@@ -47,6 +47,20 @@ from biokids_daemon.sessions import SessionWatcher, UserPresence
 
 log = logging.getLogger(__name__)
 
+TERMINAL_LOCK: frozenset[str] = frozenset({Reason.QUOTA_EXHAUSTED, Reason.WINDOW_CLOSED})
+"""The two reasons that end the day, and the only two that may reach the end
+sequence. A break also returns `Action.LOCK`, and routing it through the same
+path was a real bug: it opened the countdown slot, so the next genuine
+exhaustion found a stale timestamp already past the countdown and powered the
+machine off with no lock screen, no two minutes and no "time's up"."""
+
+END_ACTION_BACKOFF_SECONDS: tuple[int, ...] = (10, 20, 40, 80, 120)
+"""How long to wait before retrying an end action that did not work."""
+
+END_ACTION_GIVE_UP_AFTER = 3
+"""After this many consecutive failures, escalate to the lockdown path (D-106)
+rather than continuing to log quietly."""
+
 ACTIVITY_TTL_SECONDS = 90
 """How long a focus report from the shell is trusted. Past this the child is
 treated as having nothing in particular on screen, which is the conservative
@@ -72,8 +86,23 @@ class ChildRuntime:
 
     last_decision: Decision | None = None
     last_active: bool = False
-    end_action_applied: bool = False
-    """Set once the configured end action has fired, so it fires exactly once."""
+
+    end_action_sessions: frozenset[str] = frozenset()
+    """Which session ids the last end action was applied against.
+
+    Not a boolean. A boolean fires once and then never again, so a child whose
+    session was logged out and who logs straight back in — a new session id, the
+    same day, the same exhausted quota — is never enforced against for the rest
+    of the day. Comparing session ids re-fires exactly when there is something
+    new to fire at."""
+    end_action_failures: int = 0
+    end_action_next_attempt: float = 0.0
+    """Backoff, in BOOTTIME seconds. An end action that returned false is
+    retried; "audited and then forgotten" is `continue unprotected`."""
+
+    paused_reason: str = ""
+    """The break or timeout currently in force, so the child's applications are
+    stopped once on the way in rather than on every tick."""
 
     def activity_fresh(self, now_boot: float) -> bool:
         return (
@@ -183,7 +212,10 @@ class Supervisor:
                 runtime.activity_reported_at = previous.activity_reported_at
                 runtime.last_decision = previous.last_decision
                 runtime.last_active = previous.last_active
-                runtime.end_action_applied = previous.end_action_applied
+                runtime.end_action_sessions = previous.end_action_sessions
+                runtime.end_action_failures = previous.end_action_failures
+                runtime.end_action_next_attempt = previous.end_action_next_attempt
+                runtime.paused_reason = previous.paused_reason
             fresh[child.id] = runtime
             by_user[child.unix_user] = child.id
 
@@ -279,18 +311,23 @@ class Supervisor:
             # achieves nothing and races the suspend itself.
             return
 
+        terminal = decision.action is Action.LOCK and decision.reason_code in TERMINAL_LOCK
+
+        # Anything that is not the end of the day closes the countdown, not just
+        # an outright `NONE`. A break that is followed by a warning rather than
+        # by a clear tick used to leave the slot open for the rest of the day.
+        if not terminal:
+            self._clear_end_sequence(runtime, day, decision.remaining_seconds)
+        if decision.action not in (Action.LOCK, Action.TIMEOUT) or terminal:
+            runtime.paused_reason = ""
+
         match decision.action:
             case Action.WARN:
                 self._speak_warning(runtime, decision, day)
-            case Action.LOCK:
+            case Action.LOCK if terminal:
                 await self._run_end_sequence(runtime, presence, decision, day, now_boot)
-            case Action.TIMEOUT:
-                self.bus.publish(
-                    EventKind.TIMEOUT_STARTED,
-                    child_id=runtime.child_id,
-                    reason_code=decision.reason_code,
-                )
-                await self._lock(runtime, presence)
+            case Action.LOCK | Action.TIMEOUT:
+                await self._enter_pause(runtime, decision)
             case Action.BLOCK:
                 self.bus.publish(
                     EventKind.BLOCKED,
@@ -298,10 +335,35 @@ class Supervisor:
                     reason_code=decision.reason_code,
                     app=runtime.app_slug,
                 )
-            case Action.NONE:
-                self._clear_end_sequence(runtime, day, decision.remaining_seconds)
             case _:
                 pass
+
+    async def _enter_pause(self, runtime: ChildRuntime, decision: Decision) -> None:
+        """A break or a timeout: pause the child, do not lock them out.
+
+        The session is deliberately *not* locked. `loginctl lock-session` hands a
+        four-year-old a password prompt, and nothing in BioKids can unlock it —
+        a five-minute break would end with a child waiting for a parent. UX.md
+        §2.5 asks for a calm full-screen timer, which the launcher already draws.
+
+        What does have to happen is stopping the applications, once. The
+        launcher is a Chromium window like any other, so a break that arrives
+        while the child is inside a fullscreen game renders behind the game and
+        enforces nothing.
+        """
+        if runtime.paused_reason == decision.reason_code:
+            return
+        runtime.paused_reason = decision.reason_code
+
+        kind = (
+            EventKind.TIMEOUT_STARTED
+            if decision.action is Action.TIMEOUT
+            else EventKind.BREAK_STARTED
+        )
+        self.bus.publish(kind, child_id=runtime.child_id, reason_code=decision.reason_code)
+        if decision.speak is not None:
+            self._publish_speech(runtime, decision)
+        await self.enforcer.stop_all_apps(runtime.unix_user)
 
     def _speak_warning(self, runtime: ChildRuntime, decision: Decision, day: dt.date) -> None:
         """Say each threshold once. The engine has no memory; the ledger does."""
@@ -339,28 +401,45 @@ class Supervisor:
     ) -> None:
         """Lock, count down, then do what the parent chose (`ARCHITECTURE.md` §3.5).
 
-        A break or a penalty locks too, but it must never reach the end action —
-        the machine does not shut down because a child owes five minutes of rest.
+        Only reached for the two reasons that end the day. A break returns
+        `Action.LOCK` too and must never arrive here: it would open the countdown
+        slot, and the next genuine exhaustion would find a timestamp already past
+        the countdown and shut the machine down with no lock screen at all.
+
+        Three things are re-asserted on every tick rather than done once, because
+        "done once" is how a child who gets back in ends up unsupervised for the
+        rest of the day:
+
+        * the **lock**, against any session that is present and not already
+          locked, so a dismissed lock comes back within one tick;
+        * the **end action**, whenever a session id appears it has not been
+          applied against — logind hands out a fresh id on every login;
+        * a **retry**, when the last attempt returned false, with backoff.
         """
         policy = runtime.policy
-        terminal = decision.reason_code in {Reason.QUOTA_EXHAUSTED, Reason.WINDOW_CLOSED}
+        boot_id = self.clock.read().boot_id
 
-        started = self.ledger.end_sequence_started_at(runtime.child_id, day)
-        if started is None:
-            self.ledger.start_end_sequence(runtime.child_id, day, now_boot)
+        started_new = self.ledger.start_end_sequence(runtime.child_id, day, now_boot, boot_id)
+        started = self.ledger.end_sequence_started_at(runtime.child_id, day, boot_id)
+        if started is None:  # pragma: no cover - written immediately above
             started = now_boot
-            runtime.end_action_applied = False
-            await self._lock(runtime, presence)
+
+        if started_new:
+            runtime.end_action_sessions = frozenset()
+            runtime.end_action_failures = 0
+            runtime.end_action_next_attempt = 0.0
             if decision.speak is not None:
                 self._publish_speech(runtime, decision)
-            if terminal:
-                repo.audit(
-                    self.session,
-                    actor="daemon",
-                    action="quota_exhausted",
-                    target=f"child:{runtime.child_id}",
-                    detail={"reason": decision.reason_code},
-                )
+            repo.audit(
+                self.session,
+                actor="daemon",
+                action="quota_exhausted",
+                target=f"child:{runtime.child_id}",
+                detail={"reason": decision.reason_code},
+            )
+
+        # The lock, every tick, but only where it would change something.
+        await self._lock(runtime, presence, only_unlocked=True)
 
         countdown = (
             policy.lock_countdown_seconds
@@ -376,10 +455,18 @@ class Supervisor:
             end_action=(policy.end_action.value if policy else EndAction.LOCK.value),
         )
 
-        if not terminal or runtime.end_action_applied or elapsed < countdown:
+        if elapsed < countdown:
             return
 
-        runtime.end_action_applied = True
+        present = frozenset(presence.lockable_session_ids)
+        unenforced = present - runtime.end_action_sessions
+        retry_due = (
+            runtime.end_action_failures > 0 and now_boot >= runtime.end_action_next_attempt
+        )
+        already_done = bool(runtime.end_action_sessions)
+        if already_done and not unenforced and not retry_due:
+            return
+
         action = policy.end_action if policy is not None else EndAction.LOCK
         # Applications first, so an unsaved drawing gets its SIGTERM before the
         # machine starts going down.
@@ -387,27 +474,74 @@ class Supervisor:
         ok = await self.enforcer.apply_end_action(
             action, runtime.unix_user, presence.lockable_session_ids
         )
+
+        if ok:
+            # `frozenset({""})` rather than an empty set for the poweroff case,
+            # where there is nothing to enumerate: an empty set would read as
+            # "never applied" and re-fire on the next tick.
+            runtime.end_action_sessions = present or frozenset({""})
+            runtime.end_action_failures = 0
+        else:
+            runtime.end_action_failures += 1
+            wait = END_ACTION_BACKOFF_SECONDS[
+                min(runtime.end_action_failures - 1, len(END_ACTION_BACKOFF_SECONDS) - 1)
+            ]
+            runtime.end_action_next_attempt = now_boot + wait
+
         repo.audit(
             self.session,
             actor="daemon",
             action=action.value if action is not EndAction.LOCK else "session_locked",
             target=f"child:{runtime.child_id}",
-            detail={"reason": decision.reason_code, "ok": ok},
-            severity="warning",
+            detail={
+                "reason": decision.reason_code,
+                "ok": ok,
+                "attempt": runtime.end_action_failures or 1,
+            },
+            severity="warning" if ok else "alert",
         )
         log.info("end action %s for %s: %s", action.value, runtime.unix_user, ok)
 
-    def _clear_end_sequence(self, runtime: ChildRuntime, day: dt.date, remaining: int) -> None:
-        if self.ledger.end_sequence_started_at(runtime.child_id, day) is not None:
-            self.ledger.clear_end_sequence(runtime.child_id, day)
-            runtime.end_action_applied = False
-            self.ledger.rearm_warnings(runtime.child_id, day, remaining)
-            self.bus.publish(EventKind.END_SEQUENCE, child_id=runtime.child_id, cancelled=True)
+        if runtime.end_action_failures >= END_ACTION_GIVE_UP_AFTER:
+            # Three failures in a row. Stop hoping and take the D-106 path: lock
+            # every session this child has, loudly. A parental control that has
+            # quietly given up is exactly what principle #3 exists to prevent.
+            log.error(
+                "the end action for %s has failed %s times; falling back to lockdown",
+                runtime.unix_user,
+                runtime.end_action_failures,
+            )
+            await self.enforcer.lockdown(presence.lockable_session_ids)
+            repo.audit(
+                self.session,
+                actor="daemon",
+                action="lockdown",
+                target=f"child:{runtime.child_id}",
+                detail={"reason": "the end action kept failing", "action": action.value},
+                severity="alert",
+            )
+            runtime.end_action_failures = 0
+            runtime.end_action_next_attempt = now_boot + END_ACTION_BACKOFF_SECONDS[-1]
 
-    async def _lock(self, runtime: ChildRuntime, presence: UserPresence) -> None:
-        if not presence.lockable_session_ids:
+    def _clear_end_sequence(self, runtime: ChildRuntime, day: dt.date, remaining: int) -> None:
+        runtime.end_action_sessions = frozenset()
+        runtime.end_action_failures = 0
+        runtime.end_action_next_attempt = 0.0
+        if not self.ledger.has_end_sequence(runtime.child_id, day):
             return
-        await self.enforcer.lock_sessions(presence.lockable_session_ids)
+        self.ledger.clear_end_sequence(runtime.child_id, day)
+        self.ledger.rearm_warnings(runtime.child_id, day, remaining)
+        self.bus.publish(EventKind.END_SEQUENCE, child_id=runtime.child_id, cancelled=True)
+
+    async def _lock(
+        self, runtime: ChildRuntime, presence: UserPresence, *, only_unlocked: bool = False
+    ) -> None:
+        targets = (
+            presence.relockable_session_ids if only_unlocked else presence.lockable_session_ids
+        )
+        if not targets:
+            return
+        await self.enforcer.lock_sessions(targets)
 
     def _on_earned(self, runtime: ChildRuntime, seconds: int) -> None:
         minutes = seconds // 60
@@ -614,12 +748,21 @@ class Supervisor:
             "action": decision.action.value,
             "reason_code": decision.reason_code,
             "idle": presence.idle,
-            "countdown_seconds": self._countdown_remaining(runtime, day, now_boot=reading.boot),
+            "countdown_seconds": self._countdown_remaining(
+                runtime, day, reading.boot, reading.boot_id
+            ),
         }
 
-    def _countdown_remaining(self, runtime: ChildRuntime, day: dt.date, now_boot: float) -> int:
-        """Seconds left on the lock screen before the end action, or zero."""
-        started = self.ledger.end_sequence_started_at(runtime.child_id, day)
+    def _countdown_remaining(
+        self, runtime: ChildRuntime, day: dt.date, now_boot: float, boot_id: str
+    ) -> int:
+        """Seconds left on the lock screen before the end action, or zero.
+
+        Takes the boot id for the same reason the sequence stores one: an offset
+        from a previous boot would otherwise feed the child's time-up screen a
+        countdown of several hours.
+        """
+        started = self.ledger.end_sequence_started_at(runtime.child_id, day, boot_id)
         if started is None:
             return 0
         total = (

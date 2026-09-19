@@ -78,7 +78,10 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
 
       - name: Build packages
-        run: dpkg-buildpackage -us -uc -b
+        # Without the archive keyring: its key exists only at release time, and
+        # a pipeline that is red from the first commit teaches everyone to
+        # ignore it. The release workflow builds the full set.
+        run: dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring
 
       - name: lintian
         run: lintian --fail-on error ../*.changes

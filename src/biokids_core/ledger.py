@@ -473,6 +473,7 @@ class TimeLedger:
         row.granted_s = 0
         row.warned = set()
         row.end_sequence_started_at = None
+        row.end_sequence_boot_id = None
         self._mark_dirty(child_id)
         self.persist()
 
@@ -510,22 +511,59 @@ class TimeLedger:
             self._mark_dirty(child_id)
         return kept
 
-    def end_sequence_started_at(self, child_id: int, day: dt.date) -> float | None:
-        row = self._day_row_readonly(child_id, day)
-        return row.end_sequence_started_at if row is not None else None
+    def end_sequence_started_at(
+        self, child_id: int, day: dt.date, boot_id: str
+    ) -> float | None:
+        """When the lock screen went up, in this boot's own clock.
 
-    def start_end_sequence(self, child_id: int, day: dt.date, at_boot: float) -> None:
+        A reading from a previous boot is not late, it is meaningless:
+        `CLOCK_BOOTTIME` restarted at zero, so an offset recorded at eight hours
+        of uptime would read as "0 seconds elapsed" for the next eight hours.
+        Returning None says "not started", which makes the caller lock the
+        screen again and begin a fresh countdown — which is what a child who
+        rebooted to escape the shutdown should get.
+        """
+        row = self._day_row_readonly(child_id, day)
+        if row is None or row.end_sequence_started_at is None:
+            return None
+        if row.end_sequence_boot_id != boot_id:
+            return None
+        return row.end_sequence_started_at
+
+    def start_end_sequence(
+        self, child_id: int, day: dt.date, at_boot: float, boot_id: str
+    ) -> bool:
+        """Record the start, and say whether this began a new sequence.
+
+        Overwrites a reading from another boot rather than keeping it: see
+        `end_sequence_started_at`. The boolean is what the caller uses to lock
+        the screen and speak once instead of every ten seconds.
+        """
         row = self._day_row(child_id, day)
-        if row.end_sequence_started_at is None:
-            row.end_sequence_started_at = at_boot
-            self._mark_dirty(child_id)
-            self.persist()
+        if row.end_sequence_started_at is not None and row.end_sequence_boot_id == boot_id:
+            return False
+        row.end_sequence_started_at = at_boot
+        row.end_sequence_boot_id = boot_id
+        self._mark_dirty(child_id)
+        self.persist()
+        return True
+
+    def has_end_sequence(self, child_id: int, day: dt.date) -> bool:
+        """Whether anything is recorded, regardless of which boot wrote it.
+
+        `end_sequence_started_at` deliberately answers None for another boot's
+        reading; clearing needs to know the row is dirty anyway, or a stale
+        offset would survive until the next reboot.
+        """
+        row = self._day_row_readonly(child_id, day)
+        return row is not None and row.end_sequence_started_at is not None
 
     def clear_end_sequence(self, child_id: int, day: dt.date) -> None:
         row = self._day_row_readonly(child_id, day)
         if row is None or row.end_sequence_started_at is None:
             return
         row.end_sequence_started_at = None
+        row.end_sequence_boot_id = None
         self._mark_dirty(child_id)
 
     # ------------------------------------------------------------- reading

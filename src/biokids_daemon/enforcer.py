@@ -113,6 +113,23 @@ class Enforcer:
         result = await self._run(["loginctl", "lock-session", session_id])
         return result.ok
 
+    async def unlock_session(self, session_id: str) -> bool:
+        """Release a lock BioKids applied.
+
+        Only a repair path. `loginctl unlock-session` emits logind's Unlock
+        signal, which not every screen locker acts on, so nothing a child needs
+        in order to carry on is allowed to depend on it — a break pauses them in
+        the launcher instead of locking the session.
+        """
+        result = await self._run(["loginctl", "unlock-session", session_id])
+        return result.ok
+
+    async def unlock_sessions(self, session_ids: Sequence[str]) -> bool:
+        if not session_ids:
+            return False
+        results = [await self.unlock_session(sid) for sid in session_ids]
+        return any(results)
+
     async def lock_sessions(self, session_ids: Sequence[str]) -> bool:
         """Lock these sessions and no others.
 

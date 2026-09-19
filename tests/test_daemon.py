@@ -13,6 +13,8 @@ are both injected, so the whole sequence runs in milliseconds on any machine.
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Sequence
+from typing import Any
 
 import pytest
 from sqlalchemy.orm import Session
@@ -36,9 +38,31 @@ def source() -> FakeSessionSource:
     return FakeSessionSource()
 
 
+class LoginctlAwareRunner(RecordingRunner):
+    """A recording runner that mirrors what loginctl actually does.
+
+    `loginctl lock-session` makes logind set `LockedHint` on that session, which
+    the watcher then reads back. Without modelling that, a test cannot tell the
+    difference between "the daemon locks a session once" and "the daemon locks
+    an already-locked session ten times a minute" — and one of those is a bug.
+    """
+
+    def __init__(self, source: FakeSessionSource) -> None:
+        super().__init__()
+        self.source = source
+
+    async def __call__(self, argv: Sequence[str]) -> Any:
+        result = await super().__call__(argv)
+        if result.ok and list(argv[:2]) == ["loginctl", "lock-session"] and len(argv) > 2:
+            self.source.set(argv[2], locked=True)
+        if result.ok and list(argv[:2]) == ["loginctl", "terminate-user"] and len(argv) > 2:
+            self.source.sessions = [s for s in self.source.sessions if s.unix_user != argv[2]]
+        return result
+
+
 @pytest.fixture
-def runner() -> RecordingRunner:
-    return RecordingRunner()
+def runner(source: FakeSessionSource) -> RecordingRunner:
+    return LoginctlAwareRunner(source)
 
 
 @pytest.fixture
@@ -608,3 +632,247 @@ async def test_a_new_day_gives_the_child_their_quota_back(
     await supervisor.tick()
 
     assert supervisor.status()["children"][0]["remaining_seconds"] > 0
+
+
+# ------------------------------------------- the end sequence, adversarially
+#
+# Four ways a child got an unsupervised afternoon, each found by reading the
+# code adversarially rather than by a failing test. They are grouped here
+# because they share one cause: the sequence used to be something that happened
+# once, and "once" is not a property a child cooperates with.
+
+
+async def test_rebooting_does_not_buy_hours_of_unsupervised_use(
+    db: Database,
+    bus: EventBus,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    clock: FakeClock,
+    config: Config,
+    session: Session,
+    child: Child,
+) -> None:
+    """The countdown is a BOOTTIME offset, so it has to carry its boot with it.
+
+    Without one: the machine has been up for hours, the quota runs out, the
+    child pulls the power. BOOTTIME restarts at zero, the stored offset now
+    reads as "the countdown has not started", and because it is not None the
+    branch that locks the screen is skipped too. The child gets the machine back
+    unlocked, and keeps it until uptime passes the old offset — typically hours.
+    """
+    set_quota(session, 1, 5, end_action=EndAction.POWEROFF.value, lock_countdown_seconds=60)
+    clock.advance(8 * 3600)  # a machine that booted this morning
+
+    first = Supervisor(
+        database=db,
+        bus=bus,
+        watcher=SessionWatcher(source),
+        enforcer=Enforcer(config, runner),
+        clock=clock,
+        config=config,
+    )
+    await first.start()
+    source.log_in("elif")
+    await run_for(first, clock, 6 * 60)
+    assert runner.ran("loginctl", "lock-session"), "the day ended and the screen locked"
+    await first.stop()
+
+    # The child reboots instead of waiting for the shutdown.
+    clock.reboot(off_for=60)
+    runner.calls.clear()
+    source.sessions.clear()
+
+    second = Supervisor(
+        database=db,
+        bus=EventBus(queue_size=4096, history_size=4096),
+        watcher=SessionWatcher(source),
+        enforcer=Enforcer(config, runner),
+        clock=clock,
+        config=config,
+    )
+    await second.start()
+    source.log_in("elif", session_id="after-reboot")
+    await run_for(second, clock, 30)
+
+    assert runner.ran("loginctl", "lock-session", "after-reboot"), (
+        "the new session must be locked within a tick, not in eight hours"
+    )
+
+    await run_for(second, clock, 90)
+    assert runner.ran("systemctl", "poweroff"), "and the countdown must run again"
+
+
+async def test_logging_back_in_after_a_logout_is_enforced_again(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    session: Session,
+    runner: RecordingRunner,
+) -> None:
+    """lightdm hands the child a new session; the day's quota is still spent."""
+    set_quota(session, 1, 5, end_action=EndAction.LOGOUT.value, lock_countdown_seconds=30)
+    await supervisor.start()
+    source.log_in("elif")
+    await run_for(supervisor, clock, 6 * 60)
+    assert runner.ran("loginctl", "terminate-user", "elif")
+
+    runner.calls.clear()
+    source.sessions.clear()
+    source.log_in("elif", session_id="second-go")
+    await run_for(supervisor, clock, 60)
+
+    assert runner.ran("loginctl", "terminate-user", "elif"), (
+        "a fresh session id is something the end action has not been applied to"
+    )
+
+
+async def test_a_dismissed_lock_comes_back_within_one_tick(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    session: Session,
+    runner: RecordingRunner,
+) -> None:
+    set_quota(session, 1, 5, end_action=EndAction.LOCK.value, lock_countdown_seconds=600)
+    await supervisor.start()
+    logged_in = source.log_in("elif")
+    await run_for(supervisor, clock, 6 * 60)
+    assert runner.ran("loginctl", "lock-session", logged_in.session_id)
+
+    source.set(logged_in.session_id, locked=False)
+    runner.calls.clear()
+    await run_for(supervisor, clock, 20)
+
+    assert runner.ran("loginctl", "lock-session", logged_in.session_id)
+
+
+async def test_an_already_locked_session_is_not_locked_every_ten_seconds(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    session: Session,
+    runner: RecordingRunner,
+) -> None:
+    set_quota(session, 1, 5, end_action=EndAction.LOCK.value, lock_countdown_seconds=600)
+    await supervisor.start()
+    source.log_in("elif")
+    await run_for(supervisor, clock, 6 * 60)
+
+    runner.calls.clear()
+    await run_for(supervisor, clock, 120)
+
+    assert not runner.ran("loginctl", "lock-session"), "logind already says it is locked"
+
+
+async def test_a_break_never_opens_the_end_of_day_countdown(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    session: Session,
+    runner: RecordingRunner,
+    bus: EventBus,
+) -> None:
+    """The bug this guards: a break wrote the countdown slot, so the real
+    exhaustion later found a timestamp already past the countdown and powered
+    the machine off in the same tick — no lock screen, no two minutes, no
+    "time's up"."""
+    set_quota(
+        session,
+        1,
+        10,
+        break_enabled=True,
+        break_work_min=5,
+        break_rest_min=1,
+        end_action=EndAction.POWEROFF.value,
+        lock_countdown_seconds=120,
+    )
+    await supervisor.start()
+    source.log_in("elif")
+
+    await run_for(supervisor, clock, 7 * 60)  # through the break and out again
+    assert not runner.ran("systemctl", "poweroff")
+
+    await run_for(supervisor, clock, 5 * 60)  # now the quota really runs out
+    spoken = [str(p.get("event", "")) for p in events_of(bus, EventKind.SPEAK)]
+    assert "time_up" in spoken, "the child is told the day is over"
+    assert not runner.ran("systemctl", "poweroff"), "the two minutes have not passed yet"
+
+    countdowns = [
+        int(p.get("countdown_seconds", 0))
+        for p in events_of(bus, EventKind.END_SEQUENCE)
+        if "countdown_seconds" in p
+    ]
+    assert max(countdowns) > 100, "the countdown starts at the top, not at zero"
+
+    await run_for(supervisor, clock, 130)
+    assert runner.ran("systemctl", "poweroff")
+
+
+async def test_a_break_pauses_the_child_without_locking_them_out(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    session: Session,
+    runner: RecordingRunner,
+) -> None:
+    """Nothing in BioKids can unlock a session, so a break must not lock one.
+
+    A five-year-old left at a password prompt for the rest of the afternoon is
+    a worse outcome than the one the break was for. UX.md §2.5 asks for a calm
+    full-screen timer, which the launcher draws.
+    """
+    set_quota(session, 1, 120, break_enabled=True, break_work_min=1, break_rest_min=1)
+    await supervisor.start()
+    source.log_in("elif")
+
+    await run_for(supervisor, clock, 70)
+
+    assert not runner.ran("loginctl", "lock-session"), "a break is not a lock"
+    assert runner.ran("stop"), "but the running application is stopped, once"
+
+    stops = [call for call in runner.calls if "stop" in call]
+    runner.calls.clear()
+    await run_for(supervisor, clock, 30)
+    assert not runner.ran("stop"), "and not again on every tick"
+    assert len(stops) == 1
+
+    await run_for(supervisor, clock, 60)
+    assert supervisor.shell_state(1)["allow"] is True, "the child is back on the grid"
+
+
+async def test_a_timeout_pauses_rather_than_locking_too(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+) -> None:
+    await supervisor.start()
+    source.log_in("elif")
+    supervisor.start_timeout(1, 1)
+    await run_for(supervisor, clock, 30)
+
+    assert not runner.ran("loginctl", "lock-session")
+    assert runner.ran("stop")
+
+
+async def test_an_end_action_that_keeps_failing_escalates_to_lockdown(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    session: Session,
+    runner: RecordingRunner,
+    db: Database,
+) -> None:
+    """Audited once and then forgotten is `continue unprotected`."""
+    set_quota(session, 1, 5, end_action=EndAction.POWEROFF.value, lock_countdown_seconds=10)
+    await supervisor.start()
+    source.log_in("elif")
+    runner.returncode = 1  # everything the enforcer runs now fails
+
+    await run_for(supervisor, clock, 10 * 60)
+
+    supervisor.session.commit()
+    with db.session() as fresh:
+        entries = [row for row in fresh.query(AuditLog).all() if row.action == "lockdown"]
+    assert entries, "three failures in a row take the D-106 path"
+    assert entries[0].severity == "alert"

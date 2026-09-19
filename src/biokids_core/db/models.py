@@ -362,6 +362,14 @@ class LedgerDay(Base):
     end_sequence_started_at: Mapped[float | None] = mapped_column(Float, default=None)
     """BOOTTIME reading when the lock screen appeared, for the 120 s countdown."""
 
+    end_sequence_boot_id: Mapped[str | None] = mapped_column(String(64), default=None)
+    """Which boot the reading above belongs to.
+
+    Without it the offset is meaningless across a reboot: BOOTTIME restarts at
+    zero, so an offset recorded at eight hours of uptime reads as "the countdown
+    has not started" for the next eight hours — during which the child is
+    neither locked nor shut down."""
+
     updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
     @property

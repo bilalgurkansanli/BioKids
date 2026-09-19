@@ -90,6 +90,19 @@ class UserPresence:
         return tuple(s.session_id for s in self.sessions if s.session_class == "user")
 
     @property
+    def relockable_session_ids(self) -> tuple[str, ...]:
+        """The user sessions that are not already locked.
+
+        The end sequence re-asserts the lock on every tick, so that a child who
+        dismisses it gets it back within ten seconds. Filtering on logind's own
+        `LockedHint` is what keeps that from being ten `loginctl` calls a minute
+        against a screen that is already locked.
+        """
+        return tuple(
+            s.session_id for s in self.sessions if s.session_class == "user" and not s.locked
+        )
+
+    @property
     def primary_session(self) -> SessionInfo | None:
         for session in self.sessions:
             if session.counts_as_use:
@@ -107,6 +120,8 @@ class SessionSource(Protocol):
     async def snapshot(self) -> list[SessionInfo]: ...
 
     async def lock(self, session_id: str) -> bool: ...
+
+    async def unlock(self, session_id: str) -> bool: ...
 
     async def terminate(self, session_id: str) -> bool: ...
 
@@ -177,6 +192,21 @@ class SessionWatcher:
             if await self._source.lock(session_id):
                 locked += 1
         return locked
+
+    async def unlock_user(self, unix_user: str) -> int:
+        """Undo a lock this daemon applied.
+
+        `loginctl unlock-session` only emits logind's Unlock signal, which
+        xfce4-screensaver and light-locker honour and some lockers do not. So
+        this is a repair path, not a mechanism to rely on: a break pauses the
+        child through the launcher rather than by locking the session, exactly
+        so that getting back in never depends on this working.
+        """
+        unlocked = 0
+        for session_id in self.presence(unix_user).lockable_session_ids:
+            if await self._source.unlock(session_id):
+                unlocked += 1
+        return unlocked
 
     async def terminate_user(self, unix_user: str) -> int:
         ended = 0
@@ -266,6 +296,9 @@ class LogindSessionSource:
     async def lock(self, session_id: str) -> bool:
         return await self._session_call(session_id, "call_lock")
 
+    async def unlock(self, session_id: str) -> bool:
+        return await self._session_call(session_id, "call_unlock")
+
     async def terminate(self, session_id: str) -> bool:
         return await self._session_call(session_id, "call_terminate")
 
@@ -298,6 +331,7 @@ class FakeSessionSource:
 
     sessions: list[SessionInfo] = field(default_factory=list)
     locked_calls: list[str] = field(default_factory=list)
+    unlocked_calls: list[str] = field(default_factory=list)
     terminated_calls: list[str] = field(default_factory=list)
     started: bool = False
     fail_snapshot: bool = False
@@ -317,6 +351,13 @@ class FakeSessionSource:
         self.locked_calls.append(session_id)
         self.sessions = [
             _with(s, locked=True) if s.session_id == session_id else s for s in self.sessions
+        ]
+        return True
+
+    async def unlock(self, session_id: str) -> bool:
+        self.unlocked_calls.append(session_id)
+        self.sessions = [
+            _with(s, locked=False) if s.session_id == session_id else s for s in self.sessions
         ]
         return True
 

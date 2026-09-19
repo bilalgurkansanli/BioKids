@@ -289,7 +289,16 @@ existed. Where this packaging differs, it is on purpose:
 **The archive key.** debian/rules refuses to build if
 `debian/biokids-archive-keyring.asc` is missing, and that is the intended
 behaviour: a keyring package that ships no key is worse than one that will not
-build. Before the first release, generate a dedicated signing key (not a
+build.
+
+To build the other eight packages before the key exists, use the build profile:
+
+    dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring
+
+which drops `biokids-archive-keyring` from the build and skips the key entirely.
+CI uses exactly that, so the packaging is verified on every push; the release
+workflow does not, so a release that somehow lost the key fails loudly instead
+of shipping eight packages and no way to trust them. Before the first release, generate a dedicated signing key (not a
 personal one), commit its **public** half, ASCII-armoured, as
 debian/biokids-archive-keyring.asc, and publish its fingerprint in README.md so
 people can verify what they are trusting. The private half goes into GitHub

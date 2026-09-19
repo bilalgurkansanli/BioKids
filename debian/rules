@@ -10,6 +10,11 @@
 
 export PYBUILD_NAME=biokids
 
+# The archive keyring needs a key that only exists at release time. Under this
+# profile the package is not built at all (see debian/control) and the key is
+# not required, which is what lets CI verify the other eight on every push.
+NOKEYRING := $(filter pkg.biokids.nokeyring,$(DEB_BUILD_PROFILES))
+
 # The test suite wants every runtime dependency at once, a session bus and a
 # Linux clock. CI runs it on every push, long before a package is built; making
 # the build depend on it again would only add build dependencies.
@@ -71,10 +76,13 @@ override_dh_auto_install:
 	    alembic.ini > debian/tmp/usr/share/biokids/alembic.ini
 	chmod 0644 debian/tmp/usr/share/biokids/alembic.ini
 
+ifeq (,$(NOKEYRING))
 	@if [ ! -f debian/biokids-archive-keyring.asc ]; then \
 		echo "debian/rules: debian/biokids-archive-keyring.asc is missing." >&2; \
 		echo "  biokids-archive-keyring cannot be built without the real" >&2; \
 		echo "  archive key. See debian/README.source, section 6." >&2; \
+		echo "  To build everything else without it:" >&2; \
+		echo "    dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring" >&2; \
 		exit 1; \
 	fi
 	install -d debian/tmp/usr/share/keyrings
@@ -82,6 +90,9 @@ override_dh_auto_install:
 		--output debian/tmp/usr/share/keyrings/biokids-archive-keyring.gpg \
 		debian/biokids-archive-keyring.asc
 	chmod 0644 debian/tmp/usr/share/keyrings/biokids-archive-keyring.gpg
+else
+	@echo "debian/rules: pkg.biokids.nokeyring is set; not building the keyring."
+endif
 
 # pyproject.toml declares the union of every component's requirements, so
 # letting dh_python3 guess would put FastAPI into biokids-core's Depends and

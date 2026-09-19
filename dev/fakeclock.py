@@ -363,7 +363,9 @@ class Simulation:
 
         if not self._locked:
             self._locked = True
-            self._ledger.start_end_sequence(child_id, day, self._clock.boot)
+            self._ledger.start_end_sequence(
+                child_id, day, self._clock.boot, self._clock.boot_id
+            )
             event = decision.speak.event if decision.speak else "—"
             notes.append(
                 self._ink.alarm(
@@ -373,7 +375,7 @@ class Simulation:
             )
             return Row("!! ", "LOCK")
 
-        started = self._ledger.end_sequence_started_at(child_id, day)
+        started = self._ledger.end_sequence_started_at(child_id, day, self._clock.boot_id)
         elapsed = max(0.0, self._clock.boot - (started or self._clock.boot))
         if elapsed >= self._policy.lock_countdown_seconds:
             self.totals.ended_with = self._policy.end_action.value
