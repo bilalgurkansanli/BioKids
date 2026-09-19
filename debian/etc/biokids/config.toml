@@ -31,6 +31,9 @@ model_dir = "/var/lib/biokids/models"
 log_dir = "/var/log/biokids"
 run_dir = "/run/biokids"
 daemon_socket = "/run/biokids/daemon.sock"
+# The child launcher's socket. World-connectable and authorised by the peer's
+# uid instead of by its file mode (D-123); relocate it with run_dir above.
+shell_socket = "/run/biokids/shell.sock"
 share_dir = "/usr/share/biokids"
 secret_key = "/etc/biokids/secret.key"
 ext_token = "/etc/biokids/ext.token"

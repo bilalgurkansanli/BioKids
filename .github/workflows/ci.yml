@@ -72,8 +72,9 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            build-essential devscripts debhelper dh-python \
-            python3-all python3-setuptools pybuild-plugin-pyproject lintian
+            build-essential devscripts debhelper dh-python gnupg \
+            po-debconf pybuild-plugin-pyproject python3-all \
+            python3-setuptools lintian
         env:
           DEBIAN_FRONTEND: noninteractive
 
@@ -81,10 +82,21 @@ jobs:
         # Without the archive keyring: its key exists only at release time, and
         # a pipeline that is red from the first commit teaches everyone to
         # ignore it. The release workflow builds the full set.
-        run: dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring
+        #
+        # The chmod is not paranoia: the tree is authored on Windows, where the
+        # mode bit is not a thing .gitattributes can carry.
+        run: |
+          chmod +x debian/rules
+          dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring
 
       - name: lintian
-        run: lintian --fail-on error ../*.changes
+        # `bad-distribution-in-changes-file` fires because the changelog targets
+        # trixie, which lintian does not recognise as a distribution name until
+        # it is released. Suppressed here and in release.yml, together.
+        run: |
+          lintian --fail-on error \
+            --suppress-tags bad-distribution-in-changes-file \
+            ../biokids_*.changes
 
       - name: Collect artefacts
         run: |

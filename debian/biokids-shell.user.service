@@ -1,4 +1,8 @@
 [Unit]
+# The autostart entry names only this unit, so the voice service has to be
+# pulled in rather than waited for. `Wants=`, not `Requires=`: biokids-voice is
+# a Recommends, and a machine without it must still get its launcher.
+Wants=biokids-voice.service
 Description=BioKids child launcher
 Documentation=https://github.com/bilalgurkansanli/biokids
 # This is a user unit: it runs inside the child's own session, as the child,

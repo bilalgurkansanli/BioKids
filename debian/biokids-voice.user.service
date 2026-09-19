@@ -9,6 +9,11 @@ After=graphical-session.target pipewire.service
 Wants=pipewire.service
 
 [Service]
+# The child owns this. /var/lib/biokids is 0700 root — the family's history is
+# not something a child's session may read — so the audio cache belongs in the
+# child's own cache directory. systemd creates it 0700 before ExecStart and
+# exports $CACHE_DIRECTORY, which is what synth.py looks for first.
+CacheDirectory=biokids-voice
 Type=simple
 ExecStart=/usr/bin/biokids-voice
 Restart=always

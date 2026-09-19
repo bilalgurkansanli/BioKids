@@ -26,8 +26,10 @@ rather than a second and a half later.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import logging
+import os
 import subprocess
 import wave
 from collections.abc import Sequence
@@ -36,7 +38,7 @@ from pathlib import Path
 from shutil import which
 from typing import Final, Protocol
 
-from biokids_core.config import Config, get_config
+from biokids_core.config import Config, PathsConfig, get_config
 from biokids_core.errors import BioKidsError
 
 LOG = logging.getLogger(__name__)
@@ -272,6 +274,42 @@ def write_silence(destination: Path, seconds: float, sample_rate: int = SAMPLE_R
 # -------------------------------------------------------------------- cache
 
 
+def cache_root(config: Config | None = None) -> Path:
+    """Where rendered audio goes, for a process running as the child.
+
+    Not `/var/lib/biokids/voice-cache`, although that is what the config says.
+    The family's data directory is 0700 root — a child's session may not read
+    the history of every child in the house — so the voice service, which runs
+    as the child with no privilege at all, cannot even traverse it. Writing
+    there raises `PermissionError` on the very first warning, and because that
+    is an `OSError` rather than a `SynthError` it escapes the fallback and every
+    spoken line silently becomes an on-screen card, for the life of the machine,
+    with nothing louder than a stack trace in the child's own journal.
+
+    So: `$CACHE_DIRECTORY` when systemd made one (the user unit asks for it with
+    `CacheDirectory=`), then the XDG cache, then `~/.cache`. The configured path
+    is honoured only when an administrator set it deliberately, which is what
+    keeps `BIOKIDS_PREFIX` and the test suite working.
+    """
+    config = config or get_config()
+
+    from_systemd = os.environ.get("CACHE_DIRECTORY", "").split(":")[0]
+    if from_systemd:
+        return Path(from_systemd)
+
+    if config.paths.voice_cache_dir != _DEFAULT_CACHE_DIR:
+        # Set on purpose, in config.toml or by BIOKIDS_PREFIX.
+        return config.paths.voice_cache_dir
+
+    xdg = os.environ.get("XDG_CACHE_HOME", "")
+    base = Path(xdg) if xdg else Path.home() / ".cache"
+    return base / "biokids-voice"
+
+
+_DEFAULT_CACHE_DIR = PathsConfig().voice_cache_dir
+"""The built-in default, so a configured path can be told from an inherited one."""
+
+
 class VoiceCache:
     """WAV files on disk, capped and evicted least-recently-used first.
 
@@ -289,7 +327,7 @@ class VoiceCache:
     @classmethod
     def from_config(cls, config: Config | None = None, *, subdir: str = "") -> VoiceCache:
         config = config or get_config()
-        directory = config.paths.voice_cache_dir
+        directory = cache_root(config)
         return cls(
             directory / subdir if subdir else directory,
             max_bytes=config.voice.cache_max_mb * 1024 * 1024,
@@ -458,4 +496,10 @@ class Synthesizer:
         finally:
             # Kept inside the cache's own naming so that eviction reaps whatever
             # a hard kill leaves behind; this only runs when the move did not.
-            partial.unlink(missing_ok=True)
+            #
+            # Suppressed, because an OSError raised here would *replace* the
+            # SynthError being raised — and `render` promises it never raises.
+            # A full disk or a read-only home would then turn a well-handled
+            # fallback into an unhandled traceback in the child's journal.
+            with contextlib.suppress(OSError):
+                partial.unlink(missing_ok=True)
