@@ -10,25 +10,47 @@ datasets with different terms, and some of them are not redistributable. T6.1
 says to record the licence **before** bundling, and until that is done for a
 Turkish voice, BioKids ships without one.
 
-## What happens meanwhile
+## What the catalogue actually has, checked 2026-09-20
 
-`biokids-voice` works and is not blocked on this:
+T6.1 asks for "one Turkish female plus one Turkish male voice". Neither exists
+in a form BioKids may ship, and this is not a matter of nobody having looked:
 
-* it renders every line, falls back correctly, queues correctly and caches
-  correctly, against whatever Piper voices the machine has;
-* `biokids-voice` **Recommends** `piper-tts`, so a normal `apt install` pulls in
-  Piper and its packaged voices;
-* when no voice is available at all, the fallback chain ends at the character
-  card, which always carries the spoken line as text (VOICE.md §7). The child
-  reads the warning instead of hearing it.
+| Voice | State | Source |
+|---|---|---|
+| `tr_TR-dfki-medium` | Dataset is **CC-BY-NC-SA-4.0** — non-commercial, so excluded by the rule below | its `MODEL_CARD`, which names `github.com/marytts/dfki-ot-data/` |
+| `tr_TR-fahrettin-*` | **Withdrawn.** "Remove fahrettin and fettah voices at request of contributors" | `rhasspy/piper-voices` commit `b145f2a` |
+| `tr_TR-fettah-*` | **Withdrawn**, same commit | as above |
 
-So a machine with no voice model warns the child on screen. It does not fail
-silently and it does not pretend.
+A voice whose contributor asked for it to be taken down is not one to keep a
+copy of, whatever its file says.
 
-**This is the one part of the Phase 0 exit criterion that is not met yet.** That
-criterion asks for warnings *spoken* in Turkish, and speaking them needs a
-Turkish voice whose licence has been checked. It is a packaging task, not a code
-one.
+And Piper itself is not packaged: **`piper-tts` is not in Debian 13.** The only
+`piper` in trixie is a GTK utility for configuring gaming mice. So the old
+`Recommends: piper-tts` named nothing at all, and on a fresh machine the
+fallback chain went straight from "no Piper" to silence.
+
+## So espeak-ng speaks, and Piper is the upgrade
+
+`biokids-voice` now recommends **espeak-ng**: in Debian main, GPL-3+, speaks
+Turkish, carries its voices inside the package, needs no model file and no
+network. Personas are distinguished by pitch, which is crude and enough.
+
+It sounds like a 1990s robot. That is the honest trade: a four-year-old who
+hears "beş dakika kaldı" has been warned, and a four-year-old shown a card they
+cannot read yet has not. `PiperSynth` is still tried first and still wins
+whenever a family installs Piper themselves.
+
+`mbrola-tr1` and `mbrola-tr2` improve espeak-ng's Turkish considerably and are
+**Suggests** rather than Recommends, because they are in `non-free` and BioKids
+must install cleanly from `main` alone.
+
+When no engine is available at all the chain ends at the character card, which
+always carries the spoken line as text (VOICE.md §7). A machine with no TTS
+warns the child on screen. It does not fail silently and it does not pretend.
+
+**Revisit this** if a Turkish Piper voice with a redistributable dataset
+appears, or if `piper-tts` enters Debian. Bundling one is still the better
+outcome; there is simply nothing to bundle today.
 
 ## The table
 

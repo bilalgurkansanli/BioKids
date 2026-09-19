@@ -52,6 +52,9 @@ MAX_DURATION_S: Final = 15.0
 PIPER_TIMEOUT_S: Final = 20.0
 
 STOCK_MODEL_SUBDIR: Final = "piper"
+ESPEAK_CACHE_SUBDIR: Final = "espeak"
+"""espeak-ng's audio is cached apart from Piper's, for the same reason the stub's
+is: the cache key names the sentence and the voice and never the engine."""
 MODEL_SUFFIX: Final = ".onnx"
 
 STUB_CACHE_SUBDIR: Final = "silent"
@@ -232,6 +235,75 @@ class PiperSynth:
             raise SynthError(f"{self._binary} exited {finished.returncode}: {detail}")
         if not destination.is_file() or destination.stat().st_size == 0:
             raise SynthError(f"{self._binary} wrote nothing to {destination}")
+
+
+class EspeakSynth:
+    """espeak-ng, which every Debian machine can have and none has to download.
+
+    The fallback that makes the exit criterion reachable. Piper sounds better
+    and is tried first, but `piper-tts` is not in Debian 13 and the last Turkish
+    Piper voice is licensed CC-BY-NC-SA, so on an ordinary install Piper is
+    simply not there. espeak-ng is in main, speaks Turkish, and carries its
+    voices inside the package - no model file, no network, nothing to license.
+
+    It sounds like a 1990s robot. That is the right trade against silence: a
+    child who hears "bes dakika kaldi" has been warned, and a child watching a
+    card they may not read yet has not.
+    """
+
+    name = "espeak-ng"
+
+    #: espeak-ng speaks a language, not a model, so the persona is carried in
+    #: pitch instead: Zio lower, Sio higher. Crude, and enough to tell them
+    #: apart, which is all the character card needs from the audio.
+    PITCH: Final[dict[str, int]] = {"zio": 35, "sio": 75}
+    DEFAULT_PITCH: Final = 50
+    WORDS_PER_MINUTE: Final = 150
+
+    def __init__(self, binary: str = "espeak-ng", *, timeout: float = PIPER_TIMEOUT_S) -> None:
+        self._binary = binary
+        self._timeout = timeout
+
+    def available(self) -> bool:
+        return which(self._binary) is not None
+
+    def render(self, text: str, voice: VoiceSpec, destination: Path) -> None:
+        if not self.available():
+            raise SynthError(f"{self._binary} is not installed")
+
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        argv = [
+            self._binary,
+            # `tr` rather than `tr_TR`: espeak-ng names languages, not locales,
+            # and an unknown name is a hard failure rather than a fallback.
+            "-v",
+            voice.locale.split("_")[0].split("-")[0] or "tr",
+            "-p",
+            str(self.PITCH.get(voice.persona, self.DEFAULT_PITCH)),
+            "-s",
+            str(self.WORDS_PER_MINUTE),
+            # Text on stdin, so a sentence starting with a dash is a sentence
+            # and not an option.
+            "--stdout",
+        ]
+        try:
+            finished = subprocess.run(
+                argv,
+                input=text.encode("utf-8"),
+                capture_output=True,
+                timeout=self._timeout,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise SynthError(f"{self._binary} could not be run: {exc}") from exc
+
+        if finished.returncode != 0:
+            detail = finished.stderr.decode("utf-8", "replace").strip()[:200]
+            raise SynthError(f"{self._binary} exited {finished.returncode}: {detail}")
+        if not finished.stdout:
+            raise SynthError(f"{self._binary} produced no audio")
+
+        destination.write_bytes(finished.stdout)
 
 
 class StubSynth:
@@ -425,21 +497,42 @@ class Synthesizer:
 
     @classmethod
     def from_config(cls, config: Config | None = None) -> Synthesizer:
-        """Piper when it is installed, silence when it is not.
+        """Piper, then espeak-ng, then silence.
+
+        espeak-ng is in the middle because on a stock Debian 13 machine it is
+        the only one of the three that is actually there: `piper-tts` is not in
+        the archive, and the last Turkish Piper voice is licensed CC-BY-NC-SA
+        (see `assets/voices/LICENSES.md`). Without this rung the chain went
+        straight from "no Piper" to silence, and the Phase 0 exit criterion -
+        warnings *spoken* in Turkish - was unreachable by any install.
 
         Falling back to silence rather than refusing to start is what keeps the
-        service, the card and the queue working on a machine without Piper —
-        but it is loud about it, because a family who expected a voice and got
-        none deserves a reason in the log.
+        service, the card and the queue working on a machine with neither — but
+        it is loud about it, because a family who expected a voice and got none
+        deserves a reason in the log.
         """
         config = config or get_config()
         piper = PiperSynth(config.voice.piper_binary)
         if piper.available():
             return cls(piper, VoiceCache.from_config(config))
 
+        espeak = EspeakSynth(config.voice.espeak_binary)
+        if espeak.available():
+            LOG.info(
+                "%s is not installed; speaking with %s instead",
+                config.voice.piper_binary,
+                espeak.name,
+            )
+            # Its own cache directory, for the reason the stub has one: the key
+            # describes the sentence and the voice, never the engine, so a
+            # family who installs Piper later would otherwise keep hearing the
+            # robot for every line they have already heard.
+            return cls(espeak, VoiceCache.from_config(config, subdir=ESPEAK_CACHE_SUBDIR))
+
         LOG.warning(
-            "%s is not installed: cards will appear but nothing will be spoken",
+            "neither %s nor %s is installed: cards will appear but nothing will be spoken",
             config.voice.piper_binary,
+            espeak.name,
         )
         # Silence gets a cache of its own. The key is the sentence, the persona
         # and the profile (VOICE.md §6) and says nothing about which engine

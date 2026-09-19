@@ -794,3 +794,32 @@ because the claim is what a parent relies on. `biokids-shell` now ships both.
 broken X server is a worse outcome than the escape this closes (principle #4). The
 recovery paths are GRUB's recovery entry and ssh over the tailnet, and both config
 files say so in their own comments.
+
+**D-137 [claude] espeak-ng is what speaks; Piper is the upgrade.**
+T6.1 asks for "one Turkish female plus one Turkish male voice" from the Piper catalogue.
+Checked against the archives on 2026-09-20, neither exists in a form BioKids may ship:
+`tr_TR-dfki-medium`'s dataset is CC-BY-NC-SA-4.0, and `fahrettin` and `fettah` were
+removed from `rhasspy/piper-voices` "at request of contributors" (commit `b145f2a`). A
+voice whose contributor asked for it to be taken down is not one to keep a copy of.
+
+And Piper itself is not packaged: **`piper-tts` is not in Debian 13.** The only `piper`
+in trixie configures gaming mice. So `Recommends: piper-tts` named nothing, and on a
+fresh machine `Synthesizer.from_config` found no binary and fell straight to silence —
+every warning an on-screen card, permanently. The Phase 0 exit criterion asks for
+warnings **spoken** in Turkish, so as shipped it was unreachable by any install.
+
+espeak-ng is in Debian main, GPL-3+, speaks Turkish, carries its voices inside the
+package, and needs no model file and no network. It sounds like a 1990s robot, and that
+is the trade: a four-year-old who hears "beş dakika kaldı" has been warned, and one
+shown a card they cannot read yet has not. Piper is still tried first and still wins
+wherever a family installs it. `mbrola-tr1`/`tr2` improve espeak-ng's Turkish and are a
+`Suggests`, not a `Recommends`, because they are in non-free and BioKids must install
+cleanly from main alone.
+
+Each engine caches into its own directory. The key is `sha256(text + persona + profile)`
+and names no engine, so one shared directory would leave a family who installed Piper on
+Tuesday hearing Monday's robot — or Monday's silence — for every line they already knew.
+
+Revisit if a Turkish Piper voice with a redistributable dataset appears, or if
+`piper-tts` enters Debian. Bundling one is still the better outcome; there is nothing to
+bundle today.

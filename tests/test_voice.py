@@ -30,6 +30,7 @@ from biokids_core.config import Config
 from biokids_core.db import Database
 from biokids_core.db.models import VoiceLine
 from biokids_core.ipc import Event, Request
+from biokids_voice import synth as synth_module
 from biokids_voice.lines import DEFAULT_EVENTS, LineBook
 from biokids_voice.player import AudioDucker, NullPlayer, PipeWirePlayer, SilentPlayer
 from biokids_voice.service import (
@@ -43,7 +44,9 @@ from biokids_voice.service import (
     VoiceService,
 )
 from biokids_voice.synth import (
+    ESPEAK_CACHE_SUBDIR,
     STUB_CACHE_SUBDIR,
+    EspeakSynth,
     PiperSynth,
     StubSynth,
     SynthError,
@@ -872,3 +875,139 @@ async def test_status_explains_a_quiet_machine(voice_config: Config, stub: Synth
     assert status["backend"] == "stub"
     assert status["queue_depth"] == 3
     assert status["quiet_now"] is False
+
+# ---------------------------------------------------- the engine that is there
+
+
+def test_espeak_speaks_when_piper_is_not_installed(
+    voice_config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Without this rung the chain went from "no Piper" straight to silence.
+
+    Which is every stock Debian 13 machine: `piper-tts` is not in the archive,
+    and the one Turkish Piper voice left in the catalogue is CC-BY-NC-SA, so
+    BioKids may not ship it. The Phase 0 exit criterion asks for warnings
+    *spoken* in Turkish, and until espeak-ng was tried nothing could speak them.
+    """
+    monkeypatch.setattr(PiperSynth, "available", lambda _self: False)
+    monkeypatch.setattr(EspeakSynth, "available", lambda _self: True)
+
+    chain = Synthesizer.from_config(voice_config)
+
+    assert isinstance(chain.backend, EspeakSynth)
+    assert chain.cache.directory == voice_config.paths.voice_cache_dir / ESPEAK_CACHE_SUBDIR
+
+
+def test_piper_still_wins_when_a_family_has_installed_it(
+    voice_config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """espeak-ng is the floor, not the ceiling."""
+    monkeypatch.setattr(PiperSynth, "available", lambda _self: True)
+    monkeypatch.setattr(EspeakSynth, "available", lambda _self: True)
+
+    chain = Synthesizer.from_config(voice_config)
+
+    assert isinstance(chain.backend, PiperSynth)
+    assert chain.cache.directory == voice_config.paths.voice_cache_dir
+
+
+def test_with_no_engine_at_all_the_card_still_appears(
+    voice_config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(PiperSynth, "available", lambda _self: False)
+    monkeypatch.setattr(EspeakSynth, "available", lambda _self: False)
+
+    chain = Synthesizer.from_config(voice_config)
+
+    assert isinstance(chain.backend, StubSynth)
+    assert chain.cache.directory == voice_config.paths.voice_cache_dir / STUB_CACHE_SUBDIR
+
+
+def test_each_engine_caches_apart_from_the_others(voice_config: Config) -> None:
+    """The cache key names the sentence and the voice, never the engine.
+
+    So one shared directory would leave a family who installed Piper on Tuesday
+    listening to Monday's robot - or worse, Monday's silence - for every line
+    they have already heard, with `status` cheerfully reporting `piper`.
+    """
+    root = voice_config.paths.voice_cache_dir
+    assert len({root, root / ESPEAK_CACHE_SUBDIR, root / STUB_CACHE_SUBDIR}) == 3
+
+
+def test_espeak_is_asked_for_a_language_not_a_locale(
+    voice_config: Config, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """espeak-ng names languages. `-v tr_TR` is an error, not a fallback."""
+    seen: list[list[str]] = []
+
+    class Finished:
+        returncode = 0
+        stdout = b"RIFF....WAVEfmt "
+        stderr = b""
+
+    def record(argv: list[str], **_kwargs: object) -> Finished:
+        seen.append(list(argv))
+        return Finished()
+
+    monkeypatch.setattr(synth_module.subprocess, "run", record)
+    monkeypatch.setattr(EspeakSynth, "available", lambda _self: True)
+
+    EspeakSynth().render(
+        "Beş dakika kaldı.",
+        VoiceSpec(persona="zio", locale="tr_TR", profile_id="stock:zio:tr"),
+        tmp_path / "out.wav",
+    )
+
+    argv = seen[0]
+    assert "-v" in argv and argv[argv.index("-v") + 1] == "tr"
+    assert "tr_TR" not in argv
+
+
+def test_the_two_personas_do_not_sound_the_same(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """espeak-ng has no model per character, so the pitch carries them apart."""
+    pitches: list[str] = []
+
+    class Finished:
+        returncode = 0
+        stdout = b"RIFF....WAVEfmt "
+        stderr = b""
+
+    def record(argv: list[str], **_kwargs: object) -> Finished:
+        pitches.append(argv[argv.index("-p") + 1])
+        return Finished()
+
+    monkeypatch.setattr(synth_module.subprocess, "run", record)
+    monkeypatch.setattr(EspeakSynth, "available", lambda _self: True)
+
+    for persona in ("zio", "sio"):
+        EspeakSynth().render(
+            "Merhaba.",
+            VoiceSpec(persona=persona, locale="tr", profile_id=f"stock:{persona}:tr"),
+            tmp_path / f"{persona}.wav",
+        )
+
+    assert pitches[0] != pitches[1]
+
+
+def test_espeak_writing_nothing_is_a_synth_error_not_an_empty_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """An empty WAV plays as success. The chain has to see the failure."""
+
+    class Finished:
+        returncode = 0
+        stdout = b""
+        stderr = b""
+
+    monkeypatch.setattr(synth_module.subprocess, "run", lambda *_a, **_k: Finished())
+    monkeypatch.setattr(EspeakSynth, "available", lambda _self: True)
+
+    with pytest.raises(SynthError, match="no audio"):
+        EspeakSynth().render(
+            "Merhaba.",
+            VoiceSpec(persona="zio", locale="tr", profile_id="stock:zio:tr"),
+            tmp_path / "out.wav",
+        )
+

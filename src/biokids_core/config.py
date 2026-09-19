@@ -98,6 +98,9 @@ class VoiceConfig:
     queue_depth: int = 3
     duck_percent: int = 30
     piper_binary: str = "piper"
+    espeak_binary: str = "espeak-ng"
+    """The fallback engine, tried when Piper is absent. It usually is: piper-tts
+    is not in Debian 13 and the last Turkish Piper voice is CC-BY-NC-SA."""
     quiet_hours: str = ""
     """Empty means never quiet. Otherwise a window like "21:00-08:00"."""
 

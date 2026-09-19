@@ -95,6 +95,10 @@ cache_max_mb = 200
 queue_depth = 3
 duck_percent = 30
 piper_binary = "piper"
+# The fallback engine, used whenever Piper is absent - which on a stock Debian
+# 13 machine it is: piper-tts is not in the archive and the one remaining
+# Turkish Piper voice is CC-BY-NC-SA. See assets/voices/LICENSES.md.
+espeak_binary = "espeak-ng"
 quiet_hours = ""
 
 # --- ai ----------------------------------------------------------------------

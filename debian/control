@@ -168,7 +168,8 @@ Depends: biokids-core (= ${binary:Version}),
          pipewire,
          ${misc:Depends},
          ${python3:Depends}
-Recommends: piper-tts
+Recommends: espeak-ng
+Suggests: mbrola-tr1, mbrola-tr2
 Description: parental controls for Debian - Zio and Sio, the voice companions
  Zio and Sio are the two characters who tell a child what is happening: ten
  minutes left, five minutes left, one minute left, time to stop. A spoken
@@ -176,10 +177,17 @@ Description: parental controls for Debian - Zio and Sio, the voice companions
  and what they say always appears as text on screen as well, so a child who
  is not listening still sees it.
  .
- Speech is produced on the machine itself with Piper. Nothing is recorded,
- nothing is uploaded and no microphone is ever opened. If Piper is not
- installed, the warnings appear as on-screen cards instead of being spoken:
- the recommended piper-tts package is what turns the sound on.
+ Speech is produced on the machine itself. Nothing is recorded, nothing is
+ uploaded and no microphone is ever opened. espeak-ng is what speaks by
+ default: it is in Debian, it needs no model file and no download, and it
+ speaks Turkish. It also sounds like a 1990s robot, which is the honest trade
+ against a child being shown a card they may not be able to read yet.
+ .
+ Piper sounds far better and is used instead whenever it is installed, but it
+ is not in Debian and its remaining Turkish voice may not be redistributed, so
+ it cannot be the default. mbrola-tr1 and mbrola-tr2 improve espeak-ng's
+ Turkish considerably and are suggested rather than recommended because they
+ are in non-free.
  .
  The service runs inside the child's session with no privileges, and ducks
  whatever else is playing to thirty percent while it speaks.

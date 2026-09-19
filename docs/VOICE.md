@@ -26,18 +26,32 @@ in their actual mother's voice is a different experience from hearing a robot.
 ```
 line text (i18n)
      │
-     ├── Piper  (tr_TR / en_US, ONNX, CPU, offline)      ← always available
+     ├── Piper  (tr_TR / en_US, ONNX, CPU, offline)      ← best, rarely present
      │        │
      │        └── OpenVoice V2 tone-color conversion      ← only if a cloned profile exists
+     │
+     ├── espeak-ng  (tr, in Debian main, offline)        ← the default in practice
      │
      └── ElevenLabs API                                    ← optional, opt-in, cloud
 ```
 
+> **Corrected 2026-09-20.** This diagram called Piper "always available". It is
+> not available at all on a stock Debian 13 machine: `piper-tts` is not in the
+> archive, and the one Turkish voice left in the Piper catalogue is licensed
+> CC-BY-NC-SA, so BioKids may not ship it either. See
+> `assets/voices/LICENSES.md` for what the catalogue actually contains and
+> D-137 for the decision. espeak-ng is what speaks by default.
+
 ### Why this stack
 
 - **Piper** is MIT, fully offline, CPU-only, real-time on weak hardware, and has decent
-  Turkish voices. It is the default and the permanent fallback. If everything else
-  fails, Piper still speaks.
+  Turkish voices. It is the best engine here and it is used whenever it is installed —
+  but it is not in Debian and it cannot be the thing a family relies on arriving.
+- **espeak-ng** is the permanent fallback, and on most machines the only engine present.
+  GPL-3+, in Debian main, speaks Turkish, carries its voices inside the package, needs
+  no model file and no network. It sounds like a 1990s robot. That is the honest trade
+  against a four-year-old being shown a card they cannot read yet. `mbrola-tr1` and
+  `mbrola-tr2` improve it considerably and are a `Suggests`, because they are non-free.
 - **OpenVoice V2** is **MIT** and performs timbre conversion on existing TTS audio, so
   it layers onto Piper cleanly and inherits Piper's Turkish.
 - **XTTS-v2 is deliberately not used.** It is the obvious choice for cloning and it
@@ -60,15 +74,21 @@ Two per language ship with the package:
 
 | Persona | Locale | Source |
 |---|---|---|
-| Zio | tr_TR | a female Turkish voice from the Piper catalog |
-| Sio | tr_TR | a male Turkish voice from the Piper catalog |
-| Zio | en_US | a female English voice |
-| Sio | en_US | a male English voice |
+| Zio | tr_TR | espeak-ng `-v tr` at a higher pitch; a Piper voice when one is installed |
+| Sio | tr_TR | espeak-ng `-v tr` at a lower pitch; a Piper voice when one is installed |
+| Zio | en_US | as above, `-v en` |
+| Sio | en_US | as above, `-v en` |
+
+Pitch rather than two models, because espeak-ng has one Turkish voice and no
+per-character models. It is crude, and it is enough: the character card names who is
+speaking, and the audio only has to sound like a different person.
 
 **Check each voice's license before bundling.** Piper's catalog aggregates datasets
 with different terms; some are not redistributable. Record the chosen voice, its
-dataset, and its license in `assets/voices/LICENSES.md`. If a Turkish voice cannot be
-redistributed, download it at first run instead of bundling it.
+dataset, and its license in `assets/voices/LICENSES.md`. **This was done, and the
+answer was no** — both Turkish alternatives to the CC-BY-NC-SA one were withdrawn from
+the catalogue at their contributors' request. Nothing is bundled, and nothing is
+downloaded at first run either: espeak-ng is already there.
 
 ---
 
@@ -139,8 +159,11 @@ Default is `alternate`, so the child hears both.
 - **Cache aggressively.** Key on `sha256(text + persona + voice_profile_id)`, store WAV
   in `/var/lib/biokids/voice-cache/`, LRU capped at 200 MB. Most lines are identical
   every day; after the first day almost nothing is synthesised live.
-- **Fallback chain:** cloned → stock Piper → on-screen banner only. Never silent failure
-  with no visual.
+- **Fallback chain:** cloned → stock Piper → espeak-ng → on-screen banner only. Never
+  silent failure with no visual. Each engine caches into its own directory, because the
+  cache key names the sentence and the voice and never the engine — one shared directory
+  would leave a family who installed Piper on Tuesday hearing Monday's robot for every
+  line they had already heard.
 
 ---
 
