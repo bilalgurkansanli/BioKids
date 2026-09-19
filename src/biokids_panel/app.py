@@ -25,6 +25,7 @@ import json
 import logging
 from collections.abc import AsyncIterator, Iterator
 from typing import Annotated, Any
+from urllib.parse import quote
 
 from fastapi import Depends, FastAPI, Form, Query, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
@@ -135,7 +136,7 @@ def _guard(
     if _needs_setup(session):
         return see_other("/wizard/1")
     if not state.authenticated:
-        nxt = request.url.path
+        nxt = quote(auth.safe_next(request.url.path), safe="/")
         return see_other(f"/login?next={nxt}")
     return None
 
@@ -236,7 +237,7 @@ def register_routes(app: FastAPI) -> None:
                 ),
                 lockout_minutes=result.lockout_minutes,
             )
-        response = see_other(next if next.startswith("/") else "/today")
+        response = see_other(auth.safe_next(next))
         _set_session_cookie(response, result.token, ctx.config)
         return response
 

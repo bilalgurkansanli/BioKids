@@ -371,3 +371,38 @@ def test_guessing_in_parallel_does_not_buy_extra_attempts(
             if row.action in {"login_failed", "login_locked"}
         ]
     assert len(locked) == attempts, "each guess is counted once and audited once"
+
+
+# ------------------------------------------------------------ the login redirect
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        "//evil.example.com/",
+        "/" + chr(92) + "evil.example.com/",
+        "https://evil.example.com/",
+        "//evil.example.com/login?next=/today",
+        "http:/evil.example.com",
+        "/today\r\nSet-Cookie: x=1",
+        "",
+        "today",
+    ],
+)
+def test_the_login_redirect_does_not_leave_the_panel(target: str) -> None:
+    """`startswith("/")` is not enough, and this is how that check fails.
+
+    `//evil.example.com/` starts with a slash, and the browser reads a
+    protocol-relative URL and leaves the site. What lands is a page with
+    "BioKids" in the history and a login form that is not ours, for a product
+    whose entire job is guarding one PIN.
+    """
+    assert auth.safe_next(target) == "/today"
+
+
+@pytest.mark.parametrize(
+    "target",
+    ["/today", "/children/1/time", "/audit?action=login_ok", "/settings"],
+)
+def test_the_login_redirect_still_returns_a_parent_to_where_they_were(target: str) -> None:
+    assert auth.safe_next(target) == target

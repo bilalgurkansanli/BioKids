@@ -338,3 +338,27 @@ def csrf_ok(state: AuthState, presented: str | None) -> bool:
     if not expected:
         return False
     return bool(presented) and security.constant_time_equals(expected, presented or "")
+
+
+def safe_next(target: str, fallback: str = "/today") -> str:
+    r"""Where `?next=` may actually send a parent after signing in.
+
+    `target.startswith("/")` is not enough, and this is the classic way that
+    check fails: `//evil.example.com/` starts with a slash, and a browser reads
+    a protocol-relative URL and leaves the site. `/\evil.example.com` is treated
+    the same way by several browsers, and a backslash survives most naive
+    filters. A tab that says "BioKids" in the history and a login form that is
+    not ours is exactly the shape of a phishing page for a product whose whole
+    job is guarding one PIN.
+
+    So: one leading slash, no second slash or backslash after it, no scheme, no
+    control characters. Anything else goes to the fallback rather than being
+    repaired - a redirect we do not fully understand is not one to follow.
+    """
+    if not target or not target.startswith("/"):
+        return fallback
+    if target.startswith(("//", "/\\")):
+        return fallback
+    if any(ch in target for ch in "\r\n\t\0") or ":" in target.split("/")[1][:16]:
+        return fallback
+    return target
