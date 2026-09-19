@@ -1,0 +1,11 @@
+# BioKids ships to Linux. Everything in the tree is LF, whatever the checkout
+# host is — a maintainer script or a systemd unit with CRLF endings simply does
+# not work, and the project is developed from a Windows host.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.woff2 binary
+*.onnx binary
+*.wav binary
+*.mo binary
