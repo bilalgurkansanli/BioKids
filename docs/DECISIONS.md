@@ -722,3 +722,31 @@ twice, with `--stdin` for scripts. `dev/check_i18n.py` grew an AST walk over `re
 call sites at the same time: twelve audited actions had no `audit.action.*` string, and
 gettext returns the key unchanged, so the one screen whose whole job is to be readable
 was printing `passphrase_failed` and `access_requested` at a Turkish-speaking parent.
+**D-132 [claude] Earned time lands in the general allowance when there is no Games
+limit to raise.** D-45 puts earned minutes into Oyun: learning buys game time. Read
+literally, `earn_spendable_general = false` means "raise the Games ceiling" — and
+nothing in the product writes a Games ceiling. `CategoryLimit` is a table with no
+writer, per-category limits are D-44 and not Phase 0, and `earn_spendable_general` has
+no writer either. So in every configuration a family could actually produce, both
+branches were unreachable: the child did their homework, the daemon congratulated them,
+the panel showed the minutes, and their remaining time did not move by one second.
+
+Raising an unlimited ceiling is a no-op, so the only place those minutes can go is the
+day's allowance. This is not a departure from D-45; it is what D-45 means in a
+configuration it did not consider. The parent's setting still decides when there *is* a
+Games limit, and `earned_lands_in_general()` is written as one condition and its
+negation so that the minutes can never be counted in both places or neither.
+
+The earn controls stay on the child's time screen even though TASKS-PHASE0 puts rewards
+outside Phase 0, because they now do what they say. A control that does nothing is the
+bug this entry is about.
+
+**D-133 [claude] Warnings are re-armed on every tick, not only on a grant.**
+`rearm_warnings` was called from the grant path alone, so only "+10 dk" could bring the
+warnings back. Any of half a dozen other things put the end of the day back — the quota
+edited on the settings screen, a window widened, a break ending, a policy reload — and
+all of them left `warned` full. A parent who raised a 20-minute day to 60 gave their
+child forty more minutes that ran out in complete silence, ending in a shutdown with no
+warning at all. Re-arming every tick makes the warning set a function of the current
+remaining time rather than of how it got there. The ledger only marks the child dirty
+when the set actually changes, so the cost is a set comparison.

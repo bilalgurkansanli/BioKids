@@ -206,15 +206,34 @@ def evaluate(
 # --------------------------------------------------------------------- helpers
 
 
+def earned_lands_in_general(policy: ChildPolicy) -> bool:
+    """Whether earned minutes raise the day's allowance rather than the Games cap.
+
+    D-45 puts earned time into Oyun: learning buys game time. That needs a Games
+    limit to raise. When there is no limit on Games - which is every
+    installation until per-category limits ship (D-44), and any family that
+    simply never set one - "raise the Games ceiling" means adding minutes to an
+    allowance that was already unlimited, so the child earns nothing at all
+    while being congratulated for it.
+
+    So: the parent's setting decides when there is a Games limit to honour, and
+    when there is not, the only place the minutes can go is the general
+    allowance. This is not a departure from D-45; it is what D-45 means in a
+    configuration it did not consider.
+    """
+    if not policy.earn_enabled:
+        return False
+    return policy.earn_spendable_general or Category.GAMES not in policy.category_limits_min
+
+
 def general_allowance_seconds(policy: ChildPolicy, state: LedgerState) -> int:
     """Today's total screen-time allowance in seconds.
 
     The quota for this kind of day, plus whatever the parent granted by hand,
-    plus earned minutes when the parent made them spendable generally (D-45).
-    Earned minutes otherwise raise the Games ceiling instead.
+    plus earned minutes when they land here rather than in Games (D-45).
     """
     base = policy.quota_minutes(state.day) * 60 + state.granted_s
-    if policy.earn_enabled and policy.earn_spendable_general:
+    if earned_lands_in_general(policy):
         base += min(state.earned_s, policy.earn_cap_min * 60)
     return base
 
@@ -253,8 +272,9 @@ def _category_allowance_seconds(policy: ChildPolicy, state: LedgerState, cat: Ca
     if limit is None:
         return _UNLIMITED
     allowance = limit * 60
-    # Earned minutes land in Games unless the parent made them general (D-45).
-    if policy.earn_enabled and not policy.earn_spendable_general and cat is Category.GAMES:
+    # Earned minutes land in Games unless they went to the general allowance
+    # instead (D-45). Exactly one of the two, never both and never neither.
+    if cat is Category.GAMES and policy.earn_enabled and not earned_lands_in_general(policy):
         allowance += min(state.earned_s, policy.earn_cap_min * 60)
     return allowance
 

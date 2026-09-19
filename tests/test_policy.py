@@ -13,7 +13,12 @@ import datetime as dt
 
 import pytest
 
-from biokids_core.policy import evaluate, general_allowance_seconds, remaining_seconds
+from biokids_core.policy import (
+    _category_remaining,
+    evaluate,
+    general_allowance_seconds,
+    remaining_seconds,
+)
 from biokids_core.types import (
     Action,
     ActivityContext,
@@ -362,10 +367,61 @@ def test_a_warning_fires_on_the_window_closing_too() -> None:
 # -------------------------------------------------------------- earned time
 
 
-def test_earned_minutes_do_not_extend_the_general_quota_by_default() -> None:
-    """D-45: earned time is spendable in Games unless the parent says otherwise."""
+def test_earned_minutes_are_spendable_somewhere() -> None:
+    """The bug this replaces: earned time bought nothing, in every configuration.
+
+    D-45 puts earned minutes into Oyun, and the old rule read that literally -
+    `earn_spendable_general` false meant "raise the Games ceiling". But nothing
+    in the product ever writes a Games limit (`CategoryLimit` has no writer, and
+    per-category limits are D-44, not Phase 0), so there was no ceiling to
+    raise; and nothing ever writes `earn_spendable_general` either, so the other
+    branch was unreachable too.
+
+    The result, in every installation a parent could actually produce: the child
+    does their homework, the daemon congratulates them, the panel shows the
+    minutes, and their remaining time does not move by one second.
+    """
     policy = make_policy(earn_enabled=True, earn_spendable_general=False)
+    assert policy.category_limits_min == {}, "the configuration every family has"
+
+    allowance = general_allowance_seconds(policy, state(earned_s=30 * 60))
+
+    assert allowance == 90 * 60, "thirty earned minutes have to be worth thirty minutes"
+
+
+def test_earned_minutes_go_to_games_when_there_is_a_games_limit_to_raise() -> None:
+    """With a limit set, D-45 applies as written and the general quota is untouched."""
+    policy = make_policy(
+        earn_enabled=True,
+        earn_spendable_general=False,
+        category_limits_min={Category.GAMES: 20},
+    )
     assert general_allowance_seconds(policy, state(earned_s=30 * 60)) == 60 * 60
+
+
+def test_earned_minutes_are_never_counted_in_both_places() -> None:
+    """Thirty earned minutes are thirty minutes, not sixty.
+
+    The two branches are written as one condition and its negation so this
+    cannot drift, and this is the test that says why that matters.
+    """
+    limited = make_policy(
+        earn_enabled=True,
+        earn_spendable_general=True,
+        category_limits_min={Category.GAMES: 20},
+    )
+    earned = state(earned_s=30 * 60)
+
+    assert general_allowance_seconds(limited, earned) == 90 * 60
+    games_left = _category_remaining(limited, earned, Category.GAMES)
+    assert games_left == 20 * 60, "the same minutes were added to Games as well"
+
+
+def test_earning_switched_off_adds_nothing_anywhere() -> None:
+    policy = make_policy(earn_enabled=False, category_limits_min={Category.GAMES: 20})
+    earned = state(earned_s=30 * 60)
+    assert general_allowance_seconds(policy, earned) == 60 * 60
+    assert _category_remaining(policy, earned, Category.GAMES) == 20 * 60
 
 
 def test_earned_minutes_extend_the_general_quota_when_the_parent_says_so() -> None:

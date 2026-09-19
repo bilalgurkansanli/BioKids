@@ -40,6 +40,7 @@ from biokids_core.types import (
     Decision,
     EndAction,
     Reason,
+    SpeechRequest,
 )
 from biokids_daemon.bus import EventBus
 from biokids_daemon.enforcer import Enforcer
@@ -65,6 +66,11 @@ ACTIVITY_TTL_SECONDS = 90
 """How long a focus report from the shell is trusted. Past this the child is
 treated as having nothing in particular on screen, which is the conservative
 reading: category limits stop applying, the general quota does not."""
+
+EARN_SPEECH_INTERVAL = 300
+"""How rarely the earning celebration may fire - banner and spoken line
+together. Interrupting a child every ten seconds to praise them for earning zero
+minutes is how a reward becomes a nuisance, and D-45 asks for a small one."""
 
 
 @dataclass
@@ -103,6 +109,13 @@ class ChildRuntime:
     paused_reason: str = ""
     """The break or timeout currently in force, so the child's applications are
     stopped once on the way in rather than on every tick."""
+
+    earned_pending_s: int = 0
+    """Earned seconds not yet announced. A tick's payout is ten seconds at the
+    default ratio, and `10 // 60` is the zero the child was congratulated for."""
+    earned_announced_at: float = 0.0
+    """When the last celebration went out, in BOOTTIME seconds. Zero means never,
+    which is why the first one is never throttled."""
 
     def activity_fresh(self, now_boot: float) -> bool:
         return (
@@ -267,7 +280,7 @@ class Supervisor:
                     payload={"gap_seconds": result.gap_seconds},
                 )
             if result.earned_seconds:
-                self._on_earned(runtime, result.earned_seconds)
+                self._on_earned(runtime, result.earned_seconds, reading.boot)
             if result.break_started:
                 self.bus.publish(EventKind.BREAK_STARTED, child_id=runtime.child_id)
             if result.break_finished:
@@ -276,18 +289,34 @@ class Supervisor:
                 self.bus.publish(EventKind.TIMEOUT_FINISHED, child_id=runtime.child_id)
 
             state = result.state or self.ledger.state(runtime.child_id, result.day)
+            # The same freshness test the ledger got. Without it the two
+            # disagree: the ledger stops charging a category the child has left
+            # while the engine keeps applying its limit, so `remaining_seconds`
+            # stays pinned to an app that was closed twenty minutes ago.
+            fresh = runtime.activity_fresh(reading.boot)
             decision = evaluate(
                 runtime.policy,
                 state,
                 ActivityContext(
-                    app_slug=runtime.app_slug or None,
-                    category=runtime.category,
+                    app_slug=(runtime.app_slug or None) if fresh else None,
+                    category=runtime.category if fresh else None,
                     app_allowed=True,
                     session_active=seen.active,
                 ),
                 reading.wall,
             )
             decisions.append(decision)
+
+            # Re-armed every tick rather than only when a parent presses
+            # "+10 dk". Any of half a dozen things can put the end of the day
+            # back - the quota edited on the settings screen, a window widened,
+            # a break ending, the policy reloaded - and all of them used to
+            # leave `warned` full, so the extra time ran out in silence and the
+            # machine shut down with no warning at all. The set is cheap and the
+            # ledger only marks the child dirty when it actually changes.
+            self.ledger.rearm_warnings(
+                runtime.child_id, result.day, decision.remaining_seconds
+            )
             await self._act(runtime, seen, decision, result.day, reading.boot)
             self._publish_tick(runtime, seen, decision, state)
             runtime.last_decision = decision
@@ -543,29 +572,68 @@ class Supervisor:
             return
         await self.enforcer.lock_sessions(targets)
 
-    def _on_earned(self, runtime: ChildRuntime, seconds: int) -> None:
-        minutes = seconds // 60
+    def _on_earned(self, runtime: ChildRuntime, seconds: int, now_boot: float) -> None:
+        """Celebrate earned minutes - once they are minutes, and not every tick.
+
+        `seconds` is this tick's payout. The first one clears the streak
+        threshold and is worth ten minutes; every one after it is a single tick,
+        ten seconds at the default ratio, and `10 // 60` is zero. So the child
+        was congratulated for earning zero minutes, every ten seconds, for the
+        length of their homework - spoken aloud, and drawn across their screen
+        as a banner, because `shell.js` renders the same event.
+
+        The payouts therefore accumulate and are announced in whole minutes, no
+        more often than EARN_SPEECH_INTERVAL, as one celebration: banner and
+        voice together. D-45 asks for "a small celebration", and something that
+        interrupts a child every ten seconds to praise them for nothing is not
+        small, and stops reading as praise.
+        """
+        runtime.earned_pending_s += seconds
+        minutes = runtime.earned_pending_s // 60
+        if minutes < 1:
+            return
+        # `earned_announced_at` is zero until the first celebration, and the
+        # first one must not be swallowed by the interval: it is the ten-minute
+        # payout that clears the streak threshold, and it is the one the child
+        # is actually waiting for.
+        since = now_boot - runtime.earned_announced_at
+        if runtime.earned_announced_at and since < EARN_SPEECH_INTERVAL:
+            return
+        runtime.earned_pending_s -= minutes * 60
+        runtime.earned_announced_at = now_boot
+
+        # The banner, which the child sees whether or not the voice is on: a
+        # parent turning off the sound is not turning off the reward.
         self.bus.publish(
-            EventKind.EARNED, child_id=runtime.child_id, seconds=seconds, minutes=minutes
-        )
-        self.bus.publish(
-            EventKind.SPEAK,
+            EventKind.EARNED,
             child_id=runtime.child_id,
-            event="earned",
-            locale=runtime.locale,
-            vars={"name": runtime.display_name, "minutes": minutes},
-            priority="normal",
-            expression="happy",
+            seconds=minutes * 60,
+            minutes=minutes,
+        )
+        self._speak(
+            runtime,
+            SpeechRequest(
+                event="earned",
+                vars={"name": runtime.display_name, "minutes": minutes},
+                priority="normal",
+                expression="happy",
+            ),
         )
 
     def _publish_speech(self, runtime: ChildRuntime, decision: Decision) -> None:
         """Ask for a line. The daemon never speaks; the shell relays to the voice
         service, which runs inside the child's session where the audio is."""
-        speak = decision.speak
-        if speak is None:
-            return
-        policy = runtime.policy
-        if policy is not None and not self.config.voice.enabled:
+        if decision.speak is not None:
+            self._speak(runtime, decision.speak)
+
+    def _speak(self, runtime: ChildRuntime, speak: SpeechRequest) -> None:
+        """The one place a spoken line leaves the daemon.
+
+        Every line goes through here so that `voice.enabled` means what it says.
+        The earning celebration used to publish SPEAK for itself and was
+        therefore the single line a parent could not turn off.
+        """
+        if not self.config.voice.enabled:
             return
         self.bus.publish(
             EventKind.SPEAK,
@@ -748,6 +816,11 @@ class Supervisor:
             "action": decision.action.value,
             "reason_code": decision.reason_code,
             "idle": presence.idle,
+            # Which of the three end actions is configured (D-43). The launcher
+            # cannot read the policy - the database is 0600 root - so without
+            # this its time-up screen told every child the computer was about to
+            # shut down, including the two cases where it was not.
+            "end_action": policy.end_action.value if policy else "",
             "countdown_seconds": self._countdown_remaining(
                 runtime, day, reading.boot, reading.boot_id
             ),

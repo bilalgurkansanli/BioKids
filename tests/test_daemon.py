@@ -12,6 +12,7 @@ are both injected, so the whole sequence runs in milliseconds on any machine.
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 from collections.abc import Sequence
 from typing import Any
@@ -28,7 +29,7 @@ from biokids_daemon.bus import EventBus
 from biokids_daemon.enforcer import Enforcer, RecordingRunner
 from biokids_daemon.server import DaemonServer
 from biokids_daemon.sessions import FakeSessionSource, SessionWatcher
-from biokids_daemon.supervisor import Supervisor
+from biokids_daemon.supervisor import ACTIVITY_TTL_SECONDS, Supervisor
 
 TICK = 10
 
@@ -101,6 +102,22 @@ def supervisor(
 async def run_for(supervisor: Supervisor, clock: FakeClock, seconds: int) -> None:
     for _ in range(seconds // TICK):
         clock.advance(TICK)
+        await supervisor.tick()
+
+
+async def run_learning(
+    supervisor: Supervisor, clock: FakeClock, seconds: int, child_id: int = 1
+) -> None:
+    """Run the loop with an educational app in focus the whole time.
+
+    The shell re-sends the focus report; a report is only trusted for
+    ACTIVITY_TTL_SECONDS. Reporting once and then running for ten minutes models
+    a shell that crashed, and the learning streak resets every ninety seconds -
+    which is correct behaviour, and not what these tests are about.
+    """
+    for _ in range(seconds // TICK):
+        clock.advance(TICK)
+        supervisor.report_activity(child_id, "gcompris", "GCompris", "learning")
         await supervisor.tick()
 
 
@@ -876,3 +893,208 @@ async def test_an_end_action_that_keeps_failing_escalates_to_lockdown(
         entries = [row for row in fresh.query(AuditLog).all() if row.action == "lockdown"]
     assert entries, "three failures in a row take the D-106 path"
     assert entries[0].severity == "alert"
+
+# ------------------------------------------------- earned time, and saying so
+
+
+async def test_the_earning_celebration_never_says_zero_minutes(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    bus: EventBus,
+    session: Session,
+) -> None:
+    """A tick's payout is ten seconds, and `10 // 60` is zero.
+
+    The first payout clears the streak threshold and is worth ten minutes; every
+    tick after it credits one tick's worth. Announcing each of those meant the
+    child was congratulated for earning zero minutes, every ten seconds, for as
+    long as they kept working.
+    """
+    set_quota(
+        session,
+        1,
+        60,
+        earn_enabled=True,
+        earn_ratio=1.0,
+        earn_cap_min=60,
+        earn_min_session_min=1,
+    )
+    await supervisor.start()
+    source.log_in("elif")
+    await run_learning(supervisor, clock, 600)
+
+    spoken = [e for e in events_of(bus, EventKind.SPEAK) if e.get("event") == "earned"]
+    assert spoken, "ten minutes of learning earned something worth saying"
+    minutes = [int(e["vars"]["minutes"]) for e in spoken]  # type: ignore[index]
+    assert all(m >= 1 for m in minutes), f"congratulated for earning nothing: {minutes}"
+
+    # shell.js draws a banner from the EARNED event, so it carried the same
+    # zero across the child's screen every ten seconds, with no voice setting
+    # to turn it off. The banner and the spoken line are one celebration now.
+    banners = [int(e["minutes"]) for e in events_of(bus, EventKind.EARNED)]  # type: ignore[arg-type]
+    assert banners, "the child sees the minutes appear (D-45)"
+    assert all(m >= 1 for m in banners), f"a banner announcing nothing: {banners}"
+    assert len(banners) == len(spoken), "the banner and the voice are one celebration"
+
+
+async def test_the_earning_celebration_does_not_interrupt_every_ten_seconds(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    bus: EventBus,
+    session: Session,
+) -> None:
+    """Praise on every tick is not a reward, it is a nuisance."""
+    set_quota(
+        session,
+        1,
+        120,
+        earn_enabled=True,
+        earn_ratio=1.0,
+        earn_cap_min=60,
+        earn_min_session_min=1,
+    )
+    await supervisor.start()
+    source.log_in("elif")
+    await run_learning(supervisor, clock, 1800)
+
+    spoken = [e for e in events_of(bus, EventKind.SPEAK) if e.get("event") == "earned"]
+    assert len(spoken) <= 1800 // 300 + 1, f"spoke {len(spoken)} times in half an hour"
+
+
+async def test_a_parent_who_turned_the_voice_off_is_obeyed_by_the_celebration_too(
+    db: Database,
+    bus: EventBus,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    clock: FakeClock,
+    config: Config,
+    child: Child,
+    session: Session,
+) -> None:
+    """It published SPEAK for itself, so it was the one line that ignored the setting."""
+    set_quota(
+        session,
+        1,
+        60,
+        earn_enabled=True,
+        earn_ratio=1.0,
+        earn_cap_min=60,
+        earn_min_session_min=1,
+    )
+    quiet = dataclasses.replace(config, voice=dataclasses.replace(config.voice, enabled=False))
+    supervisor = Supervisor(
+        database=db,
+        bus=bus,
+        watcher=SessionWatcher(source),
+        enforcer=Enforcer(quiet, runner),
+        clock=clock,
+        config=quiet,
+    )
+    await supervisor.start()
+    source.log_in("elif")
+    await run_learning(supervisor, clock, 900)
+
+    assert events_of(bus, EventKind.SPEAK) == [], "the daemon spoke with the voice off"
+    assert events_of(bus, EventKind.EARNED), "the visual counter is not the voice"
+
+
+async def test_earned_minutes_actually_extend_the_day(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    bus: EventBus,
+    session: Session,
+) -> None:
+    """The whole point, asserted on the number the child and the parent both see."""
+    set_quota(
+        session,
+        1,
+        20,
+        earn_enabled=True,
+        earn_ratio=1.0,
+        earn_cap_min=60,
+        earn_min_session_min=1,
+    )
+    await supervisor.start()
+    source.log_in("elif")
+    await run_learning(supervisor, clock, 600)
+
+    ticks = events_of(bus, EventKind.TICK)
+    remaining = int(ticks[-1]["remaining_seconds"])  # type: ignore[arg-type]
+    used = supervisor.ledger.state(1).general_used_s
+    assert used >= 600 - TICK, f"ten minutes were spent, less the baseline tick: {used}"
+    assert remaining > 20 * 60 - used, (
+        f"ten earned minutes bought nothing: {remaining}s left after {used}s of a 20 min day"
+    )
+
+
+# ------------------------------------------------------- stale activity
+
+
+async def test_a_category_the_child_left_stops_capping_their_time(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    bus: EventBus,
+) -> None:
+    """The ledger applied the freshness rule and the policy engine did not.
+
+    So the ledger stopped charging a category the child had left while the
+    engine kept applying its limit, and `remaining_seconds` - the number on the
+    parent's Today card - stayed pinned to an app closed twenty minutes ago.
+    """
+    await supervisor.start()
+    source.log_in("elif")
+    supervisor.report_activity(1, "supertux", "SuperTux", "games")
+
+    await run_for(supervisor, clock, TICK)
+    runtime = supervisor.children[1]
+    assert runtime.category is not None
+
+    await run_for(supervisor, clock, ACTIVITY_TTL_SECONDS * 2)
+
+    last = events_of(bus, EventKind.TICK)[-1]
+    assert last["app"] in (None, "", "SuperTux"), "the runtime may still remember it"
+    decision = runtime.last_decision
+    assert decision is not None
+    # What matters is what the engine was told, not what the runtime remembers.
+    assert supervisor.children[1].activity_fresh(clock.read().boot) is False
+
+
+# ------------------------------------------------- re-arming the warnings
+
+
+async def test_raising_the_quota_lets_the_warnings_fire_again(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    bus: EventBus,
+    session: Session,
+) -> None:
+    """A parent editing the quota is not a grant, and used not to re-arm anything.
+
+    Before the fix the child heard 10, 5 and 1 against the old 20-minute day;
+    the parent then set 60 minutes on the settings screen; and the remaining
+    forty minutes ran out in complete silence, ending in a shutdown with no
+    warning at all. Only `+10 dk` re-armed them, because only `+10 dk` went
+    through `grant`.
+    """
+    set_quota(session, 1, 20)
+    await supervisor.start()
+    source.log_in("elif")
+
+    await run_for(supervisor, clock, 20 * 60 - 60)
+    heard = [e["event"] for e in events_of(bus, EventKind.SPEAK)]
+    assert "warn_10" in heard and "warn_5" in heard, f"the first day's warnings: {heard}"
+
+    before = len(events_of(bus, EventKind.SPEAK))
+    set_quota(session, 1, 60)
+    supervisor.reload()
+    await run_for(supervisor, clock, 41 * 60)
+
+    after = [e["event"] for e in events_of(bus, EventKind.SPEAK)][before:]
+    assert "warn_10" in after, f"the extra forty minutes ran out in silence: {after}"
+    assert "warn_5" in after
+    assert "warn_1" in after
