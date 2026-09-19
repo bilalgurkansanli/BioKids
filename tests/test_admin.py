@@ -15,9 +15,12 @@ their own machine during an incident is its own kind of failure.
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import subprocess
+import sys
 from typing import Any
+from unittest import mock
 
 import pytest
 
@@ -212,6 +215,18 @@ def test_loginctl_being_absent_yields_no_sessions(monkeypatch: pytest.MonkeyPatc
 # ----------------------------------------------------------------- reset-pin
 
 
+def _reset(config: Config, pin: str) -> int:
+    """Run reset-pin with the PIN arriving on standard input.
+
+    A real pipe rather than a stubbed `read_new_pin`, so the reading half is
+    covered too: it stopped being a positional argument because on a family
+    machine `ps` and the shell history are readable by the child the PIN exists
+    to stop, and a test that patches the reader would not notice it regressing.
+    """
+    with mock.patch.object(sys, "stdin", io.StringIO(f"{pin}\n")):
+        return admin.cmd_reset_pin(argparse.Namespace(stdin=True), config)
+
+
 def test_reset_pin_sets_a_new_pin_and_clears_the_lockout(
     config: Config, db: Database, family_with_children: None
 ) -> None:
@@ -221,7 +236,7 @@ def test_reset_pin_sets_a_new_pin_and_clears_the_lockout(
         parent.pin_failures = 4
         parent.pin_lockout_level = 2
 
-    assert admin.cmd_reset_pin(argparse.Namespace(pin="551234"), config) == 0
+    assert _reset(config, "551234") == 0
 
     with db.session() as session:
         parent = repo.get_parent(session)
@@ -237,7 +252,7 @@ def test_reset_pin_sets_a_new_pin_and_clears_the_lockout(
 def test_reset_pin_refuses_a_guessable_pin(
     config: Config, db: Database, family_with_children: None
 ) -> None:
-    assert admin.cmd_reset_pin(argparse.Namespace(pin="111111"), config) == 2
+    assert _reset(config, "111111") == 2
     with db.session() as session:
         parent = repo.get_parent(session)
         assert parent is not None
@@ -247,9 +262,68 @@ def test_reset_pin_refuses_a_guessable_pin(
 def test_reset_pin_before_setup_says_so_rather_than_creating_a_parent(
     config: Config, db: Database
 ) -> None:
-    assert admin.cmd_reset_pin(argparse.Namespace(pin="551234"), config) == 1
+    assert _reset(config, "551234") == 1
     with db.session() as session:
         assert repo.get_parent(session) is None
+
+
+def test_reset_pin_does_not_take_the_pin_on_the_command_line(
+    config: Config, db: Database, family_with_children: None
+) -> None:
+    """`reset-pin 551234` must not be a thing a parent can type.
+
+    Every process table on the machine shows a command line, including the
+    child's session, and the shell writes it to history. The parser rejecting it
+    is the whole fix, so the parser is what is tested.
+    """
+    parser = admin.build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(["reset-pin", "551234"])
+
+    args = parser.parse_args(["reset-pin", "--stdin"])
+    assert args.stdin is True
+    assert not hasattr(args, "pin"), "no argv path for the PIN survives"
+
+
+def test_reset_pin_asks_twice_and_refuses_a_typo(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Typing it once is how a parent locks themselves out of their own machine."""
+    typed = iter(["551234", "551243"])
+    monkeypatch.setattr(admin.getpass, "getpass", lambda _prompt: next(typed))
+    with pytest.raises(ValueError, match="mismatch"):
+        admin.read_new_pin(False)
+
+
+def test_reset_pin_prompt_is_not_echoed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """It goes through getpass, not input(): a child may well be watching."""
+    monkeypatch.setattr(admin.getpass, "getpass", lambda _prompt: "551234")
+    monkeypatch.setattr(
+        "builtins.input", lambda *_a: pytest.fail("the PIN was echoed to the screen")
+    )
+    assert admin.read_new_pin(False) == "551234"
+
+
+# ------------------------------------------------------------ provision-child
+
+
+def test_provision_child_reports_a_missing_account_rather_than_pretending(
+    config: Config, db: Database, family_with_children: None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """--no-create on a machine with no such user is a failure, and says which.
+
+    The development host has no `adduser` and no password database, which is
+    exactly the shape of the failure this has to report honestly: the command
+    must not print "done" over a child who still cannot log in.
+    """
+    code = admin.cmd_provision_child(
+        argparse.Namespace(
+            unix_user="nobody-here", name="", no_create=True, overwrite=False
+        ),
+        config,
+    )
+    assert code == 1
+    captured = capsys.readouterr()
+    assert "nobody-here" in captured.err
+    assert "does not exist" in captured.err
 
 
 # --------------------------------------------------------------- sync-catalog
@@ -282,7 +356,7 @@ def test_sync_catalog_is_idempotent(
 def test_every_subcommand_is_reachable() -> None:
     parser = admin.build_parser()
     for command in ("lockdown", "status", "reset-pin", "sync-catalog", "version"):
-        args = parser.parse_args([command, "551234"] if command == "reset-pin" else [command])
+        args = parser.parse_args([command, "--stdin"] if command == "reset-pin" else [command])
         assert args.command == command
 
 

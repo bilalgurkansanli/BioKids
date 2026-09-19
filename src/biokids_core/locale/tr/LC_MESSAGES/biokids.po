@@ -598,6 +598,43 @@ msgstr "Günlük süre doldu"
 msgid "audit.action.warning_spoken"
 msgstr "Uyarı verildi"
 
+msgid "audit.action.access_requested"
+msgstr "Çocuk izin istedi"
+
+msgid "audit.action.break_ended"
+msgstr "Mola bitti"
+
+msgid "audit.action.child_provisioned"
+msgstr "Çocuk hesabı hazırlandı"
+
+msgid "audit.action.daemon_stopped"
+msgstr "BioKids servisi kapatıldı"
+
+msgid "audit.action.first_run_explained"
+msgstr "Çocuğa BioKids anlatıldı"
+
+msgid "audit.action.logout"
+msgstr "Panelden çıkıldı"
+
+msgid "audit.action.passphrase_failed"
+msgstr "Hatalı parola denemesi"
+
+msgid "audit.action.recovery_failed"
+msgstr "Hatalı kurtarma kodu"
+
+msgid "audit.action.remote_access_changed"
+msgstr "Uzaktan erişim ayarı değişti"
+
+msgid "audit.action.setup_passphrase_set"
+msgstr "Parola belirlendi"
+
+msgid "audit.action.timeout_cleared"
+msgstr "Ara verme kaldırıldı"
+
+msgid "audit.action.timeout_started"
+msgstr "Ara verildi"
+
+
 # --- kurulum sihirbazı ---
 
 msgid "wizard.title"

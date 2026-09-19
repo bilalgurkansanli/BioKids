@@ -574,6 +574,10 @@ def register_routes(app: FastAPI) -> None:
         # being typed must not be enough. Everything else here changes how much
         # time a child gets; this one stops BioKids managing them at all.
         turning_off = bool(before["enabled"]) and enabled != "on"
+        # The other half of the same transition. It was audited as an ordinary
+        # settings change, which buried it: a parent scanning the log for "when
+        # did supervision come back" found a line that looks like a quota edit.
+        turning_on = not before["enabled"] and enabled == "on"
         if turning_off and not state.passphrase_fresh():
             return render(
                 ctx,
@@ -624,7 +628,13 @@ def register_routes(app: FastAPI) -> None:
         repo.audit(
             session,
             actor=_actor(state),
-            action="protection_disabled" if turning_off else "policy_changed",
+            action=(
+                "protection_disabled"
+                if turning_off
+                else "protection_enabled"
+                if turning_on
+                else "policy_changed"
+            ),
             target=f"child:{child_id}",
             detail={"before": before, "after": after},
             severity="warning" if turning_off else "info",

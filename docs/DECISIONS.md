@@ -691,6 +691,7 @@ sequential version branches.
 `docs/*.md`.** A single giant file would be re-read in full every session and would
 still be skimmed. Keep `CLAUDE.md` under about 200 lines and push detail into `docs/`,
 with a pointer table telling Claude Code which doc to open for which task.
+
 **D-130 [claude] Adding a child provisions their Unix account; the packaging never does.**
 `create_child` wrote a row whose `unix_user` named an account that did not exist, and
 nothing put the child's XFCE configuration in a home directory. Both failures look
@@ -713,3 +714,11 @@ the request — a machine without `adduser` must still finish adding the child, 
 reason in the audit log. And nothing here ever removes a home directory: taking a child
 out of BioKids must not delete their drawings.
 
+**D-131 [claude] `biokids-admin reset-pin` reads the PIN, it does not take it.**
+It was a positional argument. Every process table on the machine shows a command line —
+including the child's session — and the shell writes it to history. On a family machine
+the other user is precisely the person the PIN exists to stop. Now `getpass`, asked
+twice, with `--stdin` for scripts. `dev/check_i18n.py` grew an AST walk over `repo.audit`
+call sites at the same time: twelve audited actions had no `audit.action.*` string, and
+gettext returns the key unchanged, so the one screen whose whole job is to be readable
+was printing `passphrase_failed` and `access_requested` at a Turkish-speaking parent.

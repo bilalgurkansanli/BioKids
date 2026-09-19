@@ -4,15 +4,27 @@
 Every message id present in one locale must be present in all of them, and no
 catalog may carry an empty translation. This is the guard behind T1.3: a missing
 Turkish string is a bug the same way a missing function is.
+
+It also checks the audit vocabulary, which parity alone cannot catch. The audit
+screen renders `_('audit.action.' ~ entry.action)` and gettext returns the key
+unchanged when nothing matches, so an action added in Python with no catalogue
+entry does not fail anywhere - it just prints its own slug. Twelve of them had
+accumulated that way, and a parent reading their family's history saw
+`passphrase_failed` and `access_requested` on the one screen whose whole job is
+to be readable.
 """
 
 from __future__ import annotations
 
+import ast
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 LOCALE_DIR = ROOT / "src" / "biokids_core" / "locale"
+SRC_DIR = ROOT / "src"
+
+AUDIT_CALLS = {"audit", "audit_now"}
 
 
 def parse_po(path: Path) -> dict[str, str]:
@@ -57,6 +69,47 @@ def _unquote(chunk: str) -> str:
     return chunk.replace('\\"', '"').replace("\\n", "\n").replace("\\\\", "\\")
 
 
+def audited_actions() -> set[str]:
+    """Every action literal passed to `repo.audit(...)`, read from the syntax tree.
+
+    An AST rather than a regex, because `action=` is also argparse's keyword:
+    a pattern loose enough to catch `action="protection_enabled" if ... else ...`
+    also catches `add_argument("--stdin", action="store_true")` and then demands
+    a Turkish sentence for `store_true`. Here the call is identified first and
+    the keyword read second, so only real audit entries are checked.
+
+    Both branches of a conditional are collected. An action assembled at runtime
+    is invisible to this, and should stay that way: an audited action that
+    cannot be read off the source cannot be translated ahead of time either.
+    """
+    found: set[str] = set()
+
+    def literals(node: ast.expr) -> set[str]:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return {node.value}
+        if isinstance(node, ast.IfExp):
+            return literals(node.body) | literals(node.orelse)
+        return set()
+
+    for path in sorted(SRC_DIR.rglob("*.py")):
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        except SyntaxError as exc:  # pragma: no cover - a broken file fails elsewhere
+            print(f"{path}: {exc}")
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+            if name not in AUDIT_CALLS:
+                continue
+            for keyword in node.keywords:
+                if keyword.arg == "action":
+                    found |= literals(keyword.value)
+    return found
+
+
 def main() -> int:
     catalogs: dict[str, dict[str, str]] = {}
     for po in sorted(LOCALE_DIR.glob("*/LC_MESSAGES/biokids.po")):
@@ -80,6 +133,14 @@ def main() -> int:
             if not value.strip():
                 problems.append(f"{locale}: empty translation for {key!r}")
 
+    actions = audited_actions()
+    for action in sorted(actions):
+        if f"audit.action.{action}" not in all_keys:
+            problems.append(
+                f"audit: {action!r} is written to the log but has no "
+                f"'audit.action.{action}' string, so the screen shows the slug"
+            )
+
     for problem in problems:
         print(problem)
 
@@ -89,6 +150,7 @@ def main() -> int:
         return 1
 
     print(f"i18n ok: {total} keys x {len(catalogs)} locales ({', '.join(sorted(catalogs))})")
+    print(f"audit ok: {len(actions)} audited actions, all with a translated name")
     return 0
 
 

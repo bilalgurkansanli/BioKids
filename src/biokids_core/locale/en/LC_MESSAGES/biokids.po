@@ -598,6 +598,43 @@ msgstr "Daily time used up"
 msgid "audit.action.warning_spoken"
 msgstr "Warning given"
 
+msgid "audit.action.access_requested"
+msgstr "The child asked for permission"
+
+msgid "audit.action.break_ended"
+msgstr "Break over"
+
+msgid "audit.action.child_provisioned"
+msgstr "Child account prepared"
+
+msgid "audit.action.daemon_stopped"
+msgstr "The BioKids service was stopped"
+
+msgid "audit.action.first_run_explained"
+msgstr "BioKids was explained to the child"
+
+msgid "audit.action.logout"
+msgstr "Signed out of the panel"
+
+msgid "audit.action.passphrase_failed"
+msgstr "Wrong passphrase attempt"
+
+msgid "audit.action.recovery_failed"
+msgstr "Wrong recovery code"
+
+msgid "audit.action.remote_access_changed"
+msgstr "Remote access setting changed"
+
+msgid "audit.action.setup_passphrase_set"
+msgstr "Passphrase set"
+
+msgid "audit.action.timeout_cleared"
+msgstr "Time out ended"
+
+msgid "audit.action.timeout_started"
+msgstr "Time out started"
+
+
 # --- setup wizard ---
 
 msgid "wizard.title"
