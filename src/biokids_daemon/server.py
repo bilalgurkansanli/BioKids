@@ -43,6 +43,22 @@ except ImportError:  # pragma: no cover - the Windows development host
 
 log = logging.getLogger(__name__)
 
+
+async def cancel_connections(tasks: set[asyncio.Task[None]]) -> None:
+    """Cancel every connection handler and wait for it to actually be gone.
+
+    Both socket servers use this. A handler that is cancelled but not awaited is
+    a handler that may still be running when the event loop closes, which is how
+    a clean shutdown turns into a traceback in the child's journal.
+    """
+    pending = [task for task in list(tasks) if not task.done()]
+    for task in pending:
+        task.cancel()
+    if pending:
+        await asyncio.gather(*pending, return_exceptions=True)
+    tasks.clear()
+
+
 Handler = Callable[[Request], Awaitable[Response]]
 
 
@@ -106,12 +122,20 @@ class DaemonServer:
             log.exception("could not set the group on %s", path)
 
     async def stop(self) -> None:
+        """Stop listening, drop the subscribers, then wait.
+
+        The order is load-bearing. Since CPython 3.12 `wait_closed()` waits for
+        every connection handler task as well as the listener, and a subscribed
+        panel parks in `_stream` until something cancels it - so cancelling
+        after the await meant cancelling code that was never reached, and the
+        daemon hung until systemd lost patience and killed it.
+        """
         if self._server is not None:
             self._server.close()
+        await cancel_connections(self._connections)
+        if self._server is not None:
             await self._server.wait_closed()
             self._server = None
-        for task in list(self._connections):
-            task.cancel()
         with contextlib.suppress(FileNotFoundError):
             self.socket_path.unlink()
 

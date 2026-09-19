@@ -12,24 +12,27 @@ are both injected, so the whole sequence runs in milliseconds on any machine.
 
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import datetime as dt
 from collections.abc import Sequence
 from typing import Any
 
 import pytest
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from biokids_core.clock import FakeClock
 from biokids_core.config import Config
 from biokids_core.db import AuditLog, Child, Database, Policy
 from biokids_core.ipc import EventKind, Op, Request, Response
+from biokids_core.ledger import TickInput
 from biokids_core.types import EndAction
 from biokids_daemon.bus import EventBus
 from biokids_daemon.enforcer import Enforcer, RecordingRunner
 from biokids_daemon.server import DaemonServer
 from biokids_daemon.sessions import FakeSessionSource, SessionWatcher
-from biokids_daemon.supervisor import ACTIVITY_TTL_SECONDS, Supervisor
+from biokids_daemon.supervisor import ACTIVITY_TTL_SECONDS, Supervisor, run_forever
 
 TICK = 10
 
@@ -1140,3 +1143,198 @@ async def test_saving_a_setting_does_not_restart_the_earning_celebration(
     await run_learning(supervisor, clock, 60)
     after = len(events_of(bus, EventKind.EARNED))
     assert after == before, f"reload made it celebrate again: {before} -> {after}"
+
+
+# ------------------------------------- whose machine is it, at the end of the day
+
+
+async def test_the_day_does_not_end_for_a_child_who_is_not_here(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    session: Session,
+) -> None:
+    """The mother logs in that evening and the machine shuts down under her.
+
+    A logged-out child still evaluates to QUOTA_EXHAUSTED every tick - the
+    engine never consults presence on that branch - and the end sequence had no
+    presence test. `_lock` no-ops on an empty session list, so control reached
+    `apply_end_action(POWEROFF)`, which ignores session ids entirely. Poweroff
+    is the column default and the wizard pre-checks it, so this was what a
+    family got without changing a setting.
+    """
+    set_quota(session, 1, 20, end_action=EndAction.POWEROFF.value)
+    await supervisor.start()
+
+    # Elif spends her twenty minutes and logs out.
+    source.log_in("elif")
+    await run_for(supervisor, clock, 21 * 60)
+    source.log_out("elif")
+    runner.calls.clear()
+
+    # Her mother sits down at her own account.
+    source.log_in("anne")
+    await run_for(supervisor, clock, 10 * 60)
+
+    assert not any("poweroff" in " ".join(call) for call in runner.calls), (
+        f"the machine was powered off under the parent: {runner.calls}"
+    )
+
+
+async def test_ending_one_childs_day_does_not_shut_down_a_parent_who_is_working(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    session: Session,
+) -> None:
+    """Poweroff and logout reach past the child; locking is the part about them.
+
+    The child still loses the machine. The parent, sitting at the same computer
+    on their own account, does not lose their work to it.
+    """
+    set_quota(session, 1, 20, end_action=EndAction.POWEROFF.value)
+    await supervisor.start()
+    source.log_in("elif")
+    source.log_in("anne")
+
+    await run_for(supervisor, clock, 25 * 60)
+
+    assert not any("poweroff" in " ".join(call) for call in runner.calls), (
+        f"the parent's session was taken down with the child's: {runner.calls}"
+    )
+    assert any("lock-session" in " ".join(call) for call in runner.calls), (
+        "the child was not stopped either; narrowing must not mean doing nothing"
+    )
+
+
+async def test_a_child_alone_at_the_machine_is_still_powered_off(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    session: Session,
+) -> None:
+    """The narrowing must not become a way out of the end action."""
+    set_quota(session, 1, 20, end_action=EndAction.POWEROFF.value)
+    await supervisor.start()
+    source.log_in("elif")
+
+    await run_for(supervisor, clock, 25 * 60)
+
+    assert any("poweroff" in " ".join(call) for call in runner.calls), (
+        f"the day never ended for a child sitting alone at the machine: {runner.calls}"
+    )
+
+
+# ------------------------------------- the loop that ran for days doing nothing
+
+
+async def test_a_wedged_database_does_not_leave_the_child_unsupervised(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    session: Session,
+) -> None:
+    """Three failed ticks in a row must stop looking like supervision.
+
+    One transient SQLite error used to be permanent: `persist()` had no
+    rollback, so the daemon's long-lived Session stayed in the needs-rollback
+    state and every later tick died before accounting for a second. The loop
+    caught that, logged it, and went round again - for days. systemd saw
+    `active (running)`, so `Restart=` and `OnFailure=` never fired, and the
+    panel kept rendering the last numbers committed.
+    """
+    set_quota(session, 1, 60)
+    await supervisor.start()
+    source.log_in("elif")
+
+    broken = {"count": 0}
+    real_tick = supervisor.tick
+
+    async def failing() -> None:
+        broken["count"] += 1
+        raise OperationalError("UPDATE ledger_day", {}, Exception("disk I/O error"))
+
+    supervisor.tick = failing  # type: ignore[method-assign]
+    stop = asyncio.Event()
+
+    with pytest.raises(OperationalError):
+        await run_forever(supervisor, stop)
+
+    supervisor.tick = real_tick  # type: ignore[method-assign]
+    assert broken["count"] == 3, f"gave up after {broken['count']} ticks, not 3"
+    assert any("lock-session" in " ".join(call) for call in runner.calls), (
+        "the loop gave up without locking the child's screen"
+    )
+
+
+async def test_one_bad_tick_is_not_a_reason_to_lock_a_child_out(
+    supervisor: Supervisor, clock: FakeClock, source: FakeSessionSource, runner: RecordingRunner
+) -> None:
+    """A single D-Bus hiccup must not become a locked screen a parent has to explain."""
+    await supervisor.start()
+    source.log_in("elif")
+
+    calls = {"n": 0}
+    real_tick = supervisor.tick
+
+    async def flaky() -> None:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("a transient hiccup")
+        await real_tick()
+        if calls["n"] >= 3:
+            stop.set()
+
+    supervisor.tick = flaky  # type: ignore[method-assign]
+    stop = asyncio.Event()
+    await run_forever(supervisor, stop)
+    supervisor.tick = real_tick  # type: ignore[method-assign]
+
+    assert calls["n"] >= 3, "the loop stopped on the first failure"
+    assert not any("lock-session" in " ".join(call) for call in runner.calls), (
+        "one bad tick locked the child out"
+    )
+
+
+def test_a_failed_persist_leaves_the_ledger_usable(
+    config: Config, db: Database, child: Child, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The rollback is what makes the next tick possible at all.
+
+    Without it the Session stays in the needs-rollback state and every later
+    call raises PendingRollbackError. The test fixtures hid this because
+    `Database.session()` is the only place in src/ that rolls back, and the
+    daemon deliberately does not use it.
+    """
+    from biokids_core.ledger import TimeLedger
+
+    clock = FakeClock()
+    with db.session() as own:
+        ledger = TimeLedger(own, clock, config)
+        ledger.begin()
+
+        calls = {"n": 0}
+        real_commit = own.commit
+
+        def once_broken() -> None:
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise OperationalError("commit", {}, Exception("disk I/O error"))
+            real_commit()
+
+        monkeypatch.setattr(own, "commit", once_broken)
+        with pytest.raises(OperationalError):
+            ledger.persist()
+        monkeypatch.undo()
+
+        # The session has to be usable again, or the daemon is finished. Two
+        # ticks, because the first one after begin() only sets the baseline.
+        for _ in range(2):
+            clock.advance(10)
+            ledger.tick([TickInput(child_id=child.id, active=True, idle=False)])
+        ledger.persist()
+        assert ledger.state(child.id).general_used_s >= 10, "accounting never resumed"

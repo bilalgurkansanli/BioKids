@@ -17,6 +17,7 @@ minutes.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import datetime as dt
 import logging
 from dataclasses import dataclass, field
@@ -445,6 +446,23 @@ class Supervisor:
           applied against — logind hands out a fresh id on every login;
         * a **retry**, when the last attempt returned false, with backoff.
         """
+        if not presence.present:
+            # Nobody to end the day for. The quota really is exhausted, but this
+            # child has no session: there is no screen to lock, and the two
+            # remaining end actions reach past them - poweroff takes the whole
+            # machine, logout ends sessions by user name.
+            #
+            # Without this the sequence ran for an absent child on every tick,
+            # found nothing to lock, and went on to power the machine off. The
+            # mother logs in that evening and two minutes later it shuts down
+            # under her; with a bedtime window it happens every evening whether
+            # or not the child ever touched it. Poweroff is the default, so this
+            # was the out-of-the-box behaviour.
+            #
+            # The countdown is not started either, so it begins when they come
+            # back rather than having expired in their absence.
+            return
+
         policy = runtime.policy
         boot_id = self.clock.read().boot_id
 
@@ -496,7 +514,7 @@ class Supervisor:
         if already_done and not unenforced and not retry_due:
             return
 
-        action = policy.end_action if policy is not None else EndAction.LOCK
+        action = self._end_action_for(runtime, presence, policy)
         # Applications first, so an unsaved drawing gets its SIGTERM before the
         # machine starts going down.
         await self.enforcer.stop_all_apps(runtime.unix_user)
@@ -551,6 +569,62 @@ class Supervisor:
             )
             runtime.end_action_failures = 0
             runtime.end_action_next_attempt = now_boot + END_ACTION_BACKOFF_SECONDS[-1]
+
+    def _others_logged_in(self, runtime: ChildRuntime) -> tuple[str, ...]:
+        """Which other human users have a session right now.
+
+        Everyone with a `user` session who is not this child. Another child
+        counts: ending Elif's day must not log Deniz out mid-drawing either.
+        """
+        others: list[str] = []
+        for unix_user, presence in self.watcher.all_presence.items():
+            if unix_user == runtime.unix_user:
+                continue
+            if presence.lockable_session_ids:
+                others.append(unix_user)
+        return tuple(sorted(others))
+
+    def _end_action_for(
+        self,
+        runtime: ChildRuntime,
+        presence: UserPresence,
+        policy: ChildPolicy | None,
+    ) -> EndAction:
+        """The end action, narrowed to what may be done to this machine right now.
+
+        `poweroff` and `logout` are the two that reach past the child. Poweroff
+        takes the whole machine; logout ends sessions by user name. Neither is
+        acceptable while somebody else is sitting at the same computer - a
+        parent working, or a sibling drawing - so both degrade to locking the
+        child's own screen, which is the part that was ever about this child.
+
+        The child still loses the machine. Nobody else does.
+        """
+        chosen = policy.end_action if policy is not None else EndAction.LOCK
+        if chosen is EndAction.LOCK:
+            return chosen
+        others = self._others_logged_in(runtime)
+        if not others:
+            return chosen
+        log.info(
+            "%s is configured for %s, but %s %s also logged in; locking instead",
+            runtime.unix_user,
+            chosen.value,
+            ", ".join(others),
+            "is" if len(others) == 1 else "are",
+        )
+        repo.audit(
+            self.session,
+            actor="daemon",
+            action="end_action_narrowed",
+            target=f"child:{runtime.child_id}",
+            detail={
+                "configured": chosen.value,
+                "used": EndAction.LOCK.value,
+                "others": list(others),
+            },
+        )
+        return EndAction.LOCK
 
     def _clear_end_sequence(self, runtime: ChildRuntime, day: dt.date, remaining: int) -> None:
         runtime.end_action_sessions = frozenset()
@@ -1051,22 +1125,84 @@ class Supervisor:
         return runtime
 
 
-async def run_forever(supervisor: Supervisor, stop_event: asyncio.Event) -> None:
-    """Tick until asked to stop, and never die because one tick threw.
+TICK_FAILURES_BEFORE_GIVING_UP = 3
+"""Consecutive failed ticks before the loop stops pretending it is supervising.
 
-    A crash here is caught by systemd and escalates to the lockdown service
-    (D-106), which is the right answer for a broken daemon. It is the wrong
-    answer for one transient D-Bus hiccup, so a single failing tick is logged
-    and the loop continues; the failure becomes visible in the audit log rather
-    than in a locked screen a parent has to explain.
+Three rather than one, because a single D-Bus hiccup is not a reason to lock a
+child out of a machine a parent then has to explain. Three rather than never,
+because a loop that catches everything forever is a daemon that reports
+`active (running)` to systemd while enforcing nothing at all."""
+
+
+async def run_forever(supervisor: Supervisor, stop_event: asyncio.Event) -> None:
+    """Tick until asked to stop, and survive a tick that throws - up to a point.
+
+    One bad tick is logged and the loop continues: a transient D-Bus or SQLite
+    hiccup is the wrong reason to lock a child's screen.
+
+    `TICK_FAILURES_BEFORE_GIVING_UP` in a row is different. It means nothing is
+    being accounted for and nothing is being enforced, and the process staying
+    alive is what hides that: systemd sees `active (running)`, so `Restart=`
+    never fires, `OnFailure=biokids-lockdown.service` never fires, and there is
+    no WatchdogSec. The child sits at an unsupervised machine while the panel
+    renders the last numbers that were committed.
+
+    So the loop locks every child session itself - D-106's answer, and it needs
+    no database, which matters because the database is the likeliest thing that
+    just broke - and then raises, so the unit exits non-zero and systemd's own
+    net catches what is left.
     """
     interval = supervisor.config.daemon.tick_seconds
+    failures = 0
     while not stop_event.is_set():
         try:
             await supervisor.tick()
-        except Exception:  # one bad tick must not stop enforcement
-            log.exception("tick failed")
+            failures = 0
+        except Exception as exc:  # one bad tick must not stop enforcement
+            failures += 1
+            log.exception("tick failed (%s in a row)", failures)
+            if failures >= TICK_FAILURES_BEFORE_GIVING_UP:
+                await _give_up(supervisor, failures, exc)
+                raise
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=interval)
         except TimeoutError:
             continue
+
+
+async def _give_up(supervisor: Supervisor, failures: int, exc: BaseException) -> None:
+    """Lock every child session, say so if the database still answers, and leave.
+
+    Nothing here may depend on the database: the commonest cause of three failed
+    ticks is the database itself. The lock goes through `loginctl`, and the audit
+    row is attempted afterwards and allowed to fail.
+    """
+    log.error(
+        "%s ticks in a row failed (%s); locking every child session and exiting",
+        failures,
+        exc,
+    )
+    # Ask logind who is here rather than trusting the last snapshot: the tick
+    # may well have died before it got as far as refreshing presence, and a
+    # lockdown with an empty session list is the "audited and then forgotten"
+    # outcome D-106 exists to prevent.
+    with contextlib.suppress(Exception):
+        await supervisor.watcher.refresh()
+    sessions: list[str] = []
+    for runtime in supervisor.children.values():
+        sessions.extend(supervisor.watcher.presence(runtime.unix_user).lockable_session_ids)
+    with contextlib.suppress(Exception):
+        await supervisor.enforcer.lockdown(tuple(sessions))
+    with contextlib.suppress(Exception):
+        supervisor.bus.publish(
+            EventKind.DAEMON_STATE, state="failed", failures=failures, error=str(exc)[:200]
+        )
+    with contextlib.suppress(Exception):
+        repo.audit(
+            supervisor.session,
+            actor="daemon",
+            action="daemon_failed",
+            detail={"consecutive_tick_failures": failures, "error": str(exc)[:200]},
+            severity="alert",
+        )
+        supervisor.session.commit()

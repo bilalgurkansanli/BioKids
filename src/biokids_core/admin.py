@@ -34,6 +34,7 @@ from biokids_core import repo, security
 from biokids_core.catalog import load_catalog, sync_catalog
 from biokids_core.config import Config, set_config
 from biokids_core.db.session import Database
+from biokids_core.errors import ConfigError
 from biokids_core.i18n import translator
 from biokids_core.ipc import DaemonClient, Op
 from biokids_core.provision import provision
@@ -48,7 +49,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
-    config = Config.load(args.config)
+    config = _load_config_or_default(args.config, args.command)
     set_config(config)
 
     handlers = {
@@ -64,6 +65,37 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.print_help()
         return 2
     return handler(args, config)
+
+
+def _load_config_or_default(path: Path | None, command: str) -> Config:
+    """The configuration, or the defaults when the file will not parse.
+
+    `lockdown` is what `biokids-lockdown.service` runs when the daemon has died
+    (D-106), and one of the commonest ways for the daemon to die is a parent
+    making a typo in `/etc/biokids/config.toml` - a documented conffile they are
+    invited to edit. That typo used to take the backstop down with it: `main()`
+    called `Config.load()` before any handler ran, `ConfigError` escaped, and no
+    session was locked and nothing was written to the audit log. The child kept
+    playing, unsupervised, and the parent's audit screen showed nothing at all.
+
+    So lockdown falls back to the built-in defaults. It needs almost nothing
+    from the file - the database path, to find out who the children are - and
+    locking against the default path is worth far more than not locking. Every
+    other subcommand still refuses to run on a file it cannot read, because
+    guessing is the wrong answer when nobody is in danger.
+    """
+    try:
+        return Config.load(path)
+    except ConfigError:
+        if command != "lockdown":
+            raise
+        log.error(
+            "the configuration could not be read; locking with built-in defaults. "
+            "This is the D-106 backstop: it runs precisely because something else "
+            "is already broken, so it must not need the thing that broke.",
+            exc_info=True,
+        )
+        return Config()
 
 
 def build_parser() -> argparse.ArgumentParser:

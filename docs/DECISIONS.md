@@ -823,3 +823,64 @@ Tuesday hearing Monday's robot — or Monday's silence — for every line they a
 Revisit if a Turkish Piper voice with a redistributable dataset appears, or if
 `piper-tts` enters Debian. Bundling one is still the better outcome; there is nothing to
 bundle today.
+
+**D-138 [claude] An end action is scoped to whoever is actually at the machine.**
+The end-of-time sequence ran for every child on every tick with no presence test. A
+logged-out child still evaluates to `QUOTA_EXHAUSTED` — the engine never consults
+presence on that branch — and `_lock` quietly no-ops on an empty session list, so
+control reached `apply_end_action(POWEROFF)`, which ignores session ids entirely. The
+mother logs in that evening and two minutes later the machine shuts down under her.
+Poweroff is the column default and the wizard pre-checks it, so this was the
+out-of-the-box behaviour, and with a bedtime window it repeated every evening whether
+or not the child ever touched the computer.
+
+Two rules now. The sequence does not start for a child with no session at all: there is
+no screen to lock, and the countdown should begin when they come back rather than
+having expired in their absence. And when somebody else is logged in — a parent
+working, a sibling drawing — `poweroff` and `logout` narrow to `lock`, because those
+two reach past the child and locking is the part that was ever about this child. The
+child still loses the machine; nobody else does. The narrowing is audited so a parent
+can see why their chosen action was not the one taken.
+
+**D-139 [claude] Three failed ticks in a row is a failed daemon, and it says so.**
+`persist()` committed with no `try`, so one transient SQLite error left the daemon's
+long-lived Session needing a rollback nothing ever issued, and every later tick died
+with `PendingRollbackError` before accounting for a second. `run_forever` caught that,
+logged it, and looped — forever. The process stayed alive, so systemd saw
+`active (running)`: `Restart=` never fired, `OnFailure=biokids-lockdown.service` never
+fired, there is no `WatchdogSec`, and the panel kept rendering the last committed
+numbers. That is "continue unprotected", and `run_forever`'s own docstring already
+promised the opposite.
+
+`persist()` now rolls back and re-raises. `run_forever` counts consecutive failures:
+one is a hiccup and is logged, three means nothing is being enforced, so it locks every
+child session itself — D-106's answer, and it needs no database, which matters because
+the database is the likeliest thing that just broke — and then raises so the unit exits
+non-zero and systemd's own net catches the rest. The tests never saw any of it because
+`Database.session()` is the only place in `src/` that rolls back and the daemon
+deliberately does not use it: the fixtures were performing the recovery production
+lacked.
+
+**D-140 [claude] A socket server cancels its connections before it waits for them.**
+Since CPython 3.12 `Server.wait_closed()` waits for every connection handler task.
+`DaemonServer.stop()` cancelled its handlers *after* awaiting `wait_closed()` — which
+was blocked on exactly those handlers — and `ShellServer.stop()` tracked no tasks at
+all. The child's launcher holds one subscription open for as long as the kiosk is on
+screen, so every restart, upgrade, reboot and press of the child's own shutdown tile
+hung for the full 90 s stop timeout and was then SIGKILLed. `$SERVICE_RESULT` is then
+`timeout`, not `success`, so the unit's `ExecStopPost` fired `biokids-admin lockdown`:
+an upgrade locked a child out of a machine they were legitimately using, with an
+alert-level audit row for a lockdown that had no reason behind it, and the ledger was
+never flushed because `supervisor.stop()` never ran. Cancel, then wait. The order is
+the whole fix.
+
+**D-141 [claude] `biokids-admin lockdown` falls back to the built-in defaults.**
+D-106's backstop runs precisely because the daemon is not there, and one of the
+commonest ways for the daemon not to be there is a parent making a typo in
+`/etc/biokids/config.toml` — a documented conffile they are invited to edit. That typo
+took the backstop down with it: `main()` called `Config.load()` before any handler ran,
+`ConfigError` escaped, and no session was locked and nothing was audited. Lockdown now
+falls back to `Config()`; it needs almost nothing from the file, and locking against
+the default database path is worth far more than not locking. Every other subcommand
+still refuses a file it cannot read, because guessing is the wrong answer when nobody
+is in danger.

@@ -12,6 +12,7 @@ mode stops being a considered decision and becomes a hole.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import pytest
@@ -272,3 +273,47 @@ async def test_subscribing_asks_for_a_stream_rather_than_answering(
     )
     assert response.ok
     assert subscribe is True
+
+
+# ------------------------------------------------- stopping while somebody listens
+
+
+async def test_stopping_cancels_a_subscriber_instead_of_waiting_for_it(
+    running: dict[str, Any],
+) -> None:
+    """Nothing ever called ShellServer.start() or stop(), and this is what that cost.
+
+    Since CPython 3.12 `Server.wait_closed()` waits for every connection handler
+    task. `_stream` parks on the subscriber queue forever, so a launcher with an
+    open subscription - which is every launcher, for as long as the kiosk is on
+    screen - held the daemon open for the full 90 s stop timeout. systemd then
+    SIGKILLed it, `$SERVICE_RESULT` became `timeout` rather than `success`, and
+    the unit's own ExecStopPost fired `biokids-admin lockdown`: an upgrade
+    locked the child out of a machine they were legitimately using, and the
+    ledger was never flushed because supervisor.stop() never ran.
+
+    No socket here on purpose: the defect is the order of two lines in stop(),
+    and that is testable on any platform.
+    """
+    server: ShellServer = running["server"]
+    parked = asyncio.Event()
+
+    async def never_returns() -> None:
+        parked.set()
+        await asyncio.Event().wait()
+
+    task = asyncio.create_task(never_returns())
+    server._connections.add(task)
+    await parked.wait()
+
+    await asyncio.wait_for(server.stop(), timeout=5)
+
+    assert task.cancelled() or task.done(), "the subscriber was left running"
+    assert not server._connections, "the connection set was not cleared"
+
+
+async def test_stopping_twice_is_not_an_error(running: dict[str, Any]) -> None:
+    """systemd can send SIGTERM while an orderly shutdown is already under way."""
+    server: ShellServer = running["server"]
+    await asyncio.wait_for(server.stop(), timeout=5)
+    await asyncio.wait_for(server.stop(), timeout=5)

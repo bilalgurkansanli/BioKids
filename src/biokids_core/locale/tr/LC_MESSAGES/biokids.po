@@ -622,6 +622,9 @@ msgstr "Çocuk hesabı hazırlandı"
 msgid "audit.action.daemon_stopped"
 msgstr "BioKids servisi kapatıldı"
 
+msgid "audit.action.end_action_narrowed"
+msgstr "Bitiş işlemi daraltıldı"
+
 msgid "audit.action.first_run_explained"
 msgstr "Çocuğa BioKids anlatıldı"
 

@@ -19,6 +19,7 @@ import io
 import json
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any
 from unittest import mock
 
@@ -27,6 +28,7 @@ import pytest
 from biokids_core import admin, repo, security
 from biokids_core.config import Config
 from biokids_core.db import AuditLog, Child, Database, Family, Parent, Policy
+from biokids_core.errors import ConfigError
 
 
 @pytest.fixture
@@ -362,3 +364,46 @@ def test_a_subcommand_is_required() -> None:
     """`biokids-admin` alone must not silently do something."""
     with pytest.raises(SystemExit):
         admin.build_parser().parse_args([])
+
+
+# ------------------------------------- the backstop and the file that broke the daemon
+
+
+def test_lockdown_still_locks_when_the_config_file_is_broken(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The commonest way to kill the daemon also used to kill its backstop.
+
+    /etc/biokids/config.toml is a dpkg conffile a parent is invited to edit. A
+    typo stops the daemon starting; systemd gives up and fires
+    OnFailure=biokids-lockdown.service, which runs this command - whose first
+    action was Config.load() on that same broken file. ConfigError escaped
+    main(), the process died with a traceback, nothing was locked and nothing
+    was audited. The child kept playing.
+    """
+    broken = tmp_path / "config.toml"
+    broken.write_text('[daemon]\ntick_seconds = "ten\n', encoding="utf-8")
+
+    locked: list[str] = []
+    monkeypatch.setattr(admin, "list_sessions", lambda: [])
+    monkeypatch.setattr(admin, "lock_session", lambda sid: locked.append(sid) or True)
+
+    # It must reach the handler at all; that is the whole point.
+    code = admin.main(["--config", str(broken), "lockdown"])
+
+    assert code in (0, 1), f"lockdown died on the broken file instead of running: {code}"
+
+
+def test_every_other_subcommand_still_refuses_a_broken_config(
+    tmp_path: Path,
+) -> None:
+    """Guessing is the right answer only when somebody is in danger.
+
+    `status` on a file we cannot read must say so rather than reporting on a
+    database that is not the family's.
+    """
+    broken = tmp_path / "config.toml"
+    broken.write_text('[daemon]\ntick_seconds = "ten\n', encoding="utf-8")
+
+    with pytest.raises(ConfigError):
+        admin.main(["--config", str(broken), "status"])

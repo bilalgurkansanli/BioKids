@@ -38,6 +38,7 @@ from biokids_core.config import Config, get_config
 from biokids_core.errors import IpcError
 from biokids_core.ipc import Event, Request, Response, ShellOp
 from biokids_daemon.bus import EventBus
+from biokids_daemon.server import cancel_connections
 from biokids_daemon.supervisor import ChildRuntime, Supervisor
 
 if TYPE_CHECKING:  # pragma: no cover - the daemon only ever runs on Linux
@@ -99,6 +100,11 @@ class ShellServer:
         self.bus = bus
         self.config = config or get_config()
         self._server: AbstractServer | None = None
+        self._connections: set[asyncio.Task[None]] = set()
+        """Every live connection handler, so stop() can end them.
+
+        Its absence is the whole of the hang: `_stream` parks on the subscriber
+        queue forever, `wait_closed()` waits for it, and nothing cancelled it."""
 
     @property
     def socket_path(self) -> Path:
@@ -122,8 +128,17 @@ class ShellServer:
         log.info("child launcher socket at %s", path)
 
     async def stop(self) -> None:
+        """The same shape as DaemonServer.stop, and for the same reason.
+
+        This one is the worse of the two, because the subscriber that hangs it
+        is the child's own launcher: it holds a subscription open for as long as
+        the kiosk is on screen, so pressing the shutdown tile used to leave a
+        four-year-old staring at a frozen screen for ninety seconds.
+        """
         if self._server is not None:
             self._server.close()
+        await cancel_connections(self._connections)
+        if self._server is not None:
             await self._server.wait_closed()
             self._server = None
         with contextlib.suppress(FileNotFoundError):
@@ -132,6 +147,9 @@ class ShellServer:
     # ----------------------------------------------------------- connection
 
     async def _serve(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        task = asyncio.current_task()
+        if task is not None:
+            self._connections.add(task)
         uid = peer_uid(writer)
         caller = self._identify(uid)
         try:

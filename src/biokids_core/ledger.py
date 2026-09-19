@@ -32,6 +32,7 @@ worst bug this file could have.
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import logging
 from dataclasses import dataclass, field
@@ -656,17 +657,36 @@ class TimeLedger:
 
         A hard power cut therefore costs at most half a minute of accounting,
         which is the promise in `ARCHITECTURE.md` §3.3.
+
+        A failed write rolls the session back before it leaves, and then raises.
+        Both halves matter. Without the rollback the daemon's long-lived Session
+        stays in the "needs rollback" state and every later tick dies with
+        `PendingRollbackError` before accounting for a single second - one
+        transient `database is locked` and the child has an unsupervised machine
+        until somebody restarts the service. Without the raise the caller would
+        believe the numbers were safe on disk.
         """
         reading = reading or self._clock.read()
-        self._flush_category_seconds(reading.wall.date())
-        if self._boot_id:
-            epoch = self._session.scalar(
-                select(BootEpoch).where(BootEpoch.boot_id == self._boot_id)
-            )
-            if epoch is not None:
-                epoch.last_seen_wall = reading.wall
-                epoch.last_boot_offset = max(epoch.last_boot_offset, reading.boot)
-        self._session.commit()
+        try:
+            self._flush_category_seconds(reading.wall.date())
+            if self._boot_id:
+                epoch = self._session.scalar(
+                    select(BootEpoch).where(BootEpoch.boot_id == self._boot_id)
+                )
+                if epoch is not None:
+                    epoch.last_seen_wall = reading.wall
+                    epoch.last_boot_offset = max(epoch.last_boot_offset, reading.boot)
+            self._session.commit()
+        except Exception:
+            # `Session.rollback()` is the documented way back from a failed
+            # flush or commit, and this is the only long-lived session in the
+            # product that is not inside `Database.session()` - which is where
+            # every other caller gets this for free.
+            log.exception("could not persist the ledger; rolling back to stay usable")
+            with contextlib.suppress(Exception):
+                self._session.rollback()
+            raise
+
         self._last_persist_boot = reading.boot
         for runtime in self._runtime.values():
             runtime.dirty = False

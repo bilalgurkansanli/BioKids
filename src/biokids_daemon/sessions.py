@@ -392,6 +392,17 @@ class FakeSessionSource:
         self.sessions.append(session)
         return session
 
+    def log_out(self, unix_user: str) -> int:
+        """Every session this user has, gone. The other half of `log_in`.
+
+        Its absence is why nothing caught the end sequence running for a child
+        who was not there: writing that scenario meant reaching into
+        `self.sessions` by hand, and no test did.
+        """
+        before = len(self.sessions)
+        self.sessions = [s for s in self.sessions if s.unix_user != unix_user]
+        return before - len(self.sessions)
+
     def set(self, session_id: str, **changes: object) -> None:
         self.sessions = [
             _with(s, **changes) if s.session_id == session_id else s for s in self.sessions

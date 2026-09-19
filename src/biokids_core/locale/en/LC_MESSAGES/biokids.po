@@ -622,6 +622,9 @@ msgstr "Child account prepared"
 msgid "audit.action.daemon_stopped"
 msgstr "The BioKids service was stopped"
 
+msgid "audit.action.end_action_narrowed"
+msgstr "End action narrowed"
+
 msgid "audit.action.first_run_explained"
 msgstr "BioKids was explained to the child"
 
