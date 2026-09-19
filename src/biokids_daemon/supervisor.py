@@ -152,7 +152,14 @@ class Supervisor:
         panel is a separate process writing the same database, so the daemon
         cannot cache indefinitely. It also must not re-query on every tick — that
         is a database round trip per child per ten seconds forever.
+
+        A reload that arrives while the daemon is still starting is ignored, not
+        an error: the panel may finish the wizard a moment before the daemon is
+        ready, and `start()` reads the policies itself anyway.
         """
+        if self._session is None:
+            log.info("reload arrived before the daemon finished starting; ignoring")
+            return
         self.session.expire_all()
         today = self.clock.read().wall.date()
         fresh: dict[int, ChildRuntime] = {}

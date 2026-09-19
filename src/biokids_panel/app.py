@@ -74,8 +74,20 @@ Db = Annotated[Session, Depends(get_db)]
 
 
 def current_auth(request: Request, session: Db, ctx: Ctx) -> auth.AuthState:
+    """Resolve the cookie, and commit before the handler runs.
+
+    Resolving touches `last_seen_at`, which is a write. SQLite allows one writer
+    at a time, so leaving that transaction open for the rest of the request means
+    the panel holds the write lock while it calls the daemon — and the daemon's
+    first act on `get_status` is to write a `ledger_day` row. The two then wait
+    for each other until `busy_timeout` gives up.
+
+    Committing here costs one fsync per request and removes the window entirely.
+    """
     token = request.cookies.get(auth.SESSION_COOKIE)
-    return auth.resolve(session, ctx.config, token)
+    state = auth.resolve(session, ctx.config, token)
+    session.commit()
+    return state
 
 
 Auth = Annotated[auth.AuthState, Depends(current_auth)]

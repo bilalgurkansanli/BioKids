@@ -479,7 +479,8 @@ class TimeLedger:
     # --------------------------------------------------- warning bookkeeping
 
     def already_warned(self, child_id: int, day: dt.date, threshold: int) -> bool:
-        return threshold in self._day_row(child_id, day).warned
+        row = self._day_row_readonly(child_id, day)
+        return row is not None and threshold in row.warned
 
     def mark_warned(self, child_id: int, day: dt.date, threshold: int) -> None:
         row = self._day_row(child_id, day)
@@ -500,7 +501,9 @@ class TimeLedger:
         at the end of it. A threshold stays remembered only while it is behind
         us: `threshold * 60 >= remaining`.
         """
-        row = self._day_row(child_id, day)
+        row = self._day_row_readonly(child_id, day)
+        if row is None:
+            return set()
         kept = {t for t in row.warned if t * 60 >= remaining_s}
         if kept != row.warned:
             row.warned = kept
@@ -508,7 +511,8 @@ class TimeLedger:
         return kept
 
     def end_sequence_started_at(self, child_id: int, day: dt.date) -> float | None:
-        return self._day_row(child_id, day).end_sequence_started_at
+        row = self._day_row_readonly(child_id, day)
+        return row.end_sequence_started_at if row is not None else None
 
     def start_end_sequence(self, child_id: int, day: dt.date, at_boot: float) -> None:
         row = self._day_row(child_id, day)
@@ -518,15 +522,24 @@ class TimeLedger:
             self.persist()
 
     def clear_end_sequence(self, child_id: int, day: dt.date) -> None:
-        row = self._day_row(child_id, day)
+        row = self._day_row_readonly(child_id, day)
+        if row is None or row.end_sequence_started_at is None:
+            return
         row.end_sequence_started_at = None
         self._mark_dirty(child_id)
 
     # ------------------------------------------------------------- reading
 
     def state(self, child_id: int, day: dt.date | None = None) -> LedgerState:
+        """A snapshot. A child with nothing recorded today has used nothing."""
         day = day or self._clock.read().wall.date()
-        row = self._day_row(child_id, day)
+        row = self._day_row_readonly(child_id, day)
+        if row is None:
+            return LedgerState(
+                child_id=child_id,
+                day=day,
+                category_used_s=self._category_seconds(child_id, day),
+            )
         return LedgerState(
             child_id=child_id,
             day=day,
@@ -560,6 +573,11 @@ class TimeLedger:
     # ---------------------------------------------------------- persistence
 
     def _day_row(self, child_id: int, day: dt.date) -> LedgerDay:
+        """The row for this child and day, creating it if it is not there.
+
+        Only callers that are about to *change* something may use this. Reading
+        goes through `_day_row_readonly`, for the reason spelled out there.
+        """
         cached = self._days.get((child_id, day))
         if cached is not None:
             return cached
@@ -570,6 +588,22 @@ class TimeLedger:
             self._session.flush()
         self._days[(child_id, day)] = row
         return row
+
+    def _day_row_readonly(self, child_id: int, day: dt.date) -> LedgerDay | None:
+        """The row, or None. Never inserts, never flushes.
+
+        This distinction is not tidiness. SQLite allows one writer at a time, and
+        the daemon's session stays open between ticks; if answering "how much
+        time is left?" inserted a row, the daemon would hold the write lock from
+        the first status request until the next persist, and the panel — a
+        separate process on the same file — could not log anyone in.
+
+        Found by the acceptance test, which runs both against one database.
+        """
+        cached = self._days.get((child_id, day))
+        if cached is not None:
+            return cached
+        return self._session.get(LedgerDay, {"child_id": child_id, "day": day})
 
     def _mark_dirty(self, child_id: int) -> None:
         self._runtime.setdefault(child_id, _ChildRuntime()).dirty = True
