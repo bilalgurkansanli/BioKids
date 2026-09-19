@@ -33,7 +33,7 @@ from sqlalchemy.orm import Session
 
 from biokids_core import repo, security
 from biokids_core.config import Config, get_config
-from biokids_core.db.models import Policy
+from biokids_core.db.models import Policy, utcnow
 from biokids_core.errors import IpcError
 from biokids_core.i18n import Translator
 from biokids_core.ipc import AsyncDaemonClient, Op
@@ -519,6 +519,7 @@ def register_routes(app: FastAPI) -> None:
         earn_enabled: Annotated[str, Form()] = "",
         earn_ratio: Annotated[float, Form()] = 1.0,
         earn_cap_min: Annotated[int, Form()] = 60,
+        passphrase: Annotated[str, Form()] = "",
         csrf_token: Annotated[str, Form()] = "",
     ) -> Response:
         blocked = _guard(request, session, state)
@@ -527,6 +528,20 @@ def register_routes(app: FastAPI) -> None:
         child = repo.get_child(session, child_id)
         if child is None or not auth.csrf_ok(state, csrf_token):
             return see_other("/children?error=1")
+
+        if passphrase:
+            parent = state.parent
+            if parent is not None and not parent.passphrase_hash:
+                # No passphrase on this install: the PIN, re-entered, is the
+                # fallback. Never a dead end (principle #4).
+                if security.verify_secret(parent.pin_hash, passphrase.strip()) and (
+                    state.session is not None
+                ):
+                    state.session.passphrase_ok_until = utcnow() + dt.timedelta(
+                        minutes=auth.PASSPHRASE_GRACE_MINUTES
+                    )
+            else:
+                auth.confirm_passphrase(session, state, passphrase)
 
         try:
             windows = {
@@ -553,6 +568,45 @@ def register_routes(app: FastAPI) -> None:
         policy = repo.get_or_create_policy(session, child_id)
         before = _policy_snapshot(policy)
 
+        # Turning a child's protection off is the one setting on this screen
+        # that D-48 puts behind the passphrase: a PIN a ten-year-old watched
+        # being typed must not be enough. Everything else here changes how much
+        # time a child gets; this one stops BioKids managing them at all.
+        turning_off = bool(before["enabled"]) and enabled != "on"
+        if turning_off and not state.passphrase_fresh():
+            return render(
+                ctx,
+                request,
+                session,
+                state,
+                tr,
+                "child_time.html",
+                status_code=403,
+                child=child,
+                policy=policy,
+                windows=policy.windows,
+                end_actions=[e.value for e in EndAction],
+                confirm_disable=True,
+                submitted={
+                    "weekday_quota_min": weekday_quota_min,
+                    "weekend_quota_min": weekend_quota_min,
+                    "weekday_windows": weekday_windows,
+                    "weekend_windows": weekend_windows,
+                    "end_action": end_action,
+                    "break_enabled": break_enabled,
+                    "break_work_min": break_work_min,
+                    "break_rest_min": break_rest_min,
+                    "earn_enabled": earn_enabled,
+                    "earn_ratio": earn_ratio,
+                    "earn_cap_min": earn_cap_min,
+                },
+                # An install that skipped the wizard's third step has no
+                # passphrase. Ask for the PIN again rather than refusing
+                # outright, and point at the settings screen: a gate with no
+                # key is how a parent gets locked out of their own machine.
+                no_passphrase=not (state.parent and state.parent.passphrase_hash),
+            )
+
         policy.weekday_quota_min = max(0, min(weekday_quota_min, 24 * 60))
         policy.weekend_quota_min = max(0, min(weekend_quota_min, 24 * 60))
         policy.windows = windows
@@ -565,12 +619,14 @@ def register_routes(app: FastAPI) -> None:
         policy.earn_ratio = max(0.0, min(earn_ratio, 5.0))
         policy.earn_cap_min = max(0, min(earn_cap_min, 480))
 
+        after = _policy_snapshot(policy)
         repo.audit(
             session,
             actor=_actor(state),
-            action="policy_changed",
+            action="protection_disabled" if turning_off else "policy_changed",
             target=f"child:{child_id}",
-            detail={"before": before, "after": _policy_snapshot(policy)},
+            detail={"before": before, "after": after},
+            severity="warning" if turning_off else "info",
         )
         session.commit()
         _call_daemon(ctx, Op.RELOAD)
@@ -701,6 +757,52 @@ def register_routes(app: FastAPI) -> None:
         response = see_other("/login?pin_changed=1")
         response.delete_cookie(auth.SESSION_COOKIE, path="/")
         return response
+
+    @app.post("/settings/passphrase")
+    def settings_passphrase(
+        request: Request,
+        session: Db,
+        state: Auth,
+        current_pin: Annotated[str, Form()] = "",
+        current_passphrase: Annotated[str, Form()] = "",
+        new_passphrase: Annotated[str, Form()] = "",
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        """Set or change the passphrase.
+
+        This route is what makes the gate on turning protection off safe to
+        add. An install that skipped the wizard's third step has no passphrase,
+        and without somewhere to set one the gate would lock a parent out of
+        their own settings with no way back — which is principle #4 exactly.
+        """
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        parent = state.parent
+        if parent is None or not auth.csrf_ok(state, csrf_token):
+            return see_other("/settings?error=csrf")
+        if not security.verify_secret(parent.pin_hash, current_pin.strip()):
+            return see_other("/settings?error=pin")
+        # Changing an existing passphrase needs the old one; setting the first
+        # one does not, because there is nothing to prove.
+        if parent.passphrase_hash and not security.verify_secret(
+            parent.passphrase_hash, current_passphrase.strip()
+        ):
+            return see_other("/settings?error=passphrase")
+        try:
+            chosen = security.validate_passphrase(new_passphrase)
+        except ValueError as exc:
+            return see_other(f"/settings?error={exc}")
+
+        parent.passphrase_hash = security.hash_secret(chosen)
+        repo.audit(
+            session,
+            actor=_actor(state),
+            action="passphrase_changed",
+            severity="warning",
+        )
+        session.commit()
+        return see_other("/settings?saved=1")
 
     @app.post("/settings/remote")
     def settings_remote(

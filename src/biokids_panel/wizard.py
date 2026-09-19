@@ -20,7 +20,7 @@ import logging
 import re
 from typing import Annotated, Any
 
-from fastapi import FastAPI, Form, Request, Response
+from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
@@ -52,6 +52,27 @@ SETTING_PENDING_CHILD = "wizard.child_id"
 cookie so that a parent who closes the tab and comes back does not start again."""
 
 
+def wizard_is_open(session: Db) -> None:
+    """Refuse every wizard request once the family exists.
+
+    The GET checked this and the ten POSTs did not, which made
+    `POST /wizard/2` an unauthenticated account takeover: it overwrites
+    `pin_hash`, clears `pin_failures` and nulls `pin_locked_until`, so the
+    parent's PIN stops working, the attacker's starts, and a lockout from a
+    second earlier is gone. No cookie is involved, so `SameSite=Strict` bought
+    nothing and any page the child's browser loaded could submit it.
+
+    A dependency cannot return a redirect, so this raises one. Step 10 is safe
+    under the gate because it is the handler that *sets* `setup_completed_at`,
+    and the flag is still false when it is entered.
+    """
+    if repo.setup_complete(session):
+        raise HTTPException(status_code=303, headers={"Location": "/login"})
+
+
+Open = Depends(wizard_is_open)
+
+
 def register_wizard(app: FastAPI) -> None:
     """Ten steps, in order. Each POST validates, persists, and moves on."""
 
@@ -73,7 +94,7 @@ def register_wizard(app: FastAPI) -> None:
         step = max(1, min(step, TOTAL_STEPS + 1))
         return _render_step(ctx, request, session, state, tr, step)
 
-    @app.post("/wizard/1")
+    @app.post("/wizard/1", dependencies=[Open])
     def step_language(
         request: Request,
         ctx: Ctx,
@@ -92,7 +113,7 @@ def register_wizard(app: FastAPI) -> None:
         _ = (ctx, request, state, tr)
         return response
 
-    @app.post("/wizard/2")
+    @app.post("/wizard/2", dependencies=[Open])
     def step_parent(
         request: Request,
         ctx: Ctx,
@@ -121,10 +142,17 @@ def register_wizard(app: FastAPI) -> None:
         parent.pin_hash = security.hash_secret(chosen)
         parent.pin_failures = 0
         parent.pin_locked_until = None
+        repo.audit(
+            session,
+            actor="system",
+            action="pin_changed",
+            detail={"via": "setup wizard"},
+            severity="warning",
+        )
         session.commit()
         return see_other("/wizard/3")
 
-    @app.post("/wizard/3")
+    @app.post("/wizard/3", dependencies=[Open])
     def step_passphrase(
         request: Request,
         ctx: Ctx,
@@ -167,7 +195,7 @@ def register_wizard(app: FastAPI) -> None:
         session.commit()
         return see_other("/wizard/4")
 
-    @app.post("/wizard/4")
+    @app.post("/wizard/4", dependencies=[Open])
     def step_child(
         request: Request,
         ctx: Ctx,
@@ -206,7 +234,7 @@ def register_wizard(app: FastAPI) -> None:
         session.commit()
         return see_other("/wizard/5")
 
-    @app.post("/wizard/5")
+    @app.post("/wizard/5", dependencies=[Open])
     async def step_apps(request: Request, ctx: Ctx, session: Db) -> Response:
         """A repeated checkbox needs the raw multidict, so this one reads the form."""
         child = _pending_child(session)
@@ -219,7 +247,7 @@ def register_wizard(app: FastAPI) -> None:
         session.commit()
         return see_other("/wizard/6")
 
-    @app.post("/wizard/6")
+    @app.post("/wizard/6", dependencies=[Open])
     def step_time(
         request: Request,
         ctx: Ctx,
@@ -253,7 +281,7 @@ def register_wizard(app: FastAPI) -> None:
         session.commit()
         return see_other("/wizard/7")
 
-    @app.post("/wizard/7")
+    @app.post("/wizard/7", dependencies=[Open])
     def step_filter(session: Db, mode: Annotated[str, Form()] = "") -> Response:
         """A stub in Phase 0: the choice is recorded, the enforcement is Phase 1."""
         child = _pending_child(session)
@@ -264,7 +292,7 @@ def register_wizard(app: FastAPI) -> None:
             session.commit()
         return see_other("/wizard/8")
 
-    @app.post("/wizard/8")
+    @app.post("/wizard/8", dependencies=[Open])
     def step_remote(
         ctx: Ctx, session: Db, state: Auth, enable: Annotated[str, Form()] = ""
     ) -> Response:
@@ -282,11 +310,11 @@ def register_wizard(app: FastAPI) -> None:
         _ = state
         return see_other("/wizard/9")
 
-    @app.post("/wizard/9")
+    @app.post("/wizard/9", dependencies=[Open])
     def step_email() -> Response:
         return see_other("/wizard/10")
 
-    @app.post("/wizard/10")
+    @app.post("/wizard/10", dependencies=[Open])
     def step_extras(
         ctx: Ctx,
         session: Db,
@@ -299,6 +327,15 @@ def register_wizard(app: FastAPI) -> None:
             # The AI layer stays off. It is an optional package that is not even
             # installed in Phase 0, and D-82 says default off regardless.
             policy.ai_enabled = False
+
+        # D-49 makes every step skippable, and a secret is the one thing that
+        # cannot have a sane default. Skipping step 3 used to leave both
+        # `passphrase_hash` and `recovery_hash` empty, which quietly removed the
+        # gate on turning protection off *and* the only way back in after a
+        # forgotten PIN. So this step, and only this step, insists.
+        parent = repo.get_parent(session)
+        if parent is None or not parent.passphrase_hash or not parent.recovery_hash:
+            return see_other("/wizard/3?required=1")
 
         family = repo.get_or_create_family(session)
         family.setup_completed_at = utcnow()

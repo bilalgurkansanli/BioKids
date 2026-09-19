@@ -10,6 +10,45 @@
 {% block content %}
   <h1>{{ child.display_name }} — {{ _('time.title') }}</h1>
 
+  {% if confirm_disable %}
+    {#
+      Turning protection off needs the passphrase (D-48). Every field the parent
+      just filled in comes back as a hidden input, so confirming does not make
+      them type the form again — and so the server needs no pending state.
+    #}
+    <form class="card" method="post" action="/children/{{ child.id }}/time">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      {% for name, value in submitted.items() %}
+        <input type="hidden" name="{{ name }}" value="{{ value }}">
+      {% endfor %}
+
+      <div class="notice notice--danger" role="alert">
+        <div class="notice__title">{{ _('time.disable.title', name=child.display_name) }}</div>
+        <p class="small">{{ _('time.disable.body', name=child.display_name) }}</p>
+      </div>
+
+      <div class="field">
+        <label for="pp">
+          {% if no_passphrase %}{{ _('login.pin') }}{% else %}{{ _('auth.passphrase.title') }}{% endif %}
+        </label>
+        <input id="pp" name="passphrase" type="password" required autofocus
+               autocomplete="current-password">
+        <span class="help">
+          {% if no_passphrase %}
+            {{ _('auth.passphrase.missing') }}
+          {% else %}
+            {{ _('auth.passphrase.help') }}
+          {% endif %}
+        </span>
+      </div>
+
+      <div class="wizard-actions">
+        <button class="btn btn--danger" type="submit">{{ _('time.disable.confirm') }}</button>
+        <a class="btn btn--quiet" href="/children/{{ child.id }}/time">{{ _('common.cancel') }}</a>
+      </div>
+    </form>
+  {% endif %}
+
   <form class="card" method="post" action="/children/{{ child.id }}/time">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
 

@@ -458,6 +458,7 @@ def test_a_quota_cannot_exceed_a_day(
         data={
             "weekday_quota_min": 99999,
             "end_action": "poweroff",
+            "enabled": "on",
             "csrf_token": csrf_of(client),
         },
         follow_redirects=False,
@@ -657,3 +658,223 @@ def test_the_csrf_token_is_tied_to_the_session(session: Session) -> None:
     assert auth.csrf_token(one) != auth.csrf_token(two)
     assert not auth.csrf_ok(one, auth.csrf_token(two))
     assert auth.csrf_ok(one, auth.csrf_token(one))
+
+
+# ----------------------------------------------- the gates, adversarially
+#
+# Both of these were found by reading the code rather than by a failing test,
+# and both were verified against the real app before being fixed.
+
+
+def test_the_wizard_cannot_be_re_run_to_take_over_the_panel(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """`POST /wizard/2` used to overwrite the PIN with no cookie and no session.
+
+    The parent's PIN stopped working, the attacker's started, and a lockout from
+    a second earlier was cleared. No cookie was involved, so SameSite bought
+    nothing: any page the child's browser loaded could submit it.
+    """
+    with db.session() as session:
+        parent = repo.get_parent(session)
+        assert parent is not None
+        parent.pin_locked_until = utcnow() + dt.timedelta(minutes=10)
+
+    response = client.post(
+        "/wizard/2",
+        data={"name": "x", "pin": "424242", "pin_again": "424242"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
+    with db.session() as session:
+        parent = repo.get_parent(session)
+        assert parent is not None
+        assert security.verify_secret(parent.pin_hash, PIN), "the real PIN still works"
+        assert not security.verify_secret(parent.pin_hash, "424242")
+        assert parent.pin_locked_until is not None, "and the lockout still stands"
+
+
+@pytest.mark.parametrize("step", range(1, 11))
+def test_no_wizard_step_does_anything_once_setup_is_finished(
+    client: TestClient, family_ready: None, db: Database, step: int
+) -> None:
+    response = client.post(
+        f"/wizard/{step}",
+        data={
+            "lang": "en",
+            "pin": "424242",
+            "pin_again": "424242",
+            "passphrase": "short one here",
+            "weekday_quota_min": 1440,
+            "display_name": "Intruder",
+            "birth_year": dt.date.today().year - 5,
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
+
+    with db.session() as session:
+        assert repo.get_or_create_policy(session, 1).weekday_quota_min == 60
+        assert len(repo.list_children(session)) == 1
+
+
+def test_setup_cannot_finish_without_a_passphrase(client: TestClient, db: Database) -> None:
+    """Skipping step 3 used to leave no passphrase and no recovery code.
+
+    That silently removed both the gate on turning protection off and the only
+    documented way back in after a forgotten PIN.
+    """
+    client.post("/wizard/1", data={"lang": "tr"})
+    client.post("/wizard/2", data={"name": "Anne", "pin": PIN, "pin_again": PIN})
+
+    response = client.post("/wizard/10", data={"voices": "on"}, follow_redirects=False)
+
+    assert response.headers["location"].startswith("/wizard/3")
+    with db.session() as session:
+        assert not repo.setup_complete(session)
+
+
+def test_turning_protection_off_needs_the_passphrase(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """D-48: a PIN a ten-year-old watched being typed is not enough."""
+    login(client)
+    response = client.post(
+        "/children/1/time",
+        data={
+            "weekday_quota_min": 60,
+            "end_action": "poweroff",
+            "csrf_token": csrf_of(client),
+        },
+    )
+
+    assert response.status_code == 403
+    assert "korumayı kapatıyorsunuz" in response.text
+    with db.session() as session:
+        assert repo.get_or_create_policy(session, 1).enabled is True
+
+
+def test_the_passphrase_confirms_it_and_keeps_the_submitted_settings(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    response = client.post(
+        "/children/1/time",
+        data={
+            "weekday_quota_min": 45,
+            "weekend_quota_min": 90,
+            "end_action": "lock",
+            "passphrase": PASSPHRASE,
+            "csrf_token": csrf_of(client),
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    with db.session() as session:
+        policy = repo.get_or_create_policy(session, 1)
+        assert policy.enabled is False
+        assert policy.weekday_quota_min == 45, "the rest of the form was not lost"
+        entries = list(repo.recent_audit(session, limit=5))
+    assert entries[0].action == "protection_disabled"
+    assert entries[0].severity == "warning"
+
+
+def test_a_wrong_passphrase_does_not_turn_protection_off(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    response = client.post(
+        "/children/1/time",
+        data={
+            "weekday_quota_min": 60,
+            "end_action": "poweroff",
+            "passphrase": "not the passphrase",
+            "csrf_token": csrf_of(client),
+        },
+    )
+    assert response.status_code == 403
+    with db.session() as session:
+        assert repo.get_or_create_policy(session, 1).enabled is True
+
+
+def test_an_install_with_no_passphrase_falls_back_to_the_pin(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """Never a dead end (principle #4): a gate with no key locks the parent out."""
+    with db.session() as session:
+        parent = repo.get_parent(session)
+        assert parent is not None
+        parent.passphrase_hash = ""
+
+    login(client)
+    asked = client.post(
+        "/children/1/time",
+        data={"weekday_quota_min": 60, "end_action": "lock", "csrf_token": csrf_of(client)},
+    )
+    assert asked.status_code == 403
+    assert "PIN" in asked.text
+
+    client.post(
+        "/children/1/time",
+        data={
+            "weekday_quota_min": 60,
+            "end_action": "lock",
+            "passphrase": PIN,
+            "csrf_token": csrf_of(client),
+        },
+        follow_redirects=False,
+    )
+    with db.session() as session:
+        assert repo.get_or_create_policy(session, 1).enabled is False
+
+
+def test_a_passphrase_can_be_set_afterwards(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    with db.session() as session:
+        parent = repo.get_parent(session)
+        assert parent is not None
+        parent.passphrase_hash = ""
+
+    login(client)
+    response = client.post(
+        "/settings/passphrase",
+        data={
+            "current_pin": PIN,
+            "current_passphrase": "",
+            "new_passphrase": "yeni bir parola",
+            "csrf_token": csrf_of(client),
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    with db.session() as session:
+        parent = repo.get_parent(session)
+        assert parent is not None
+        assert security.verify_secret(parent.passphrase_hash, "yeni bir parola")
+        assert "passphrase_changed" in [e.action for e in repo.recent_audit(session, limit=5)]
+
+
+def test_changing_an_existing_passphrase_needs_the_old_one(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    client.post(
+        "/settings/passphrase",
+        data={
+            "current_pin": PIN,
+            "current_passphrase": "wrong",
+            "new_passphrase": "yeni bir parola",
+            "csrf_token": csrf_of(client),
+        },
+        follow_redirects=False,
+    )
+    with db.session() as session:
+        parent = repo.get_parent(session)
+        assert parent is not None
+        assert security.verify_secret(parent.passphrase_hash, PASSPHRASE)

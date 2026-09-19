@@ -782,3 +782,36 @@ msgstr "BioKids is an aid, not a guarantee"
 
 msgid "disclaimer.body"
 msgstr "No filter catches everything. These tools do not replace talking to your child; they are there to start the conversation."
+
+msgid "time.disable.title"
+msgstr "You are turning protection off for {name}"
+
+msgid "time.disable.body"
+msgstr "No time limit, hour rule or break will apply to {name} any more. This is written to the audit log."
+
+msgid "time.disable.confirm"
+msgstr "Yes, turn protection off"
+
+msgid "auth.passphrase.current"
+msgstr "Current passphrase"
+
+msgid "auth.passphrase.current.help"
+msgstr "Leave this empty if you are setting one for the first time."
+
+msgid "auth.passphrase.new"
+msgstr "New passphrase"
+
+msgid "auth.passphrase.missing"
+msgstr "This installation has no passphrase. Enter your PIN for now, then set a passphrase in Settings."
+
+msgid "audit.action.protection_disabled"
+msgstr "Protection turned off"
+
+msgid "audit.action.passphrase_changed"
+msgstr "Passphrase changed"
+
+msgid "audit.action.protection_enabled"
+msgstr "Protection turned on"
+
+msgid "wizard.passphrase.required"
+msgstr "You need to set a passphrase before continuing."

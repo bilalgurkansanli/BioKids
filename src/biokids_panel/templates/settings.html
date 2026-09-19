@@ -77,6 +77,31 @@
     <button class="btn" type="submit">{{ _('common.save') }}</button>
   </form>
 
+  {# -------------------------------------------------------- passphrase #}
+  <form class="card" method="post" action="/settings/passphrase">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <h2>{{ _('wizard.passphrase.field') }}</h2>
+    <p class="muted small">{{ _('wizard.passphrase.help') }}</p>
+
+    <div class="field">
+      <label for="pp-pin">{{ _('login.pin') }}</label>
+      <input id="pp-pin" name="current_pin" type="password" inputmode="numeric"
+             pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required>
+    </div>
+    <div class="field">
+      <label for="pp-old">{{ _('auth.passphrase.current') }}</label>
+      <input id="pp-old" name="current_passphrase" type="password"
+             autocomplete="current-password">
+      <span class="help">{{ _('auth.passphrase.current.help') }}</span>
+    </div>
+    <div class="field">
+      <label for="pp-new">{{ _('auth.passphrase.new') }}</label>
+      <input id="pp-new" name="new_passphrase" type="password" minlength="10" required
+             autocomplete="new-password">
+    </div>
+    <button class="btn" type="submit">{{ _('common.save') }}</button>
+  </form>
+
   {# ---------------------------------------------------- service health #}
   <section class="card">
     <h2>{{ _('audit.actor.daemon') }}</h2>

@@ -782,3 +782,36 @@ msgstr "BioKids bir yardımcıdır, garanti değil"
 
 msgid "disclaimer.body"
 msgstr "Hiçbir filtre her şeyi yakalayamaz. Bu araçlar çocuğunuzla konuşmanın yerini tutmaz, konuşmayı başlatmak içindir."
+
+msgid "time.disable.title"
+msgstr "{name} için korumayı kapatıyorsunuz"
+
+msgid "time.disable.body"
+msgstr "{name} için hiçbir süre sınırı, saat kuralı veya mola uygulanmayacak. Bu işlem kayıtlara işlenir."
+
+msgid "time.disable.confirm"
+msgstr "Evet, korumayı kapat"
+
+msgid "auth.passphrase.current"
+msgstr "Mevcut parola"
+
+msgid "auth.passphrase.current.help"
+msgstr "İlk kez parola belirliyorsanız burayı boş bırakın."
+
+msgid "auth.passphrase.new"
+msgstr "Yeni parola"
+
+msgid "auth.passphrase.missing"
+msgstr "Bu kurulumda parola belirlenmemiş. Şimdilik PIN'inizi yazın, sonra Ayarlar'dan bir parola belirleyin."
+
+msgid "audit.action.protection_disabled"
+msgstr "Koruma kapatıldı"
+
+msgid "audit.action.passphrase_changed"
+msgstr "Parola değiştirildi"
+
+msgid "audit.action.protection_enabled"
+msgstr "Koruma açıldı"
+
+msgid "wizard.passphrase.required"
+msgstr "Devam etmek için bir parola belirlemeniz gerekiyor."
