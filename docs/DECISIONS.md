@@ -722,6 +722,7 @@ twice, with `--stdin` for scripts. `dev/check_i18n.py` grew an AST walk over `re
 call sites at the same time: twelve audited actions had no `audit.action.*` string, and
 gettext returns the key unchanged, so the one screen whose whole job is to be readable
 was printing `passphrase_failed` and `access_requested` at a Turkish-speaking parent.
+
 **D-132 [claude] Earned time lands in the general allowance when there is no Games
 limit to raise.** D-45 puts earned minutes into Oyun: learning buys game time. Read
 literally, `earn_spendable_general = false` means "raise the Games ceiling" — and
@@ -750,6 +751,7 @@ child forty more minutes that ran out in complete silence, ending in a shutdown 
 warning at all. Re-arming every tick makes the warning set a function of the current
 remaining time rather than of how it got there. The ledger only marks the child dirty
 when the set actually changes, so the cost is a set comparison.
+
 **D-134 [claude] The child's screens get their own strings, not the panel's.**
 Two failure screens reused `error.unknown` and `error.daemon_unreachable`, which are
 written for a parent: formal address, and in one case "try restarting the computer" —
@@ -780,3 +782,15 @@ to find someone who is not there. `shell.blocked.ask_father` existed and was nev
 rendered, which is a second button that was planned and never added — and two gendered
 buttons doing the same thing would have been the wrong fix. The body of that screen
 already said "you can ask a grown-up"; the button now agrees with it.
+
+**D-136 [claude] The virtual-terminal guards D-54 names are actually shipped.**
+D-54 disables TTY switching "via `logind.conf` + `X11 DontVTSwitch`" and T5.7 lists it
+as Phase 0 work. Neither file existed. `src/biokids_shell/xfce/README.md` stated that
+`biokids-daemon` installed them, so `Ctrl+Alt+F2` gave the child a login prompt while
+the documentation told a parent that escape was handled — worse than not claiming it,
+because the claim is what a parent relies on. `biokids-shell` now ships both.
+
+`ReserveVT=1` rather than none, deliberately: a machine a parent cannot recover from a
+broken X server is a worse outcome than the escape this closes (principle #4). The
+recovery paths are GRUB's recovery entry and ssh over the tailnet, and both config
+files say so in their own comments.

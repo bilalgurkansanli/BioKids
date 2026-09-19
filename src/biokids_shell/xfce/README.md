@@ -24,7 +24,7 @@ it: delete the files and log in again.
 | Escape | Handled by |
 |---|---|
 | `Alt+F4`, `Alt+Space`, `Super` | `xfwm4.xml` — the shortcuts are unbound, so nothing receives them |
-| `Ctrl+Alt+F1…F6` (virtual terminals) | `logind.conf.d/biokids.conf` and `X11 DontVTSwitch`, installed by `biokids-daemon` |
+| `Ctrl+Alt+F1…F6` (virtual terminals) | `etc/systemd/logind.conf.d/biokids.conf` and `etc/X11/xorg.conf.d/50-biokids-no-vt-switch.conf`, both shipped by `biokids-shell` |
 | A terminal emulator | None is installed. `biokids-desktop` does not depend on one and `biokids-harden --check` reports it if one appears |
 | `Ctrl+W`, `Ctrl+T`, `F11`, `F12` in the browser | The kiosk profile's managed policy plus `shell.js`; see `kiosk.py` |
 | Booting another OS from a USB stick | **Nothing here.** Firmware territory, out of scope, documented in `docs/SECURITY.md` §1 |

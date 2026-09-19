@@ -14,6 +14,7 @@ browser or a sound card.
 
 from __future__ import annotations
 
+import pathlib
 from typing import Any
 
 import pytest
@@ -513,3 +514,42 @@ def test_a_slug_cannot_escape_into_a_systemd_unit_name() -> None:
     assert _safe_unit("../../etc/passwd") == "------etc-passwd"
     assert _safe_unit("") == "app"
     assert len(_safe_unit("x" * 200)) == 48
+
+
+# ---------------------------------------------- the packaged session hardening
+
+
+def test_the_virtual_terminal_guards_are_actually_shipped() -> None:
+    """D-54 names two files and T5.7 requires them; neither existed.
+
+    The XFCE README said `biokids-daemon` installed them. Nothing installed
+    them, so `Ctrl+Alt+F2` on a real machine gave the child a login prompt while
+    a parent reading the documentation was told that escape was handled - which
+    is worse than not claiming it, because it is the claim a parent relies on.
+
+    Asserted on the packaging rather than on a running machine: the failure was
+    a file that did not exist, and that is checkable anywhere.
+    """
+    root = pathlib.Path(__file__).resolve().parent.parent
+    logind = root / "debian/etc/systemd/logind.conf.d/biokids.conf"
+    xorg = root / "debian/etc/X11/xorg.conf.d/50-biokids-no-vt-switch.conf"
+
+    assert logind.is_file(), "no getty configuration; Ctrl+Alt+F2 offers a login"
+    assert xorg.is_file(), "no DontVTSwitch; the child can leave the session"
+
+    logind_text = logind.read_text(encoding="utf-8")
+    assert "NAutoVTs=1" in logind_text, "gettys on VT2-VT6 are a shell for the asking"
+    assert "ReserveVT=1" in logind_text, (
+        "one VT stays reserved on purpose: a machine a parent cannot recover "
+        "from a broken X server is a worse outcome than the escape this closes"
+    )
+
+    # Whitespace-insensitive: the file aligns its values, and a test that
+    # breaks on alignment teaches people to reformat rather than to think.
+    xorg_text = " ".join(xorg.read_text(encoding="utf-8").split())
+    assert 'Option "DontVTSwitch" "true"' in xorg_text
+    assert 'Option "DontZap" "true"' in xorg_text, "Ctrl+Alt+Backspace kills the launcher"
+
+    shipped = (root / "debian/biokids-shell.install").read_text(encoding="utf-8")
+    assert "logind.conf.d" in shipped, "the file exists but no package installs it"
+    assert "xorg.conf.d" in shipped, "the file exists but no package installs it"
