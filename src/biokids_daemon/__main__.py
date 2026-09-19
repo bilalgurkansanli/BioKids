@@ -28,6 +28,7 @@ from biokids_daemon.sessions import (
     SessionSource,
     SessionWatcher,
 )
+from biokids_daemon.shell_server import ShellServer
 from biokids_daemon.supervisor import Supervisor, run_forever
 
 log = logging.getLogger("biokids.daemon")
@@ -86,12 +87,15 @@ async def main_async(args: argparse.Namespace) -> int:
         config=config,
     )
     server = DaemonServer(supervisor, bus, config)
+    shell_server = ShellServer(supervisor, bus, config)
 
     await supervisor.start()
     await server.start()
+    await shell_server.start()
 
     if args.once:
         await supervisor.tick()
+        await shell_server.stop()
         await server.stop()
         await supervisor.stop()
         return 0
@@ -105,6 +109,7 @@ async def main_async(args: argparse.Namespace) -> int:
     try:
         await run_forever(supervisor, stop_event)
     finally:
+        await shell_server.stop()
         await server.stop()
         await supervisor.stop()
         database.dispose()

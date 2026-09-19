@@ -1,0 +1,37 @@
+# Turkish translation of the BioKids debconf questions.
+# Copyright (C) 2026 Bilal Gurkan Sanli
+# This file is distributed under the same licence as the biokids package.
+# Bilal Gurkan Sanli <bilalsanli129@gmail.com>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: biokids 0.1.0-1\n"
+"Report-Msgid-Bugs-To: bilalsanli129@gmail.com\n"
+"POT-Creation-Date: 2026-09-19 12:00+0300\n"
+"PO-Revision-Date: 2026-09-19 12:00+0300\n"
+"Last-Translator: Bilal Gurkan Sanli <bilalsanli129@gmail.com>\n"
+"Language-Team: Turkish\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: boolean
+#. Description
+#: ../biokids-core.templates:1001
+msgid "Delete the stored BioKids data for this family?"
+msgstr "Bu ailenin BioKids verileri silinsin mi?"
+
+#. Type: boolean
+#. Description
+#: ../biokids-core.templates:1001
+msgid ""
+"/var/lib/biokids holds every child's time history, their settings and the "
+"audit log. Answer no to keep it, and a later reinstallation of BioKids will "
+"find it again. Answer yes only if this family's record of computer use should "
+"be erased for good; that cannot be undone."
+msgstr ""
+"/var/lib/biokids dizininde her çocuğun süre geçmişi, ayarları ve işlem kaydı "
+"tutulur. Saklamak için hayır deyin; BioKids'i sonra yeniden kurduğunuzda bu "
+"kayıtlar yerinde olur. Yalnızca bu ailenin bilgisayar kullanım kaydının "
+"tamamen silinmesini istiyorsanız evet deyin; bu işlem geri alınamaz."

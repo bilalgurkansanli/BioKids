@@ -118,7 +118,16 @@ python_version = "3.13"
 strict = true
 warn_unreachable = true
 mypy_path = "src"
-packages = ["biokids_core", "biokids_daemon"]
+# CLAUDE.md §6 requires strict typing on core and daemon. The rest passes it
+# too, and a check that covers everything cannot quietly stop covering
+# something when a file moves between packages.
+packages = [
+    "biokids_core",
+    "biokids_daemon",
+    "biokids_panel",
+    "biokids_shell",
+    "biokids_voice",
+]
 exclude = ["src/biokids_core/migrations/"]
 
 [[tool.mypy.overrides]]

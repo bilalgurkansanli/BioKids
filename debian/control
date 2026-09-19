@@ -1,0 +1,263 @@
+Source: biokids
+Section: admin
+Priority: optional
+Maintainer: Bilal Gurkan Sanli <bilalsanli129@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               dh-python,
+               gnupg,
+               po-debconf,
+               pybuild-plugin-pyproject,
+               python3-all,
+               python3-setuptools
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://biokids.bilalgurkansanli.com
+Vcs-Git: https://github.com/bilalgurkansanli/biokids.git
+Vcs-Browser: https://github.com/bilalgurkansanli/biokids
+
+Package: biokids
+Architecture: all
+Depends: biokids-core (= ${binary:Version}),
+         biokids-daemon (= ${binary:Version}),
+         biokids-panel (= ${binary:Version}),
+         biokids-shell (= ${binary:Version}),
+         biokids-voice (= ${binary:Version}),
+         ${misc:Depends}
+Recommends: biokids-archive-keyring
+Suggests: biokids-ai, biokids-desktop
+Description: parental controls for Debian that stay on your own machine
+ BioKids is a metapackage that installs a complete, working set of parental
+ controls on an existing Debian system: the enforcement daemon, the parent
+ panel, the child launcher and the two voice companions, Zio and Sio.
+ .
+ What a parent gets is a daily time limit that a child cannot win back by
+ moving the system clock, separate weekday and weekend rules, time windows,
+ spoken warnings before the computer shuts down, and a launcher with big
+ tiles instead of a desktop full of things a six-year-old should not find.
+ .
+ Nothing leaves the computer. There is no account to create, no telemetry, no
+ analytics and no cloud service in the path. The parent panel listens on
+ 127.0.0.1 and is reached from a phone over the family's own private network.
+ .
+ BioKids is built for a curious child aged 4 to 10 working alone at one
+ computer. It does not try to stop someone who boots from a USB stick, edits
+ the kernel command line, takes the disk out, or has an adult helping them,
+ and it protects one machine rather than a household. It is a supervision
+ aid, not a guarantee, and it is no substitute for talking to your child.
+
+Package: biokids-core
+Architecture: all
+Depends: adduser,
+         alembic (>= 1.13),
+         python3-argon2,
+         python3-cryptography,
+         python3-sqlalchemy (>= 2.0),
+         ${misc:Depends},
+         ${python3:Depends}
+Recommends: biokids-daemon
+Suggests: biokids-ai
+Description: parental controls for Debian - shared library and data
+ This package holds the parts every other BioKids package is built on: the
+ loader for /etc/biokids/config.toml, the SQLite schema and its migrations,
+ the policy engine, the Turkish and English message catalogues, and the
+ application catalogue in /usr/share/biokids/catalog.
+ .
+ It also owns the family's data directory, /var/lib/biokids, and creates it
+ on installation. Removing this package leaves that directory alone; only a
+ purge offers to delete it, and it asks first.
+ .
+ On its own it does nothing a parent can see. Install the biokids package for
+ a working system.
+ .
+ BioKids is built for a curious child aged 4 to 10 working alone at one
+ computer. It does not try to stop someone who boots from a USB stick, edits
+ the kernel command line or has an adult helping them.
+
+Package: biokids-daemon
+Architecture: all
+Depends: biokids-core (= ${binary:Version}),
+         dnsmasq,
+         nftables,
+         python3-dbus-next,
+         systemd,
+         ${misc:Depends},
+         ${python3:Depends}
+Recommends: biokids-panel
+Suggests: biokids-ai
+Description: parental controls for Debian - enforcement daemon
+ The daemon is the part that actually counts a child's time and acts on it.
+ It follows every login session through systemd-logind, accounts time against
+ CLOCK_BOOTTIME so that winding the clock forward buys nothing, evaluates the
+ policy the parent set, and warns, locks or shuts the machine down when the
+ daily allowance runs out.
+ .
+ It runs as root, confined by a systemd sandbox, and speaks to the rest of
+ BioKids over a Unix socket at /run/biokids/daemon.sock. If it dies, the
+ child's session is locked rather than left unsupervised: a parental control
+ that fails open is worse than none at all.
+ .
+ This package also brings in dnsmasq and nftables, which the filtering work
+ in a later release configures. Neither is touched until a parent turns
+ filtering on.
+ .
+ BioKids is built for a curious child aged 4 to 10 working alone at one
+ computer. It does not defend against a booted USB stick, an edited kernel
+ command line or an adult who is helping.
+
+Package: biokids-panel
+Architecture: all
+Depends: biokids-core (= ${binary:Version}),
+         biokids-daemon (= ${binary:Version}),
+         python3-fastapi,
+         python3-itsdangerous,
+         python3-jinja2,
+         python3-multipart,
+         python3-qrcode,
+         python3-uvicorn,
+         ${misc:Depends},
+         ${python3:Depends}
+Suggests: biokids-ai
+Description: parental controls for Debian - parent panel
+ The panel is how a parent sets everything up and sees what happened today:
+ a setup wizard, a daily quota per child, time windows, the audit log, and
+ three buttons that reach the daemon directly - grant fifteen minutes, lock
+ the session now, and shut the computer down.
+ .
+ It listens on 127.0.0.1:7878 only. There is no port to forward and no
+ account to create; reaching it from a phone is done over the family's own
+ private network. Access is gated by a six-digit PIN hashed with argon2id and
+ rate limited, with a separate passphrase for anything destructive.
+ .
+ The interface is in Turkish and English, and it is written for a parent who
+ does not want to learn what a systemd unit is.
+ .
+ BioKids is built for a curious child aged 4 to 10 working alone at one
+ computer, and the panel says so where a parent will read it.
+
+Package: biokids-shell
+Architecture: all
+Section: x11
+Depends: biokids-core (= ${binary:Version}),
+         chromium,
+         ${misc:Depends},
+         ${python3:Depends}
+Recommends: biokids-voice
+Suggests: biokids-desktop
+Description: parental controls for Debian - child launcher
+ Instead of a desktop, a child gets a full-screen grid of large tiles holding
+ exactly the applications the parent picked, a ring showing how much time is
+ left today, and nothing else: no file manager, no settings, no terminal, no
+ way to minimise it.
+ .
+ The launcher is a small local web application shown in a Chromium kiosk
+ window, started as a systemd user unit inside the child's own session. It
+ has no privileges of its own; every decision about what may run and for how
+ long comes from the daemon.
+ .
+ The tile grid changes with the child's age: the four-to-seven layout is
+ larger, has fewer tiles and uses pictures rather than words.
+ .
+ BioKids is built for a curious child aged 4 to 10 working alone at one
+ computer. The launcher cannot be left with a keyboard or a mouse, which is
+ not the same thing as being unescapable.
+
+Package: biokids-voice
+Architecture: all
+Section: sound
+Depends: biokids-core (= ${binary:Version}),
+         pipewire,
+         ${misc:Depends},
+         ${python3:Depends}
+Recommends: piper-tts
+Description: parental controls for Debian - Zio and Sio, the voice companions
+ Zio and Sio are the two characters who tell a child what is happening: ten
+ minutes left, five minutes left, one minute left, time to stop. A spoken
+ warning lands with a four-year-old in a way that a notification never does,
+ and what they say always appears as text on screen as well, so a child who
+ is not listening still sees it.
+ .
+ Speech is produced on the machine itself with Piper. Nothing is recorded,
+ nothing is uploaded and no microphone is ever opened. If Piper is not
+ installed, the warnings appear as on-screen cards instead of being spoken:
+ the recommended piper-tts package is what turns the sound on.
+ .
+ The service runs inside the child's session with no privileges, and ducks
+ whatever else is playing to thirty percent while it speaks.
+
+Package: biokids-desktop
+Architecture: all
+Section: metapackages
+Depends: biokids (= ${binary:Version}),
+         chromium,
+         lightdm,
+         xfce4,
+         ${misc:Depends}
+Recommends: frozen-bubble,
+            gcompris-qt,
+            gnome-mahjongg,
+            klavaro,
+            kolourpaint,
+            stellarium,
+            supertux,
+            tuxmath,
+            tuxpaint
+Suggests: biokids-ai, libreoffice-calc, libreoffice-writer
+Description: parental controls for Debian - full child desktop (metapackage)
+ This metapackage turns a plain Debian installation into the machine a child
+ is handed: BioKids itself, the XFCE session it is built on, the LightDM
+ greeter with its large avatars, and the applications in the BioKids
+ catalogue - GCompris, TuxPaint, TuxMath, Klavaro, Stellarium, KolourPaint,
+ SuperTux, Frozen Bubble and gnome-mahjongg.
+ .
+ The applications arrive as recommendations, so a parent who wants a smaller
+ set can drop any of them without fighting the package manager. Nothing a
+ parent has not enabled in the panel is ever shown to the child, whether it
+ is installed or not.
+ .
+ Install this on a machine that is going to be a child's computer. On a
+ shared machine, install the biokids package instead and leave the parent's
+ own desktop as it is.
+
+Package: biokids-ai
+Architecture: all
+Depends: biokids-core (= ${binary:Version}),
+         ${misc:Depends},
+         ${python3:Depends}
+Enhances: biokids-daemon
+Description: parental controls for Debian - optional screen supervision
+ An optional worker that looks at the child's screen when something new
+ appears, asks a local vision model how appropriate it is for a child of that
+ age, and tells the parent when the answer is bad. It exists so that a parent
+ hears about a problem the filter did not catch.
+ .
+ Everything happens on this computer. The screenshot is held in memory, scored
+ on the local GPU and discarded; only a flagged frame is kept, in
+ /var/lib/biokids/evidence, and it is pruned automatically. No image is ever
+ uploaded, and the worker runs as its own unprivileged system user with no
+ access to the network once its model has been fetched.
+ .
+ The feature is off until a parent turns it on, and the child is told it is
+ running: BioKids does not do covert monitoring, and a supervision feature a
+ child does not know about is one this project will not ship.
+ .
+ The model itself is not in this package; biokids-ai-setup downloads it after
+ installation, and the whole feature needs a GPU to be worth having.
+
+Package: biokids-archive-keyring
+Architecture: all
+Multi-Arch: foreign
+Section: misc
+Depends: ${misc:Depends}
+Description: GnuPG archive key for the BioKids APT repository
+ This package ships the public half of the key that signs the BioKids APT
+ repository at https://apt.biokids.bilalgurkansanli.com, as
+ /usr/share/keyrings/biokids-archive-keyring.gpg.
+ .
+ Point an apt source at that file with signed-by= and apt will accept
+ BioKids packages and nothing else. The key's private half exists only in the
+ project's release automation; it has never been on a developer's machine and
+ is not in the source repository.
+ .
+ Installing this package does not add the repository to apt. The two commands
+ that do are in the project's README, and they are deliberately something a
+ person types rather than something a package does behind their back.

@@ -1,0 +1,14 @@
+{% extends "_full.html" %}
+{% set tone = 'full--warm' %}
+{% block title %}BioKids{% endblock %}
+{% block inner %}
+  {#
+    The daemon is not answering, so nothing on this machine is being supervised.
+    The child gets a calm holding screen and nothing they can do, because the
+    alternative — a working launcher with no limits behind it — is exactly the
+    failure principle #3 exists to prevent.
+  #}
+  <div class="tile__icon" style="font-size:5rem" aria-hidden="true">🌙</div>
+  <h1>{{ _('shell.locked.title') }}</h1>
+  <p>{{ _('error.daemon_unreachable') }}</p>
+{% endblock %}

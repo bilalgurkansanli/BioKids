@@ -1,0 +1,37 @@
+#!/bin/sh
+# biokids-daemon prerm: put the daemon down before its files go away.
+#
+# dh_installsystemd generates an equivalent stop into the #DEBHELPER# block
+# below. It is written out here as well, first, because the order is what
+# matters: the daemon has to be stopped before dpkg starts unlinking the Python
+# modules it is running out of. A second stop of an already stopped unit costs
+# nothing.
+#
+# A clean stop is not a failure, so this does not trip
+# OnFailure=biokids-lockdown.service and nobody's session gets locked because an
+# administrator ran apt.
+
+set -e
+
+case "$1" in
+    remove|deconfigure)
+        if [ -d /run/systemd/system ]; then
+            deb-systemd-invoke stop biokids-daemon.service >/dev/null 2>&1 || true
+        fi
+        ;;
+
+    upgrade|failed-upgrade)
+        # Left running across an upgrade on purpose. The postinst restarts it,
+        # and a child session that spends an apt run unsupervised is exactly
+        # the gap this project exists to close.
+        ;;
+
+    *)
+        echo "prerm called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

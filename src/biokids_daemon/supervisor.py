@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 from biokids_core import repo
 from biokids_core.clock import Clock, SystemClock
 from biokids_core.config import Config, get_config
+from biokids_core.db.models import AccessRequest
 from biokids_core.db.session import Database
 from biokids_core.ipc import EventKind
 from biokids_core.ledger import TickInput, TimeLedger
@@ -538,6 +539,148 @@ class Supervisor:
             "day": day.isoformat(),
             "children": children,
         }
+
+    def shell_state(self, child_id: int) -> dict[str, Any]:
+        """Everything the child's launcher draws, in one call.
+
+        The launcher runs as the child and cannot read the database — it is 0600
+        root — so this is where identity, tiles and remaining time come from. It
+        is also why the launcher can be trusted to render whatever it is given:
+        it has no way to invent a number.
+        """
+        runtime = self._require(child_id)
+        reading = self.clock.read()
+        day = reading.wall.date()
+        presence = self.watcher.presence(runtime.unix_user)
+        state = self.ledger.state(child_id, day)
+        policy = runtime.policy
+
+        decision = evaluate(
+            policy,
+            state,
+            ActivityContext(
+                app_slug=runtime.app_slug or None,
+                category=runtime.category,
+                session_active=True,
+            ),
+            reading.wall,
+        )
+
+        child = repo.get_child(self.session, child_id)
+        tiles: list[dict[str, Any]] = []
+        if child is not None:
+            for link, app in repo.list_child_apps(self.session, child_id):
+                if app.kind == "__gone__":
+                    continue
+                tiles.append(
+                    {
+                        "slug": app.slug,
+                        "name": app.name(runtime.locale),
+                        "description": app.description(runtime.locale),
+                        "icon": app.icon,
+                        "kind": app.kind,
+                        "url": app.url,
+                        "exec": app.exec_cmd,
+                        "category": repo.child_app_category(link, app).value,
+                    }
+                )
+
+        quota = policy.quota_minutes(day) * 60 if policy else 0
+        return {
+            "child_id": child_id,
+            "display_name": runtime.display_name,
+            "avatar": runtime.avatar,
+            "locale": runtime.locale,
+            "age_band": runtime.age_band,
+            "managed": policy is not None,
+            "supervision_indicator": child.supervision_indicator if child else "badge",
+            "first_run_done": bool(child.first_run_done) if child else True,
+            "tiles": tiles,
+            "remaining_seconds": decision.remaining_seconds,
+            "remaining_minutes": decision.remaining_minutes,
+            "quota_seconds": quota + state.granted_s,
+            "used_seconds": state.general_used_s,
+            "earned_seconds": state.earned_s,
+            "break_seconds": state.break_remaining_s,
+            "penalty_seconds": state.penalty_remaining_s,
+            "allow": decision.allow,
+            "action": decision.action.value,
+            "reason_code": decision.reason_code,
+            "idle": presence.idle,
+            "countdown_seconds": self._countdown_remaining(runtime, day, now_boot=reading.boot),
+        }
+
+    def _countdown_remaining(self, runtime: ChildRuntime, day: dt.date, now_boot: float) -> int:
+        """Seconds left on the lock screen before the end action, or zero."""
+        started = self.ledger.end_sequence_started_at(runtime.child_id, day)
+        if started is None:
+            return 0
+        total = (
+            runtime.policy.lock_countdown_seconds
+            if runtime.policy is not None
+            else self.config.daemon.lock_countdown_seconds
+        )
+        return max(0, total - int(now_boot - started))
+
+    def mark_first_run_done(self, child_id: int) -> None:
+        """The child has read the supervision explanation (D-111)."""
+        child = repo.get_child(self.session, child_id)
+        if child is None or child.first_run_done:
+            return
+        child.first_run_done = True
+        repo.audit(
+            self.session,
+            actor=f"child:{child.unix_user}",
+            action="first_run_explained",
+            target=f"child:{child_id}",
+        )
+        self.session.commit()
+
+    async def child_requested_shutdown(self, child_id: int) -> bool:
+        """The shutdown tile (D-100). Refused while a sibling is still logged in."""
+        runtime = self._require(child_id)
+        others = [
+            other
+            for other in self.children.values()
+            if other.child_id != child_id and self.watcher.presence(other.unix_user).present
+        ]
+        if others:
+            log.info(
+                "%s asked to shut down, but %s is still logged in",
+                runtime.unix_user,
+                ", ".join(o.unix_user for o in others),
+            )
+            return False
+
+        repo.audit(
+            self.session,
+            actor=f"child:{runtime.unix_user}",
+            action="poweroff",
+            target=f"child:{child_id}",
+            detail={"by": "child"},
+        )
+        self.session.commit()
+        await self.enforcer.stop_all_apps(runtime.unix_user)
+        self.ledger.persist()
+        return await self.enforcer.poweroff()
+
+    def file_access_request(self, child_id: int, url: str) -> int:
+        """ "Anneme sor" (D-65). Turns the filter from a wall into a conversation."""
+        runtime = self._require(child_id)
+        row = AccessRequest(child_id=child_id, url=url, status="pending")
+        self.session.add(row)
+        repo.audit(
+            self.session,
+            actor=f"child:{runtime.unix_user}",
+            action="access_requested",
+            target=f"child:{child_id}",
+            detail={"url": url},
+        )
+        self.session.commit()
+        self.bus.publish(
+            EventKind.ACCESS_REQUEST, child_id=child_id, url=url, request_id=row.id
+        )
+        return int(row.id)
 
     def grant_time(self, child_id: int, seconds: int, actor: str = "parent") -> dict[str, Any]:
         runtime = self._require(child_id)

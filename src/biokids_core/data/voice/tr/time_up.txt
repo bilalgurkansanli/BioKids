@@ -1,0 +1,4 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}
+Süremiz doldu {name}. Yarın yine buradayım.
+Bugünlük bu kadar yavrum. Yarın görüşürüz.
+Bugünlük bitti. Kendine iyi bak, yarın görüşürüz.

@@ -1,0 +1,9 @@
+# /etc/biokids is shipped so that dpkg owns it and removes it on purge once the
+# secrets the postinst generated are gone.
+#
+# /var/lib/biokids, /var/log/biokids and /run/biokids are deliberately NOT here:
+# dpkg re-applies the recorded mode of a directory it ships on every unpack, and
+# 0700 on a family's history must not depend on nobody having changed the
+# recorded mode. The postinst creates those three instead.
+etc/biokids
+usr/share/biokids

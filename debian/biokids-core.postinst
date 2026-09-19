@@ -1,0 +1,106 @@
+#!/bin/sh
+# biokids-core postinst.
+#
+# This is the only script in the source package that creates state, and it runs
+# again on every upgrade and on every "dpkg --configure". So everything in it is
+# written to be correct the second time as well: create if absent, assert the
+# mode, and never regenerate a secret or overwrite something a parent may have
+# changed. If any of it fails the package is left unconfigured, which is the
+# loud failure we want - a half-installed parental control is the bad case.
+
+set -e
+
+BIOKIDS_GROUP=biokids
+AI_USER=biokids-ai
+CONF_DIR=/etc/biokids
+DATA_DIR=/var/lib/biokids
+EVIDENCE_DIR=/var/lib/biokids/evidence
+LOG_DIR=/var/log/biokids
+RUN_DIR=/run/biokids
+ALEMBIC_INI=/usr/share/biokids/alembic.ini
+
+case "$1" in
+    configure)
+        # The group that owns the daemon socket and the extension token. The
+        # child's launcher is a member; the child's login session is not.
+        if ! getent group "$BIOKIDS_GROUP" >/dev/null; then
+            addgroup --system "$BIOKIDS_GROUP"
+        fi
+
+        # The screen watcher's account. Created here rather than in biokids-ai
+        # so that ownership under /var/lib/biokids is settled once and turning
+        # the optional package on later changes no permissions. It has no home,
+        # no shell and no password; all it ever needs is the X display and the
+        # daemon socket.
+        if ! getent passwd "$AI_USER" >/dev/null; then
+            adduser --system --group --no-create-home --home /nonexistent \
+                    --shell /usr/sbin/nologin \
+                    --gecos "BioKids screen watcher" "$AI_USER"
+        fi
+        adduser --quiet "$AI_USER" "$BIOKIDS_GROUP"
+
+        # These three are created here instead of being shipped in the package
+        # because dpkg re-applies the recorded mode of a directory it owns on
+        # every unpack, and 0700 on a family's history is not something to leave
+        # to a recorded mode. install -d is idempotent and re-asserts the mode,
+        # which is the point: an upgrade should repair a loosened permission.
+        install -d -o root -g root -m 0700 "$DATA_DIR"
+        install -d -o root -g root -m 0700 "$EVIDENCE_DIR"
+        install -d -o root -g adm -m 0750 "$LOG_DIR"
+        # /run is a tmpfs, so this covers the window between installing and the
+        # first boot. After that the daemon unit's RuntimeDirectory= owns it.
+        install -d -o root -g root -m 0755 "$RUN_DIR"
+
+        # The token the browser extension presents to the daemon. Readable by
+        # the biokids group so the child's session can pass it on, and written
+        # under a temporary name so a reader never sees a half-written file.
+        # Regenerating it would silently disconnect the extension, so it is
+        # generated once and then left alone.
+        if [ ! -e "$CONF_DIR/ext.token" ]; then
+            tmp="$(mktemp "$CONF_DIR/ext.token.XXXXXX")"
+            od -An -tx1 -N32 /dev/urandom | tr -d ' \n' > "$tmp"
+            printf '\n' >> "$tmp"
+            chown root:"$BIOKIDS_GROUP" "$tmp"
+            chmod 0640 "$tmp"
+            mv "$tmp" "$CONF_DIR/ext.token"
+        fi
+
+        # The key that encrypts the SMTP password and anything else stored at
+        # rest. A Fernet key has a shape, so it is made by the code that will
+        # read it; that helper also creates the file 0600 from its first byte,
+        # never world readable even for an instant. Replacing this key would
+        # make every stored secret undecryptable, hence the test.
+        if [ ! -e "$CONF_DIR/secret.key" ]; then
+            python3 -c 'import sys
+from pathlib import Path
+from biokids_core.security import load_or_create_key
+load_or_create_key(Path(sys.argv[1]))' "$CONF_DIR/secret.key"
+        fi
+
+        # The schema. Alembic is authoritative in production. The database URL
+        # is not in the ini: migrations/env.py asks biokids_core.config for it,
+        # so this migrates whatever config.toml actually points at.
+        alembic -c "$ALEMBIC_INI" upgrade head
+
+        # Load the application catalogue into the app table. Additive by
+        # design: an app a parent disabled stays disabled, and an app that has
+        # left the catalogue is marked gone rather than deleted, because a
+        # child_app row still points at it and a family's arrangement of tiles
+        # should survive an upgrade. The subcommand ships in this package, so it
+        # is here on disk by the time this line runs, and a parent can repeat it
+        # by hand after editing the catalogue.
+        biokids-admin sync-catalog
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

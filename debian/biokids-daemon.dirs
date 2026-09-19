@@ -1,0 +1,4 @@
+# The daemon renders its nftables ruleset into this directory. Shipping the
+# directory (empty) means the unit's ReadWritePaths= has something to bind and
+# the daemon has somewhere to write the first time filtering is turned on.
+etc/nftables.d

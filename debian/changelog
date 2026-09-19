@@ -1,0 +1,14 @@
+biokids (0.1.0-1) trixie; urgency=medium
+
+  * Initial packaging of BioGuard: biokids-core, biokids-daemon,
+    biokids-panel, biokids-shell, biokids-voice, the biokids and
+    biokids-desktop metapackages, the optional biokids-ai worker, and
+    biokids-archive-keyring.
+  * Phase 0 scope only. Time accounting, enforcement, the parent panel and
+    the child launcher are the product; filtering, earned time, categories
+    and the screen watcher ship as packages but are not finished features.
+  * The distribution is "trixie" because that is the suite name of the
+    project's own archive, which is where these packages are published.
+    They are not uploaded to Debian.
+
+ -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Sat, 19 Sep 2026 12:00:00 +0300

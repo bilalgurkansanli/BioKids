@@ -1,0 +1,45 @@
+{#
+  The launcher shell.
+
+  Deliberately hostile to escape: no context menu, no text selection, no drag,
+  no keyboard shortcut that Chromium lets a page see. The rest is the window
+  manager's job and is documented as such (SECURITY.md §1).
+#}
+<!DOCTYPE html>
+<html lang="{{ locale }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="no-referrer">
+  <title>{% block title %}BioKids{% endblock %}</title>
+  <link rel="stylesheet" href="/static/shared/tokens.css">
+  <link rel="stylesheet" href="/static/shell.css">
+  <link rel="icon" href="/static/icons/icon-192.png" sizes="192x192">
+</head>
+<body>
+  {% block body %}{% endblock %}
+
+  <div class="banner" id="banner" data-level="info" role="status" aria-live="polite">
+    <span class="banner__icon" aria-hidden="true">⏳</span>
+    <span id="banner-text"></span>
+  </div>
+
+  <div class="speech-card" id="speech" data-persona="zio" aria-live="polite">
+    <div class="character" id="speech-character">
+      {{ characters.zio|safe if characters.zio else '' }}
+    </div>
+    <p class="speech-card__text" id="speech-text"></p>
+  </div>
+
+  {# Every sentence the page substitutes into a live event comes from the
+     catalogs, not from JavaScript (ARCHITECTURE.md §8). #}
+  <script id="strings" type="application/json">{{ strings|tojson }}</script>
+  <script id="lines" type="application/json">{{ lines|tojson }}</script>
+  <script>
+    window.BIOKIDS_STRINGS = JSON.parse(document.getElementById("strings").textContent);
+    window.BIOKIDS_LINES = JSON.parse(document.getElementById("lines").textContent);
+  </script>
+  <script src="/static/shell.js" defer></script>
+</body>
+</html>

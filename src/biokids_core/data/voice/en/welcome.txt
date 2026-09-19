@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}
+Hello {name}, welcome back. You have {minutes} minutes today.
+I was waiting for you, {name}! You have {minutes} minutes today.
+Welcome back. You have {minutes} minutes today, have fun.
+Welcome back, it is lovely to see you.

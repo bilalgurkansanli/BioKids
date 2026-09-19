@@ -1,0 +1,18 @@
+{#
+  The shape every full-screen state shares: a character, a heading, a sentence,
+  and at most two very large buttons. Never an error code, never a URL, never
+  the word "forbidden" (UX.md §2.5).
+#}
+{% extends "base.html" %}
+{% block body %}
+<div class="full {{ tone|default('') }}">
+  <div class="full__inner">
+    {% if persona and characters[persona] %}
+      <div class="character" data-expression="{{ expression|default('neutral') }}">
+        {{ characters[persona]|expression(expression|default('neutral'))|safe }}
+      </div>
+    {% endif %}
+    {% block inner %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

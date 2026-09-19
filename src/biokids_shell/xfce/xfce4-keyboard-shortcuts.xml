@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Keyboard shortcuts, in a child's session.
+
+  The kiosk window must not be closable, movable or switchable away from, so the
+  bindings that would do any of those are set empty. Nothing here stops
+  Ctrl+Alt+F2: that is a virtual-terminal switch handled by logind and the X
+  server, and biokids-daemon installs the configuration for it.
+-->
+<channel name="xfce4-keyboard-shortcuts" version="1.0">
+  <property name="xfwm4" type="empty">
+    <property name="custom" type="empty">
+      <property name="&lt;Alt&gt;F4" type="empty"/>
+      <property name="&lt;Alt&gt;F7" type="empty"/>
+      <property name="&lt;Alt&gt;F8" type="empty"/>
+      <property name="&lt;Alt&gt;F10" type="empty"/>
+      <property name="&lt;Alt&gt;space" type="empty"/>
+      <property name="&lt;Alt&gt;Tab" type="empty"/>
+      <property name="&lt;Alt&gt;&lt;Shift&gt;Tab" type="empty"/>
+      <property name="&lt;Super&gt;Tab" type="empty"/>
+      <property name="&lt;Super&gt;p" type="empty"/>
+      <property name="&lt;Control&gt;&lt;Alt&gt;d" type="empty"/>
+      <property name="&lt;Control&gt;&lt;Alt&gt;Delete" type="empty"/>
+      <property name="&lt;Control&gt;&lt;Alt&gt;End" type="empty"/>
+    </property>
+  </property>
+  <property name="commands" type="empty">
+    <property name="custom" type="empty">
+      <property name="&lt;Super&gt;e" type="empty"/>
+      <property name="&lt;Super&gt;f" type="empty"/>
+      <property name="&lt;Super&gt;r" type="empty"/>
+      <property name="&lt;Super&gt;t" type="empty"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;t" type="empty"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;Escape" type="empty"/>
+      <property name="XF86Display" type="empty"/>
+      <!--
+        Volume keys stay bound: a child who cannot turn the sound down will turn
+        the computer off instead, and the launcher's own slider is not reachable
+        from inside a fullscreen game.
+      -->
+    </property>
+  </property>
+</channel>

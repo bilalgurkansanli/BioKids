@@ -1,0 +1,16 @@
+{% extends "_full.html" %}
+{% set tone = 'full--warm' %}
+{% set persona = 'sio' %}
+{% set expression = 'neutral' %}
+{% block title %}{{ _('shell.shutdown.confirm_title') }}{% endblock %}
+{% block inner %}
+  <h1>{{ _('shell.shutdown.confirm_title') }}</h1>
+  <div class="btn-row">
+    <form method="post" action="/shutdown">
+      <button class="big-btn big-btn--danger" type="submit">
+        {{ _('shell.shutdown.confirm_yes') }}
+      </button>
+    </form>
+    <a class="big-btn big-btn--quiet" href="/">{{ _('shell.shutdown.confirm_no') }}</a>
+  </div>
+{% endblock %}

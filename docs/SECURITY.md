@@ -57,7 +57,7 @@ Never add a claim to marketing copy that contradicts this list.
 |---|---|---|
 | `biokids-daemon` | root | needs logind control, nftables, service reloads, shutdown |
 | `biokids-panel` | root | writes config that only root may write |
-| `biokids-shell` | child | runs in the child session; no privilege |
+| `biokids-shell` | child | runs in the child session; no privilege. Reaches the daemon only over `/run/biokids/shell.sock`, where every operation is scoped to the calling uid's own child (D-123) |
 | `biokids-voice` | child | audio only |
 | `biokids-ai` | `biokids-ai` system user | needs X11 access for capture, nothing else |
 

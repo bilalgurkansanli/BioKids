@@ -1,0 +1,4 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}
+Our time is up, {name}. I will be here again tomorrow.
+That is all for today, sweetheart. See you tomorrow.
+That is it for today. Take care, see you tomorrow.

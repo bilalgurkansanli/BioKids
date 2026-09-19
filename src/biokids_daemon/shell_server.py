@@ -1,0 +1,303 @@
+"""The unprivileged socket the child's own session talks to.
+
+`ARCHITECTURE.md` §2 says the launcher "asks the daemon for permission", and
+`SECURITY.md` §2 says the daemon's socket is `root:biokids` 0660. Both are right
+and together they leave a gap: the child is not in the `biokids` group and must
+never be, because that group can grant time and power the machine off.
+
+So there are two sockets.
+
+`/run/biokids/daemon.sock` is the privileged one, unchanged: root, group
+`biokids`, 0660, every operation.
+
+`/run/biokids/shell.sock` is this one. It is world-connectable, which sounds
+alarming and is not, because **nothing on it takes a child id as an argument**.
+The daemon asks the kernel who is on the other end — `SO_PEERCRED`, which a
+process cannot forge about itself — maps that uid to a child, and answers about
+that child only. A uid that is not a managed child gets nothing at all.
+
+What the child's session can do is therefore bounded by this file: read its own
+remaining time and tiles, ask to start an application the parent enabled, say
+what has focus, ask for the machine to be shut down, and file an "ask a parent"
+request. There is no operation here that adds a minute to anyone's day.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import logging
+import os
+import socket
+import struct
+from collections.abc import Awaitable, Callable
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, cast
+
+from biokids_core.config import Config, get_config
+from biokids_core.errors import IpcError
+from biokids_core.ipc import Event, Request, Response, ShellOp
+from biokids_daemon.bus import EventBus
+from biokids_daemon.supervisor import ChildRuntime, Supervisor
+
+if TYPE_CHECKING:  # pragma: no cover - the daemon only ever runs on Linux
+    from asyncio import AbstractServer
+
+log = logging.getLogger(__name__)
+
+Handler = Callable[["ShellCaller", Request], Awaitable[Response]]
+
+SHELL_SOCKET_MODE = 0o666
+"""World-connectable on purpose; see the module docstring. The authorisation is
+the peer's uid, not the file mode."""
+
+
+class ShellCaller:
+    """Who is on the other end of a connection, decided by the kernel."""
+
+    def __init__(self, uid: int, runtime: ChildRuntime) -> None:
+        self.uid = uid
+        self.runtime = runtime
+
+    @property
+    def child_id(self) -> int:
+        return self.runtime.child_id
+
+
+def peer_uid(writer: asyncio.StreamWriter) -> int | None:
+    """The uid of the connecting process, or None if it cannot be established.
+
+    `SO_PEERCRED` is filled in by the kernel at connect time from the peer's
+    real credentials. A process cannot lie about it, which is what makes an
+    open-mode socket safe here.
+    """
+    raw = writer.get_extra_info("socket")
+    if raw is None:  # pragma: no cover - only on a transport we do not use
+        return None
+    try:
+        creds = raw.getsockopt(
+            socket.SOL_SOCKET,
+            socket.SO_PEERCRED,  # type: ignore[attr-defined]
+            struct.calcsize("3i"),
+        )
+    except (OSError, AttributeError):  # pragma: no cover - non-Linux
+        return None
+    _pid, uid, _gid = struct.unpack("3i", creds)
+    return int(uid)
+
+
+class ShellServer:
+    """Serves `ShellOp` to the child's session, and nothing else."""
+
+    def __init__(
+        self,
+        supervisor: Supervisor,
+        bus: EventBus,
+        config: Config | None = None,
+    ) -> None:
+        self.supervisor = supervisor
+        self.bus = bus
+        self.config = config or get_config()
+        self._server: AbstractServer | None = None
+
+    @property
+    def socket_path(self) -> Path:
+        return self.config.paths.shell_socket
+
+    # ------------------------------------------------------------ lifecycle
+
+    async def start(self) -> None:
+        path = self.socket_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with contextlib.suppress(FileNotFoundError):
+            path.unlink()
+
+        start_unix_server = cast(
+            "Callable[..., Awaitable[AbstractServer]]",
+            asyncio.start_unix_server,  # type: ignore[attr-defined]
+        )
+        self._server = await start_unix_server(self._serve, path=str(path))
+        with contextlib.suppress(OSError):
+            path.chmod(SHELL_SOCKET_MODE)
+        log.info("child launcher socket at %s", path)
+
+    async def stop(self) -> None:
+        if self._server is not None:
+            self._server.close()
+            await self._server.wait_closed()
+            self._server = None
+        with contextlib.suppress(FileNotFoundError):
+            self.socket_path.unlink()
+
+    # ----------------------------------------------------------- connection
+
+    async def _serve(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        uid = peer_uid(writer)
+        caller = self._identify(uid)
+        try:
+            if caller is None:
+                # Not a managed child. Say so once and close; do not leak whether
+                # the uid exists, which child ids there are, or anything else.
+                writer.write(Response(ok=False, error="shell.not_a_child").encode())
+                await writer.drain()
+                return
+            while True:
+                line = await reader.readline()
+                if not line:
+                    return
+                if not line.strip():
+                    continue
+                response, subscribe = await self._dispatch(caller, line)
+                writer.write(response.encode())
+                await writer.drain()
+                if subscribe:
+                    await self._stream(writer, caller.child_id)
+                    return
+        except (ConnectionResetError, BrokenPipeError):
+            return
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # a broken launcher must not stop enforcement
+            log.exception("shell connection failed")
+        finally:
+            writer.close()
+            with contextlib.suppress(OSError):
+                await writer.wait_closed()
+
+    def _identify(self, uid: int | None) -> ShellCaller | None:
+        if uid is None:
+            return None
+        if uid == 0:
+            # root connecting to the unprivileged socket is the test suite or an
+            # administrator poking at it. There is nothing here root cannot get
+            # from the privileged socket, so refuse rather than guess a child.
+            return None
+        name = username_for_uid(uid)
+        if name is None:
+            return None
+        child_id = self.supervisor.by_user.get(name)
+        if child_id is None:
+            return None
+        runtime = self.supervisor.children.get(child_id)
+        return ShellCaller(uid, runtime) if runtime else None
+
+    async def _dispatch(self, caller: ShellCaller, line: bytes) -> tuple[Response, bool]:
+        try:
+            request = Request.decode(line)
+        except IpcError:
+            return Response.failure("", "protocol.malformed"), False
+
+        if request.op == ShellOp.SUBSCRIBE_EVENTS:
+            return Response(id=request.id, ok=True, data={"subscribed": True}), True
+
+        handler = self._handlers().get(request.op)
+        if handler is None:
+            return Response.failure(request.id, "shell.not_allowed"), False
+        try:
+            return await handler(caller, request), False
+        except Exception:
+            log.exception("shell op %s failed", request.op)
+            return Response.failure(request.id, "error.unknown"), False
+
+    async def _stream(self, writer: asyncio.StreamWriter, child_id: int) -> None:
+        """Only this child's events. A launcher never hears about a sibling."""
+        subscriber = self.bus.subscribe(child_id=child_id, label=f"shell:{child_id}")
+        try:
+            while True:
+                event: Event = await subscriber.queue.get()
+                subscriber.queue.task_done()
+                if event.child_id not in (None, child_id):
+                    continue
+                writer.write(event.encode())
+                await writer.drain()
+        except (ConnectionResetError, BrokenPipeError, asyncio.CancelledError):
+            return
+        finally:
+            self.bus.unsubscribe(subscriber)
+
+    # -------------------------------------------------------------- handlers
+
+    def _handlers(self) -> dict[str, Handler]:
+        return {
+            ShellOp.PING: self._ping,
+            ShellOp.GET_STATE: self._get_state,
+            ShellOp.LAUNCH: self._launch,
+            ShellOp.REPORT_ACTIVITY: self._report_activity,
+            ShellOp.FIRST_RUN_DONE: self._first_run_done,
+            ShellOp.REQUEST_SHUTDOWN: self._request_shutdown,
+            ShellOp.ASK_A_PARENT: self._ask_a_parent,
+        }
+
+    async def _ping(self, _caller: ShellCaller, request: Request) -> Response:
+        return Response(id=request.id, ok=True)
+
+    async def _get_state(self, caller: ShellCaller, request: Request) -> Response:
+        return Response(
+            id=request.id, ok=True, data=self.supervisor.shell_state(caller.child_id)
+        )
+
+    async def _launch(self, caller: ShellCaller, request: Request) -> Response:
+        slug = str(request.args.get("app_slug", ""))
+        decision = self.supervisor.request_launch(caller.child_id, slug)
+        return Response(
+            id=request.id,
+            ok=True,
+            data={
+                "allow": decision.allow,
+                "reason_code": decision.reason_code,
+                "remaining_seconds": decision.remaining_seconds,
+            },
+        )
+
+    async def _report_activity(self, caller: ShellCaller, request: Request) -> Response:
+        self.supervisor.report_activity(
+            caller.child_id,
+            str(request.args.get("app_slug", "")),
+            str(request.args.get("app_name", "")),
+            str(request.args.get("category", "")),
+        )
+        return Response(id=request.id, ok=True)
+
+    async def _first_run_done(self, caller: ShellCaller, request: Request) -> Response:
+        self.supervisor.mark_first_run_done(caller.child_id)
+        return Response(id=request.id, ok=True)
+
+    async def _request_shutdown(self, caller: ShellCaller, request: Request) -> Response:
+        """The child may shut the machine down from a clearly marked tile (D-100).
+
+        It is a request rather than a command: the daemon stops the child's own
+        applications first and refuses outright if another child is still logged
+        in, because one child must not be able to close another's work.
+        """
+        ok = await self.supervisor.child_requested_shutdown(caller.child_id)
+        return Response(
+            id=request.id, ok=ok, data={"poweroff": ok}, error="" if ok else "shell.not_allowed"
+        )
+
+    async def _ask_a_parent(self, caller: ShellCaller, request: Request) -> Response:
+        url = str(request.args.get("url", ""))[:1024]
+        created = self.supervisor.file_access_request(caller.child_id, url)
+        return Response(id=request.id, ok=True, data={"request_id": created})
+
+
+def username_for_uid(uid: int) -> str | None:
+    """Ask the password database who this uid is.
+
+    `pwd` is POSIX-only and typeshed says so, so it is reached through a cast;
+    `mypy --strict` runs on the Windows host this project is developed from and
+    production is Linux (D-12).
+    """
+    try:
+        import pwd as pwd_module
+    except ImportError:  # pragma: no cover - the Windows development host
+        return None
+    getpwuid = cast("Callable[[int], Any]", pwd_module.getpwuid)  # type: ignore[attr-defined]
+    try:
+        return str(getpwuid(uid).pw_name)
+    except KeyError:
+        return None
+
+
+def current_uid() -> int:
+    getuid = getattr(os, "getuid", None)
+    return int(getuid()) if getuid is not None else -1  # pragma: no cover

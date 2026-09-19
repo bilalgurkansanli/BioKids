@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240"
+     class="bk-char bk-zio" role="img">
+  <title>Zio</title>
+  <desc>
+    Zio, the warm companion (VOICE.md section 7, D-94). Four expressions live in this
+    file as the groups zio-expr-neutral, zio-expr-happy, zio-expr-concerned and
+    zio-expr-sleepy; exactly one is visible at a time, chosen by a class on the root
+    svg element: no class or is-neutral, is-happy, is-concerned, is-sleepy. Add
+    is-speaking for the idle bob.
+
+    Every colour goes through a custom property, and each one falls back to the matching
+    token from docs/UX.md section 1, so the shell themes these by setting --bio-coral and
+    --bio-amber rather than by editing this file.
+
+    The rules below select on classes rather than on the ids, and every id in the file
+    carries the character's name, because the shell inlines Zio and Sio in the same
+    document (VOICE.md section 7) and two elements may not share an id there.
+  </desc>
+
+  <style>
+    .bk-zio {
+      --bk-body:      var(--bio-coral, #FF6B5B);
+      --bk-body-deep: var(--bk-zio-shade, #E2503F);
+      --bk-accent:    var(--bio-amber, #FFB020);
+      --bk-face:      var(--bk-zio-face, #FFF4EC);
+      --bk-ink:       var(--bio-ink, #221E1C);
+      --bk-mouth:     var(--bk-zio-mouth, #8E3B33);
+      --bk-tongue:    var(--bk-zio-tongue, #FF9A90);
+      --bk-blush:     var(--bk-zio-blush, #FFB020);
+    }
+
+    .bk-zio .bk-body   { fill: var(--bk-body); }
+    .bk-zio .bk-shade  { fill: var(--bk-body-deep); }
+    .bk-zio .bk-accent { fill: var(--bk-accent); }
+    .bk-zio .bk-face   { fill: var(--bk-face); }
+    .bk-zio .bk-eye    { fill: var(--bk-ink); }
+    .bk-zio .bk-glint  { fill: #FFFFFF; }
+    .bk-zio .bk-mouth  { fill: var(--bk-mouth); }
+    .bk-zio .bk-tongue { fill: var(--bk-tongue); }
+    .bk-zio .bk-blush  { fill: var(--bk-blush); }
+    .bk-zio .bk-sheen  {
+      fill: none; stroke: #FFFFFF; stroke-linecap: round; opacity: .22;
+    }
+    .bk-zio .bk-stroke {
+      fill: none; stroke: var(--bk-ink); stroke-width: 6;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+    .bk-zio .bk-zzz {
+      fill: none; stroke: var(--bk-ink); stroke-linecap: round;
+      stroke-linejoin: round; opacity: .7;
+    }
+
+    /* Neutral is the default, so a card that forgets to set a class still has a face. */
+    .bk-zio .bk-expr { display: none; }
+    .bk-zio .bk-expr-neutral { display: inline; }
+    .bk-zio.is-happy     .bk-expr-neutral,
+    .bk-zio.is-concerned .bk-expr-neutral,
+    .bk-zio.is-sleepy    .bk-expr-neutral { display: none; }
+    .bk-zio.is-happy     .bk-expr-happy     { display: inline; }
+    .bk-zio.is-concerned .bk-expr-concerned { display: inline; }
+    .bk-zio.is-sleepy    .bk-expr-sleepy    { display: inline; }
+
+    @keyframes bk-zio-bob {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-5px); }
+    }
+    .bk-zio.is-speaking .bk-figure {
+      animation: bk-zio-bob 1.6s ease-in-out infinite;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .bk-zio .bk-figure { animation: none !important; }
+    }
+  </style>
+
+  <clipPath id="zio-mouth-clip">
+    <path d="M 101 148 Q 120 190 139 148 Z"/>
+  </clipPath>
+
+  <g class="bk-figure">
+
+    <!-- Feet, arms and ears are drawn first so the body tucks them in behind it. -->
+    <ellipse class="bk-shade" cx="94"  cy="206" rx="21" ry="14"/>
+    <ellipse class="bk-shade" cx="146" cy="206" rx="21" ry="14"/>
+    <ellipse class="bk-shade" cx="44"  cy="150" rx="15" ry="23"/>
+    <ellipse class="bk-shade" cx="196" cy="150" rx="15" ry="23"/>
+
+    <ellipse class="bk-body"   cx="76"  cy="52" rx="27" ry="29"/>
+    <ellipse class="bk-body"   cx="164" cy="52" rx="27" ry="29"/>
+    <ellipse class="bk-accent" cx="76"  cy="56" rx="14" ry="15" opacity=".8"/>
+    <ellipse class="bk-accent" cx="164" cy="56" rx="14" ry="15" opacity=".8"/>
+
+    <rect class="bk-body" x="40" y="58" width="160" height="152" rx="70" ry="72"/>
+
+    <!-- The sheen is painted before the face plate, which then crops it for free. -->
+    <path class="bk-sheen" d="M 62 126 Q 62 84 96 72" stroke-width="10"/>
+
+    <ellipse class="bk-accent" cx="120" cy="178" rx="46" ry="28" opacity=".3"/>
+    <ellipse class="bk-face"   cx="120" cy="128" rx="62" ry="54"/>
+    <ellipse class="bk-blush"  cx="82"  cy="150" rx="13" ry="9" opacity=".55"/>
+    <ellipse class="bk-blush"  cx="158" cy="150" rx="13" ry="9" opacity=".55"/>
+
+    <!-- =========================================================== neutral -->
+    <g id="zio-expr-neutral" class="bk-expr bk-expr-neutral">
+      <path class="bk-stroke" d="M 87 100 Q 98 93 109 100" stroke-width="5"/>
+      <path class="bk-stroke" d="M 131 100 Q 142 93 153 100" stroke-width="5"/>
+      <ellipse class="bk-eye" cx="98"  cy="123" rx="10" ry="12"/>
+      <ellipse class="bk-eye" cx="142" cy="123" rx="10" ry="12"/>
+      <circle class="bk-glint" cx="102" cy="117" r="4.2"/>
+      <circle class="bk-glint" cx="146" cy="117" r="4.2"/>
+      <circle class="bk-glint" cx="94"  cy="129" r="2" opacity=".75"/>
+      <circle class="bk-glint" cx="138" cy="129" r="2" opacity=".75"/>
+      <path class="bk-stroke" d="M 105 154 Q 120 166 135 154"/>
+    </g>
+
+    <!-- ============================================================= happy -->
+    <g id="zio-expr-happy" class="bk-expr bk-expr-happy">
+      <path class="bk-stroke" d="M 85 96 Q 98 87 111 96" stroke-width="5"/>
+      <path class="bk-stroke" d="M 129 96 Q 142 87 155 96" stroke-width="5"/>
+      <path class="bk-stroke" d="M 87 128 Q 98 112 109 128"/>
+      <path class="bk-stroke" d="M 131 128 Q 142 112 153 128"/>
+      <path class="bk-mouth" d="M 101 148 Q 120 190 139 148 Z"/>
+      <ellipse class="bk-tongue" cx="120" cy="164" rx="10" ry="8"
+               clip-path="url(#zio-mouth-clip)"/>
+      <ellipse class="bk-blush" cx="79"  cy="147" rx="16" ry="11" opacity=".85"/>
+      <ellipse class="bk-blush" cx="161" cy="147" rx="16" ry="11" opacity=".85"/>
+    </g>
+
+    <!-- ========================================================= concerned -->
+    <g id="zio-expr-concerned" class="bk-expr bk-expr-concerned">
+      <path class="bk-stroke" d="M 84 109 Q 96 99 111 95"/>
+      <path class="bk-stroke" d="M 156 109 Q 144 99 129 95"/>
+      <ellipse class="bk-eye" cx="98"  cy="126" rx="9.5" ry="11"/>
+      <ellipse class="bk-eye" cx="142" cy="126" rx="9.5" ry="11"/>
+      <circle class="bk-glint" cx="101" cy="121" r="3.8"/>
+      <circle class="bk-glint" cx="145" cy="121" r="3.8"/>
+      <circle class="bk-glint" cx="94"  cy="131" r="1.8" opacity=".75"/>
+      <circle class="bk-glint" cx="138" cy="131" r="1.8" opacity=".75"/>
+      <path class="bk-stroke" d="M 106 164 Q 120 152 134 164"/>
+    </g>
+
+    <!-- ============================================================ sleepy -->
+    <g id="zio-expr-sleepy" class="bk-expr bk-expr-sleepy">
+      <path class="bk-stroke" d="M 85 105 Q 98 100 111 105" stroke-width="5"/>
+      <path class="bk-stroke" d="M 129 105 Q 142 100 155 105" stroke-width="5"/>
+      <path class="bk-stroke" d="M 87 120 Q 98 133 109 120"/>
+      <path class="bk-stroke" d="M 131 120 Q 142 133 153 120"/>
+      <ellipse class="bk-mouth" cx="120" cy="159" rx="9" ry="11"/>
+      <path class="bk-zzz" d="M 190 79 h 11 l -11 12 h 11"  stroke-width="3.5"/>
+      <path class="bk-zzz" d="M 201 51 h 14 l -14 15 h 14"  stroke-width="4.5"/>
+      <path class="bk-zzz" d="M 213 19 h 18 l -18 20 h 18"  stroke-width="5.5"/>
+    </g>
+
+  </g>
+</svg>

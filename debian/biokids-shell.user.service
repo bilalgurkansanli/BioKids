@@ -1,0 +1,28 @@
+[Unit]
+Description=BioKids child launcher
+Documentation=https://github.com/bilalgurkansanli/biokids
+# This is a user unit: it runs inside the child's own session, as the child,
+# with no privileges of any kind. Every decision about what may run and for how
+# long is the daemon's, reached over /run/biokids/daemon.sock.
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/biokids-shell
+# A child who closes the launcher gets the launcher back, not a desktop.
+Restart=always
+RestartSec=2s
+Environment=PYTHONUNBUFFERED=1
+
+# The hardening block from SECURITY.md section 2 is deliberately not copied
+# here. Most of it needs privileges a user manager does not have, and the two
+# pieces that would apply are actively harmful in a session: PrivateTmp= hides
+# /tmp/.X11-unix, so the kiosk browser would have no display to open, and
+# ProtectHome= hides the home directory the child's own files live in. What is
+# left that is both free and useful is this:
+NoNewPrivileges=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=graphical-session.target

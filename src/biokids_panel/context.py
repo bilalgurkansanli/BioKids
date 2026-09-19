@@ -104,9 +104,16 @@ class PanelContext:
 
 
 def filter_minutes(seconds: object) -> int:
-    """Seconds to whole minutes, rounded up. The UI never shows seconds (UX §3.3)."""
+    """Seconds to whole minutes, rounded up. The UI never shows seconds (UX §3.3).
+
+    Takes `object` because a template hands it whatever the daemon sent, which
+    on a bad day is a string or nothing at all. A template filter that raises
+    takes the whole page with it.
+    """
+    if isinstance(seconds, bool) or not isinstance(seconds, int | float | str):
+        return 0
     try:
-        value = int(seconds)  # type: ignore[arg-type]
+        value = int(float(seconds))
     except (TypeError, ValueError):
         return 0
     return -(-max(0, value) // 60)

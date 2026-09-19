@@ -1,0 +1,17 @@
+{% extends "_full.html" %}
+{% set tone = 'full--calm' %}
+{% set persona = 'zio' %}
+{% set expression = 'happy' %}
+{% block title %}{{ _('shell.firstrun.title') }}{% endblock %}
+{% block inner %}
+  {# Non-skippable on first login (D-111). A child is told what the computer
+     does before it starts doing it, in their own language and at their level. #}
+  <h1>{{ _('shell.firstrun.title') }}</h1>
+  <p>{{ _('shell.firstrun.p1') }}</p>
+  <p>{{ _('shell.firstrun.p2') }}</p>
+  <p>{{ _('shell.firstrun.p3') }}</p>
+  <p>{{ _('shell.firstrun.p4') }}</p>
+  <form method="post" action="/first-run">
+    <button class="big-btn big-btn--ok" type="submit">{{ _('shell.firstrun.ok') }}</button>
+  </form>
+{% endblock %}

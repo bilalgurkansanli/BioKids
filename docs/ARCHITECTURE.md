@@ -65,9 +65,23 @@ The only component allowed to change system state. Everything else asks it.
 - **EventBus** fans out events to the panel (SSE), the voice service, the AI worker,
   and the notifier.
 
-IPC: a line-delimited JSON protocol over `/run/biokids/daemon.sock`, group-restricted.
-Not DBus. A Unix socket is easier to test, easier to secure, and has no session-bus
-lifetime problems.
+IPC: a line-delimited JSON protocol over a Unix socket. Not DBus — a Unix socket is
+easier to test, easier to secure, and has no session-bus lifetime problems.
+
+There are **two** sockets, because the panel and the child need very different
+things (D-123):
+
+| Socket | Access | What it can do |
+|---|---|---|
+| `/run/biokids/daemon.sock` | `root:biokids`, 0660 | everything: policy, grants, lock, poweroff |
+| `/run/biokids/shell.sock` | world-connectable, authorised by peer uid | reads scoped to the calling child, plus launch, activity, ask-a-parent, shutdown request |
+
+The child is not in the `biokids` group and must never be — that group can grant
+time and power the machine off. The launcher therefore has a socket of its own on
+which **no operation takes a child id as an argument**: the daemon reads the peer
+credentials the kernel attached at connect time (`SO_PEERCRED`, which a process
+cannot forge about itself), maps that uid to a child, and answers about that
+child only. A uid that is not a managed child gets nothing.
 
 ### `biokids-panel` (root, system service)
 
@@ -119,6 +133,11 @@ Usage is always a difference of two `BOOTTIME` readings. Wall clock is used for 
 two things: deciding which calendar day's quota applies, and evaluating time windows
 ("only 16:00–20:00"). A wall-clock jump greater than 600 s is written to the audit log
 and raised to the parent; it never changes the ledger.
+
+Suspended time is measured rather than asked for: `CLOCK_BOOTTIME` runs through
+suspend and `CLOCK_MONOTONIC` does not, so the difference between the two deltas
+*is* the time the machine was asleep. That is exact, needs no logind round trip,
+and cannot disagree with the clock it is correcting.
 
 Because `BOOTTIME` resets on reboot, the ledger persists `(boot_id, boot_offset)` pairs.
 `boot_id` comes from `/proc/sys/kernel/random/boot_id`. A new `boot_id` means a new
@@ -324,6 +343,8 @@ Focus tracking on X11: `_NET_ACTIVE_WINDOW` via python-xlib, mapped to a PID via
 | Failure | Response |
 |---|---|
 | daemon crashes | `Restart=always`; `OnFailure=biokids-lockdown.service` locks the child session |
+| daemon unreachable from the launcher | the launcher shows a holding screen and starts nothing. A working launcher with no limits behind it is the failure principle #3 exists to prevent |
+| daemon unreachable from the panel | the children are still listed, from the database, with their live state shown as unknown and the action buttons withheld. "Not responding" is never rendered as "no children" |
 | panel crashes | restart; enforcement is unaffected |
 | dnsmasq fails to reload | revert to the previous config; if that fails, lock and alert |
 | AI worker crashes | log, alert the parent, continue without AI. Never blocks the child |

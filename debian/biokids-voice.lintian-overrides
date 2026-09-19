@@ -1,0 +1,3 @@
+# graphical-session.target is the correct target for a systemd *user* unit that
+# belongs to a desktop session; the tag is about system units.
+biokids-voice: systemd-service-file-refers-to-unusual-wantedby-target

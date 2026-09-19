@@ -1,0 +1,33 @@
+[Unit]
+Description=BioKids lockdown - lock every child session
+Documentation=https://github.com/bilalgurkansanli/biokids
+# Deliberately no Requires= or After= on biokids-daemon.service: this unit runs
+# precisely because the daemon is not there. Nothing it needs may be tied to
+# something that has just died.
+#
+# There is no [Install] section either. This unit is pulled in by OnFailure=,
+# and is never enabled: a system that starts it at boot is a system whose
+# children are locked out for no reason.
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/biokids-admin lockdown
+# The audit entry it writes is the record of what happened, so it must reach
+# the journal even if the database write is what failed.
+Environment=PYTHONUNBUFFERED=1
+
+# SECURITY.md section 2, in full. It writes the audit entry, so it needs the
+# database and the log directory and nothing else - in particular none of the
+# filter directories, which it has no business touching.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service
+ReadWritePaths=/var/lib/biokids /var/log/biokids -/run/biokids

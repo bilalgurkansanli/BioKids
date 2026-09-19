@@ -1,0 +1,26 @@
+[Unit]
+Description=BioKids voice companions, Zio and Sio
+Documentation=https://github.com/bilalgurkansanli/biokids
+# A user unit in the child's session: speech needs the session's audio, and
+# nothing here needs privileges. It ducks whatever else is playing while it
+# speaks, which is only possible from inside the same PipeWire graph.
+PartOf=graphical-session.target
+After=graphical-session.target pipewire.service
+Wants=pipewire.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/biokids-voice
+Restart=always
+RestartSec=2s
+Environment=PYTHONUNBUFFERED=1
+
+# As in biokids-shell.service: a user unit gets what a user manager can
+# actually apply. PrivateTmp= is left out on purpose - the PipeWire and
+# PulseAudio sockets a child's session uses may live under /tmp, and a voice
+# service that cannot reach them is a silent one.
+NoNewPrivileges=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=graphical-session.target

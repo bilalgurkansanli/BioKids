@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ _('shell.greeting', name=state.display_name) }}{% endblock %}
+
+{% block body %}
+<div class="screen" data-band="{{ band }}">
+  <header class="head">
+    <div class="hello">
+      <span class="avatar" aria-hidden="true">{{ state.avatar|avatar }}</span>
+      <span>{{ _('shell.greeting', name=state.display_name) }}</span>
+    </div>
+
+    {# 8-10 get a clock; 4-7 do not, because a number they cannot read is noise. #}
+    {% if not young %}
+      <span class="clock" id="clock" aria-hidden="true"></span>
+    {% endif %}
+
+    {% if state.supervision_indicator != 'hidden' %}
+      <span class="badge-zio" id="supervision" title="{{ _('shell.supervision.badge') }}">
+        <span aria-hidden="true">👀</span>
+        {% if not young %}{{ _('shell.supervision.badge') }}{% endif %}
+      </span>
+    {% endif %}
+
+    {% set remaining = state.remaining_seconds|int %}
+    {% set quota = state.quota_seconds|int %}
+    {% set fraction = (remaining / quota) if quota > 0 else 0 %}
+    <div class="ring-wrap" id="ring-wrap"
+         data-tone="{{ 'danger' if fraction <= 0.10 else ('warn' if fraction <= 0.25 else 'ok') }}"
+         data-quota="{{ quota }}">
+      <svg class="ring" viewBox="0 0 100 100" role="img"
+           aria-label="{{ _('shell.remaining_label') }}">
+        <circle class="ring__track" cx="50" cy="50" r="40"></circle>
+        <circle class="ring__value" id="ring-value" cx="50" cy="50" r="40"
+                stroke-dasharray="251.33"
+                stroke-dashoffset="{{ (251.33 * (1 - fraction))|round(2) }}"></circle>
+      </svg>
+      {# The number is for readers only. The shrinking circle is for everyone. #}
+      {% if not young %}
+        <span class="ring__label" id="ring-label">{{ (remaining / 60)|round(0, 'ceil')|int }}</span>
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="tiles">
+    {% if not tiles %}
+      <p class="full__inner">{{ _('shell.no_apps') }}</p>
+    {% endif %}
+    {% for tile in tiles %}
+      {% if tile.slug not in ('volume', 'brightness', 'shutdown') %}
+        <a class="tile tile--{{ tile.category }}" href="/launch/{{ tile.slug }}"
+           data-slug="{{ tile.slug }}"
+           {% if young %}data-speak="{{ tile.name }}"{% endif %}>
+          <span class="tile__icon" aria-hidden="true">{{ tile.icon|icon }}</span>
+          <span class="tile__label">{{ tile.name }}</span>
+        </a>
+      {% endif %}
+    {% endfor %}
+  </main>
+
+  <footer class="foot">
+    <label class="slider">
+      <span aria-hidden="true">🔊</span>
+      <span class="visually-hidden">{{ _('shell.volume') }}</span>
+      <input type="range" id="volume" min="0" max="100" step="5" value="70">
+    </label>
+
+    <label class="slider">
+      <span aria-hidden="true">☀️</span>
+      <span class="visually-hidden">{{ _('shell.brightness') }}</span>
+      <input type="range" id="brightness" min="20" max="100" step="5" value="100">
+    </label>
+
+    <a class="tile-small" href="/shutdown">
+      <span aria-hidden="true">⏻</span> {{ _('shell.shutdown') }}
+    </a>
+  </footer>
+</div>
+{% endblock %}

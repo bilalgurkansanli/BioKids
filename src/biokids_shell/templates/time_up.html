@@ -1,0 +1,15 @@
+{% extends "_full.html" %}
+{% set tone = 'full--night' %}
+{% set persona = 'zio' %}
+{% set expression = 'sleepy' %}
+{% block title %}{{ _('shell.timeup.title') }}{% endblock %}
+{% block inner %}
+  <h1>{{ _('shell.timeup.title') }}</h1>
+  <p>{{ _('shell.timeup.body') }}</p>
+  {% if state.countdown_seconds %}
+    <p class="countdown" id="countdown" data-seconds="{{ state.countdown_seconds }}">
+      {{ _('shell.timeup.countdown', seconds=state.countdown_seconds) }}
+    </p>
+  {% endif %}
+  <p>{{ _('shell.timeup.tomorrow') }}</p>
+{% endblock %}

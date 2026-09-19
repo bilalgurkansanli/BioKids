@@ -1,0 +1,362 @@
+name: Release
+
+# Everything that turns a tag into something a stranger can install: build the
+# packages, sign them, publish the APT repository to GitHub Pages, and attach
+# the .deb files with their checksums and a detached signature to a GitHub
+# Release.
+#
+# The signing key lives in this repository's Secrets and nowhere else. It is
+# never committed, never on a developer's machine, and never leaves the one job
+# below that needs it - which imports it into a throwaway GNUPGHOME under
+# RUNNER_TEMP and destroys it on the way out (PACKAGING.md section 2).
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  # Never cancel a half-finished publish: an APT repository caught mid-push is
+  # an archive that apt cannot verify.
+  cancel-in-progress: false
+
+env:
+  APT_SUITE: trixie
+  APT_DOMAIN: apt.biokids.bilalgurkansanli.com
+
+jobs:
+  build:
+    name: build and check packages
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    steps:
+      - name: Install build dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential ca-certificates devscripts debhelper dh-python \
+            git gnupg lintian po-debconf pybuild-plugin-pyproject \
+            python3-all python3-setuptools
+
+      - uses: actions/checkout@v4
+        with:
+          # Release notes are generated from the commits since the last tag.
+          fetch-depth: 0
+
+      - name: The tag and debian/changelog must agree
+        run: |
+          set -eu
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          tag_version="${GITHUB_REF_NAME#v}"
+          changelog_version="$(dpkg-parsechangelog -S Version)"
+          upstream_version="${changelog_version%-*}"
+          if [ "$tag_version" != "$upstream_version" ]; then
+            echo "tag $GITHUB_REF_NAME does not match debian/changelog" \
+                 "($changelog_version). Update the changelog, or tag the" \
+                 "version it declares." >&2
+            exit 1
+          fi
+
+      - name: Build the packages
+        run: |
+          set -eu
+          # This tree is authored on Windows, where git records no mode bit.
+          # dpkg-buildpackage needs debian/rules executable and says something
+          # unhelpful when it is not, so assert it here and say so out loud -
+          # if this prints, debian/rules needs `git update-index --chmod=+x`.
+          if [ ! -x debian/rules ]; then
+            echo "debian/rules is not executable in this checkout; fixing for" \
+                 "this build. Commit the mode bit with:" \
+                 "git update-index --chmod=+x debian/rules" >&2
+            chmod +x debian/rules
+          fi
+          dpkg-buildpackage -us -uc -b
+
+      - name: lintian
+        # See debian/README.source section 6 for the one suppressed tag: the
+        # changelog names this project's own suite, which is not one of
+        # Debian's, and a .changes tag cannot be overridden from inside the
+        # package.
+        run: |
+          lintian --fail-on error \
+            --suppress-tags bad-distribution-in-changes-file \
+            ../biokids_*.changes
+
+      - name: Collect the artefacts
+        run: |
+          set -eu
+          mkdir -p dist
+          cp ../*.deb dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: dist/*.deb
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: sign, publish and release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      # Creating the release and pushing the archive to gh-pages.
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages
+          path: dist
+
+      - name: Install aptly
+        run: |
+          set -eu
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends aptly gnupg
+
+      - name: Import the archive signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -eu
+          # A keyring of its own, outside $HOME, removed in the last step of the
+          # job. The secrets are read from the environment rather than expanded
+          # into the script, so they never appear in a command line.
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          mkdir -p -m 0700 "$GNUPGHOME"
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --quiet --import
+          umask 077
+          printf '%s' "$GPG_PASSPHRASE" > "$RUNNER_TEMP/passphrase"
+          key_id="$(gpg --list-secret-keys --with-colons \
+                     | awk -F: '/^fpr:/ { print $10; exit }')"
+          if [ -z "$key_id" ]; then
+            echo "no secret key was imported; is the GPG_PRIVATE_KEY secret set" \
+                 "to the ASCII-armoured private key?" >&2
+            exit 1
+          fi
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          echo "GPG_KEY_ID=$key_id" >> "$GITHUB_ENV"
+          echo "Signing with $key_id"
+
+      - name: The shipped keyring must hold the key this release is signed with
+        run: |
+          set -eu
+          # biokids-archive-keyring ships debian/biokids-archive-keyring.asc, and
+          # the README tells people to point apt at it with signed-by=. If that
+          # is not the key signing the archive below, nothing here fails: the
+          # release publishes, and then every machine that trusted the keyring
+          # package stops being able to run apt update, weeks later, with a
+          # NO_PUBKEY that looks like our archive is compromised. Two
+          # fingerprints are cheaper than that. --import-options show-only reads
+          # the file without importing anything.
+          shipped="$(gpg --batch --with-colons --import-options show-only \
+                         --import debian/biokids-archive-keyring.asc \
+                     | awk -F: '/^fpr:/ { print $10; exit }')"
+          if [ "$shipped" != "$GPG_KEY_ID" ]; then
+            echo "debian/biokids-archive-keyring.asc carries ${shipped:-no key}," \
+                 "but this release signs with $GPG_KEY_ID. Commit the public" \
+                 "half of the signing key, or fix the GPG_PRIVATE_KEY secret;" \
+                 "do not publish an archive nobody can verify." >&2
+            exit 1
+          fi
+          echo "keyring and signing key agree: $shipped"
+
+      - name: Checksums and a detached signature
+        run: |
+          set -eu
+          cd dist
+          sha256sum *.deb > SHA256SUMS
+          sign_args="--batch --yes --pinentry-mode loopback"
+          if [ -s "$RUNNER_TEMP/passphrase" ]; then
+            sign_args="$sign_args --passphrase-file $RUNNER_TEMP/passphrase"
+          fi
+          # shellcheck disable=SC2086
+          gpg $sign_args --local-user "$GPG_KEY_ID" \
+              --armor --detach-sign --output SHA256SUMS.asc SHA256SUMS
+          gpg --verify SHA256SUMS.asc SHA256SUMS
+
+      - name: Decide where this tag goes
+        run: |
+          set -eu
+          # A tag with a suffix - v0.2.0-rc1 - is a pre-release. It gets a
+          # GitHub Release marked as such, and it is deliberately NOT published
+          # to the stable APT suite: nobody is pointed at trixie-testing by
+          # default (PACKAGING.md section 2), and mixing the two suites in one
+          # pool cannot be reconstructed later.
+          case "$GITHUB_REF_NAME" in
+            *-*) echo "PRERELEASE=true"  >> "$GITHUB_ENV" ;;
+            *)   echo "PRERELEASE=false" >> "$GITHUB_ENV" ;;
+          esac
+
+      - name: Publish the APT repository to gh-pages
+        if: env.PRERELEASE == 'false'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+
+          # The aptly database does not survive between runs, and it should not
+          # have to: the repository is rebuilt from what is already published
+          # plus what was just built. No hidden state on a runner decides what
+          # a family's machine can install.
+          mkdir gh-pages
+          cd gh-pages
+          git init -q -b gh-pages
+          git remote add origin \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin gh-pages; then
+            git reset -q --hard FETCH_HEAD
+          else
+            echo "no gh-pages branch yet; publishing the first archive"
+          fi
+          cd ..
+
+          aptly repo create -distribution="$APT_SUITE" -component=main biokids
+          if [ -d gh-pages/pool ]; then
+            aptly repo add biokids gh-pages/pool
+          fi
+          aptly repo add biokids dist
+
+          publish_args="-batch -architectures=amd64 -distribution=$APT_SUITE"
+          if [ -s "$RUNNER_TEMP/passphrase" ]; then
+            publish_args="$publish_args -passphrase-file=$RUNNER_TEMP/passphrase"
+          fi
+          # shellcheck disable=SC2086
+          aptly publish repo $publish_args -gpg-key="$GPG_KEY_ID" biokids
+
+          # Replace the archive wholesale; everything in it was just rebuilt
+          # from the previous pool, so nothing is lost.
+          rm -rf gh-pages/dists gh-pages/pool
+          cp -a "$HOME/.aptly/public/." gh-pages/
+
+          # The public key, in the dearmoured form the README pipes into
+          # /usr/share/keyrings, and the same key biokids-archive-keyring ships.
+          gpg --export "$GPG_KEY_ID" > gh-pages/KEY.gpg
+
+          # Pages must serve dists/ and pool/ verbatim, and the archive has had
+          # its own domain since the first release so the URL never has to
+          # change.
+          printf '%s\n' "$APT_DOMAIN" > gh-pages/CNAME
+          : > gh-pages/.nojekyll
+
+          cd gh-pages
+          git add -A
+          git -c user.name='github-actions[bot]' \
+              -c user.email='github-actions[bot]@users.noreply.github.com' \
+              commit -q -m "apt: publish ${GITHUB_REF_NAME}" \
+            || { echo "archive unchanged"; exit 0; }
+          git push -q origin HEAD:gh-pages
+
+      - name: Release notes from the commit log
+        run: |
+          set -eu
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          previous="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+          if [ -n "$previous" ]; then
+            range="${previous}..${GITHUB_REF_NAME}"
+            echo "notes cover ${range}"
+          else
+            range="$GITHUB_REF_NAME"
+            echo "first tag; notes cover the whole history"
+          fi
+          git log --no-merges --pretty=format:'%s (%h)' "$range" > commits.txt
+          printf '\n' >> commits.txt
+
+          : > notes.md
+
+          # Conventional Commits: "type(scope)!: subject". The heading is the
+          # human-readable name of the type; the "!" marks a break.
+          section() {
+            heading="$1"
+            types="$2"
+            body="$(grep -E "^(${types})(\([^)]*\))?!?: " commits.txt || true)"
+            if [ -n "$body" ]; then
+              printf '### %s\n\n' "$heading" >> notes.md
+              printf '%s\n' "$body" \
+                | sed -E "s/^(${types})(\([^)]*\))?!?: //" \
+                | sed -E 's/^/- /' >> notes.md
+              printf '\n' >> notes.md
+            fi
+          }
+
+          breaking="$(grep -E '^[a-z]+(\([^)]*\))?!: ' commits.txt || true)"
+          if [ -n "$breaking" ]; then
+            printf '### Breaking changes\n\n' >> notes.md
+            printf '%s\n' "$breaking" | sed -E 's/^/- /' >> notes.md
+            printf '\n' >> notes.md
+          fi
+
+          section 'New' 'feat'
+          section 'Fixed' 'fix'
+          section 'Faster' 'perf'
+          section 'Documentation' 'docs'
+          section 'Under the hood' 'refactor|build|ci|test|style|chore'
+
+          if [ ! -s notes.md ]; then
+            printf 'See the commit log for what changed.\n\n' >> notes.md
+          fi
+
+          cat >> notes.md <<NOTES
+
+          ### Install
+
+          \`\`\`bash
+          curl -fsSL https://${APT_DOMAIN}/KEY.gpg \\
+            | sudo tee /usr/share/keyrings/biokids-archive-keyring.gpg > /dev/null
+
+          echo "deb [signed-by=/usr/share/keyrings/biokids-archive-keyring.gpg] \\
+          https://${APT_DOMAIN} ${APT_SUITE} main" \\
+            | sudo tee /etc/apt/sources.list.d/biokids.list
+
+          sudo apt update && sudo apt install biokids
+          \`\`\`
+
+          ### Verifying these files
+
+          \`\`\`bash
+          gpg --verify SHA256SUMS.asc SHA256SUMS
+          sha256sum --check SHA256SUMS
+          \`\`\`
+
+          Signed with \`${GPG_KEY_ID}\`. The fingerprint is in README.md; check
+          it against one you already trust rather than against this page.
+
+          BioKids is built for a curious child aged 4 to 10 working alone at one
+          computer. It is a supervision aid, not a guarantee.
+          NOTES
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          args=""
+          if [ "$PRERELEASE" = "true" ]; then
+            args="--prerelease"
+          fi
+          # shellcheck disable=SC2086
+          gh release create "$GITHUB_REF_NAME" $args \
+            --title "BioKids $GITHUB_REF_NAME" \
+            --notes-file notes.md \
+            dist/*.deb dist/SHA256SUMS dist/SHA256SUMS.asc
+
+      - name: Destroy the signing key
+        # Runs even if something above failed. The runner is thrown away anyway;
+        # this is so that no later step in a future edit of this file can reach
+        # the key by accident.
+        if: always()
+        run: |
+          gpgconf --kill all || true
+          rm -rf "$RUNNER_TEMP/gnupg" "$RUNNER_TEMP/passphrase"

@@ -1,0 +1,124 @@
+#!/usr/bin/make -f
+#
+# BioKids: one source package, nine binary packages.
+#
+# The Python side is an ordinary pybuild build. Everything interesting here is
+# about the split: pyproject.toml describes one project carrying the union of
+# every component's dependencies, and this file takes that single installed tree
+# apart into packages that each declare only what they really need. See
+# debian/README.source for what could not be verified on the development host.
+
+export PYBUILD_NAME=biokids
+
+# The test suite wants every runtime dependency at once, a session bus and a
+# Linux clock. CI runs it on every push, long before a package is built; making
+# the build depend on it again would only add build dependencies.
+export PYBUILD_DISABLE=test
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+# Message catalogues are compiled at package time and never committed.
+# biokids_core.i18n falls back to the .po when there is no .mo, which is what
+# lets a developer see an edited string immediately; an installed system should
+# not pay for that convenience on every lookup.
+override_dh_auto_build:
+	python3 dev/compile_i18n.py
+	dh_auto_build
+
+override_dh_auto_clean:
+	dh_auto_clean
+	rm -f src/biokids_core/locale/*/LC_MESSAGES/*.mo
+
+# One tree for all nine packages; the .install files divide it up. Four things
+# are placed here that pybuild knows nothing about:
+#
+#   * the application catalogue (D-20), which lives inside biokids_core as a
+#     development fallback and at /usr/share/biokids/catalog for real
+#     installations - which is where biokids_core.catalog looks first;
+#
+#   * the voice lines. VOICE.md section 5 makes them data rather than code and
+#     puts them at /usr/share/biokids/voice/<locale>/<event>.txt, which is where
+#     biokids_voice.lines looks before falling back to the copy inside the
+#     wheel. Without this an administrator who edits the documented path edits a
+#     file nobody reads;
+#
+#   * an alembic.ini whose script_location points at the installed package
+#     rather than at ./src. Generated from the source tree's copy rather than
+#     kept as a second file in debian/, so the two cannot drift. Neither carries
+#     a database URL: migrations/env.py asks biokids_core.config for it, which
+#     is what makes one ini correct in the postinst, in CI and under
+#     BIOKIDS_PREFIX;
+#
+#   * the archive key, public half. Its absence is a hard failure on purpose: a
+#     keyring package that ships no key is worse than one that will not build.
+override_dh_auto_install:
+	dh_auto_install --destdir=debian/tmp
+
+	install -d debian/tmp/usr/share/biokids/catalog
+	install -m 0644 src/biokids_core/data/catalog/catalog.toml \
+		debian/tmp/usr/share/biokids/catalog/catalog.toml
+
+	set -e; for dir in src/biokids_core/data/voice/*/; do \
+		locale="$$(basename "$$dir")"; \
+		install -d debian/tmp/usr/share/biokids/voice/$$locale; \
+		install -m 0644 $$dir*.txt \
+			debian/tmp/usr/share/biokids/voice/$$locale/; \
+	done
+
+	sed -e 's,^script_location = .*,script_location = /usr/lib/python3/dist-packages/biokids_core/migrations,' \
+	    -e '/^prepend_sys_path[[:space:]]*=/d' \
+	    alembic.ini > debian/tmp/usr/share/biokids/alembic.ini
+	chmod 0644 debian/tmp/usr/share/biokids/alembic.ini
+
+	@if [ ! -f debian/biokids-archive-keyring.asc ]; then \
+		echo "debian/rules: debian/biokids-archive-keyring.asc is missing." >&2; \
+		echo "  biokids-archive-keyring cannot be built without the real" >&2; \
+		echo "  archive key. See debian/README.source, section 6." >&2; \
+		exit 1; \
+	fi
+	install -d debian/tmp/usr/share/keyrings
+	gpg --batch --yes --dearmor \
+		--output debian/tmp/usr/share/keyrings/biokids-archive-keyring.gpg \
+		debian/biokids-archive-keyring.asc
+	chmod 0644 debian/tmp/usr/share/keyrings/biokids-archive-keyring.gpg
+
+# pyproject.toml declares the union of every component's requirements, so
+# letting dh_python3 guess would put FastAPI into biokids-core's Depends and
+# drag the panel onto a machine that only wanted the daemon. Each binary
+# package names what it actually imports, by hand, in debian/control.
+override_dh_python3:
+	dh_python3 --no-guessing-deps
+
+# Starting biokids-lockdown.service locks every child session. It is triggered
+# by OnFailure= and must never be enabled or started because somebody ran apt.
+#
+# Two calls for one package, and the exact form of each matters:
+#
+#   * --name=biokids-lockdown reads debian/biokids-daemon.biokids-lockdown.service
+#     and installs it as biokids-lockdown.service. --name changes the *source*
+#     filename debhelper looks for, with no fallback, so the daemon's own unit
+#     must NOT be named here: --name=biokids-daemon would look for
+#     debian/biokids-daemon.biokids-daemon.service, find nothing, and ship a
+#     daemon package with no unit at all.
+#
+#   * the second call names biokids-daemon.service as a positional argument
+#     instead. That keeps the generated enable/start snippets scoped to it;
+#     without the argument dh_installsystemd acts on every unit already in the
+#     package build directory, which by then includes biokids-lockdown.service -
+#     and starting that one locks every child session on install.
+override_dh_installsystemd:
+	dh_installsystemd -pbiokids-daemon --name=biokids-lockdown --no-enable --no-start
+	dh_installsystemd -pbiokids-daemon biokids-daemon.service
+	dh_installsystemd --remaining-packages
+
+# The shell and the voice service belong to a child's session and are enabled
+# there by the session configuration. Enabling them globally would start a kiosk
+# launcher inside the parent's own desktop.
+override_dh_installsystemduser:
+	dh_installsystemduser --no-enable
+
+# Nothing may fall out of debian/tmp unnoticed: a module that silently stops
+# being shipped is a package that silently stops working.
+override_dh_missing:
+	dh_missing --fail-missing

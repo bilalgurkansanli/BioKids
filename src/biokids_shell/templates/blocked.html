@@ -1,0 +1,18 @@
+{% extends "_full.html" %}
+{% set tone = 'full--warm' %}
+{% set persona = 'zio' %}
+{% set expression = 'concerned' %}
+{% block title %}{{ _('shell.blocked.title') }}{% endblock %}
+{% block inner %}
+  {# Never the URL, never an error code, never the word "forbidden" (UX.md §2.5). #}
+  <h1>{{ _('shell.blocked.title') }}</h1>
+  <p>{{ _('shell.blocked.body') }}</p>
+
+  <div class="btn-row">
+    <form method="post" action="/ask-a-parent">
+      <input type="hidden" name="url" value="{{ blocked_url|default('') }}">
+      <button class="big-btn" type="submit">{{ _('shell.blocked.ask_mother') }}</button>
+    </form>
+    <a class="big-btn big-btn--quiet" href="/">{{ _('shell.blocked.back') }}</a>
+  </div>
+{% endblock %}

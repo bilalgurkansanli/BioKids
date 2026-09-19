@@ -1,0 +1,62 @@
+[Unit]
+Description=BioKids enforcement daemon
+Documentation=https://github.com/bilalgurkansanli/biokids
+# Session state comes from logind. Without it the daemon has nothing to account
+# against, so start after it rather than racing it.
+After=systemd-logind.service
+Wants=systemd-logind.service
+# If the daemon ends up failed, lock the children out rather than leaving them
+# unsupervised (D-106). Restart=always means this only fires once the start
+# limit below is exhausted; ExecStopPost= covers the single crash.
+OnFailure=biokids-lockdown.service
+# Five crashes in a minute is a broken daemon, not a transient fault. Give up
+# then, so that OnFailure= gets its turn.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/biokids-daemon
+Restart=always
+RestartSec=2s
+# Log lines are how a parent finds out what happened. Unbuffered, so the last
+# one before a crash is actually in the journal.
+Environment=PYTHONUNBUFFERED=1
+
+# Restart=always revives the daemon instead of marking the unit failed, so
+# OnFailure= alone would not fire on the first unclean exit - and the first
+# unclean exit is exactly when a child is sitting in front of an unsupervised
+# machine. Trip the lockdown from here too. The leading "-" keeps a failing
+# lockdown from turning an otherwise clean restart into a failed unit; the
+# OnFailure= line above is the second net.
+ExecStopPost=-/bin/sh -c 'test "$$SERVICE_RESULT" = success || /usr/bin/biokids-admin lockdown'
+
+# /run/biokids, holding daemon.sock. Created by systemd before ExecStart so the
+# socket always has somewhere to live, and preserved across restarts so that a
+# panel holding the path does not have it vanish underneath. The socket itself
+# is chmod 0660 root:biokids by the daemon; the directory is traversable so a
+# child's launcher can reach it.
+RuntimeDirectory=biokids
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+
+# SECURITY.md section 2, in full. This process is root and controls sessions,
+# so everything it does not need is taken away.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service
+# The "-" prefixes matter: a missing path in ReadWritePaths= is a unit that
+# refuses to start, and /etc/chromium/policies/managed only exists once
+# Chromium is installed, which biokids-daemon does not require.
+ReadWritePaths=/var/lib/biokids /var/log/biokids /run/biokids -/etc/dnsmasq.d -/etc/chromium/policies/managed -/etc/nftables.d
+
+[Install]
+WantedBy=multi-user.target

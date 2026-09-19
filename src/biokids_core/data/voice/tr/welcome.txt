@@ -1,0 +1,5 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}
+Merhaba {name}, hoş geldin. Bugün {minutes} dakikan var.
+Seni bekliyordum {name}! Bugün {minutes} dakikan var.
+Hoş geldin. Bugün {minutes} dakikan var, iyi eğlenceler.
+Hoş geldin, seni görmek çok güzel.

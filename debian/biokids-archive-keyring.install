@@ -1,0 +1,2 @@
+# Dearmoured from debian/biokids-archive-keyring.asc by debian/rules.
+usr/share/keyrings/biokids-archive-keyring.gpg

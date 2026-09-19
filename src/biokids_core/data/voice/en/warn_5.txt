@@ -1,0 +1,4 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}
+We stop in five minutes, {name}. Save your work.
+Five minutes left. Do not forget to save what you are doing.
+Five minutes to go. You can start finishing up now.

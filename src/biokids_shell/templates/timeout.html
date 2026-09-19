@@ -1,0 +1,10 @@
+{% extends "_full.html" %}
+{% set tone = 'full--calm' %}
+{% set persona = 'zio' %}
+{% set expression = 'concerned' %}
+{% block title %}{{ _('shell.locked.title') }}{% endblock %}
+{% block inner %}
+  <h1>{{ _('shell.locked.title') }}</h1>
+  <p>{{ _('penalty.active') }}</p>
+  <p class="countdown" id="countdown" data-seconds="{{ state.penalty_seconds|int }}"></p>
+{% endblock %}

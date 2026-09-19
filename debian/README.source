@@ -1,0 +1,415 @@
+BioKids source package
+======================
+
+One source package, nine binary packages, one wheel. This file explains the
+shape of the packaging, the decisions inside it that are not obvious from the
+files, and - section 7 - exactly what could not be verified, because this
+packaging was written on a Windows development host where dpkg-buildpackage
+does not exist. Read section 7 before the first real build; it is a to-do list,
+not a disclaimer.
+
+
+1. Building
+-----------
+
+On a Debian 13 (trixie) machine or container, from the top of the source tree:
+
+    sudo apt install build-essential devscripts debhelper dh-python \
+        python3-all python3-setuptools pybuild-plugin-pyproject \
+        po-debconf gnupg lintian
+    dpkg-buildpackage -us -uc -b
+    lintian --fail-on error \
+        --suppress-tags bad-distribution-in-changes-file \
+        ../biokids_0.1.0-1_*.changes
+
+`-b` (binary only) is deliberate, and it is what .github/workflows/ci.yml and
+release.yml both do. The format is 3.0 (quilt), so building the *source*
+package needs an orig tarball, which for this project is generated from the tag
+rather than downloaded:
+
+    git archive --format=tar.gz --prefix=biokids-0.1.0/ v0.1.0 \
+        > ../biokids_0.1.0.orig.tar.gz
+    dpkg-buildpackage -us -uc -S
+
+The suppressed lintian tag is explained in section 6.
+
+If the tree was checked out on Windows, make sure debian/rules is executable
+before building; .gitattributes keeps line endings LF, but the mode bit is a
+separate thing:
+
+    chmod +x debian/rules            # on the build host, or
+    git update-index --chmod=+x debian/rules
+
+
+2. How one wheel becomes nine packages
+--------------------------------------
+
+pyproject.toml describes a single project whose dependency list is the *union*
+of every component's requirements: SQLAlchemy for the core, FastAPI for the
+panel, dbus-next for the daemon. That is right for development and wrong for
+installation - a machine that installs biokids-daemon should not acquire
+FastAPI.
+
+So:
+
+  * debian/rules installs the whole wheel once, into debian/tmp
+    (`dh_auto_install --destdir=debian/tmp`);
+  * the .install files divide that tree between the packages;
+  * `dh_python3 --no-guessing-deps` stops dh_python3 turning the wheel's
+    metadata into ${python3:Depends}, and each binary package declares by hand,
+    in debian/control, what it actually imports;
+  * `dh_missing --fail-missing` makes sure nothing falls out of debian/tmp
+    unclaimed. A module that silently stops being shipped is a package that
+    silently stops working.
+
+Three non-Python artefacts are produced in override_dh_auto_install rather than
+being kept as extra files in debian/:
+
+  * /usr/share/biokids/catalog/catalog.toml, copied from the fallback copy that
+    lives inside biokids_core (D-20);
+  * /usr/share/biokids/voice/<locale>/<event>.txt, copied the same way from
+    biokids_core/data/voice. VOICE.md section 5 makes the lines data rather
+    than code and names that path; biokids_voice.lines reads it before falling
+    back to the copy inside the wheel, and its docstring says "which is what the
+    .deb installs". They go into biokids-voice, not biokids-core: nothing else
+    reads them;
+  * /usr/share/biokids/alembic.ini, generated from the source tree's alembic.ini
+    with script_location pointed at the installed package. Generated, not
+    duplicated, so the two cannot drift. Neither copy contains a database URL:
+    migrations/env.py asks biokids_core.config, which is what makes
+    `alembic upgrade head` do the right thing in the postinst, in CI and under
+    BIOKIDS_PREFIX without anyone editing an ini.
+
+The gettext catalogues are compiled at build time by
+`python3 dev/compile_i18n.py` in override_dh_auto_build and removed again in
+override_dh_auto_clean. They are never committed: biokids_core.i18n falls back
+to the .po when there is no .mo, which is what makes an edited string visible
+to a developer immediately, and an installed system should not pay for that.
+
+
+3. Units
+--------
+
+    debian/biokids-daemon.service                   -> biokids-daemon.service
+    debian/biokids-daemon.biokids-lockdown.service  -> biokids-lockdown.service
+    debian/biokids-panel.service                    -> biokids-panel.service
+    debian/biokids-shell.user.service    -> /usr/lib/systemd/user/biokids-shell.service
+    debian/biokids-voice.user.service    -> /usr/lib/systemd/user/biokids-voice.service
+
+The lockdown unit's filename looks redundant and is not: `dh_installsystemd
+--name=NAME` reads `debian/<binary package>.NAME.service` and has no fallback to
+`debian/<binary package>.service`, so a file called plainly
+`debian/biokids-lockdown.service` would name a binary package that does not
+exist and would be ignored in silence, producing a daemon whose
+OnFailure= points at nothing. The double prefix is what puts
+biokids-lockdown.service inside biokids-daemon.
+
+The same rule is why the daemon's own unit is NOT installed with
+`--name=biokids-daemon`: that would look for
+`debian/biokids-daemon.biokids-daemon.service`, find nothing, and produce a
+daemon package containing no unit at all. It is installed by a second call that
+names `biokids-daemon.service` as a positional argument instead. The argument is
+not decoration either - dh_installsystemd otherwise acts on *every* unit already
+in the package build directory, which by that point includes
+biokids-lockdown.service, and the generated snippet would then start it on every
+install. Passing the unit name keeps the enable/start code scoped to the daemon.
+
+Three things in debian/rules exist to keep systemd from doing the obvious wrong
+thing:
+
+  * biokids-lockdown.service is installed with --no-enable --no-start, and the
+    daemon's own call is scoped to one unit so that nothing re-enables it.
+    Starting it locks every child session; it is triggered by OnFailure=, never
+    by an apt run. It also has no [Install] section, on purpose.
+  * The user units are installed with --no-enable. Enabling them globally would
+    start a kiosk launcher inside the parent's own desktop. The child's session
+    configuration enables them (T5.7).
+  * biokids-daemon.service carries both `Restart=always` and
+    `OnFailure=biokids-lockdown.service`, as D-106 requires, plus an
+    ExecStopPost= that trips the lockdown directly. That third line is there
+    because the first two do not compose the way they read: Restart=always
+    revives the unit instead of letting it reach the failed state, so
+    OnFailure= would not fire until StartLimitBurst is exhausted - five crashes
+    later. T3.7 expects a single `systemctl kill -s KILL` to lock the session
+    within five seconds, and the ExecStopPost is what delivers that. It is
+    prefixed with `-` so that a lockdown which itself fails cannot turn a clean
+    restart into a failed unit; OnFailure= remains as the second net.
+
+The hardening block from SECURITY.md section 2 is reproduced in full in all
+three system units. Two deliberate differences, both noted in the units
+themselves:
+
+  * ReadWritePaths entries for the three generated-config directories carry a
+    `-` prefix in the daemon unit. systemd refuses to start a unit whose
+    ReadWritePaths names a path that does not exist, and
+    /etc/chromium/policies/managed only exists once Chromium is installed,
+    which biokids-daemon does not require. Without the prefix, a daemon-only
+    machine has a daemon that will not start.
+
+    The prefix has a tail, and whoever builds the filter in Phase 1 needs to
+    know it: a path skipped because it was absent at start does not become
+    writable when it appears. Install Chromium on a running machine and the
+    daemon still cannot write the managed policy until it is restarted. Either
+    the filter code restarts the unit when it first renders a Chromium policy,
+    or biokids-daemon co-owns that directory in a .dirs file. Do not let it
+    become a filter that silently fails to apply.
+  * biokids-panel gets /etc/biokids (it writes config.toml, which is the reason
+    it runs as root) and does not get the three filter directories (the daemon
+    is the single writer of a live filter, ARCHITECTURE.md section 2).
+
+biokids-panel also declares RuntimeDirectory=biokids itself, with
+RuntimeDirectoryPreserve=yes. /run is a tmpfs and ProtectSystem=strict makes it
+read-only, so /run/biokids has to be in ReadWritePaths= - and a unit whose
+ReadWritePaths= names a missing path refuses to start. On a machine where the
+daemon has not started since boot, which is precisely when a parent needs the
+panel to tell them why, that path does not exist. Declaring the runtime
+directory creates it; Preserve=yes keeps stopping the panel from deleting the
+directory the daemon's socket lives in.
+
+The user units do not copy the hardening block. Most of it needs privileges a
+user manager does not have, and the two directives that would apply are
+harmful in a session: PrivateTmp= hides /tmp/.X11-unix, so the kiosk browser
+would have no display, and ProtectHome= hides the home directory the child's
+own files are in.
+
+
+4. Maintainer scripts
+---------------------
+
+Only three packages have hand-written ones.
+
+biokids-core.postinst creates the `biokids` group and the `biokids-ai` system
+user, creates /var/lib/biokids (0700 root), /var/lib/biokids/evidence (0700
+root), /var/log/biokids (0750 root:adm) and /run/biokids (0755), generates
+/etc/biokids/ext.token (0640 root:biokids) and /etc/biokids/secret.key (0600)
+if they are absent, runs `alembic upgrade head` against the shipped ini, and
+seeds the application catalogue into the database with `biokids-admin
+sync-catalog` - the same command a parent can repeat by hand, rather than a
+second copy of the same logic embedded in a shell heredoc. It is idempotent
+throughout: it runs again on every upgrade and on every `dpkg --configure`.
+
+The three directories are created here rather than shipped in a .dirs file on
+purpose. dpkg re-applies the recorded mode of a directory it owns on every
+unpack, and 0700 on a family's history should not depend on a recorded mode
+nobody looks at. /etc/biokids *is* shipped, so that dpkg owns it and takes it
+away on purge once the generated secrets are gone.
+
+Secrets are generated only when missing. Rotating secret.key would make every
+stored SMTP password undecryptable; rotating ext.token would silently
+disconnect the browser extension. secret.key is made by
+biokids_core.security.load_or_create_key rather than by the shell, because a
+Fernet key has a shape and because that helper opens the file 0600 from its
+first byte.
+
+biokids-daemon.prerm and biokids-panel.prerm stop their units, explicitly and
+before the generated #DEBHELPER# block, so that the order is guaranteed rather
+than inherited from whichever snippets debhelper happened to generate. A clean
+stop is not a failure, so no session is locked because somebody ran apt.
+
+biokids-daemon.postrm removes the generated dnsmasq, Chromium and nftables
+files on purge. Those are not conffiles - they are rendered from the database
+and carry a do-not-hand-edit header, and dpkg prompting an administrator about
+a file no human wrote would be worse than useless - so dpkg does not know about
+them and cannot clean them up itself. /etc/biokids/config.toml, by contrast, IS
+a conffile: it is shipped under /etc from debian/etc/biokids/config.toml, dpkg
+registers it automatically, and an edited copy is never overwritten. No
+maintainer script in this package modifies a configuration file, so ucf is not
+needed anywhere.
+
+biokids-core.postrm is the purge question. A `remove` never touches
+/var/lib/biokids. A `purge` asks, through debconf, and deletes only on a clear
+yes; the logs follow the same answer rather than getting a second question. If
+debconf cannot ask - an unattended purge, a frontend below the question's
+priority, a system where debconf has already gone - the answer is no and the
+data stays. That asymmetry is deliberate: a directory that could have been
+deleted later is a nuisance, one that should have been kept is not
+recoverable.
+
+The question lives in debian/biokids-core.templates with its Turkish in
+debian/po/tr.po, through po-debconf. debian/biokids-core.config asks nothing;
+it registers the template at unpack time so an automated install can answer in
+advance with debconf-set-selections, and clears the `seen` flag so a second
+purge asks afresh. The extended description is deliberately one long physical
+line: po-debconf reflows extended descriptions when it extracts them, and a
+single line makes the msgid in the .po files unambiguous no matter how it
+chooses to wrap.
+
+The `biokids` group and the `biokids-ai` user are left behind on purge, per
+Debian policy: when the data directory is kept something still owns it, and a
+reissued uid inherits whatever files carried the old one.
+
+
+5. Deliberate deviations from PACKAGING.md section 1
+----------------------------------------------------
+
+The dependency table in PACKAGING.md was written before some of this code
+existed. Where this packaging differs, it is on purpose:
+
+  * biokids-core also depends on python3-argon2 and python3-cryptography.
+    biokids_core.security ships in core and imports both at module import time,
+    so the table's `python3, python3-sqlalchemy, alembic` would produce a core
+    package that cannot be imported. It also depends on adduser, which the
+    postinst calls.
+  * biokids-voice *recommends* piper-tts rather than depending on it. Piper may
+    not exist under that name in trixie (section 7), and a hard dependency on a
+    package apt cannot resolve would break `apt install biokids` entirely -
+    which is the product's headline feature. It degrades correctly: the
+    fallback chain in VOICE.md ends at an on-screen card, so a machine without
+    Piper shows warnings instead of speaking them. Revisit this when T6.1
+    settles how Piper is shipped.
+  * biokids-desktop *recommends* the catalogue applications rather than
+    depending on them. A parent who wants a smaller set should be able to
+    remove GCompris without fighting apt, and nothing a parent has not enabled
+    in the panel is shown to the child whether it is installed or not.
+  * biokids-ai declares `Enhances: biokids-daemon` in addition to being only
+    ever Suggested. It is never a Depends of anything, in either direction.
+  * The table lists three dependencies per package and the code has more. The
+    additions, all of them things the package imports or calls:
+    biokids-daemon also gets python3-dbus-next (SessionWatcher, T3.1);
+    biokids-panel also gets python3-jinja2, python3-multipart (every form in
+    the panel is a FastAPI Form(), which needs it), python3-qrcode (the
+    Tailscale step, T7.2), python3-itsdangerous, and biokids-daemon itself -
+    the panel's three action buttons are the reason it exists and they are all
+    calls into the daemon socket. python3-itsdangerous is the one with no
+    importer today: nothing in biokids_panel imports it, because the session
+    cookie is a server-side random token compared with hmac.compare_digest
+    rather than a signed blob. It is here for Starlette's SessionMiddleware,
+    which the panel does not currently use. Drop it if T4.2 settles without
+    one.
+  * Two Recommends the table does not mention: biokids-core recommends
+    biokids-daemon and biokids-daemon recommends biokids-panel, so that
+    installing any single piece by name gets a machine that actually does
+    something. Neither is a Depends, so a deliberate partial install still
+    works.
+
+
+6. Before the first release
+---------------------------
+
+**The archive key.** debian/rules refuses to build if
+`debian/biokids-archive-keyring.asc` is missing, and that is the intended
+behaviour: a keyring package that ships no key is worse than one that will not
+build. Before the first release, generate a dedicated signing key (not a
+personal one), commit its **public** half, ASCII-armoured, as
+debian/biokids-archive-keyring.asc, and publish its fingerprint in README.md so
+people can verify what they are trusting. The private half goes into GitHub
+Secrets as GPG_PRIVATE_KEY and never touches this repository or a developer's
+machine - see .github/workflows/release.yml, which is the only thing that ever
+holds it, in a throwaway GNUPGHOME it destroys on the way out.
+
+release.yml compares the fingerprint of the committed .asc against the key it is
+about to sign with, and refuses to publish if they differ. The failure it exists
+to prevent is quiet and late: publishing an archive signed with one key while
+biokids-archive-keyring ships another breaks `apt update` on every machine that
+trusted the package, weeks after the release looked fine, with an error that
+reads like the archive has been tampered with.
+
+**The lintian suppression.** debian/changelog says `trixie`, because that is
+the suite name of this project's own archive, which is where these packages go.
+lintian validates the Distribution field of a .changes file against Debian's
+own list of suites and may call an unknown one an error, and a tag on a
+.changes file cannot be overridden from inside the package. Hence
+`--suppress-tags bad-distribution-in-changes-file` on the lintian invocations.
+If it turns out lintian is happy with `trixie`, drop the flag - it is there to
+keep one known-cosmetic tag from failing the build, and nothing else.
+.github/workflows/ci.yml does not yet pass it.
+
+There is no debian/watch. Nobody repackages BioKids from a tarball; the only
+builds are from this git tree, and a watch file would be a maintenance
+obligation with no reader.
+
+
+7. What could not be verified on the development host
+-----------------------------------------------------
+
+This packaging was written on Windows 11. `dpkg-buildpackage`, `lintian`,
+`piuparts` and `systemd-analyze verify` have never been run against it. Two
+things *were* verified mechanically, against the actual source: that
+debian/etc/biokids/config.toml matches every default in
+src/biokids_core/config.py exactly, key for key and value for value; and that
+the msgids in debian/po reassemble to exactly the text in
+debian/biokids-core.templates.
+
+Everything below is unverified, in roughly the order it will bite:
+
+ 1. **The build does not complete yet**, and that is not a packaging bug. The
+    .install files claim the Python package of every component, and dh_install
+    fails on a glob that matches nothing. src/biokids_ai is an empty directory:
+    git does not even record it, so on a CI checkout it is absent entirely and
+    nothing lands at dist-packages/biokids_ai. One __init__.py is the whole of
+    the fix, and it belongs to whoever writes the AI layer; nothing here should
+    be softened to hide the gap, because a biokids-ai package that ships no
+    worker is worse than a build that says so.
+
+    src/biokids_shell is a different case and does not block the build:
+    setuptools finds it as a namespace package and its static/ tree is package
+    data, so dist-packages/biokids_shell does get created and the .install glob
+    matches. What it does not have is a __main__.py, so the /usr/bin/biokids-shell
+    console script generated from [project.scripts] points at a module that does
+    not exist. The package installs; the launcher exits immediately. That is
+    T5's to close, not this file's.
+
+ 2. **Debian binary package names.** Every one of these was written from
+    memory and must be checked with `apt-cache policy` on trixie before the
+    first upload: python3-argon2, python3-cryptography, python3-dbus-next,
+    python3-fastapi, python3-uvicorn, python3-jinja2, python3-multipart,
+    python3-itsdangerous, python3-qrcode, piper-tts, gcompris-qt, tuxpaint,
+    tuxmath, klavaro, stellarium, kolourpaint, supertux, frozen-bubble,
+    gnome-mahjongg. python3-dbus-next and piper-tts are the two most likely to
+    be wrong; if dbus-next is not packaged, that is a decision for T3.1 and not
+    something to paper over here.
+
+ 3. **The dist-info glob.** biokids-core.install claims
+    `usr/lib/python3/dist-packages/biokids-*`, which is the wheel metadata
+    directory. With pybuild-plugin-pyproject that is `biokids-0.1.0.dist-info`.
+    If the build falls back to the legacy setuptools path it will be an
+    `.egg-info` instead - still matched by the glob, but check what actually
+    lands there, because dh_install fails on a glob that matches nothing.
+
+ 4. **The systemd sandbox has never been started.** In particular:
+    MemoryDenyWriteExecute=yes against argon2-cffi and cryptography (cffi only
+    needs W|X memory for callbacks, which neither creates, but this is worth
+    five minutes of `systemctl start` on the VM);
+    SystemCallFilter=@system-service against dbus-next's epoll and socket use;
+    ProtectSystem=strict together with the ReadWritePaths lists;
+    and the `$$SERVICE_RESULT` escaping in the daemon's ExecStopPost, which
+    relies on systemd turning `$$` into a literal dollar before /bin/sh sees
+    it. `systemd-analyze verify` on all five units is the cheapest first check.
+
+ 5. **The purge question.** The flow - config script registers the template at
+    unpack, postrm asks at purge - is standard but has not been exercised. Test
+    it as T8.5 says: install, use, remove (data must survive), purge (must ask,
+    and must keep the data if the answer is no). Also test a purge under
+    DEBIAN_FRONTEND=noninteractive, where the data must survive.
+
+ 6. **biokids-admin has since landed.** The lockdown unit and the daemon's
+    ExecStopPost both run `/usr/bin/biokids-admin lockdown`, which was
+    specified rather than observed when this packaging was written;
+    biokids_core.admin now exists and provides `lockdown`, `status`,
+    `sync-catalog`, `reset-pin` and `version`, and the postinst's catalogue
+    seeding is a call to `biokids-admin sync-catalog` rather than an embedded
+    heredoc. What is still unobserved is `biokids-admin lockdown` running
+    *inside the sandbox*: it shells out to loginctl, which reaches the system
+    bus through a socket under a read-only /run, and it must finish inside
+    TimeoutStopSec. Test it with `systemctl kill -s KILL biokids-daemon`, which
+    is what T3.7 asks for anyway.
+
+ 7. **graphical-session.target.** The user units are WantedBy it, which assumes
+    XFCE's systemd session integration is active. If it is not, the session
+    configuration from T5.7 has to start them explicitly, and the units'
+    [Install] sections become decoration. Check with
+    `systemctl --user list-units 'graphical-session*'` inside a child session.
+
+ 8. **/var/lib/biokids/evidence is 0700 root**, as specified. The screen
+    watcher runs as biokids-ai and therefore cannot write there, or even
+    traverse into /var/lib/biokids. That is fine today - the AI layer is Phase
+    2 - and the right fix is probably for the watcher to hand frames to the
+    daemon over the socket rather than for the tree to become group-traversable,
+    since the daemon is already the single writer of everything else. Decide it
+    with AI-LAYER.md, not here.
+
+ 9. **Upgrade behaviour.** Nothing here has ever seen a second version
+    installed over a first: the conffile prompt for config.toml, the conffile
+    prompt for the logrotate file, `alembic upgrade head` across a real
+    migration, and a daemon left running across the upgrade. T8.5 covers all of
+    it; do not skip the upgrade step, it is where packaging bugs live.

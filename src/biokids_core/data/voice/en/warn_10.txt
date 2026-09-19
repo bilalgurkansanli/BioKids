@@ -1,0 +1,4 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}
+You have {minutes} minutes left, {name}.
+Ten minutes left. You might want to start wrapping up.
+Your time is running down, ten minutes to go.

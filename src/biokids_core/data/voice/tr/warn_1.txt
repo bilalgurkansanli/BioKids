@@ -1,0 +1,4 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}
+Bir dakikan kaldı {name}.
+Son bir dakika. Hazır ol, birazdan kapatıyoruz.
+Bir dakika kaldı, son dokunuşlarını yap.

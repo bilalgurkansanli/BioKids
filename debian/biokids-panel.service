@@ -1,0 +1,55 @@
+[Unit]
+Description=BioKids parent panel
+Documentation=https://github.com/bilalgurkansanli/biokids
+# The panel's three action buttons go straight to the daemon socket. It starts
+# without the daemon and says so on screen rather than failing, but there is no
+# reason to start it first.
+After=network.target biokids-daemon.service
+Wants=biokids-daemon.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/biokids-panel
+Restart=always
+RestartSec=2s
+Environment=PYTHONUNBUFFERED=1
+
+# The same runtime directory the daemon declares, and for a reason that is not
+# symmetry: ProtectSystem=strict below makes /run read-only, so /run/biokids has
+# to be listed as writable, and systemd refuses to start a unit whose
+# ReadWritePaths= names a path that does not exist. /run is a tmpfs, so on a
+# machine where the daemon has not started since boot - which is exactly when a
+# parent needs the panel to tell them why - that path is absent and the panel
+# would refuse to start with it. Declaring it here creates it instead.
+# Preserve=yes so that stopping the panel does not delete the directory the
+# daemon's socket lives in.
+RuntimeDirectory=biokids
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+
+# SECURITY.md section 2, in full. The panel runs as root because it writes
+# configuration only root may write; that is the whole reason for the sandbox.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service
+# Two deliberate differences from the block in SECURITY.md section 2:
+#   /etc/biokids is added, because writing config.toml is the panel's job;
+#   the three filter directories are left out, because the daemon is the single
+#   writer of a live filter (ARCHITECTURE.md section 2) and the panel asks it
+#   over the socket rather than rendering anything itself.
+ReadWritePaths=/var/lib/biokids /var/log/biokids /run/biokids /etc/biokids
+# No IPAddressDeny= here, tempting as it is. The panel sends the parent's
+# notification mail through their own SMTP server (SECURITY.md section 4), and
+# an address filter that silently swallows those would be a worse bug than the
+# one it prevents. What keeps the panel off the network is the bind address.
+
+[Install]
+WantedBy=multi-user.target

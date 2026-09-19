@@ -39,6 +39,10 @@ class PathsConfig:
     log_dir: Path = Path("/var/log/biokids")
     run_dir: Path = Path("/run/biokids")
     daemon_socket: Path = Path("/run/biokids/daemon.sock")
+    shell_socket: Path = Path("/run/biokids/shell.sock")
+    """The child launcher's socket. World-connectable by necessity — the child
+    is not in the `biokids` group — and authorised by the peer's uid instead,
+    which the kernel supplies and nothing in a child's session can forge."""
     share_dir: Path = Path("/usr/share/biokids")
     secret_key: Path = Path("/etc/biokids/secret.key")
     ext_token: Path = Path("/etc/biokids/ext.token")

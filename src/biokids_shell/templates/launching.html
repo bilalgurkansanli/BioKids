@@ -1,0 +1,10 @@
+{% extends "_full.html" %}
+{% block title %}{{ _('shell.launching', app=tile.name) }}{% endblock %}
+{% block inner %}
+  {# The app's own icon, not a spinner: the child sees that the thing they
+     tapped is the thing that is happening (UX.md §2.4). #}
+  <div class="tile__icon" style="font-size:6rem" aria-hidden="true">{{ tile.icon|icon }}</div>
+  <h1>{{ tile.name }}</h1>
+  <p id="launch-status">{{ _('shell.launching', app=tile.name) }}</p>
+  <div id="launch-slug" hidden data-slug="{{ tile.slug }}"></div>
+{% endblock %}

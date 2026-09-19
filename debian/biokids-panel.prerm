@@ -1,0 +1,29 @@
+#!/bin/sh
+# biokids-panel prerm: stop the panel before its files go away.
+#
+# As in biokids-daemon.prerm, this is explicit and comes before the generated
+# #DEBHELPER# block so that the order is guaranteed: the panel writes to the
+# database, and it should not still be doing that while dpkg removes the code
+# underneath it.
+
+set -e
+
+case "$1" in
+    remove|deconfigure)
+        if [ -d /run/systemd/system ]; then
+            deb-systemd-invoke stop biokids-panel.service >/dev/null 2>&1 || true
+        fi
+        ;;
+
+    upgrade|failed-upgrade)
+        ;;
+
+    *)
+        echo "prerm called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

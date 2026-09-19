@@ -1,0 +1,37 @@
+#!/bin/sh
+# biokids-daemon postrm.
+#
+# The daemon renders three configuration files that dpkg knows nothing about:
+# a dnsmasq snippet, a Chromium managed policy and an nftables ruleset. They are
+# generated from the database, carry a "do not hand-edit" header and are
+# deliberately not conffiles - dpkg would otherwise prompt an administrator
+# about a file no human wrote. Being outside dpkg's inventory, they have to be
+# cleaned up here, or a purged system would keep filtering traffic on behalf of
+# software that is no longer installed.
+#
+# Only on purge. A "remove" leaves the filter in place, because removing the
+# daemon temporarily should not silently open the internet on a child's machine.
+
+set -e
+
+case "$1" in
+    purge)
+        rm -f /etc/dnsmasq.d/*biokids*
+        rm -f /etc/chromium/policies/managed/*biokids*
+        rm -f /etc/nftables.d/*biokids*
+        # Ours, shipped empty; goes only if nothing else put anything there.
+        rmdir /etc/nftables.d 2>/dev/null || true
+        ;;
+
+    remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+        ;;
+
+    *)
+        echo "postrm called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

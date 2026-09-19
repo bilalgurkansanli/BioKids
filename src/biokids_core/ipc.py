@@ -63,6 +63,28 @@ class Op(StrEnum):
     """The Chromium extension reports a committed navigation (Phase 1)."""
 
 
+class ShellOp(StrEnum):
+    """What the child's own session may ask for, on the unprivileged socket.
+
+    Deliberately short. Everything here is either a read scoped to the calling
+    child or a request the daemon is free to refuse; nothing on this list can
+    grant time, unlock a session or reach another child. The daemon establishes
+    *which* child is calling from the peer's uid, never from an argument.
+    """
+
+    PING = "ping"
+    GET_STATE = "get_state"
+    """Identity, tiles and remaining time, for the child that is calling."""
+    LAUNCH = "launch"
+    REPORT_ACTIVITY = "report_activity"
+    FIRST_RUN_DONE = "first_run_done"
+    REQUEST_SHUTDOWN = "request_shutdown"
+    """The child pressed the shutdown tile (D-100). The daemon decides."""
+    ASK_A_PARENT = "ask_a_parent"
+    """The block page's "Anneme sor" button files an access request (D-65)."""
+    SUBSCRIBE_EVENTS = "subscribe_events"
+
+
 class EventKind(StrEnum):
     """Event frames pushed to subscribers."""
 

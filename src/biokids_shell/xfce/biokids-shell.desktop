@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=BioKids
+Name[tr]=BioKids
+Comment=The child launcher
+Comment[tr]=Çocuk arayüzü
+Exec=systemctl --user start biokids-shell.service
+OnlyShowIn=XFCE;
+X-XFCE-Autostart-Override=true
+NoDisplay=true

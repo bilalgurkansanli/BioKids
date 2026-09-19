@@ -1,0 +1,4 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}
+Beş dakika sonra kapatıyoruz {name}, işini kaydet.
+Beş dakikan kaldı. Yaptığın şeyi kaydetmeyi unutma.
+Son beş dakika. Artık bitirmeye başlayabilirsin.

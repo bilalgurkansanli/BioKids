@@ -1,0 +1,11 @@
+{% extends "_full.html" %}
+{% set tone = 'full--calm' %}
+{% set persona = 'sio' %}
+{% set expression = 'neutral' %}
+{% block title %}{{ _('shell.break.title') }}{% endblock %}
+{% block inner %}
+  {# No dismiss button: a break you can click away is not a break (D-46). #}
+  <h1>{{ _('shell.break.title') }}</h1>
+  <p>{{ _('shell.break.body', minutes=(state.break_seconds|int / 60)|round(0, 'ceil')|int) }}</p>
+  <p class="countdown" id="countdown" data-seconds="{{ state.break_seconds|int }}"></p>
+{% endblock %}

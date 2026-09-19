@@ -1,0 +1,9 @@
+{% extends "_full.html" %}
+{% set tone = 'full--night' %}
+{% set persona = 'sio' %}
+{% set expression = 'sleepy' %}
+{% block title %}{{ _('shell.window_closed.title') }}{% endblock %}
+{% block inner %}
+  <h1>{{ _('shell.window_closed.title') }}</h1>
+  <p>{{ _('shell.window_closed.body') }}</p>
+{% endblock %}

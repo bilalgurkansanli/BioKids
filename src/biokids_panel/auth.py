@@ -78,8 +78,8 @@ def lockout_remaining_minutes(parent: Parent, now: dt.datetime | None = None) ->
 def _next_lockout_minutes(parent: Parent, config: Config) -> int:
     """Doubles on each lockout served, capped. The first is fifteen minutes."""
     base = config.panel.pin_lockout_minutes
-    minutes = base * (2**parent.pin_lockout_level)
-    return min(minutes, config.panel.pin_lockout_max_minutes)
+    minutes = base * (2 ** int(parent.pin_lockout_level))
+    return int(min(minutes, config.panel.pin_lockout_max_minutes))
 
 
 # --------------------------------------------------------------------- login

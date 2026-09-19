@@ -1,0 +1,4 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}
+You have one minute left, {name}.
+One last minute. Get ready, we stop very soon.
+One minute left, add your finishing touches.

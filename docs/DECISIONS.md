@@ -562,6 +562,64 @@ child.
 
 ---
 
+## Implementation decisions
+
+These were settled while building Phase 0, in areas the earlier entries left
+open. They are `[claude]` and reversible; read the reasoning first.
+
+**D-123 [claude] Two daemon sockets, and the child's is authorised by peer uid.**
+`ARCHITECTURE.md` §2 says the launcher asks the daemon for permission;
+`SECURITY.md` §2 says the daemon's socket is `root:biokids` 0660. Both are right,
+and together they leave the child unable to reach the daemon at all — which is
+correct, because the `biokids` group can grant time and power the machine off,
+and a child must never be in it.
+
+So the daemon listens twice. `/run/biokids/daemon.sock` is unchanged. A second
+socket, `/run/biokids/shell.sock`, is world-connectable and carries a deliberately
+short list of operations, none of which takes a child id as an argument: the
+daemon asks the kernel who connected (`SO_PEERCRED`), maps that uid to a child,
+and answers about that child only. The open file mode is not the control; the
+peer's identity is, and a process cannot lie about that.
+
+Rejected alternative: putting the child in the `biokids` group. It is one line
+and it hands a child every operation the panel has.
+
+**D-124 [claude] "+10 dk" raises the day's allowance; it does not subtract from usage.**
+Subtracting from `general_s` reads naturally and is wrong: a child who has used
+two minutes of a two-hour quota would get two minutes back out of a ten-minute
+grant, because usage cannot go below zero. A grant is worth what the parent said
+it was worth, whatever the child has done today, so it is a separate counter that
+raises the ceiling. A grant also re-arms any warning it has pushed back into the
+future — otherwise the extra ten minutes arrive with no warning at the end of them.
+
+**D-125 [claude] Suspended time is derived from two clocks, not reported by logind.**
+`CLOCK_BOOTTIME` includes suspend, `CLOCK_MONOTONIC` excludes it, so the
+difference between the deltas is exactly how long the machine slept. Exact, no
+round trip, and nothing to disagree with. `ARCHITECTURE.md` §3.1 is updated.
+
+**D-126 [claude] An unexplained gap is clamped, not billed.**
+If the daemon was stopped, frozen, or hibernated in a way the suspend subtraction
+missed, the interval since the last tick can be hours. Crediting that as screen
+time would be the single worst bug the ledger could have, so an interval longer
+than three ticks is recorded as a gap and clamped. The child loses nothing; the
+parent sees the gap in the event log.
+
+**D-127 [claude] The panel degrades rather than disappearing when the daemon is down.**
+Running it against a stopped daemon showed "no children have been added yet",
+which is both alarming and untrue: the children are in a database the panel reads
+perfectly well, and only their *live* state is unknown. The cards are now drawn
+from the database with the counters blank, the state shown as unknown, and the
+action buttons withheld, under the existing banner. The launcher does the
+opposite and shows a holding screen with nothing to start, because on the child's
+side a working launcher with no limits behind it is the failure to avoid.
+
+**D-128 [claude] The launcher is progressive enhancement, and so is the panel.**
+Every form is an ordinary form and every POST redirects; JavaScript only adds the
+live counters. A phone on a flaky tailnet gets a stale page rather than a broken
+one, and a launcher whose script fails to load still starts applications.
+
+---
+
 ## Development workflow
 
 **D-115 [owner] Host is Windows 11 Pro. Development target is a Debian 13 VM in VirtualBox.**

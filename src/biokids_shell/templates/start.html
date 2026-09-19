@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ _('shell.greeting', name=state.display_name) }}{% endblock %}
+{% block body %}
+<div class="screen" data-band="{{ band }}">
+  <header class="head">
+    <div class="hello">
+      <span class="avatar" aria-hidden="true">{{ state.avatar|avatar }}</span>
+      <span>{{ _('shell.greeting', name=state.display_name) }}</span>
+    </div>
+  </header>
+
+  {# The browser's home page: this child's own sites and nothing else. #}
+  <main class="start-grid">
+    {% for tile in tiles %}
+      {% if tile.kind == 'web' and tile.url %}
+        <a class="tile" href="{{ tile.url }}">
+          <span class="tile__icon" aria-hidden="true">{{ tile.icon|icon }}</span>
+          <span class="tile__label">{{ tile.name }}</span>
+        </a>
+      {% endif %}
+    {% endfor %}
+  </main>
+
+  <footer class="foot"></footer>
+</div>
+{% endblock %}

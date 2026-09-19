@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240"
+     class="bk-char bk-sio" role="img">
+  <title>Sio</title>
+  <desc>
+    Sio, the cool companion (VOICE.md section 7, D-94). Four expressions live in this
+    file as the groups sio-expr-neutral, sio-expr-happy, sio-expr-concerned and
+    sio-expr-sleepy; exactly one is visible at a time, chosen by a class on the root
+    svg element: no class or is-neutral, is-happy, is-concerned, is-sleepy. Add
+    is-speaking for the idle bob.
+
+    Deliberately the same drawing as Zio below the ears — same body, same arms, same feet,
+    same face plate, and the four expressions are geometrically identical. Only the palette
+    and the head change, which is what makes the two read as a pair rather than as two
+    characters that happen to share a screen.
+
+    Every colour goes through a custom property that falls back to the matching token from
+    docs/UX.md section 1, so the shell themes these by setting --bio-teal and --bio-indigo.
+    The rules select on classes rather than on the ids, and every id in the file carries
+    the character's name, because the shell inlines Zio and Sio in the same document
+    (VOICE.md section 7) and two elements may not share an id there.
+  </desc>
+
+  <style>
+    .bk-sio {
+      --bk-body:      var(--bio-teal, #1FB6A6);
+      --bk-body-deep: var(--bk-sio-shade, #14907F);
+      --bk-accent:    var(--bio-indigo, #4B54C8);
+      --bk-face:      var(--bk-sio-face, #EFF7F8);
+      --bk-ink:       var(--bio-ink, #221E1C);
+      --bk-mouth:     var(--bk-sio-mouth, #2A3270);
+      --bk-tongue:    var(--bk-sio-tongue, #7B84E8);
+      --bk-blush:     var(--bk-sio-blush, #98A0F2);
+    }
+
+    .bk-sio .bk-body   { fill: var(--bk-body); }
+    .bk-sio .bk-shade  { fill: var(--bk-body-deep); }
+    .bk-sio .bk-accent { fill: var(--bk-accent); }
+    .bk-sio .bk-face   { fill: var(--bk-face); }
+    .bk-sio .bk-eye    { fill: var(--bk-ink); }
+    .bk-sio .bk-glint  { fill: #FFFFFF; }
+    .bk-sio .bk-mouth  { fill: var(--bk-mouth); }
+    .bk-sio .bk-tongue { fill: var(--bk-tongue); }
+    .bk-sio .bk-blush  { fill: var(--bk-blush); }
+    .bk-sio .bk-sheen  {
+      fill: none; stroke: #FFFFFF; stroke-linecap: round; opacity: .22;
+    }
+    .bk-sio .bk-antenna {
+      fill: none; stroke: var(--bk-body-deep); stroke-width: 8; stroke-linecap: round;
+    }
+    .bk-sio .bk-stroke {
+      fill: none; stroke: var(--bk-ink); stroke-width: 6;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+    .bk-sio .bk-zzz {
+      fill: none; stroke: var(--bk-ink); stroke-linecap: round;
+      stroke-linejoin: round; opacity: .7;
+    }
+
+    /* Neutral is the default, so a card that forgets to set a class still has a face. */
+    .bk-sio .bk-expr { display: none; }
+    .bk-sio .bk-expr-neutral { display: inline; }
+    .bk-sio.is-happy     .bk-expr-neutral,
+    .bk-sio.is-concerned .bk-expr-neutral,
+    .bk-sio.is-sleepy    .bk-expr-neutral { display: none; }
+    .bk-sio.is-happy     .bk-expr-happy     { display: inline; }
+    .bk-sio.is-concerned .bk-expr-concerned { display: inline; }
+    .bk-sio.is-sleepy    .bk-expr-sleepy    { display: inline; }
+
+    @keyframes bk-sio-bob {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-5px); }
+    }
+    .bk-sio.is-speaking .bk-figure {
+      animation: bk-sio-bob 1.6s ease-in-out infinite;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .bk-sio .bk-figure { animation: none !important; }
+    }
+  </style>
+
+  <clipPath id="sio-mouth-clip">
+    <path d="M 101 148 Q 120 190 139 148 Z"/>
+  </clipPath>
+
+  <g class="bk-figure">
+
+    <!-- Feet, arms, antenna and ears first, so the body tucks them in behind it. -->
+    <ellipse class="bk-shade" cx="94"  cy="206" rx="21" ry="14"/>
+    <ellipse class="bk-shade" cx="146" cy="206" rx="21" ry="14"/>
+    <ellipse class="bk-shade" cx="44"  cy="150" rx="15" ry="23"/>
+    <ellipse class="bk-shade" cx="196" cy="150" rx="15" ry="23"/>
+
+    <path class="bk-antenna" d="M 120 66 Q 121 40 134 30"/>
+    <circle class="bk-accent" cx="138" cy="25" r="12"/>
+    <circle class="bk-glint"  cx="134" cy="21" r="3.6" opacity=".85"/>
+
+    <ellipse class="bk-body"   cx="78"  cy="60" rx="22" ry="23"/>
+    <ellipse class="bk-body"   cx="162" cy="60" rx="22" ry="23"/>
+    <ellipse class="bk-accent" cx="78"  cy="63" rx="11" ry="12" opacity=".75"/>
+    <ellipse class="bk-accent" cx="162" cy="63" rx="11" ry="12" opacity=".75"/>
+
+    <rect class="bk-body" x="40" y="58" width="160" height="152" rx="70" ry="72"/>
+
+    <!-- The sheen is painted before the face plate, which then crops it for free. -->
+    <path class="bk-sheen" d="M 62 126 Q 62 84 96 72" stroke-width="10"/>
+
+    <ellipse class="bk-accent" cx="120" cy="178" rx="46" ry="28" opacity=".26"/>
+    <ellipse class="bk-face"   cx="120" cy="128" rx="62" ry="54"/>
+    <ellipse class="bk-blush"  cx="82"  cy="150" rx="13" ry="9" opacity=".55"/>
+    <ellipse class="bk-blush"  cx="158" cy="150" rx="13" ry="9" opacity=".55"/>
+
+    <!-- =========================================================== neutral -->
+    <g id="sio-expr-neutral" class="bk-expr bk-expr-neutral">
+      <path class="bk-stroke" d="M 87 100 Q 98 93 109 100" stroke-width="5"/>
+      <path class="bk-stroke" d="M 131 100 Q 142 93 153 100" stroke-width="5"/>
+      <ellipse class="bk-eye" cx="98"  cy="123" rx="10" ry="12"/>
+      <ellipse class="bk-eye" cx="142" cy="123" rx="10" ry="12"/>
+      <circle class="bk-glint" cx="102" cy="117" r="4.2"/>
+      <circle class="bk-glint" cx="146" cy="117" r="4.2"/>
+      <circle class="bk-glint" cx="94"  cy="129" r="2" opacity=".75"/>
+      <circle class="bk-glint" cx="138" cy="129" r="2" opacity=".75"/>
+      <path class="bk-stroke" d="M 105 154 Q 120 166 135 154"/>
+    </g>
+
+    <!-- ============================================================= happy -->
+    <g id="sio-expr-happy" class="bk-expr bk-expr-happy">
+      <path class="bk-stroke" d="M 85 96 Q 98 87 111 96" stroke-width="5"/>
+      <path class="bk-stroke" d="M 129 96 Q 142 87 155 96" stroke-width="5"/>
+      <path class="bk-stroke" d="M 87 128 Q 98 112 109 128"/>
+      <path class="bk-stroke" d="M 131 128 Q 142 112 153 128"/>
+      <path class="bk-mouth" d="M 101 148 Q 120 190 139 148 Z"/>
+      <ellipse class="bk-tongue" cx="120" cy="164" rx="10" ry="8"
+               clip-path="url(#sio-mouth-clip)"/>
+      <ellipse class="bk-blush" cx="79"  cy="147" rx="16" ry="11" opacity=".8"/>
+      <ellipse class="bk-blush" cx="161" cy="147" rx="16" ry="11" opacity=".8"/>
+    </g>
+
+    <!-- ========================================================= concerned -->
+    <g id="sio-expr-concerned" class="bk-expr bk-expr-concerned">
+      <path class="bk-stroke" d="M 84 109 Q 96 99 111 95"/>
+      <path class="bk-stroke" d="M 156 109 Q 144 99 129 95"/>
+      <ellipse class="bk-eye" cx="98"  cy="126" rx="9.5" ry="11"/>
+      <ellipse class="bk-eye" cx="142" cy="126" rx="9.5" ry="11"/>
+      <circle class="bk-glint" cx="101" cy="121" r="3.8"/>
+      <circle class="bk-glint" cx="145" cy="121" r="3.8"/>
+      <circle class="bk-glint" cx="94"  cy="131" r="1.8" opacity=".75"/>
+      <circle class="bk-glint" cx="138" cy="131" r="1.8" opacity=".75"/>
+      <path class="bk-stroke" d="M 106 164 Q 120 152 134 164"/>
+    </g>
+
+    <!-- ============================================================ sleepy -->
+    <g id="sio-expr-sleepy" class="bk-expr bk-expr-sleepy">
+      <path class="bk-stroke" d="M 85 105 Q 98 100 111 105" stroke-width="5"/>
+      <path class="bk-stroke" d="M 129 105 Q 142 100 155 105" stroke-width="5"/>
+      <path class="bk-stroke" d="M 87 120 Q 98 133 109 120"/>
+      <path class="bk-stroke" d="M 131 120 Q 142 133 153 120"/>
+      <ellipse class="bk-mouth" cx="120" cy="159" rx="9" ry="11"/>
+      <path class="bk-zzz" d="M 190 79 h 11 l -11 12 h 11"  stroke-width="3.5"/>
+      <path class="bk-zzz" d="M 201 51 h 14 l -14 15 h 14"  stroke-width="4.5"/>
+      <path class="bk-zzz" d="M 213 19 h 18 l -18 20 h 18"  stroke-width="5.5"/>
+    </g>
+
+  </g>
+</svg>

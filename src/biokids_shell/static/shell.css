@@ -1,0 +1,413 @@
+/* The child launcher.
+ *
+ * Fullscreen, no chrome, nothing behind it. Built for a four-year-old who cannot
+ * read and for a ten-year-old who can, from the same markup — what changes with
+ * age is size and density, never structure (D-96).
+ *
+ * Rules taken from UX.md §2.4 and enforced here rather than remembered:
+ *   - every target is at least 64px for 4-7, 44px for 8-10
+ *   - no double-click anywhere; single tap, always
+ *   - feedback within 100ms, even when the app takes three seconds to start
+ *   - prefers-reduced-motion is respected everywhere
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden; /* nothing scrolls; the grid is sized to fit */
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-kid);
+  font-size: calc(1rem * var(--font-scale));
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+/* A child cannot select text to drag out of the window, and long-press on a
+ * touchscreen must not offer "copy" or "search the web for…". */
+img,
+svg {
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+:focus-visible {
+  outline: 4px solid var(--bio-indigo);
+  outline-offset: 4px;
+}
+
+.screen {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+/* --------------------------------------------------------------------- head */
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.hello {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex: 1;
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.hello .avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  display: grid;
+  place-items: center;
+  font-size: 2rem;
+}
+
+.clock {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The ring: always visible, top right (D-43b). For 4-7 it carries no number —
+ * a child who cannot read still understands a circle that is emptying. */
+.ring-wrap {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  flex: none;
+}
+
+.ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.ring__track {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 9;
+}
+
+.ring__value {
+  fill: none;
+  stroke: var(--ok);
+  stroke-width: 9;
+  stroke-linecap: round;
+  transition: stroke-dashoffset .6s ease, stroke .6s ease, stroke-width .6s ease;
+}
+
+/* Colour is never the only signal: the ring thickens as it reddens. */
+.ring-wrap[data-tone="warn"] .ring__value { stroke: var(--warn); stroke-width: 11; }
+.ring-wrap[data-tone="danger"] .ring__value { stroke: var(--danger); stroke-width: 13; }
+
+.ring-wrap[data-tone="danger"] { animation: pulse 1.6s ease-in-out infinite; }
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+.ring__label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------------------------- tiles */
+
+.tiles {
+  display: grid;
+  gap: var(--sp-4);
+  align-content: center;
+  justify-content: center;
+  padding: var(--sp-3) var(--sp-5);
+  grid-template-columns: repeat(auto-fit, var(--tile-size));
+}
+
+/* 4-7: 220px tiles, at most eight of them. 8-10: 150px, up to twenty. */
+.screen[data-band="4-7"] { --tile-size: 220px; --tile-label: 28px; }
+.screen[data-band="8-10"] { --tile-size: 150px; --tile-label: 18px; }
+
+.tile {
+  width: var(--tile-size);
+  height: var(--tile-size);
+  min-height: var(--target-young);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 2px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  color: var(--ink);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+
+.tile:hover,
+.tile:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-2);
+}
+
+/* The 100ms feedback rule: the press is visible before anything else happens. */
+.tile:active,
+.tile.is-pressed {
+  transform: scale(.94);
+  box-shadow: var(--shadow-1);
+}
+
+.tile__icon {
+  font-size: calc(var(--tile-size) * .38);
+  line-height: 1;
+}
+
+.tile__label {
+  font-size: var(--tile-label);
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.screen[data-band="8-10"] .tile__label {
+  font-size: var(--tile-label);
+}
+
+.tile--games { border-color: color-mix(in srgb, var(--bio-coral) 45%, var(--line)); }
+.tile--learning { border-color: color-mix(in srgb, var(--bio-teal) 45%, var(--line)); }
+.tile--web { border-color: color-mix(in srgb, var(--bio-indigo) 45%, var(--line)); }
+
+/* --------------------------------------------------------------------- foot */
+
+.foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.slider {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: 1;
+  max-width: 18rem;
+  font-size: 1.4rem;
+}
+
+.slider input[type="range"] {
+  flex: 1;
+  height: var(--target-young);
+  accent-color: var(--bio-indigo);
+}
+
+.foot .tile-small {
+  min-width: var(--target-young);
+  min-height: var(--target-young);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-4);
+  border: 2px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* The supervision indicator (D-76). Visible by default, and the first-run
+ * screen always runs even when a parent shrinks it. */
+.badge-zio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--bio-amber) 22%, var(--surface));
+  font-size: .95rem;
+}
+
+.badge-zio.is-checking { animation: blink 1.2s ease-in-out 2; }
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .45; }
+}
+
+/* ------------------------------------------------------------ full screens */
+
+.full {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: var(--sp-5);
+}
+
+.full__inner {
+  max-width: 34rem;
+  display: grid;
+  gap: var(--sp-4);
+  justify-items: center;
+}
+
+.full h1 {
+  font-size: 2.4rem;
+  margin: 0;
+  line-height: 1.15;
+}
+
+.full p {
+  font-size: 1.35rem;
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.full .countdown {
+  font-size: 3rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--danger);
+}
+
+.full--calm { background: color-mix(in srgb, var(--bio-teal) 10%, var(--bg)); }
+.full--warm { background: color-mix(in srgb, var(--bio-amber) 14%, var(--bg)); }
+.full--night { background: color-mix(in srgb, var(--bio-indigo) 12%, var(--bg)); }
+
+.big-btn {
+  min-height: 84px;
+  padding: 0 var(--sp-6);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--bio-indigo);
+  color: #fff;
+  font: inherit;
+  font-size: 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.big-btn--ok { background: var(--ok); }
+.big-btn--danger { background: var(--danger); }
+.big-btn--quiet { background: var(--surface); color: var(--ink); border: 2px solid var(--line); }
+
+.btn-row {
+  display: flex;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ------------------------------------------------------------- characters */
+
+.character {
+  width: 180px;
+  height: 180px;
+}
+
+.character svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* A card slides in from the bottom-right while a line plays, and always carries
+ * the spoken text: a deaf child, a muted machine and a noisy room all get the
+ * same information (VOICE.md §7). This is not optional. */
+.speech-card {
+  position: fixed;
+  right: var(--sp-4);
+  bottom: var(--sp-4);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  max-width: 26rem;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+  border: 2px solid var(--line);
+  transform: translateY(140%);
+  transition: transform .3s ease;
+  z-index: 50;
+}
+
+.speech-card.is-visible { transform: translateY(0); }
+.speech-card .character { width: 76px; height: 76px; flex: none; }
+.speech-card__text { font-size: 1.15rem; line-height: 1.35; }
+
+.speech-card[data-persona="zio"] { border-color: var(--bio-coral); }
+.speech-card[data-persona="sio"] { border-color: var(--bio-teal); }
+
+/* ---------------------------------------------------------------- banners */
+
+.banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  font-size: 1.3rem;
+  font-weight: 600;
+  transform: translateY(-120%);
+  transition: transform .3s ease;
+}
+
+.banner.is-visible { transform: translateY(0); }
+.banner[data-level="info"] { background: var(--bio-amber); color: #3a2a00; }
+.banner[data-level="warn"] { background: var(--warn); color: #3a2a00; }
+.banner[data-level="danger"] { background: var(--danger); color: #fff; }
+
+.banner__icon { font-size: 1.5rem; }
+
+/* ------------------------------------------------------------- start page */
+
+.start-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+}

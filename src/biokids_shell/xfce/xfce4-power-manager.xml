@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  No suspend, no display blanking from the power manager.
+
+  A machine that suspends itself halfway through the two-minute countdown comes
+  back in a state nobody designed. The ledger handles suspend correctly either
+  way (it subtracts it), but the *sequence* is easier to reason about, and much
+  easier to explain to a child, when it does not happen at all.
+-->
+<channel name="xfce4-power-manager" version="1.0">
+  <property name="xfce4-power-manager" type="empty">
+    <property name="power-button-action" type="uint" value="4"/>
+    <property name="lock-screen-suspend-hibernate" type="bool" value="true"/>
+    <property name="logind-handle-lid-switch" type="bool" value="false"/>
+    <property name="inactivity-on-ac" type="uint" value="0"/>
+    <property name="inactivity-on-battery" type="uint" value="0"/>
+    <property name="dpms-enabled" type="bool" value="false"/>
+    <property name="blank-on-ac" type="int" value="0"/>
+    <property name="blank-on-battery" type="int" value="0"/>
+    <property name="show-tray-icon" type="bool" value="false"/>
+  </property>
+</channel>
