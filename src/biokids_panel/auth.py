@@ -20,7 +20,7 @@ import datetime as dt
 import logging
 from dataclasses import dataclass
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from biokids_core import repo, security
@@ -75,6 +75,31 @@ def lockout_remaining_minutes(parent: Parent, now: dt.datetime | None = None) ->
     return max(1, int((parent.pin_locked_until - now).total_seconds() // 60) + 1)
 
 
+def _count_failure(session: Session, parent: Parent) -> int:
+    """Add one to the failure counter and return *this* request's value.
+
+    Not `parent.pin_failures += 1`. That is a read-modify-write: each concurrent
+    request reads the same starting number and writes back the same absolute
+    one, so twenty simultaneous guesses cost a single failure. Measured against
+    the real app before this change: twenty concurrent wrong PINs left
+    `pin_failures = 1` and no lockout at all.
+
+    A plain `UPDATE ... SET x = x + 1` fixes the count but not the decision: the
+    threshold is read back through the identity map, where several requests can
+    see the same number and cross it together, or miss it entirely. `RETURNING`
+    gives each caller the value its own statement produced, so exactly one
+    request sees the fifth failure.
+    """
+    updated = session.execute(
+        update(Parent)
+        .where(Parent.id == parent.id)
+        .values(pin_failures=Parent.pin_failures + 1)
+        .returning(Parent.pin_failures)
+    ).scalar_one()
+    session.refresh(parent, ["pin_failures"])
+    return int(updated)
+
+
 def _next_lockout_minutes(parent: Parent, config: Config) -> int:
     """Doubles on each lockout served, capped. The first is fifteen minutes."""
     base = config.panel.pin_lockout_minutes
@@ -116,11 +141,11 @@ def attempt_login(
         return LoginResult(ok=False, error_key="login.locked", lockout_minutes=locked)
 
     if not security.verify_secret(parent.pin_hash, pin.strip()):
-        parent.pin_failures += 1
-        remaining = max(0, config.panel.pin_attempts - parent.pin_failures)
-        detail: dict[str, object] = {"failures": parent.pin_failures}
+        failures = _count_failure(session, parent)
+        remaining = max(0, config.panel.pin_attempts - failures)
+        detail: dict[str, object] = {"failures": failures}
 
-        if remaining == 0:
+        if remaining <= 0:
             minutes = _next_lockout_minutes(parent, config)
             parent.pin_locked_until = now + dt.timedelta(minutes=minutes)
             parent.pin_lockout_level += 1

@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from biokids_core import repo, security
 from biokids_core.config import Config
-from biokids_core.db import Parent
+from biokids_core.db import Database, Parent
 from biokids_core.db.models import utcnow
 from biokids_panel import auth
 
@@ -317,3 +317,57 @@ def test_recovering_the_pin_signs_every_browser_out(
     ).ok
     session.commit()
     assert session.query(PanelSession).count() == 0
+
+
+def test_guessing_in_parallel_does_not_buy_extra_attempts(
+    config: Config, db: Database, family: object
+) -> None:
+    """Twenty simultaneous wrong PINs must cost twenty failures, not one.
+
+    `parent.pin_failures += 1` is a read-modify-write: every concurrent request
+    reads the same starting value and writes back the same absolute number. The
+    route is a sync `def`, so FastAPI runs it in the threadpool, and argon2id at
+    64 MiB holds each request open for hundreds of milliseconds — a wide window.
+    Measured before the fix: twenty concurrent guesses left `pin_failures = 1`
+    and no lockout, which turns "5 attempts then 15 minutes" into a few hundred.
+
+    Each thread gets its own session, because that is what a request does.
+    """
+    import threading
+
+    with db.session() as setup:
+        setup.add(Parent(display_name="Anne", pin_hash=security.hash_secret(PIN)))
+
+    attempts = 20
+    results: list[str] = []
+    guard = threading.Lock()
+    ready = threading.Barrier(attempts)
+
+    def guess(n: int) -> None:
+        ready.wait(timeout=30)
+        with db.session() as own:
+            outcome = auth.attempt_login(own, config, f"{n:06d}")
+        with guard:
+            results.append(outcome.error_key)
+
+    threads = [threading.Thread(target=guess, args=(n,)) for n in range(attempts)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=60)
+
+    assert len(results) == attempts, "every attempt returned"
+    assert "login.locked" in results, "the door closed at some point"
+
+    with db.session() as check:
+        parent = repo.get_parent(check)
+        assert parent is not None
+        assert parent.pin_locked_until is not None
+        # The counter resets when a lockout is served, so the surviving evidence
+        # is the lockout itself plus one audit row per attempt.
+        locked = [
+            row
+            for row in repo.recent_audit(check, limit=100)
+            if row.action in {"login_failed", "login_locked"}
+        ]
+    assert len(locked) == attempts, "each guess is counted once and audited once"
