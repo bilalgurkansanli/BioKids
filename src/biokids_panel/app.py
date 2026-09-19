@@ -270,7 +270,7 @@ def register_routes(app: FastAPI) -> None:
         blocked = _guard(request, session, state)
         if blocked:
             return blocked
-        status, reachable = _daemon_status(ctx)
+        status, reachable = _daemon_status(ctx, session)
         return render(
             ctx,
             request,
@@ -288,7 +288,7 @@ def register_routes(app: FastAPI) -> None:
         blocked = _guard(request, session, state)
         if blocked:
             return blocked
-        status, reachable = _daemon_status(ctx)
+        status, reachable = _daemon_status(ctx, session)
         return render(
             ctx,
             request,
@@ -388,8 +388,71 @@ def register_routes(app: FastAPI) -> None:
         blocked = _guard(request, session, state)
         if blocked:
             return blocked
-        rows = repo.list_children(session)
-        return render(ctx, request, session, state, tr, "children.html", children=rows)
+        return render(
+            ctx,
+            request,
+            session,
+            state,
+            tr,
+            "children.html",
+            children=repo.list_children(session),
+            this_year=dt.date.today().year,
+        )
+
+    @app.post("/children")
+    def children_add(
+        request: Request,
+        ctx: Ctx,
+        session: Db,
+        state: Auth,
+        tr: Tr,
+        display_name: Annotated[str, Form()] = "",
+        birth_year: Annotated[int, Form()] = 0,
+        unix_user: Annotated[str, Form()] = "",
+        avatar: Annotated[str, Form()] = "fox",
+        locale: Annotated[str, Form()] = "tr",
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        """The second child. The wizard adds the first; families have more."""
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        if not auth.csrf_ok(state, csrf_token):
+            return see_other("/children?error=csrf")
+
+        from biokids_panel.wizard import create_child
+
+        child, error = create_child(
+            session,
+            display_name=display_name,
+            birth_year=birth_year,
+            unix_user=unix_user,
+            avatar=avatar,
+            locale=locale,
+        )
+        if child is None:
+            return render(
+                ctx,
+                request,
+                session,
+                state,
+                tr,
+                "children.html",
+                status_code=400,
+                children=repo.list_children(session),
+                this_year=dt.date.today().year,
+                error=tr(error),
+            )
+        repo.audit(
+            session,
+            actor=_actor(state),
+            action="child_added",
+            target=f"child:{child.id}",
+            detail={"unix_user": child.unix_user},
+        )
+        session.commit()
+        _call_daemon(ctx, Op.RELOAD)
+        return see_other(f"/children/{child.id}/time?saved=1")
 
     @app.get("/children/{child_id}/time", response_class=HTMLResponse)
     def time_form(
@@ -726,21 +789,56 @@ def _actor(state: auth.AuthState) -> str:
     return f"parent:{state.parent.id}" if state.parent else "parent"
 
 
-def _daemon_status(ctx: PanelContext) -> tuple[dict[str, Any], bool]:
+def _daemon_status(ctx: PanelContext, session: Session) -> tuple[dict[str, Any], bool]:
     """Ask the daemon, and say plainly when it did not answer.
 
     A Today screen that renders stale numbers with no warning is worse than one
     that says the service is not responding: the first lets a parent believe
     their child is supervised when nobody is watching.
+
+    But "not responding" must not be shown as "no children". The children are in
+    the database, which the panel can read perfectly well; it is only their
+    *live* state that is unknown. So the cards are still drawn, from the
+    database, with the counters blank and the banner above them.
     """
     try:
         response = ctx.client.call(Op.GET_STATUS)
     except (IpcError, OSError) as exc:
         log.warning("the daemon did not answer get_status: %s", exc)
-        return {"children": []}, False
+        return {"children": _children_from_database(session)}, False
     if not response.ok:
-        return {"children": []}, False
+        return {"children": _children_from_database(session)}, False
     return response.data, True
+
+
+def _children_from_database(session: Session) -> list[dict[str, Any]]:
+    """The cards the panel can still draw with the daemon gone."""
+    today = dt.date.today()
+    rows: list[dict[str, Any]] = []
+    for child in repo.list_children(session):
+        policy = repo.load_policy(session, child, today=today)
+        rows.append(
+            {
+                "child_id": child.id,
+                "unix_user": child.unix_user,
+                "display_name": child.display_name,
+                "avatar": child.avatar,
+                "age_band": child.band(today).value,
+                "managed": policy is not None,
+                "online": False,
+                "unknown": True,
+                "app": "",
+                "remaining_seconds": 0,
+                "remaining_minutes": 0,
+                "used_seconds": 0,
+                "quota_seconds": policy.quota_minutes(today) * 60 if policy else 0,
+                "granted_seconds": 0,
+                "allow": True,
+                "reason_code": "",
+                "end_action": policy.end_action.value if policy else "",
+            }
+        )
+    return rows
 
 
 def _call_daemon(ctx: PanelContext, op: Op, **args: Any) -> bool:

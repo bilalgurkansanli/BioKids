@@ -483,6 +483,72 @@ def test_the_today_screen_says_so_when_the_daemon_is_down(
     assert "yanıt vermiyor" in page.text
 
 
+def test_the_children_are_still_listed_when_the_daemon_is_down(
+    config: Config, db: Database, family_ready: None
+) -> None:
+    """ "Not responding" must not be shown as "no children added yet".
+
+    The children are in a database the panel reads perfectly well; it is only
+    their live state that is unknown, and saying so is very different from
+    implying a parent never set the product up.
+    """
+    app = create_app(config)
+    app.state.ctx.client = FakeDaemon(up=False)  # type: ignore[assignment]
+    client = TestClient(app)
+    login(client)
+
+    page = client.get("/today").text
+    assert "Elif" in page
+    assert "durum bilinmiyor" in page
+    assert "Henüz çocuk eklenmemiş" not in page
+    assert "+10 dk" not in page, "no action button can work with the daemon gone"
+
+
+def test_a_second_child_can_be_added_outside_the_wizard(
+    client: TestClient, family_ready: None, db: Database, daemon: FakeDaemon
+) -> None:
+    login(client)
+    response = client.post(
+        "/children",
+        data={
+            "display_name": "Kerem",
+            "birth_year": dt.date.today().year - 9,
+            "unix_user": "kerem",
+            "avatar": "owl",
+            "locale": "tr",
+            "csrf_token": csrf_of(client),
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    with db.session() as session:
+        kerem = repo.get_child_by_user(session, "kerem")
+        assert kerem is not None
+        assert kerem.age_band == "8-10"
+        policy = repo.get_or_create_policy(session, kerem.id)
+        assert policy.weekday_quota_min == 120, "the 8-10 default, not the 4-7 one"
+    assert daemon.ran("reload")
+
+
+def test_adding_a_child_with_a_bad_username_is_refused(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    response = client.post(
+        "/children",
+        data={
+            "display_name": "Kerem",
+            "birth_year": dt.date.today().year - 9,
+            "unix_user": "Kerem Bey!",
+            "csrf_token": csrf_of(client),
+        },
+    )
+    assert response.status_code == 400
+    with db.session() as session:
+        assert len(repo.list_children(session)) == 1
+
+
 def test_settings_still_renders_without_the_daemon(
     config: Config, db: Database, family_ready: None
 ) -> None:

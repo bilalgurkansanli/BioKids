@@ -38,7 +38,13 @@
       <span class="child-card__name">{{ child.display_name }}</span>
       <span class="status {% if child.online %}status--online{% elif not child.allow %}status--blocked{% endif %}"
             data-role="status">
-        {% if child.online %}{{ _('today.online') }}{% else %}{{ _('today.offline') }}{% endif %}
+        {% if child.unknown %}
+          {{ _('today.unknown') }}
+        {% elif child.online %}
+          {{ _('today.online') }}
+        {% else %}
+          {{ _('today.offline') }}
+        {% endif %}
       </span>
     </div>
 
@@ -55,7 +61,9 @@
 
       <div>
         <div class="remaining__text" data-role="remaining">
-          {% if not child.managed %}
+          {% if child.unknown %}
+            {{ _('today.unknown') }}
+          {% elif not child.managed %}
             {{ _('policy.missing') }}
           {% elif remaining > 0 %}
             {{ _('today.remaining', minutes=remaining|minutes) }}
@@ -64,7 +72,9 @@
           {% endif %}
         </div>
         <div class="remaining__sub" data-role="activity">
-          {% if child.reason_code == 'window.closed' %}
+          {% if child.unknown %}
+            {{ _('error.daemon_unreachable') }}
+          {% elif child.reason_code == 'window.closed' %}
             {{ _('today.window_closed') }}
           {% elif child.online and child.app %}
             {{ _('today.now_playing', app=child.app) }}
@@ -77,7 +87,7 @@
       </div>
     </div>
 
-    {% if child.managed %}
+    {% if child.managed and not child.unknown %}
     <div class="actions">
       <form method="post" action="/children/{{ child.child_id }}/grant">
         <input type="hidden" name="csrf_token" value="{{ csrf }}">
@@ -95,7 +105,7 @@
         <button class="btn btn--danger" type="submit">{{ _('today.poweroff') }}</button>
       </form>
     </div>
-    {% else %}
+    {% elif not child.managed %}
     <p class="muted small">{{ _('time.enabled.help') }}</p>
     <a class="btn" href="/children/{{ child.child_id }}/time">{{ _('time.title') }}</a>
     {% endif %}

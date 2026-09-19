@@ -180,36 +180,16 @@ def register_wizard(app: FastAPI) -> None:
         avatar: Annotated[str, Form()] = "fox",
         locale: Annotated[str, Form()] = "tr",
     ) -> Response:
-        name = display_name.strip()[:64]
-        user = (unix_user.strip() or _suggest_user(name)).lower()
-        this_year = dt.date.today().year
-
-        if not name or not UNIX_USER_RE.match(user):
-            return _render_step(
-                ctx, request, session, state, tr, 4, error=tr("child.unix_user.help")
-            )
-        if not (this_year - 14 <= birth_year <= this_year):
-            return _render_step(
-                ctx, request, session, state, tr, 4, error=tr("error.invalid_input")
-            )
-
-        existing = repo.get_child_by_user(session, user)
-        child = existing or Child(unix_user=user, display_name=name, birth_year=birth_year)
-        child.display_name = name
-        child.birth_year = birth_year
-        child.avatar = avatar
-        child.locale = locale if locale in {"tr", "en"} else "tr"
-        child.age_band = AgeBand.for_age(this_year - birth_year).value
-        if existing is None:
-            session.add(child)
-        session.flush()
-
-        policy = repo.get_or_create_policy(session, child.id)
-        band = AgeBand(child.age_band)
-        weekday, weekend = repo.default_quota_minutes(band)
-        policy.weekday_quota_min = weekday
-        policy.weekend_quota_min = weekend
-        policy.filter_mode = repo.default_filter_mode(band).value
+        child, error = create_child(
+            session,
+            display_name=display_name,
+            birth_year=birth_year,
+            unix_user=unix_user,
+            avatar=avatar,
+            locale=locale,
+        )
+        if child is None:
+            return _render_step(ctx, request, session, state, tr, 4, error=tr(error))
 
         repo.set_setting(session, SETTING_PENDING_CHILD, str(child.id))
         repo.audit(
@@ -217,7 +197,11 @@ def register_wizard(app: FastAPI) -> None:
             actor="system",
             action="child_added",
             target=f"child:{child.id}",
-            detail={"name": name, "unix_user": user, "band": child.age_band},
+            detail={
+                "name": child.display_name,
+                "unix_user": child.unix_user,
+                "band": child.age_band,
+            },
         )
         session.commit()
         return see_other("/wizard/5")
@@ -327,6 +311,51 @@ def register_wizard(app: FastAPI) -> None:
         session.commit()
         _call_daemon(ctx, Op.RELOAD)
         return see_other("/wizard/11")
+
+
+def create_child(
+    session: Session,
+    *,
+    display_name: str,
+    birth_year: int,
+    unix_user: str = "",
+    avatar: str = "fox",
+    locale: str = "tr",
+) -> tuple[Child | None, str]:
+    """Create or update a child and give them an age-appropriate starting policy.
+
+    Shared by the wizard's fourth step and by the panel's children screen, so
+    that adding a second child in March produces exactly the same defaults as
+    adding the first one in January. Returns the child, or None and an i18n key.
+    """
+    name = display_name.strip()[:64]
+    user = (unix_user.strip() or _suggest_user(name)).lower()
+    this_year = dt.date.today().year
+
+    if not name or not UNIX_USER_RE.match(user):
+        return None, "child.unix_user.help"
+    if not (this_year - 14 <= birth_year <= this_year):
+        return None, "error.invalid_input"
+
+    existing = repo.get_child_by_user(session, user)
+    child = existing or Child(unix_user=user, display_name=name, birth_year=birth_year)
+    child.display_name = name
+    child.birth_year = birth_year
+    child.avatar = avatar if avatar else "fox"
+    child.locale = locale if locale in {"tr", "en"} else "tr"
+    child.age_band = AgeBand.for_age(this_year - birth_year).value
+    if existing is None:
+        session.add(child)
+    session.flush()
+
+    band = AgeBand(child.age_band)
+    weekday, weekend = repo.default_quota_minutes(band)
+    policy = repo.get_or_create_policy(session, child.id)
+    if existing is None:
+        policy.weekday_quota_min = weekday
+        policy.weekend_quota_min = weekend
+        policy.filter_mode = repo.default_filter_mode(band).value
+    return child, ""
 
 
 # ------------------------------------------------------------------ rendering

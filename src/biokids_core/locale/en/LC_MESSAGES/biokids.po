@@ -49,6 +49,9 @@ msgstr "No rules are set for this user"
 
 # --- categories ---
 
+msgid "app.not_installed"
+msgstr "Not installed on this computer"
+
 msgid "category.games"
 msgstr "Games"
 
@@ -419,6 +422,9 @@ msgstr "{count} requests waiting"
 
 msgid "today.window_closed"
 msgstr "outside allowed hours"
+
+msgid "today.unknown"
+msgstr "state unknown"
 
 msgid "today.daemon_down"
 msgstr "The BioKids service is not responding. Protection may not be running."

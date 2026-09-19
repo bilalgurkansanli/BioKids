@@ -335,11 +335,17 @@ a {
   margin-bottom: var(--sp-1);
 }
 
-.field .help {
+/* Every setting carries a one-line plain-language explanation under it, not a
+ * tooltip: parents on phones do not hover (UX.md §3.3). It is `block` wherever
+ * it appears, including inside a radio or checkbox label, so the explanation
+ * never runs on from the label it belongs to. */
+.help {
   display: block;
   color: var(--ink-soft);
   font-size: .85rem;
+  font-weight: 400;
   margin-top: var(--sp-1);
+  line-height: 1.4;
 }
 
 input[type="text"],

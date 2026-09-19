@@ -22,7 +22,53 @@
     </article>
   {% endfor %}
 
-  <div class="card card--flat">
-    <p class="muted">{{ _('common.coming_soon.help') }}</p>
-  </div>
+  {# The wizard adds the first child; families have more than one. #}
+  <details class="card" {% if not children %}open{% endif %}>
+    <summary><strong>{{ _('today.add_child') }}</strong></summary>
+
+    <form method="post" action="/children">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+
+      <div class="field">
+        <label for="name">{{ _('child.name') }}</label>
+        <input id="name" name="display_name" type="text" maxlength="64" required>
+      </div>
+
+      <div class="field">
+        <label for="year">{{ _('child.birth_year') }}</label>
+        <input id="year" name="birth_year" type="number" inputmode="numeric" required
+               min="{{ this_year - 14 }}" max="{{ this_year }}" value="{{ this_year - 6 }}">
+      </div>
+
+      <div class="field">
+        <label for="user">{{ _('child.unix_user') }}</label>
+        <input id="user" name="unix_user" type="text" pattern="[a-z][a-z0-9_-]{1,31}"
+               autocapitalize="none" autocomplete="off" spellcheck="false">
+        <span class="help">{{ _('child.unix_user.help') }}</span>
+      </div>
+
+      <fieldset>
+        <legend>{{ _('child.avatar') }}</legend>
+        <div class="tile-grid">
+          {% for slug, glyph in avatars %}
+            <label class="tile-pick">
+              <input type="radio" name="avatar" value="{{ slug }}"
+                     {% if loop.first %}checked{% endif %}>
+              <span aria-hidden="true" style="font-size:1.6rem">{{ glyph }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+
+      <div class="field">
+        <label for="locale">{{ _('child.locale') }}</label>
+        <select id="locale" name="locale">
+          <option value="tr">Türkçe</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+
+      <button class="btn btn--primary" type="submit">{{ _('common.add') }}</button>
+    </form>
+  </details>
 {% endblock %}

@@ -49,6 +49,9 @@ msgstr "Bu kullanıcı için kural tanımlı değil"
 
 # --- kategoriler ---
 
+msgid "app.not_installed"
+msgstr "Bu bilgisayarda kurulu değil"
+
 msgid "category.games"
 msgstr "Oyun"
 
@@ -419,6 +422,9 @@ msgstr "{count} bekleyen istek var"
 
 msgid "today.window_closed"
 msgstr "kullanım saati dışında"
+
+msgid "today.unknown"
+msgstr "durum bilinmiyor"
 
 msgid "today.daemon_down"
 msgstr "BioKids servisi yanıt vermiyor. Koruma şu an çalışmıyor olabilir."
