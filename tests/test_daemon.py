@@ -1099,3 +1099,44 @@ async def test_raising_the_quota_lets_the_warnings_fire_again(
     assert "warn_10" in after, f"the extra forty minutes ran out in silence: {after}"
     assert "warn_5" in after
     assert "warn_1" in after
+
+
+async def test_saving_a_setting_does_not_restart_the_earning_celebration(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    bus: EventBus,
+    session: Session,
+) -> None:
+    """`reload()` carries eleven fields across a policy change, on purpose.
+
+    The two the celebration needs were not among them, so a parent pressing Save
+    reset the throttle and dropped the seconds not yet announced. Save twice
+    while a child is doing their homework and they are congratulated twice in a
+    row for the same minutes.
+    """
+    set_quota(
+        session,
+        1,
+        120,
+        earn_enabled=True,
+        earn_ratio=1.0,
+        earn_cap_min=60,
+        earn_min_session_min=1,
+    )
+    await supervisor.start()
+    source.log_in("elif")
+
+    await run_learning(supervisor, clock, 120)
+    before = len(events_of(bus, EventKind.EARNED))
+    assert before >= 1, "the first payout was celebrated"
+
+    pending = supervisor.children[1].earned_pending_s
+    supervisor.reload()
+
+    assert supervisor.children[1].earned_pending_s == pending, "un-announced seconds lost"
+    assert supervisor.children[1].earned_announced_at > 0, "the throttle was reset"
+
+    await run_learning(supervisor, clock, 60)
+    after = len(events_of(bus, EventKind.EARNED))
+    assert after == before, f"reload made it celebrate again: {before} -> {after}"

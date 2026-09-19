@@ -270,6 +270,14 @@ class EspeakSynth:
     def render(self, text: str, voice: VoiceSpec, destination: Path) -> None:
         if not self.available():
             raise SynthError(f"{self._binary} is not installed")
+        if voice.kind == "cloned":
+            # Refused rather than approximated. espeak-ng cannot sound like a
+            # particular person, and `Synthesizer.render` marks the result
+            # degraded only when a backend says it could not do the job - so
+            # speaking the stock robot here would return a result claiming the
+            # family's own cloned voice had been used, and cache it under that
+            # profile id. The chain exists to know which rung it is on.
+            raise SynthError(f"{self._binary} cannot speak a cloned voice")
 
         destination.parent.mkdir(parents=True, exist_ok=True)
         argv = [

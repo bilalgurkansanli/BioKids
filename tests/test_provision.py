@@ -268,3 +268,48 @@ def test_the_audit_detail_carries_what_went_wrong(with_user: Any, config: Config
     assert detail["account_created"] is False
     problems = detail["problems"]
     assert isinstance(problems, list) and problems, "a silent failure is the bug itself"
+
+
+def test_every_directory_on_the_way_down_belongs_to_the_child(
+    with_user: Any, share: Path, home: Path, config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Not just the leaf. `mkdir(parents=True)` runs as root and creates all of it.
+
+    Writing `~/.config/autostart/biokids-shell.desktop` used to chown the file
+    and its immediate parent and stop there, leaving `~/.config` itself owned by
+    root. A child who cannot write `~/.config` cannot start a session at all,
+    which from where they are sitting is indistinguishable from BioKids refusing
+    to let them in - and every other test here passed while that was true.
+    """
+    owned: list[str] = []
+
+    def record(path: object, uid: int, gid: int) -> None:
+        owned.append(str(path))
+
+    monkeypatch.setattr(prov.os, "chown", record, raising=False)
+
+    prov.install_session_files("ayse", config)
+
+    for directory in (
+        home / ".config",
+        home / ".config" / "autostart",
+        home / ".config" / "xfce4",
+        home / ".config" / "xfce4" / "xfconf",
+        home / ".config" / "xfce4" / "xfconf" / "xfce-perchannel-xml",
+    ):
+        assert str(directory) in owned, f"{directory} was left owned by root"
+
+
+def test_nothing_above_the_home_directory_is_touched(
+    with_user: Any, share: Path, home: Path, config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Walking up to chown must stop at the home directory, not at the root of the disk."""
+    owned: list[str] = []
+    monkeypatch.setattr(prov.os, "chown", lambda p, _u, _g: owned.append(str(p)), raising=False)
+
+    prov.install_session_files("ayse", config)
+
+    for path in owned:
+        assert Path(path) == home or home in Path(path).parents, (
+            f"chowned {path}, which is outside the child's home"
+        )

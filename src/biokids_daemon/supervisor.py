@@ -229,6 +229,8 @@ class Supervisor:
                 runtime.end_action_failures = previous.end_action_failures
                 runtime.end_action_next_attempt = previous.end_action_next_attempt
                 runtime.paused_reason = previous.paused_reason
+                runtime.earned_pending_s = previous.earned_pending_s
+                runtime.earned_announced_at = previous.earned_announced_at
             fresh[child.id] = runtime
             by_user[child.unix_user] = child.id
 

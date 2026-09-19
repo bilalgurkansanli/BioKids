@@ -1011,3 +1011,61 @@ def test_espeak_writing_nothing_is_a_synth_error_not_an_empty_file(
             VoiceSpec(persona="zio", locale="tr", profile_id="stock:zio:tr"),
             tmp_path / "out.wav",
         )
+
+
+def test_espeak_refuses_a_cloned_voice_instead_of_faking_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """espeak-ng cannot sound like a particular person, and must say so.
+
+    `Synthesizer.render` marks a result degraded only when a backend raises. A
+    backend that quietly spoke the stock robot for a cloned request would return
+    a result claiming the family's own voice had been used, and cache the robot
+    under that profile id. The chain is there so the system knows which rung it
+    is standing on.
+    """
+    monkeypatch.setattr(EspeakSynth, "available", lambda _self: True)
+    monkeypatch.setattr(
+        synth_module.subprocess,
+        "run",
+        lambda *_a, **_k: pytest.fail("espeak-ng was run for a cloned voice"),
+    )
+
+    with pytest.raises(SynthError, match="cloned"):
+        EspeakSynth().render(
+            "Merhaba.",
+            VoiceSpec(
+                persona="zio",
+                locale="tr",
+                kind="cloned",
+                profile_id="cloned:zio:tr:abc",
+                model_path=tmp_path / "zio.onnx",
+            ),
+            tmp_path / "out.wav",
+        )
+
+
+def test_a_cloned_request_falls_through_to_stock_and_says_it_degraded(
+    voice_config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The whole point of refusing: the next voice gets a turn, and it is flagged."""
+
+    class Finished:
+        returncode = 0
+        stdout = b"RIFF....WAVEfmt " + b"\x00" * 64
+        stderr = b""
+
+    monkeypatch.setattr(EspeakSynth, "available", lambda _self: True)
+    monkeypatch.setattr(synth_module.subprocess, "run", lambda *_a, **_k: Finished())
+
+    chain = Synthesizer(EspeakSynth(), VoiceCache.from_config(voice_config))
+    cloned = VoiceSpec(
+        persona="zio", locale="tr", kind="cloned", profile_id="cloned:zio:tr:abc"
+    )
+    stock = VoiceSpec(persona="zio", locale="tr", kind="stock", profile_id="stock:zio:tr")
+
+    result = chain.render("Beş dakika kaldı.", [cloned, stock])
+
+    assert result.voice is not None
+    assert result.voice.kind == "stock", "the robot answered for the family's own voice"
+    assert result.degraded is True, "a silent downgrade is the bug"

@@ -94,12 +94,33 @@ def home_of(unix_user: str) -> Path | None:
     return Path(entry.pw_dir) if entry is not None else None
 
 
+SBIN_DIRS: tuple[str, ...] = ("/usr/sbin", "/sbin", "/usr/local/sbin")
+"""Where `adduser` lives. systemd's default PATH includes these, but a panel
+started by hand from a login shell inherits one that usually does not."""
+
+
+def _find(program: str) -> str | None:
+    found = shutil.which(program)
+    if found is not None:
+        return found
+    for directory in SBIN_DIRS:
+        candidate = Path(directory) / program
+        if candidate.is_file():
+            return str(candidate)
+    return None
+
+
 def _run(argv: Sequence[str]) -> tuple[bool, str]:
-    if shutil.which(argv[0]) is None:
-        return False, f"{argv[0]} is not installed"
+    program = _find(argv[0])
+    if program is None:
+        return False, f"{argv[0]} was not found on PATH or in {', '.join(SBIN_DIRS)}"
     try:
         result = subprocess.run(
-            list(argv), capture_output=True, text=True, timeout=COMMAND_TIMEOUT, check=False
+            [program, *argv[1:]],
+            capture_output=True,
+            text=True,
+            timeout=COMMAND_TIMEOUT,
+            check=False,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         return False, str(exc)
@@ -167,7 +188,7 @@ def install_session_files(
         if dst.exists() and not overwrite:
             continue
         try:
-            _own(dst.parent, uid, gid, make=True)
+            _make_owned(dst.parent, home, uid, gid)
             shutil.copyfile(src, dst)
             dst.chmod(0o644)
             _own(dst, uid, gid)
@@ -179,9 +200,33 @@ def install_session_files(
     return written, problems
 
 
-def _own(path: Path, uid: int, gid: int, *, make: bool = False) -> None:
-    if make:
-        path.mkdir(parents=True, exist_ok=True)
+def _make_owned(directory: Path, home: Path, uid: int, gid: int) -> None:
+    """Create `directory` and give the child every level of it.
+
+    Not just the leaf. `mkdir(parents=True)` runs as root and creates the whole
+    chain as root, so writing `~/.config/autostart/biokids-shell.desktop` used
+    to leave `~/.config` itself root-owned - and a child who cannot write
+    `~/.config` cannot start a session, which from where they are sitting looks
+    exactly like BioKids refusing to let them in.
+
+    Stops at `home`, which already belongs to the child and is not ours to
+    change.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    walked = directory
+    while True:
+        _own(walked, uid, gid)
+        if walked == home or walked.parent == walked:
+            return
+        walked = walked.parent
+        try:
+            walked.relative_to(home)
+        except ValueError:
+            # Above the home directory: nothing up there is ours to touch.
+            return
+
+
+def _own(path: Path, uid: int, gid: int) -> None:
     chown = getattr(os, "chown", None)
     if chown is not None:
         chown(path, uid, gid)
