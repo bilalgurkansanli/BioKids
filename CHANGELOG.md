@@ -63,9 +63,84 @@ so far.
   forward, a crash costs at most one persist interval, suspend and a locked screen cost
   nothing, two sessions for one child are counted once — plus every precedence rule and
   edge case of the policy engine.
+- **`biokids-daemon`.** The logind session watcher, reducing sessions to one boolean per
+  child so a fast user switch cannot bill the same second twice; the enforcer, which
+  locks exactly the sessions the watcher attributed to that child and never every session
+  on the machine; a bounded event bus that drops a slow subscriber rather than waiting
+  for it; the tick loop; and the end-of-time sequence, whose countdown is kept in the
+  database so a restart mid-countdown resumes rather than starting the two minutes again.
+- **`biokids-panel`.** The ten-step setup wizard, the Today screen with live counters
+  over server-sent events, per-child time rules, the audit log with filters, and the PWA.
+  Argon2id PIN with a lockout that doubles and survives a restart, a thirty-minute idle
+  timeout enforced on read, the separate passphrase gate, and the eight-word recovery
+  path. It binds to loopback and refuses anything else.
+- **`biokids-shell`.** The child launcher: the tile grid for both age bands, the seven
+  screens of `docs/UX.md` §2.5, applications started in their own systemd scope so
+  category time comes from a cgroup rather than a window title, and a kiosk Chromium with
+  a managed policy allowing exactly one origin. Plus the XFCE and window-manager
+  configuration that closes what a web page cannot.
+- **`biokids-voice`.** Zio and Sio: line files as data, a Piper backend with an atomic
+  cache keyed on the sentence and the voice, a priority queue that never interrupts a
+  line in progress, PipeWire ducking that restores the previous volume even if playback
+  is killed, and the fallback chain ending at an on-screen card that always carries the
+  spoken line as text.
+- **Remote access.** Tailscale detection, `tailscale serve` for the panel port, a
+  server-rendered QR code for the wizard, and a warning when Funnel has made the node
+  reachable from the internet. There is no LAN-exposure option and there will not be one.
+- **Debian packaging.** One source package producing nine binary packages, systemd units
+  carrying the full hardening block of `docs/SECURITY.md` §2, maintainer scripts that are
+  idempotent and never destroy a family's history on `remove`, and a release workflow
+  whose signing key never leaves GitHub Secrets.
+- **A second daemon socket** (D-123). The child cannot be in the `biokids` group — that
+  group can grant time and power the machine off — so the launcher has a socket of its
+  own on which no operation takes a child id as an argument. The daemon identifies the
+  caller from the peer credentials the kernel supplies and answers about that child only.
+- **An end-to-end acceptance test.** `docs/ROADMAP.md`'s Phase 0 exit criterion, run in
+  one process against the real wizard, policy engine, ledger, daemon loop, launcher and
+  both sockets' handlers.
+- **Development tools.** `dev/fakeclock.py`, which prints the whole end-of-time sequence
+  including the Turkish lines in a few seconds; `dev/seed.py`; `dev/reset.sh`;
+  `dev/compile_i18n.py`, a pure-Python `.mo` compiler so the build needs no `msgfmt`;
+  `dev/make_icons.py`; and `dev/screenshots.py`.
 - **Project hygiene.** `CONTRIBUTING.md`, including the explicit list of features this
   project will not accept (`docs/SECURITY.md` §7); `CODE_OF_CONDUCT.md`; a root
   `SECURITY.md` disclosure policy; and this changelog.
+
+### Fixed
+
+Found while building, and worth recording because each was a wrong behaviour rather than
+a crash:
+
+- **"+10 dk" was worth less than ten minutes** when a child had used less than that. It
+  subtracted from usage, which cannot go below zero; it now raises the day's allowance
+  (D-124). It also re-arms any warning the extra time pushed back into the future.
+- **Reading a child's remaining time created a database row**, so the daemon held
+  SQLite's single write lock between ticks and the panel — a separate process on the
+  same file — could not log anyone in. Found by running both against one database.
+- **The panel held its own write transaction across its call to the daemon**, because
+  resolving the session cookie touches `last_seen_at`. The two waited for each other.
+- **The panel reported "no children" when the daemon was down**, which is alarming and
+  untrue: only their live state was unknown (D-127).
+- **`time_up` could be dropped from a full speech queue**, because priority came from the
+  caller rather than from the event.
+- **A killed Piper left a truncated WAV at the final cache path**, which the
+  sentence-keyed cache would then serve for ever — so that line would never be heard
+  again, with nothing saying why.
+- **Re-recording a voice did not invalidate the audio it replaced.**
+
+### Known gaps
+
+Stated here rather than discovered later:
+
+- **No Piper voice is bundled** (T6.1). Piper's catalogue aggregates datasets with
+  different terms and `docs/VOICE.md` §3 requires each licence to be checked first;
+  `assets/voices/LICENSES.md` is the gate. Until it is done the warnings are shown on the
+  character card rather than spoken.
+- **Nothing has been built as a `.deb`.** `debian/` is written against Debian policy but
+  `dpkg-buildpackage` has never run, because the development host is Windows.
+  `debian/README.source` lists what that leaves unverified.
+- **The exit criterion has not been run on a VM.** A passing acceptance test says the
+  pieces agree with each other, not that Chromium starts.
 
 No telemetry, analytics, crash reporting or version ping has been added, and none will
 be. The complete inventory of outbound connections is `docs/SECURITY.md` §4.
