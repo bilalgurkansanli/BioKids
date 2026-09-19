@@ -7,7 +7,7 @@ There is no deadline. The effort estimates assume roughly one focused day per we
 
 ---
 
-## Phase 0 — BioGuard MVP  *(current)*
+## Phase 0 — BioGuard MVP  *(current — code complete, not yet released)*
 
 **Goal:** a parent can install a `.deb` on stock Debian 13, set a daily limit, and the
 child's session enforces it with spoken warnings, manageable from a phone.
@@ -32,7 +32,28 @@ ring counts down → warnings at 10/5/1 spoken in Turkish → the machine shuts 
 the parent's audit log shows every event. Reboot; the counter resumes correctly.
 Change the system clock forward 3 hours; nothing changes.
 
-*Estimate: 6–8 sessions.*
+### Where it stands
+
+Every component is written and tested. `tests/test_acceptance.py` runs the criterion
+above end to end in one process — the real wizard, policy engine, ledger, daemon loop,
+launcher and both sockets' handlers — with only logind, `systemctl` and the socket
+transport faked.
+
+**Three things are still open, and none of them is code:**
+
+1. **No Piper voice is bundled** (T6.1), so the warnings are shown rather than spoken.
+   Piper's catalogue aggregates datasets with different terms and `docs/VOICE.md` §3
+   says to check each licence first; `assets/voices/LICENSES.md` is the gate. A machine
+   with no voice still warns the child on the character card, which always carries the
+   line as text.
+2. **Nothing has been built or installed as a `.deb`.** `debian/` is complete and
+   written against Debian policy, but `dpkg-buildpackage` has never run — the
+   development host is Windows, and `debian/README.source` lists exactly what that
+   leaves unverified.
+3. **The criterion has not been run on a VM.** A passing test says the pieces agree
+   with each other, not that Chromium starts. T9 still ends with a screen recording.
+
+*Estimate: 6–8 sessions. The first seven task groups are done.*
 
 ---
 

@@ -24,8 +24,10 @@ body {
   color: var(--ink);
   font-family: var(--font-ui);
   line-height: 1.55;
-  /* Room for the fixed bottom bar on a phone, plus the home indicator. */
-  padding-bottom: calc(var(--sp-6) + env(safe-area-inset-bottom, 0px));
+  /* Room for the fixed bottom bar on a phone, plus the home indicator. The bar
+   * is one 44px target plus its own padding, so the reserve has to clear that
+   * and then some or the last line of the footer sits under it. */
+  padding-bottom: calc(var(--sp-6) + var(--sp-4) + env(safe-area-inset-bottom, 0px));
 }
 
 h1, h2, h3 {
@@ -179,14 +181,19 @@ a {
 .child-card__head {
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-3);
   margin-bottom: var(--sp-3);
 }
 
 .child-card__name {
   font-size: 1.15rem;
   font-weight: 600;
-  flex: 1;
+  /* `min-width: 0` is what lets a long name shrink instead of pushing the
+   * status line off a 390px screen. */
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .avatar {
@@ -207,10 +214,13 @@ a {
   gap: var(--sp-1);
   font-size: .85rem;
   color: var(--ink-soft);
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .status::before {
   content: "";
+  flex: none;
   width: 9px;
   height: 9px;
   border-radius: var(--r-pill);
@@ -227,6 +237,7 @@ a {
   align-items: center;
   gap: var(--sp-4);
   margin-bottom: var(--sp-4);
+  min-width: 0;
 }
 
 .ring {
@@ -269,7 +280,13 @@ a {
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--sp-2);
+}
+
+.actions form {
+  flex: 1 1 6rem;
+  display: flex;
 }
 
 .btn {

@@ -5,8 +5,10 @@ entirely on your own machine.**
 
 *Çocuklar için, tamamen kendi bilgisayarınızda çalışan ebeveyn kontrollü Linux sistemi.*
 
-> ⚠️ Early development. Nothing here is release-ready yet. See
-> [`docs/ROADMAP.md`](docs/ROADMAP.md).
+> ⚠️ **Early development — Phase 0.** The daemon, the parent panel, the child
+> launcher and the voice service are built and tested; there is no release yet and
+> no `.deb` has been installed on a machine that was not a development VM. See
+> [`docs/ROADMAP.md`](docs/ROADMAP.md) for what is done and what is not.
 
 ---
 
@@ -29,6 +31,27 @@ entirely on your own machine.**
   runs on your GPU; no screenshot ever leaves the machine.
 - **A parent panel** you reach from your phone over your own private network. No
   account, no cloud, no port forwarding.
+
+### The parent panel
+
+![The Today screen: one card per child, with the time remaining as a ring, what is on
+screen right now, and three large buttons](assets/screenshots/panel-today.png)
+
+One card per child and nothing else. A parent glancing at this on their phone has to
+understand it in three seconds without reading a label twice, so it is a ring, one line
+of state, and **+10 dk**, **Kilitle**, **Kapat**. Everything else is one level down.
+
+![The time rules for one child: weekday and weekend quotas, allowed hours, and what
+happens when the time runs out](assets/screenshots/panel-child-time.png)
+
+Five visible controls. Forced breaks and earned time live behind *Gelişmiş*, because
+most parents never touch them and a screen of thirty inputs is a screen nobody
+finishes.
+
+![The audit log, filtered by child, action and date](assets/screenshots/panel-audit.png)
+
+Every rule change, every PIN attempt, every warning spoken and every time the system
+clock moved. Append-only; the application never deletes from it.
 
 ---
 
@@ -58,7 +81,49 @@ the limits than let a parent feel safer than they are.
 
 ---
 
+## How it fits together
+
+```
+  parent's phone ──(tailscale serve)──▶  biokids-panel   ─┐
+                                          127.0.0.1:7878  │  /run/biokids/daemon.sock
+                                                          ▼
+                                                    biokids-daemon        (root)
+                                                    · BOOTTIME ledger
+                                                    · policy engine
+                                                    · logind watcher
+                                                    · enforcer
+                                                          ▲
+                                          127.0.0.1:7879  │  /run/biokids/shell.sock
+  the child      ──────────────────────▶  biokids-shell  ─┘   (authorised by peer uid)
+                    kiosk Chromium        biokids-voice
+```
+
+The daemon is the only component allowed to change system state; everything else asks
+it. The panel and the launcher reach it over two different sockets with two very
+different sets of permissions — the child's session cannot grant time, unlock a screen
+or reach a sibling's data. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) has the
+detail.
+
+Three things carry most of the correctness:
+
+- **Time accounting never touches the wall clock.** Every interval is a difference of
+  two `CLOCK_BOOTTIME` readings, minus the part the machine spent suspended — which is
+  derived by comparing `BOOTTIME` with `MONOTONIC` rather than trusted from anywhere.
+  Moving the system clock three hours forward changes nothing, and says so in the audit
+  log.
+- **The policy engine is a pure function.** `(policy, ledger, activity, now) → decision`,
+  with no I/O and no clock access, so every rule about a child's day is tested without a
+  machine.
+- **Enforcement failures lock; convenience failures degrade.** If the daemon dies the
+  child's session is locked and the parent is told. If the voice service dies the child
+  reads the warning instead of hearing it.
+
+---
+
 ## Install
+
+> Not yet. There is no APT repository and no release. This is what installing will look
+> like, and it is what `docs/PACKAGING.md` is written against.
 
 On an existing Debian 13 system:
 
@@ -76,6 +141,32 @@ sudo apt update && sudo apt install biokids
 Then open `http://127.0.0.1:7878` and follow the wizard.
 
 A bootable ISO with everything preinstalled will come later.
+
+## Running it from a checkout
+
+```bash
+python3 -m venv .venv && . .venv/bin/activate
+pip install -e ".[dev,daemon]"
+
+python dev/seed.py                 # a family, two children, the app catalogue
+python -m biokids_daemon           # as root, or --no-logind to develop without one
+python -m biokids_panel            # http://127.0.0.1:7878
+```
+
+`dev/fakeclock.py` drives the ledger with an injected clock, so a three-hour session
+takes three seconds and the whole end-of-time sequence is visible in one screen of
+output:
+
+```
+         sim     wall     used     left  what  reason             note
+ ! + 0:02:10 16:02:10  0:02:00  0:10:00  WARN  quota.warning      speaks warn_10: "On dakikan kaldı."
+ ! + 0:11:10 16:11:10  0:11:00  0:01:00  WARN  quota.warning      speaks warn_1: "Bir dakikan kaldı Elif."
+!! + 0:12:10 16:12:10  0:12:00  0:00:00  LOCK  quota.exhausted    screen locked, 120 s countdown starts
+!! + 0:14:10 16:14:10  0:12:00  0:00:00  END   quota.exhausted    countdown expired -> poweroff
+```
+
+`CONTRIBUTING.md` has the VM workflow, which is how anything touching boot, PAM,
+nftables or GRUB should be developed.
 
 ---
 
