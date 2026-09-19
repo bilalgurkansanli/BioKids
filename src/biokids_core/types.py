@@ -257,6 +257,10 @@ class LedgerState:
     day: dt.date
     general_used_s: int = 0
     earned_s: int = 0
+    granted_s: int = 0
+    """Minutes a parent added by hand today (D-47). Extra allowance, not negative
+    usage: a grant must be worth ten minutes whether the child has used fifty
+    minutes or two."""
     category_used_s: dict[Category, int] = field(default_factory=dict)
     penalty_remaining_s: int = 0
     break_remaining_s: int = 0

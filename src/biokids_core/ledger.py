@@ -415,15 +415,16 @@ class TimeLedger:
     # ------------------------------------------------------- parent actions
 
     def grant(self, child_id: int, seconds: int, day: dt.date | None = None) -> LedgerState:
-        """The "+10 dk" button (D-47). Extra time is a *reduction in usage*.
+        """The "+10 dk" button (D-47). Extra *allowance*, not negative usage.
 
-        Subtracting from `general_s` rather than adding to a bonus counter keeps
-        a single definition of "used", and it makes the grant visible in the same
-        number the child's ring is drawn from.
+        The tempting implementation is to subtract from `general_s`, which reads
+        naturally and is wrong: a child who has used two minutes of a two-hour
+        quota would get two minutes back out of a ten-minute grant, because usage
+        cannot go below zero. A grant is worth what the parent said it was worth
+        whatever the child has done today, so it raises the ceiling instead.
         """
         day = day or self._clock.read().wall.date()
         row = self._day_row(child_id, day)
-        row.general_s = max(0, row.general_s - seconds)
         row.granted_s += seconds
         self._mark_dirty(child_id)
         self.persist()
@@ -490,6 +491,22 @@ class TimeLedger:
         row.warned = set()
         self._mark_dirty(child_id)
 
+    def rearm_warnings(self, child_id: int, day: dt.date, remaining_s: int) -> set[int]:
+        """Forget warnings that are now in the future again.
+
+        A parent presses "+10 dk" after the ten-minute warning has been spoken.
+        The child now has twenty minutes, and when they get back down to ten they
+        should hear it again — otherwise the extra time arrives with no warning
+        at the end of it. A threshold stays remembered only while it is behind
+        us: `threshold * 60 >= remaining`.
+        """
+        row = self._day_row(child_id, day)
+        kept = {t for t in row.warned if t * 60 >= remaining_s}
+        if kept != row.warned:
+            row.warned = kept
+            self._mark_dirty(child_id)
+        return kept
+
     def end_sequence_started_at(self, child_id: int, day: dt.date) -> float | None:
         return self._day_row(child_id, day).end_sequence_started_at
 
@@ -515,6 +532,7 @@ class TimeLedger:
             day=day,
             general_used_s=row.general_s,
             earned_s=row.earned_s,
+            granted_s=row.granted_s,
             category_used_s=self._category_seconds(child_id, day),
             penalty_remaining_s=row.penalty_remaining_s,
             break_remaining_s=row.break_remaining_s,

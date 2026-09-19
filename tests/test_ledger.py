@@ -26,6 +26,7 @@ from biokids_core.clock import FakeClock
 from biokids_core.config import Config
 from biokids_core.db import Database, LedgerDay
 from biokids_core.ledger import TickInput, TimeLedger
+from biokids_core.policy import general_allowance_seconds
 from biokids_core.types import Category
 from helpers import make_policy
 
@@ -361,22 +362,45 @@ def test_category_seconds_are_attributed_per_app(
 # ------------------------------------------------------------- parent actions
 
 
-def test_granting_ten_minutes_gives_back_ten_minutes(
+def test_granting_ten_minutes_raises_the_allowance_not_the_usage(
     ledger: TimeLedger, clock: FakeClock, child: object
 ) -> None:
+    """A grant is extra allowance. Usage is a record of what happened and stands."""
+    policy = make_policy(weekday_quota_min=60, weekend_quota_min=60)
     prime(ledger, 1)
     run(ledger, clock, 1, 20 * 60)
+
     ledger.grant(1, 600)
-    assert ledger.state(1).general_used_s == 10 * 60
+    state = ledger.state(1)
+
+    assert state.general_used_s == 20 * 60
+    assert state.granted_s == 600
+    assert general_allowance_seconds(policy, state) == 70 * 60
 
 
-def test_granting_more_than_was_used_does_not_go_negative(
+def test_a_grant_is_worth_its_full_value_however_little_was_used(
+    ledger: TimeLedger, clock: FakeClock, child: object
+) -> None:
+    """The case that breaks a "subtract from usage" implementation."""
+    policy = make_policy(weekday_quota_min=120, weekend_quota_min=120)
+    prime(ledger, 1)
+    run(ledger, clock, 1, 60)
+
+    ledger.grant(1, 600)
+    state = ledger.state(1)
+
+    assert (
+        general_allowance_seconds(policy, state) - state.general_used_s == 120 * 60 + 600 - 60
+    )
+
+
+def test_grants_accumulate_across_a_day(
     ledger: TimeLedger, clock: FakeClock, child: object
 ) -> None:
     prime(ledger, 1)
-    run(ledger, clock, 1, 60)
-    ledger.grant(1, 3600)
-    assert ledger.state(1).general_used_s == 0
+    ledger.grant(1, 600)
+    ledger.grant(1, 600)
+    assert ledger.state(1).granted_s == 1200
 
 
 def test_warnings_are_remembered_across_a_restart(

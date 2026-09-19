@@ -184,9 +184,7 @@ class Config:
             spec.name: _reroot(prefix, getattr(self.paths, spec.name))
             for spec in fields(PathsConfig)
         }
-        kwargs: dict[str, Any] = {
-            spec.name: getattr(self, spec.name) for spec in fields(self)
-        }
+        kwargs: dict[str, Any] = {spec.name: getattr(self, spec.name) for spec in fields(self)}
         kwargs["paths"] = PathsConfig(**rerooted)
         return type(self)(**kwargs)
 

@@ -98,7 +98,8 @@ class SystemClock:
     def boottime() -> float:
         if _CLOCK_BOOTTIME is not None:
             clock_gettime = cast(
-                "Callable[[int], float]", time.clock_gettime  # type: ignore[attr-defined]
+                "Callable[[int], float]",
+                time.clock_gettime,  # type: ignore[attr-defined]
             )
             return clock_gettime(_CLOCK_BOOTTIME)
         # A development host without CLOCK_BOOTTIME (Windows, macOS). Suspend is

@@ -207,12 +207,13 @@ def evaluate(
 
 
 def general_allowance_seconds(policy: ChildPolicy, state: LedgerState) -> int:
-    """Today's total screen-time allowance in seconds, earned time included.
+    """Today's total screen-time allowance in seconds.
 
-    Earned minutes are spendable in the Games category by default and only count
-    towards the general quota when the parent says so (D-45).
+    The quota for this kind of day, plus whatever the parent granted by hand,
+    plus earned minutes when the parent made them spendable generally (D-45).
+    Earned minutes otherwise raise the Games ceiling instead.
     """
-    base = policy.quota_minutes(state.day) * 60
+    base = policy.quota_minutes(state.day) * 60 + state.granted_s
     if policy.earn_enabled and policy.earn_spendable_general:
         base += min(state.earned_s, policy.earn_cap_min * 60)
     return base
