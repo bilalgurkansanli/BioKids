@@ -66,7 +66,7 @@ Do not re-litigate these. Full rationale in `docs/DECISIONS.md`.
 | Child UI | Custom fullscreen web launcher (`biokids-shell`) in Chromium kiosk |
 | Browser | Chromium, managed via `/etc/chromium/policies/managed/` |
 | Backend | Python 3.13, FastAPI, SQLite (WAL) |
-| Frontend | Jinja2 + HTMX + vanilla CSS. **No build step, no npm, no CDN** |
+| Frontend | Jinja2 + vanilla CSS, plain forms, `EventSource` for live counters. **No build step, no npm, no CDN, no framework** (D-32, revised in D-129) |
 | Time enforcement | Own implementation on systemd-logind + `CLOCK_BOOTTIME`. Not timekpr |
 | Filtering | Local `dnsmasq` + `nftables` + a managed Chromium extension. **No MITM proxy** |
 | AI | Local VLM via `llama.cpp`, event-triggered, optional package, default OFF |
@@ -168,5 +168,11 @@ Take a snapshot before anything that touches boot, PAM, nftables, or GRUB.
 Definition of done: on a Debian 13 VM, a parent installs the `.deb`, completes the
 setup wizard, reaches the panel from their phone over Tailscale, sets a daily quota,
 and the child session enforces it with spoken warnings.
+
+T0–T8 are written and tested; `tests/test_acceptance.py` runs the exit criterion end
+to end in one process. **T9 is not done**, and `docs/ROADMAP.md` lists the three things
+standing between here and it: no Piper voice is bundled because the licences have not
+been checked, nothing has been built as a `.deb` because the development host is
+Windows, and the criterion has not been run on a VM.
 
 Nothing about the ISO belongs in Phase 0.

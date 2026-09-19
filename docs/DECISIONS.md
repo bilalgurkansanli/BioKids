@@ -168,7 +168,9 @@ and **XTTS-v2** (CPML, non-commercial, see D-62).
 **D-31 [owner] FastAPI + Python 3.13. SQLite with WAL.**
 One language across panel, daemon, voice and AI worker.
 
-**D-32 [claude] Jinja2 + HTMX + hand-written CSS. No React, no npm, no CDN.**
+**D-32 [claude] Jinja2 + hand-written CSS. No React, no npm, no CDN.**
+*Revised by D-129: HTMX is named below but was not used. The constraints stand; the
+library does not.*
 The panel is forms and tables. A build step would mean shipping node_modules in a
 `.deb`, and a CDN would break the offline guarantee. HTMX gives live-updating counters
 with a few attributes. Alpine.js may be vendored if a screen genuinely needs local
@@ -617,6 +619,37 @@ side a working launcher with no limits behind it is the failure to avoid.
 Every form is an ordinary form and every POST redirects; JavaScript only adds the
 live counters. A phone on a flaky tailnet gets a stale page rather than a broken
 one, and a launcher whose script fails to load still starts applications.
+
+**D-129 [claude] HTMX is not used. This revises D-32, which named it.**
+D-32 is right about everything except the library. Its actual constraints are "no
+build step, no npm, no CDN, and the panel is forms and tables", and all three
+survive; what changed is that HTMX turned out not to be the way to satisfy them.
+
+Two reasons, in order of weight:
+
+1. **Vendoring is the only way to ship it, and vendoring means shipping a blob
+   nobody in the repository can reproduce.** Offline is a hard requirement (D-18),
+   so a CDN is out and the file has to live in `assets/`. A ~17 KB minified
+   artefact that arrives by download, cannot be reviewed line by line, and has to
+   be re-downloaded to upgrade is a strange thing to put in a parental-control
+   package whose whole claim is that you can see what it does.
+2. **The panel needs exactly two dynamic behaviours**, and HTMX is the wrong shape
+   for one of them. The live counters are a server-sent event stream, which is
+   `EventSource` — a browser built-in — and HTMX needs an extension for it. The
+   other is "submit a form", which HTML has done since 1993.
+
+So: plain forms that POST and redirect, and about 120 lines of hand-written
+JavaScript per surface for the live parts. The gain is not lines saved, it is
+that **everything works with JavaScript switched off**. A phone on a flaky
+tailnet gets a page that is merely not live; a launcher whose script fails to
+load still starts applications; and the screenshots in the README are rendered
+by the server, which is a fact about the product rather than about the
+screenshots.
+
+Reverse this if a screen appears that genuinely needs local state — the voice
+recorder in Phase 2a is the likely first one. Vendor Alpine.js or HTMX then, for
+that screen, with the licence recorded; do not reach for it to avoid writing a
+form.
 
 ---
 

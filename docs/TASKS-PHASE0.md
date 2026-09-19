@@ -119,7 +119,9 @@ schedule, and `systemctl kill -s KILL biokids-daemon` locks the session within 5
 ## T4 — `biokids-panel`
 
 **T4.1** FastAPI app on `127.0.0.1:7878`, Jinja2 templates, `tokens.css` from
-`UX.md` §1, vendored HTMX and fonts. No npm, no CDN.
+`UX.md` §1, vendored fonts. No npm, no CDN. *(HTMX was specified here and is not
+used; see D-129. The panel is plain forms plus `EventSource`, and works with
+JavaScript switched off.)*
 
 **T4.2** Auth: argon2id PIN, the 5-attempt/15-minute lockout, a signed session cookie,
 30-minute idle timeout, the separate passphrase gate for destructive actions, and the
