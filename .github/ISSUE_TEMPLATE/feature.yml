@@ -1,0 +1,28 @@
+name: Feature request
+description: Suggest something BioKids should do
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Some features are deliberately out of scope: covert monitoring, keystroke
+        logging, microphone or camera capture, live screen mirroring, and location
+        tracking. See `docs/SECURITY.md` §7 before opening this.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: Describe the situation as a parent or a child would experience it.
+    validations: { required: true }
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like instead
+    validations: { required: true }
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This is not on the won't-build list in `docs/SECURITY.md` §7
+          required: true

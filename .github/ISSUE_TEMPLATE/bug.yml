@@ -1,0 +1,39 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not include screenshots of a child's screen, a child's name, or
+        anything from `/var/lib/biokids/evidence/`. We do not want that data.
+  - type: input
+    id: version
+    attributes:
+      label: BioKids version
+      description: "`apt policy biokids` or the version shown at the bottom of the panel"
+    validations: { required: true }
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options: [daemon, panel, shell (child launcher), voice, ai, packaging, other]
+    validations: { required: true }
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: "Debian 13 / Ubuntu 24.04 / the BioKids ISO, and amd64"
+    validations: { required: true }
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, what happened instead, and how to reproduce it.
+    validations: { required: true }
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: "`journalctl -u biokids-daemon -n 200 --no-pager` — redact names first."
+      render: shell

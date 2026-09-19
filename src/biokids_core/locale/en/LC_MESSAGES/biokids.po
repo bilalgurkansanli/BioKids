@@ -1,0 +1,772 @@
+# BioKids — English
+# Turkish is the source language; this is the translation (UX.md §4).
+# The parent is addressed formally, the child informally.
+msgid ""
+msgstr ""
+"Project-Id-Version: biokids 0.1.0\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# --- policy engine reason codes ---
+
+msgid "allowed"
+msgstr "Everything is fine"
+
+msgid "quota.exhausted"
+msgstr "Your time for today is up"
+
+msgid "quota.warning"
+msgstr "{minutes} minutes left"
+
+msgid "window.closed"
+msgstr "It is not computer time right now"
+
+msgid "penalty.active"
+msgstr "Taking a short break"
+
+msgid "break.due"
+msgstr "Time for a break"
+
+msgid "break.active"
+msgstr "Break in progress"
+
+msgid "category.exhausted"
+msgstr "The time for this kind of activity is used up"
+
+msgid "app.not_allowed"
+msgstr "This app is not on your list"
+
+msgid "filter.blocked"
+msgstr "This page is not for you"
+
+msgid "ai.blocked"
+msgstr "This page does not look right for you"
+
+msgid "policy.missing"
+msgstr "No rules are set for this user"
+
+# --- categories ---
+
+msgid "category.games"
+msgstr "Games"
+
+msgid "category.learning"
+msgstr "Learning"
+
+msgid "category.web"
+msgstr "Web"
+
+msgid "category.free"
+msgstr "Free"
+
+# --- what happens when time runs out ---
+
+msgid "end_action.lock"
+msgstr "Lock the screen"
+
+msgid "end_action.logout"
+msgstr "Log out"
+
+msgid "end_action.poweroff"
+msgstr "Shut the computer down"
+
+msgid "end_action.lock.help"
+msgstr "The computer stays on and the screen locks."
+
+msgid "end_action.logout.help"
+msgstr "Open apps close and the login screen comes back."
+
+msgid "end_action.poweroff.help"
+msgstr "The computer shuts down completely."
+
+# --- filter mode ---
+
+msgid "filter_mode.allowlist"
+msgstr "Only sites you allow"
+
+msgid "filter_mode.blocklist"
+msgstr "Everywhere except blocked sites"
+
+msgid "filter_mode.allowlist.help"
+msgstr "Recommended for younger children. Only sites you add will open."
+
+msgid "filter_mode.blocklist.help"
+msgstr "Recommended for older children. Harmful categories are blocked, the rest is open."
+
+# --- age band ---
+
+msgid "age_band.4-7"
+msgstr "Ages 4–7"
+
+msgid "age_band.8-10"
+msgstr "Ages 8–10"
+
+# --- child launcher ---
+
+msgid "shell.greeting"
+msgstr "Hello {name}"
+
+msgid "shell.remaining_minutes"
+msgstr "{minutes} min"
+
+msgid "shell.remaining_label"
+msgstr "Time left"
+
+msgid "shell.volume"
+msgstr "Sound"
+
+msgid "shell.brightness"
+msgstr "Brightness"
+
+msgid "shell.shutdown"
+msgstr "Shut down"
+
+msgid "shell.shutdown.confirm_title"
+msgstr "Shall we shut the computer down?"
+
+msgid "shell.shutdown.confirm_yes"
+msgstr "Yes, shut down"
+
+msgid "shell.shutdown.confirm_no"
+msgstr "Never mind"
+
+msgid "shell.launching"
+msgstr "Opening {app}"
+
+msgid "shell.no_apps"
+msgstr "You do not have any apps yet. Tell a grown-up."
+
+msgid "shell.clock"
+msgstr "Time"
+
+msgid "shell.my_time"
+msgstr "My time"
+
+msgid "shell.blocked.title"
+msgstr "This is not for you"
+
+msgid "shell.blocked.body"
+msgstr "We cannot open this page. You can ask a grown-up if you like."
+
+msgid "shell.blocked.ask_mother"
+msgstr "Ask mum"
+
+msgid "shell.blocked.ask_father"
+msgstr "Ask dad"
+
+msgid "shell.blocked.asked"
+msgstr "We asked! We will tell you when there is an answer."
+
+msgid "shell.blocked.back"
+msgstr "Go back"
+
+msgid "shell.break.title"
+msgstr "A little break"
+
+msgid "shell.break.body"
+msgstr "Rest your eyes. We will carry on in {minutes} minutes."
+
+msgid "shell.timeup.title"
+msgstr "That is it for today"
+
+msgid "shell.timeup.body"
+msgstr "Save your work. The computer will shut down shortly."
+
+msgid "shell.timeup.countdown"
+msgstr "{seconds} seconds"
+
+msgid "shell.timeup.tomorrow"
+msgstr "See you tomorrow."
+
+msgid "shell.locked.title"
+msgstr "Taking a break for now"
+
+msgid "shell.window_closed.title"
+msgstr "It is not computer time"
+
+msgid "shell.window_closed.body"
+msgstr "You can open it again when your hours come round."
+
+msgid "shell.earned.title"
+msgstr "Well done!"
+
+msgid "shell.earned.body"
+msgstr "You earned {minutes} minutes."
+
+msgid "shell.firstrun.title"
+msgstr "Hello, I am Zio"
+
+msgid "shell.firstrun.p1"
+msgstr "We look after you on this computer."
+
+msgid "shell.firstrun.p2"
+msgstr "The ring in the top corner shows how much time you have left."
+
+msgid "shell.firstrun.p3"
+msgstr "Some pages will not open. If one does not, you can ask a grown-up."
+
+msgid "shell.firstrun.p4"
+msgstr "Your mum and dad can see which sites you visited. This is not a secret."
+
+msgid "shell.firstrun.ok"
+msgstr "I understand"
+
+msgid "shell.supervision.badge"
+msgstr "Zio and Sio are here"
+
+# --- parent panel: general ---
+
+msgid "panel.title"
+msgstr "BioKids"
+
+msgid "panel.subtitle"
+msgstr "Parent panel"
+
+msgid "nav.today"
+msgstr "Today"
+
+msgid "nav.children"
+msgstr "Children"
+
+msgid "nav.requests"
+msgstr "Requests"
+
+msgid "nav.history"
+msgstr "History"
+
+msgid "nav.voices"
+msgstr "Voices"
+
+msgid "nav.settings"
+msgstr "Settings"
+
+msgid "nav.audit"
+msgstr "Audit log"
+
+msgid "nav.logout"
+msgstr "Sign out"
+
+msgid "common.save"
+msgstr "Save"
+
+msgid "common.cancel"
+msgstr "Cancel"
+
+msgid "common.back"
+msgstr "Back"
+
+msgid "common.next"
+msgstr "Continue"
+
+msgid "common.skip"
+msgstr "Skip for now"
+
+msgid "common.finish"
+msgstr "Finish"
+
+msgid "common.delete"
+msgstr "Delete"
+
+msgid "common.add"
+msgstr "Add"
+
+msgid "common.edit"
+msgstr "Edit"
+
+msgid "common.yes"
+msgstr "Yes"
+
+msgid "common.no"
+msgstr "No"
+
+msgid "common.on"
+msgstr "On"
+
+msgid "common.off"
+msgstr "Off"
+
+msgid "common.advanced"
+msgstr "Advanced"
+
+msgid "common.saved"
+msgstr "Saved"
+
+msgid "common.minutes"
+msgstr "minutes"
+
+msgid "common.hours"
+msgstr "hours"
+
+msgid "common.none"
+msgstr "None"
+
+msgid "common.all"
+msgstr "All"
+
+msgid "common.search"
+msgstr "Search"
+
+msgid "common.loading"
+msgstr "Loading"
+
+msgid "common.coming_soon"
+msgstr "This section is coming soon"
+
+msgid "common.coming_soon.help"
+msgstr "This feature arrives in the next release. You can skip it for now."
+
+# --- sign in ---
+
+msgid "login.title"
+msgstr "Sign in to BioKids"
+
+msgid "login.pin"
+msgstr "PIN"
+
+msgid "login.pin.help"
+msgstr "The 6-digit PIN you chose during setup."
+
+msgid "login.submit"
+msgstr "Sign in"
+
+msgid "login.wrong"
+msgstr "That PIN is not right. {remaining} attempts left."
+
+msgid "login.locked"
+msgstr "Too many wrong attempts. Try again in {minutes} minutes."
+
+msgid "login.forgot"
+msgstr "I forgot my PIN"
+
+msgid "login.recovery.title"
+msgstr "Recovery code"
+
+msgid "login.recovery.help"
+msgstr "Type the eight words you wrote down during setup, separated by spaces."
+
+msgid "login.recovery.wrong"
+msgstr "That recovery code is not right."
+
+msgid "login.recovery.ok"
+msgstr "Recovery code accepted. Now choose a new PIN."
+
+msgid "auth.passphrase.title"
+msgstr "Confirm your passphrase"
+
+msgid "auth.passphrase.help"
+msgstr "This action affects protection, so your passphrase is required."
+
+msgid "auth.passphrase.wrong"
+msgstr "That passphrase is not right."
+
+msgid "auth.session_expired"
+msgstr "Your session timed out. Please sign in again."
+
+# --- today screen ---
+
+msgid "today.title"
+msgstr "Today"
+
+msgid "today.no_children"
+msgstr "No children have been added yet."
+
+msgid "today.add_child"
+msgstr "Add a child"
+
+msgid "today.remaining"
+msgstr "{minutes} min left"
+
+msgid "today.time_up"
+msgstr "Time is up"
+
+msgid "today.now_playing"
+msgstr "now: {app}"
+
+msgid "today.idle"
+msgstr "now: away from the computer"
+
+msgid "today.offline"
+msgstr "not signed in"
+
+msgid "today.online"
+msgstr "on"
+
+msgid "today.grant_10"
+msgstr "+10 min"
+
+msgid "today.lock"
+msgstr "Lock"
+
+msgid "today.poweroff"
+msgstr "Shut down"
+
+msgid "today.grant.done"
+msgstr "Added 10 minutes for {name}."
+
+msgid "today.lock.done"
+msgstr "{name}'s session is locked."
+
+msgid "today.poweroff.done"
+msgstr "Shutting the computer down."
+
+msgid "today.poweroff.confirm"
+msgstr "The computer will shut down while {name} is using it. Are you sure?"
+
+msgid "today.requests_pending"
+msgstr "{count} requests waiting"
+
+msgid "today.window_closed"
+msgstr "outside allowed hours"
+
+msgid "today.daemon_down"
+msgstr "The BioKids service is not responding. Protection may not be running."
+
+# --- child and time settings ---
+
+msgid "child.name"
+msgstr "Name"
+
+msgid "child.birth_year"
+msgstr "Year of birth"
+
+msgid "child.avatar"
+msgstr "Picture"
+
+msgid "child.unix_user"
+msgstr "Username on the computer"
+
+msgid "child.unix_user.help"
+msgstr "The account shown on the login screen. Lower-case letters and digits only."
+
+msgid "child.locale"
+msgstr "Language"
+
+msgid "child.age_band"
+msgstr "Age group"
+
+msgid "child.age_band.help"
+msgstr "Sets how large the interface is. Chosen automatically from the age."
+
+msgid "time.title"
+msgstr "Time rules"
+
+msgid "time.weekday_quota"
+msgstr "Weekday daily time"
+
+msgid "time.weekend_quota"
+msgstr "Weekend daily time"
+
+msgid "time.quota.help"
+msgstr "How much they may use in total in one day."
+
+msgid "time.windows"
+msgstr "Allowed hours"
+
+msgid "time.windows.help"
+msgstr "Leave empty for the whole day. For example: 16:00-20:00"
+
+msgid "time.windows.weekday"
+msgstr "Weekday hours"
+
+msgid "time.windows.weekend"
+msgstr "Weekend hours"
+
+msgid "time.windows.invalid"
+msgstr "An hour range must be written like 16:00-20:00."
+
+msgid "time.end_action"
+msgstr "When time runs out"
+
+msgid "time.warnings"
+msgstr "Warning times"
+
+msgid "time.warnings.help"
+msgstr "How many minutes before the end they are warned."
+
+msgid "time.break_enabled"
+msgstr "Forced break"
+
+msgid "time.break.help"
+msgstr "A short break after a while. The break does not use up their time."
+
+msgid "time.earn_enabled"
+msgstr "Earned time"
+
+msgid "time.earn.help"
+msgstr "Time spent in learning apps is added to games time."
+
+msgid "time.enabled"
+msgstr "Let BioKids manage this child"
+
+msgid "time.enabled.help"
+msgstr "If you turn this off, no limits apply to this account."
+
+# --- audit log ---
+
+msgid "audit.title"
+msgstr "Audit log"
+
+msgid "audit.help"
+msgstr "Every change and every important event is kept here. It cannot be deleted."
+
+msgid "audit.filter.child"
+msgstr "Child"
+
+msgid "audit.filter.action"
+msgstr "Action"
+
+msgid "audit.filter.date"
+msgstr "Date"
+
+msgid "audit.empty"
+msgstr "No entries match this filter."
+
+msgid "audit.actor.daemon"
+msgstr "BioKids service"
+
+msgid "audit.actor.system"
+msgstr "System"
+
+msgid "audit.actor.parent"
+msgstr "Parent"
+
+msgid "audit.actor.cli"
+msgstr "Command line"
+
+msgid "audit.action.policy_changed"
+msgstr "Rules changed"
+
+msgid "audit.action.time_granted"
+msgstr "Time added"
+
+msgid "audit.action.session_locked"
+msgstr "Session locked"
+
+msgid "audit.action.poweroff"
+msgstr "Computer shut down"
+
+msgid "audit.action.login_ok"
+msgstr "Signed in to the panel"
+
+msgid "audit.action.login_failed"
+msgstr "Wrong PIN attempt"
+
+msgid "audit.action.login_locked"
+msgstr "Too many wrong attempts"
+
+msgid "audit.action.clock_jump"
+msgstr "System clock changed"
+
+msgid "audit.action.daemon_started"
+msgstr "BioKids service started"
+
+msgid "audit.action.daemon_failed"
+msgstr "BioKids service stopped"
+
+msgid "audit.action.lockdown"
+msgstr "Safety lock engaged"
+
+msgid "audit.action.setup_completed"
+msgstr "Setup completed"
+
+msgid "audit.action.child_added"
+msgstr "Child added"
+
+msgid "audit.action.pin_changed"
+msgstr "PIN changed"
+
+msgid "audit.action.recovery_used"
+msgstr "Recovery code used"
+
+msgid "audit.action.data_exported"
+msgstr "Data exported"
+
+msgid "audit.action.data_erased"
+msgstr "Data erased"
+
+msgid "audit.action.quota_exhausted"
+msgstr "Daily time used up"
+
+msgid "audit.action.warning_spoken"
+msgstr "Warning given"
+
+# --- setup wizard ---
+
+msgid "wizard.title"
+msgstr "BioKids setup"
+
+msgid "wizard.step"
+msgstr "Step {current} of {total}"
+
+msgid "wizard.language.title"
+msgstr "Language"
+
+msgid "wizard.language.help"
+msgstr "The language of the panel and the child's screen."
+
+msgid "wizard.parent.title"
+msgstr "Parent account"
+
+msgid "wizard.parent.name"
+msgstr "Your name"
+
+msgid "wizard.parent.pin"
+msgstr "6-digit PIN"
+
+msgid "wizard.parent.pin_again"
+msgstr "PIN again"
+
+msgid "wizard.parent.pin.help"
+msgstr "You will use this to sign in from your phone."
+
+msgid "wizard.parent.pin.mismatch"
+msgstr "The two PINs are not the same."
+
+msgid "wizard.parent.pin.format"
+msgstr "The PIN must be exactly 6 digits."
+
+msgid "wizard.parent.pin.weak"
+msgstr "That PIN is too easy to guess. Please choose another."
+
+msgid "wizard.passphrase.title"
+msgstr "Passphrase and recovery code"
+
+msgid "wizard.passphrase.field"
+msgstr "Passphrase"
+
+msgid "wizard.passphrase.help"
+msgstr "Needed for things like turning protection off. At least 10 characters."
+
+msgid "wizard.passphrase.short"
+msgstr "The passphrase must be at least 10 characters."
+
+msgid "wizard.recovery.title"
+msgstr "Your recovery code"
+
+msgid "wizard.recovery.help"
+msgstr "This is the only way back if you forget your PIN. Write it down; it is shown once."
+
+msgid "wizard.recovery.confirm"
+msgstr "I have written the recovery code down"
+
+msgid "wizard.recovery.not_confirmed"
+msgstr "Please confirm you wrote the code down before continuing."
+
+msgid "wizard.child.title"
+msgstr "Add a child"
+
+msgid "wizard.child.help"
+msgstr "Add one child now; you can add the others later."
+
+msgid "wizard.apps.title"
+msgstr "Apps"
+
+msgid "wizard.apps.help"
+msgstr "What appears on the child's screen. Age-appropriate ones are pre-selected."
+
+msgid "wizard.time.title"
+msgstr "Daily time"
+
+msgid "wizard.time.help"
+msgstr "We have suggested something for this age. Change it however you like."
+
+msgid "wizard.filter.title"
+msgstr "Site blocking"
+
+msgid "wizard.remote.title"
+msgstr "Access from your phone"
+
+msgid "wizard.remote.help"
+msgstr "We use Tailscale to open the panel on your phone. No port is opened to the internet."
+
+msgid "wizard.email.title"
+msgstr "Email notifications"
+
+msgid "wizard.extras.title"
+msgstr "Voices and AI"
+
+msgid "wizard.done.title"
+msgstr "Ready"
+
+msgid "wizard.done.help"
+msgstr "Setup is done. If you like, you can start a two-minute trial run."
+
+msgid "wizard.done.try"
+msgstr "Try it now"
+
+msgid "wizard.done.go_panel"
+msgstr "Go to the panel"
+
+# --- remote access ---
+
+msgid "remote.status.absent"
+msgstr "Tailscale is not installed"
+
+msgid "remote.status.logged_out"
+msgstr "Tailscale is installed but not signed in"
+
+msgid "remote.status.stopped"
+msgstr "Tailscale is stopped"
+
+msgid "remote.status.running"
+msgstr "Tailscale is running"
+
+msgid "remote.status.serving"
+msgstr "The panel is reachable from your phone"
+
+msgid "remote.enable"
+msgstr "Turn on phone access"
+
+msgid "remote.disable"
+msgstr "Turn off phone access"
+
+msgid "remote.url"
+msgstr "Panel address"
+
+msgid "remote.qr.help"
+msgstr "Scan this square with your phone's camera."
+
+msgid "remote.install.help"
+msgstr "You need to install Tailscale and sign in first."
+
+msgid "remote.localhost_only"
+msgstr "The panel currently opens only on this computer."
+
+msgid "remote.no_port_forward"
+msgstr "Do not set up port forwarding on your router. Do not put the panel on the internet."
+
+msgid "remote.only_tailnet"
+msgstr "Only devices on your own Tailscale network can reach this address."
+
+# --- error messages ---
+
+msgid "error.daemon_unreachable"
+msgstr "The BioKids service cannot be reached. Try restarting the computer."
+
+msgid "error.not_found"
+msgstr "That page does not exist."
+
+msgid "error.invalid_input"
+msgstr "Something entered is not right. Please check and try again."
+
+msgid "error.save_failed"
+msgstr "The setting could not be saved, please try again."
+
+msgid "error.unknown"
+msgstr "Something unexpected happened. Please try again."
+
+# --- security and privacy copy ---
+
+msgid "privacy.headline"
+msgstr "Nothing leaves your device"
+
+msgid "privacy.body"
+msgstr "Usage history, screenshots and voice recordings stay on this computer. Nothing is sent to any server."
+
+msgid "disclaimer.headline"
+msgstr "BioKids is an aid, not a guarantee"
+
+msgid "disclaimer.body"
+msgstr "No filter catches everything. These tools do not replace talking to your child; they are there to start the conversation."

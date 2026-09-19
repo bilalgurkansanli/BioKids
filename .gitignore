@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Compiled translation catalogs are built at package time
+src/biokids_core/locale/*/LC_MESSAGES/*.mo
+
+# Debian build artefacts
+debian/.debhelper/
+debian/biokids*/
+debian/files
+debian/*.substvars
+debian/*.debhelper.log
+debian/debhelper-build-stamp
+../biokids_*.deb
+../biokids_*.buildinfo
+../biokids_*.changes
+../biokids_*.dsc
+../biokids_*.tar.*
+
+# live-build
+iso/.build/
+iso/cache/
+iso/chroot/
+iso/binary/
+iso/*.iso
+iso/*.hybrid.iso
+
+# Local runtime data (never commit a family's data)
+*.db
+*.db-wal
+*.db-shm
+dev/run/
+evidence/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

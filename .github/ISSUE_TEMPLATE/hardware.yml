@@ -1,0 +1,21 @@
+name: Hardware compatibility report
+description: Report how BioKids behaved on a particular machine
+labels: [hardware]
+body:
+  - type: input
+    id: machine
+    attributes: { label: Machine, description: "Make and model" }
+    validations: { required: true }
+  - type: input
+    id: gpu
+    attributes: { label: GPU, description: "Only needed if you tried the AI layer" }
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options: [works fully, works with workarounds, does not work]
+    validations: { required: true }
+  - type: textarea
+    id: detail
+    attributes: { label: Details, description: "Boot, wifi, Secure Boot, graphics, audio" }
+    validations: { required: true }

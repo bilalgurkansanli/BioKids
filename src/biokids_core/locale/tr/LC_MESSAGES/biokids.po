@@ -1,0 +1,772 @@
+# BioKids — Türkçe
+# Ürünün birincil dili Türkçe'dir. Önce burası yazılır, İngilizce çeviridir.
+# Ebeveyne "siz", çocuğa "sen" diye hitap edilir (UX.md §4).
+msgid ""
+msgstr ""
+"Project-Id-Version: biokids 0.1.0\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# --- karar gerekçeleri (policy engine reason codes) ---
+
+msgid "allowed"
+msgstr "Her şey yolunda"
+
+msgid "quota.exhausted"
+msgstr "Bugünkü süren doldu"
+
+msgid "quota.warning"
+msgstr "{minutes} dakikan kaldı"
+
+msgid "window.closed"
+msgstr "Şu an bilgisayar kullanma saati değil"
+
+msgid "penalty.active"
+msgstr "Kısa bir ara veriliyor"
+
+msgid "break.due"
+msgstr "Mola zamanı"
+
+msgid "break.active"
+msgstr "Mola sürüyor"
+
+msgid "category.exhausted"
+msgstr "Bu tür için ayrılan süre doldu"
+
+msgid "app.not_allowed"
+msgstr "Bu uygulama senin listende yok"
+
+msgid "filter.blocked"
+msgstr "Bu sayfa senin için değil"
+
+msgid "ai.blocked"
+msgstr "Bu sayfa senin için uygun görünmüyor"
+
+msgid "policy.missing"
+msgstr "Bu kullanıcı için kural tanımlı değil"
+
+# --- kategoriler ---
+
+msgid "category.games"
+msgstr "Oyun"
+
+msgid "category.learning"
+msgstr "Eğitim"
+
+msgid "category.web"
+msgstr "İnternet"
+
+msgid "category.free"
+msgstr "Serbest"
+
+# --- süre bitince ne olacak ---
+
+msgid "end_action.lock"
+msgstr "Ekranı kilitle"
+
+msgid "end_action.logout"
+msgstr "Oturumu kapat"
+
+msgid "end_action.poweroff"
+msgstr "Bilgisayarı kapat"
+
+msgid "end_action.lock.help"
+msgstr "Bilgisayar açık kalır, ekran kilitlenir."
+
+msgid "end_action.logout.help"
+msgstr "Açık uygulamalar kapanır, giriş ekranına dönülür."
+
+msgid "end_action.poweroff.help"
+msgstr "Bilgisayar tamamen kapanır."
+
+# --- filtre modu ---
+
+msgid "filter_mode.allowlist"
+msgstr "Sadece izin verilen siteler"
+
+msgid "filter_mode.blocklist"
+msgstr "Engellenenler dışında her yer"
+
+msgid "filter_mode.allowlist.help"
+msgstr "Küçük çocuklar için önerilir. Sadece sizin eklediğiniz siteler açılır."
+
+msgid "filter_mode.blocklist.help"
+msgstr "Büyük çocuklar için önerilir. Zararlı kategoriler engellenir, gerisi serbesttir."
+
+# --- yaş bandı ---
+
+msgid "age_band.4-7"
+msgstr "4–7 yaş"
+
+msgid "age_band.8-10"
+msgstr "8–10 yaş"
+
+# --- çocuk arayüzü ---
+
+msgid "shell.greeting"
+msgstr "Merhaba {name}"
+
+msgid "shell.remaining_minutes"
+msgstr "{minutes} dk"
+
+msgid "shell.remaining_label"
+msgstr "Kalan süre"
+
+msgid "shell.volume"
+msgstr "Ses"
+
+msgid "shell.brightness"
+msgstr "Parlaklık"
+
+msgid "shell.shutdown"
+msgstr "Kapat"
+
+msgid "shell.shutdown.confirm_title"
+msgstr "Bilgisayarı kapatalım mı?"
+
+msgid "shell.shutdown.confirm_yes"
+msgstr "Evet, kapat"
+
+msgid "shell.shutdown.confirm_no"
+msgstr "Vazgeç"
+
+msgid "shell.launching"
+msgstr "{app} açılıyor"
+
+msgid "shell.no_apps"
+msgstr "Henüz hiç uygulaman yok. Bir büyüğüne söyle."
+
+msgid "shell.clock"
+msgstr "Saat"
+
+msgid "shell.my_time"
+msgstr "Sürem"
+
+msgid "shell.blocked.title"
+msgstr "Burası senin için değil"
+
+msgid "shell.blocked.body"
+msgstr "Bu sayfayı açamıyoruz. İstersen bir büyüğüne sorabilirsin."
+
+msgid "shell.blocked.ask_mother"
+msgstr "Anneme sor"
+
+msgid "shell.blocked.ask_father"
+msgstr "Babama sor"
+
+msgid "shell.blocked.asked"
+msgstr "Sorduk! Cevap gelince haber vereceğiz."
+
+msgid "shell.blocked.back"
+msgstr "Geri dön"
+
+msgid "shell.break.title"
+msgstr "Biraz mola"
+
+msgid "shell.break.body"
+msgstr "Gözlerini dinlendir. {minutes} dakika sonra devam edeceğiz."
+
+msgid "shell.timeup.title"
+msgstr "Bugünlük bu kadar"
+
+msgid "shell.timeup.body"
+msgstr "İşini kaydet. Bilgisayar birazdan kapanacak."
+
+msgid "shell.timeup.countdown"
+msgstr "{seconds} saniye"
+
+msgid "shell.timeup.tomorrow"
+msgstr "Yarın görüşürüz."
+
+msgid "shell.locked.title"
+msgstr "Şimdilik ara veriyoruz"
+
+msgid "shell.window_closed.title"
+msgstr "Şimdi bilgisayar saati değil"
+
+msgid "shell.window_closed.body"
+msgstr "Kullanabileceğin saatler geldiğinde tekrar açabilirsin."
+
+msgid "shell.earned.title"
+msgstr "Aferin!"
+
+msgid "shell.earned.body"
+msgstr "{minutes} dakika kazandın."
+
+msgid "shell.firstrun.title"
+msgstr "Merhaba, ben Zio"
+
+msgid "shell.firstrun.p1"
+msgstr "Bu bilgisayarda seninle ilgileniyoruz."
+
+msgid "shell.firstrun.p2"
+msgstr "Sürenin ne kadar kaldığını sağ üstteki halkadan görebilirsin."
+
+msgid "shell.firstrun.p3"
+msgstr "Bazı sayfalar açılmaz. Açılmazsa bir büyüğüne sorabilirsin."
+
+msgid "shell.firstrun.p4"
+msgstr "Annen ve baban hangi sitelere girdiğini görebilir. Bu bir sır değil."
+
+msgid "shell.firstrun.ok"
+msgstr "Anladım"
+
+msgid "shell.supervision.badge"
+msgstr "Zio ve Sio buradalar"
+
+# --- ebeveyn paneli: genel ---
+
+msgid "panel.title"
+msgstr "BioKids"
+
+msgid "panel.subtitle"
+msgstr "Ebeveyn paneli"
+
+msgid "nav.today"
+msgstr "Bugün"
+
+msgid "nav.children"
+msgstr "Çocuklar"
+
+msgid "nav.requests"
+msgstr "İstekler"
+
+msgid "nav.history"
+msgstr "Geçmiş"
+
+msgid "nav.voices"
+msgstr "Sesler"
+
+msgid "nav.settings"
+msgstr "Ayarlar"
+
+msgid "nav.audit"
+msgstr "Kayıtlar"
+
+msgid "nav.logout"
+msgstr "Çıkış"
+
+msgid "common.save"
+msgstr "Kaydet"
+
+msgid "common.cancel"
+msgstr "Vazgeç"
+
+msgid "common.back"
+msgstr "Geri"
+
+msgid "common.next"
+msgstr "Devam"
+
+msgid "common.skip"
+msgstr "Şimdilik geç"
+
+msgid "common.finish"
+msgstr "Bitir"
+
+msgid "common.delete"
+msgstr "Sil"
+
+msgid "common.add"
+msgstr "Ekle"
+
+msgid "common.edit"
+msgstr "Düzenle"
+
+msgid "common.yes"
+msgstr "Evet"
+
+msgid "common.no"
+msgstr "Hayır"
+
+msgid "common.on"
+msgstr "Açık"
+
+msgid "common.off"
+msgstr "Kapalı"
+
+msgid "common.advanced"
+msgstr "Gelişmiş"
+
+msgid "common.saved"
+msgstr "Kaydedildi"
+
+msgid "common.minutes"
+msgstr "dakika"
+
+msgid "common.hours"
+msgstr "saat"
+
+msgid "common.none"
+msgstr "Yok"
+
+msgid "common.all"
+msgstr "Hepsi"
+
+msgid "common.search"
+msgstr "Ara"
+
+msgid "common.loading"
+msgstr "Yükleniyor"
+
+msgid "common.coming_soon"
+msgstr "Bu bölüm yakında"
+
+msgid "common.coming_soon.help"
+msgstr "Bu özellik bir sonraki sürümde geliyor. Şimdilik atlayabilirsiniz."
+
+# --- giriş ---
+
+msgid "login.title"
+msgstr "BioKids'e giriş"
+
+msgid "login.pin"
+msgstr "PIN"
+
+msgid "login.pin.help"
+msgstr "Kurulumda belirlediğiniz 6 haneli PIN."
+
+msgid "login.submit"
+msgstr "Giriş"
+
+msgid "login.wrong"
+msgstr "PIN doğru değil. {remaining} deneme hakkınız kaldı."
+
+msgid "login.locked"
+msgstr "Çok fazla hatalı deneme yapıldı. {minutes} dakika sonra tekrar deneyin."
+
+msgid "login.forgot"
+msgstr "PIN'imi unuttum"
+
+msgid "login.recovery.title"
+msgstr "Kurtarma kodu"
+
+msgid "login.recovery.help"
+msgstr "Kurulumda yazdığınız sekiz kelimeyi aralarında boşluk bırakarak yazın."
+
+msgid "login.recovery.wrong"
+msgstr "Bu kurtarma kodu doğru değil."
+
+msgid "login.recovery.ok"
+msgstr "Kurtarma kodu kabul edildi. Şimdi yeni bir PIN belirleyin."
+
+msgid "auth.passphrase.title"
+msgstr "Parolanızı doğrulayın"
+
+msgid "auth.passphrase.help"
+msgstr "Bu işlem korumayı etkilediği için parolanız gerekiyor."
+
+msgid "auth.passphrase.wrong"
+msgstr "Parola doğru değil."
+
+msgid "auth.session_expired"
+msgstr "Oturumunuz zaman aşımına uğradı. Tekrar giriş yapın."
+
+# --- bugün ekranı ---
+
+msgid "today.title"
+msgstr "Bugün"
+
+msgid "today.no_children"
+msgstr "Henüz çocuk eklenmemiş."
+
+msgid "today.add_child"
+msgstr "Çocuk ekle"
+
+msgid "today.remaining"
+msgstr "{minutes} dk kaldı"
+
+msgid "today.time_up"
+msgstr "Süresi doldu"
+
+msgid "today.now_playing"
+msgstr "şu an: {app}"
+
+msgid "today.idle"
+msgstr "şu an: bilgisayar başında değil"
+
+msgid "today.offline"
+msgstr "oturum açık değil"
+
+msgid "today.online"
+msgstr "açık"
+
+msgid "today.grant_10"
+msgstr "+10 dk"
+
+msgid "today.lock"
+msgstr "Kilitle"
+
+msgid "today.poweroff"
+msgstr "Kapat"
+
+msgid "today.grant.done"
+msgstr "{name} için 10 dakika eklendi."
+
+msgid "today.lock.done"
+msgstr "{name} oturumu kilitlendi."
+
+msgid "today.poweroff.done"
+msgstr "Bilgisayar kapatılıyor."
+
+msgid "today.poweroff.confirm"
+msgstr "{name} çalışırken bilgisayar kapanacak. Emin misiniz?"
+
+msgid "today.requests_pending"
+msgstr "{count} bekleyen istek var"
+
+msgid "today.window_closed"
+msgstr "kullanım saati dışında"
+
+msgid "today.daemon_down"
+msgstr "BioKids servisi yanıt vermiyor. Koruma şu an çalışmıyor olabilir."
+
+# --- çocuk ve süre ayarları ---
+
+msgid "child.name"
+msgstr "Adı"
+
+msgid "child.birth_year"
+msgstr "Doğum yılı"
+
+msgid "child.avatar"
+msgstr "Simge"
+
+msgid "child.unix_user"
+msgstr "Bilgisayardaki kullanıcı adı"
+
+msgid "child.unix_user.help"
+msgstr "Giriş ekranında görünecek hesap. Sadece küçük harf ve rakam."
+
+msgid "child.locale"
+msgstr "Dili"
+
+msgid "child.age_band"
+msgstr "Yaş grubu"
+
+msgid "child.age_band.help"
+msgstr "Arayüzün büyüklüğünü belirler. Yaşa göre otomatik seçilir."
+
+msgid "time.title"
+msgstr "Süre kuralları"
+
+msgid "time.weekday_quota"
+msgstr "Hafta içi günlük süre"
+
+msgid "time.weekend_quota"
+msgstr "Hafta sonu günlük süre"
+
+msgid "time.quota.help"
+msgstr "Bir günde toplam ne kadar kullanabilir."
+
+msgid "time.windows"
+msgstr "Kullanabileceği saatler"
+
+msgid "time.windows.help"
+msgstr "Boş bırakırsanız gün boyu serbesttir. Örnek: 16:00-20:00"
+
+msgid "time.windows.weekday"
+msgstr "Hafta içi saatler"
+
+msgid "time.windows.weekend"
+msgstr "Hafta sonu saatler"
+
+msgid "time.windows.invalid"
+msgstr "Saat aralığı 16:00-20:00 gibi yazılmalı."
+
+msgid "time.end_action"
+msgstr "Süre bitince"
+
+msgid "time.warnings"
+msgstr "Uyarı zamanları"
+
+msgid "time.warnings.help"
+msgstr "Süre bitmeden önce kaçıncı dakikalarda uyarılsın."
+
+msgid "time.break_enabled"
+msgstr "Zorunlu mola"
+
+msgid "time.break.help"
+msgstr "Belirli bir süre sonra kısa bir mola verilir. Mola süreden düşmez."
+
+msgid "time.earn_enabled"
+msgstr "Kazanılan süre"
+
+msgid "time.earn.help"
+msgstr "Eğitim uygulamalarında geçirilen süre oyun süresine eklenir."
+
+msgid "time.enabled"
+msgstr "BioKids bu çocuğu yönetsin"
+
+msgid "time.enabled.help"
+msgstr "Kapatırsanız bu hesapta hiçbir sınır uygulanmaz."
+
+# --- kayıtlar ---
+
+msgid "audit.title"
+msgstr "Kayıtlar"
+
+msgid "audit.help"
+msgstr "Yapılan her değişiklik ve her önemli olay burada tutulur. Silinemez."
+
+msgid "audit.filter.child"
+msgstr "Çocuk"
+
+msgid "audit.filter.action"
+msgstr "İşlem"
+
+msgid "audit.filter.date"
+msgstr "Tarih"
+
+msgid "audit.empty"
+msgstr "Bu filtreye uyan kayıt yok."
+
+msgid "audit.actor.daemon"
+msgstr "BioKids servisi"
+
+msgid "audit.actor.system"
+msgstr "Sistem"
+
+msgid "audit.actor.parent"
+msgstr "Ebeveyn"
+
+msgid "audit.actor.cli"
+msgstr "Komut satırı"
+
+msgid "audit.action.policy_changed"
+msgstr "Kural değiştirildi"
+
+msgid "audit.action.time_granted"
+msgstr "Süre eklendi"
+
+msgid "audit.action.session_locked"
+msgstr "Oturum kilitlendi"
+
+msgid "audit.action.poweroff"
+msgstr "Bilgisayar kapatıldı"
+
+msgid "audit.action.login_ok"
+msgstr "Panele giriş yapıldı"
+
+msgid "audit.action.login_failed"
+msgstr "Hatalı PIN denemesi"
+
+msgid "audit.action.login_locked"
+msgstr "Çok fazla hatalı deneme"
+
+msgid "audit.action.clock_jump"
+msgstr "Sistem saati değişti"
+
+msgid "audit.action.daemon_started"
+msgstr "BioKids servisi başladı"
+
+msgid "audit.action.daemon_failed"
+msgstr "BioKids servisi durdu"
+
+msgid "audit.action.lockdown"
+msgstr "Güvenlik kilidi devreye girdi"
+
+msgid "audit.action.setup_completed"
+msgstr "Kurulum tamamlandı"
+
+msgid "audit.action.child_added"
+msgstr "Çocuk eklendi"
+
+msgid "audit.action.pin_changed"
+msgstr "PIN değiştirildi"
+
+msgid "audit.action.recovery_used"
+msgstr "Kurtarma kodu kullanıldı"
+
+msgid "audit.action.data_exported"
+msgstr "Veriler dışa aktarıldı"
+
+msgid "audit.action.data_erased"
+msgstr "Veriler silindi"
+
+msgid "audit.action.quota_exhausted"
+msgstr "Günlük süre doldu"
+
+msgid "audit.action.warning_spoken"
+msgstr "Uyarı verildi"
+
+# --- kurulum sihirbazı ---
+
+msgid "wizard.title"
+msgstr "BioKids kurulumu"
+
+msgid "wizard.step"
+msgstr "Adım {current} / {total}"
+
+msgid "wizard.language.title"
+msgstr "Dil"
+
+msgid "wizard.language.help"
+msgstr "Panelin ve çocuk ekranının dili."
+
+msgid "wizard.parent.title"
+msgstr "Ebeveyn hesabı"
+
+msgid "wizard.parent.name"
+msgstr "Adınız"
+
+msgid "wizard.parent.pin"
+msgstr "6 haneli PIN"
+
+msgid "wizard.parent.pin_again"
+msgstr "PIN tekrar"
+
+msgid "wizard.parent.pin.help"
+msgstr "Panele telefonunuzdan girerken bunu kullanacaksınız."
+
+msgid "wizard.parent.pin.mismatch"
+msgstr "İki PIN aynı değil."
+
+msgid "wizard.parent.pin.format"
+msgstr "PIN tam olarak 6 rakam olmalı."
+
+msgid "wizard.parent.pin.weak"
+msgstr "Bu PIN çok kolay tahmin edilir. Başka bir tane seçin."
+
+msgid "wizard.passphrase.title"
+msgstr "Parola ve kurtarma kodu"
+
+msgid "wizard.passphrase.field"
+msgstr "Parola"
+
+msgid "wizard.passphrase.help"
+msgstr "Korumayı kapatmak gibi işlemler için gerekir. En az 10 karakter."
+
+msgid "wizard.passphrase.short"
+msgstr "Parola en az 10 karakter olmalı."
+
+msgid "wizard.recovery.title"
+msgstr "Kurtarma kodunuz"
+
+msgid "wizard.recovery.help"
+msgstr "PIN'inizi unutursanız tek yol bu. Bir kağıda yazın; bir daha gösterilmeyecek."
+
+msgid "wizard.recovery.confirm"
+msgstr "Kurtarma kodunu bir yere yazdım"
+
+msgid "wizard.recovery.not_confirmed"
+msgstr "Devam etmeden önce kodu yazdığınızı onaylayın."
+
+msgid "wizard.child.title"
+msgstr "Çocuk ekleyin"
+
+msgid "wizard.child.help"
+msgstr "Şimdi bir çocuk ekleyin; diğerlerini sonra ekleyebilirsiniz."
+
+msgid "wizard.apps.title"
+msgstr "Uygulamalar"
+
+msgid "wizard.apps.help"
+msgstr "Çocuğun ekranında görünecek uygulamalar. Yaşına uygun olanlar seçili geldi."
+
+msgid "wizard.time.title"
+msgstr "Günlük süre"
+
+msgid "wizard.time.help"
+msgstr "Yaşına göre bir öneri hazırladık. İstediğiniz gibi değiştirin."
+
+msgid "wizard.filter.title"
+msgstr "Site engelleme"
+
+msgid "wizard.remote.title"
+msgstr "Telefondan erişim"
+
+msgid "wizard.remote.help"
+msgstr "Paneli telefonunuzdan açmak için Tailscale kullanıyoruz. Dışarıya hiçbir port açılmaz."
+
+msgid "wizard.email.title"
+msgstr "E-posta bildirimleri"
+
+msgid "wizard.extras.title"
+msgstr "Sesler ve yapay zekâ"
+
+msgid "wizard.done.title"
+msgstr "Hazır"
+
+msgid "wizard.done.help"
+msgstr "Kurulum tamam. Dilerseniz iki dakikalık bir deneme başlatabilirsiniz."
+
+msgid "wizard.done.try"
+msgstr "Şimdi dene"
+
+msgid "wizard.done.go_panel"
+msgstr "Panele git"
+
+# --- uzaktan erişim ---
+
+msgid "remote.status.absent"
+msgstr "Tailscale kurulu değil"
+
+msgid "remote.status.logged_out"
+msgstr "Tailscale kurulu ama giriş yapılmamış"
+
+msgid "remote.status.stopped"
+msgstr "Tailscale duruyor"
+
+msgid "remote.status.running"
+msgstr "Tailscale çalışıyor"
+
+msgid "remote.status.serving"
+msgstr "Panel telefonunuzdan erişilebilir"
+
+msgid "remote.enable"
+msgstr "Telefondan erişimi aç"
+
+msgid "remote.disable"
+msgstr "Telefondan erişimi kapat"
+
+msgid "remote.url"
+msgstr "Panel adresi"
+
+msgid "remote.qr.help"
+msgstr "Telefonunuzun kamerasıyla bu kareyi okutun."
+
+msgid "remote.install.help"
+msgstr "Önce Tailscale kurup giriş yapmanız gerekiyor."
+
+msgid "remote.localhost_only"
+msgstr "Panel şu an sadece bu bilgisayardan açılıyor."
+
+msgid "remote.no_port_forward"
+msgstr "Modeminizde port yönlendirme yapmayın. Paneli internete açmayın."
+
+msgid "remote.only_tailnet"
+msgstr "Bu adrese sadece sizin Tailscale ağınızdaki cihazlar erişebilir."
+
+# --- hata mesajları ---
+
+msgid "error.daemon_unreachable"
+msgstr "BioKids servisine ulaşılamıyor. Bilgisayarı yeniden başlatmayı deneyin."
+
+msgid "error.not_found"
+msgstr "Aradığınız sayfa yok."
+
+msgid "error.invalid_input"
+msgstr "Girilen bilgi doğru değil. Kontrol edip tekrar deneyin."
+
+msgid "error.save_failed"
+msgstr "Ayar kaydedilemedi, tekrar deneyin."
+
+msgid "error.unknown"
+msgstr "Beklenmedik bir şey oldu. Tekrar deneyin."
+
+# --- güvenlik ve gizlilik metinleri ---
+
+msgid "privacy.headline"
+msgstr "Hiçbir şey cihazınızdan çıkmaz"
+
+msgid "privacy.body"
+msgstr "Kullanım geçmişi, ekran görüntüleri ve ses kayıtları bu bilgisayarda kalır. Hiçbir sunucuya gönderilmez."
+
+msgid "disclaimer.headline"
+msgstr "BioKids bir yardımcıdır, garanti değil"
+
+msgid "disclaimer.body"
+msgstr "Hiçbir filtre her şeyi yakalayamaz. Bu araçlar çocuğunuzla konuşmanın yerini tutmaz, konuşmayı başlatmak içindir."

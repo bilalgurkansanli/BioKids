@@ -1,0 +1,141 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "biokids"
+version = "0.1.0"
+description = "Parental controls for Debian that run entirely on your own machine"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Bilal Gurkan Sanli" }]
+requires-python = ">=3.13"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Systems Administration",
+]
+
+# Runtime dependencies are declared per binary package in debian/control.
+# This list is the union used for development and CI.
+dependencies = [
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "fastapi>=0.110",
+    "uvicorn>=0.27",
+    "jinja2>=3.1",
+    "argon2-cffi>=23.1",
+    "itsdangerous>=2.1",
+    "python-multipart>=0.0.9",
+    "qrcode>=7.4",
+]
+
+[project.optional-dependencies]
+daemon = ["dbus-next>=0.2.3; sys_platform == 'linux'"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "httpx>=0.27",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "types-qrcode",
+]
+
+[project.scripts]
+biokids-daemon = "biokids_daemon.__main__:main"
+biokids-panel = "biokids_panel.__main__:main"
+biokids-shell = "biokids_shell.__main__:main"
+biokids-voice = "biokids_voice.__main__:main"
+biokids-admin = "biokids_core.admin:main"
+
+[project.urls]
+Homepage = "https://biokids.bilalgurkansanli.com"
+Repository = "https://github.com/bilalgurkansanli/biokids"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["biokids_*"]
+
+[tool.setuptools.package-data]
+biokids_core = ["locale/*/LC_MESSAGES/*.po", "locale/*/LC_MESSAGES/*.mo", "data/**/*"]
+biokids_panel = ["templates/**/*", "static/**/*"]
+biokids_shell = ["templates/**/*", "static/**/*"]
+
+# ---------------------------------------------------------------- ruff
+
+[tool.ruff]
+line-length = 96
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",         # pyflakes
+    "I",         # isort
+    "N",         # pep8-naming
+    "UP",        # pyupgrade
+    "B",         # bugbear
+    "C4",        # comprehensions
+    "SIM",       # simplify
+    "RUF",       # ruff
+    "ASYNC",     # async correctness
+    "S",         # bandit
+    "PTH",       # use pathlib
+]
+ignore = [
+    "S101",    # assert is fine in tests and in invariant checks
+    "S603",    # subprocess call: we always pass a list, never a shell string
+    "S607",    # partial executable path: systemctl/loginctl come from PATH by design
+    "N818",    # exception naming
+    "RUF001",  # Turkish strings legitimately contain dotless i and other letters
+    "RUF002",  # the same, inside docstrings
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "N802"]
+"dev/**" = ["S", "T201"]
+"src/biokids_core/migrations/**" = ["N999", "E501"]
+# The recovery wordlist is one long implicit concatenation; splitting it to fit
+# the line limit would make it much harder to audit for duplicates.
+"src/biokids_core/security.py" = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+# ---------------------------------------------------------------- mypy
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unreachable = true
+mypy_path = "src"
+packages = ["biokids_core", "biokids_daemon"]
+exclude = ["src/biokids_core/migrations/"]
+
+[[tool.mypy.overrides]]
+module = ["dbus_next.*", "qrcode.*", "argon2.*"]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------- pytest
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+asyncio_mode = "auto"
+markers = [
+    "linux_only: test requires a Linux host (logind, BOOTTIME, unix sockets)",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/migrations/*", "*/__main__.py"]
