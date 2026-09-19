@@ -17,6 +17,11 @@ Vcs-Browser: https://github.com/bilalgurkansanli/biokids
 
 Package: biokids
 Architecture: all
+# Its own description calls it a metapackage, and it ships no files at all, so
+# it belongs in the section reserved for them rather than inheriting `admin`
+# from the source stanza. dev/check_packaging.py uses this to tell a package
+# that ships nothing on purpose from one whose .install file was forgotten.
+Section: metapackages
 Depends: biokids-core (= ${binary:Version}),
          biokids-daemon (= ${binary:Version}),
          biokids-panel (= ${binary:Version}),

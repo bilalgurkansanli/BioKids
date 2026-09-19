@@ -894,6 +894,7 @@ async def test_an_end_action_that_keeps_failing_escalates_to_lockdown(
     assert entries, "three failures in a row take the D-106 path"
     assert entries[0].severity == "alert"
 
+
 # ------------------------------------------------- earned time, and saying so
 
 

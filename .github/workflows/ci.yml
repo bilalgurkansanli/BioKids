@@ -42,6 +42,13 @@ jobs:
       - name: i18n catalogs are in sync
         run: python dev/check_i18n.py
 
+      # Runs here rather than only in the build job, because the two mistakes it
+      # catches are cheap to make and expensive to find: an .install glob that
+      # matches nothing fails the whole build, and a file nothing installs
+      # produces a perfectly green build that does not work.
+      - name: the packaging names only things that exist
+        run: python dev/check_packaging.py
+
       - name: pytest
         run: pytest --cov=biokids_core --cov=biokids_daemon --cov-report=term-missing
 

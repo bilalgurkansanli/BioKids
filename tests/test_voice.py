@@ -876,6 +876,7 @@ async def test_status_explains_a_quiet_machine(voice_config: Config, stub: Synth
     assert status["queue_depth"] == 3
     assert status["quiet_now"] is False
 
+
 # ---------------------------------------------------- the engine that is there
 
 
@@ -1010,4 +1011,3 @@ def test_espeak_writing_nothing_is_a_synth_error_not_an_empty_file(
             VoiceSpec(persona="zio", locale="tr", profile_id="stock:zio:tr"),
             tmp_path / "out.wav",
         )
-

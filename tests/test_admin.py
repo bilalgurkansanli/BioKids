@@ -315,9 +315,7 @@ def test_provision_child_reports_a_missing_account_rather_than_pretending(
     must not print "done" over a child who still cannot log in.
     """
     code = admin.cmd_provision_child(
-        argparse.Namespace(
-            unix_user="nobody-here", name="", no_create=True, overwrite=False
-        ),
+        argparse.Namespace(unix_user="nobody-here", name="", no_create=True, overwrite=False),
         config,
     )
     assert code == 1

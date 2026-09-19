@@ -1032,9 +1032,7 @@ def test_locking_and_powering_off_report_back_too(
     login(client)
     token = csrf_of(client)
 
-    locked = client.post(
-        "/children/1/lock", data={"csrf_token": token}, follow_redirects=True
-    )
+    locked = client.post("/children/1/lock", data={"csrf_token": token}, follow_redirects=True)
     assert "kilitlendi" in locked.text
 
     off = client.post(

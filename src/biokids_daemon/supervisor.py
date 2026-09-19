@@ -314,9 +314,7 @@ class Supervisor:
             # leave `warned` full, so the extra time ran out in silence and the
             # machine shut down with no warning at all. The set is cheap and the
             # ledger only marks the child dirty when it actually changes.
-            self.ledger.rearm_warnings(
-                runtime.child_id, result.day, decision.remaining_seconds
-            )
+            self.ledger.rearm_warnings(runtime.child_id, result.day, decision.remaining_seconds)
             await self._act(runtime, seen, decision, result.day, reading.boot)
             self._publish_tick(runtime, seen, decision, state)
             runtime.last_decision = decision

@@ -259,9 +259,7 @@ def test_provision_of_an_existing_user_leaves_the_account_alone(
     assert len(result.files_written) == 3
 
 
-def test_the_audit_detail_carries_what_went_wrong(
-    with_user: Any, config: Config
-) -> None:
+def test_the_audit_detail_carries_what_went_wrong(with_user: Any, config: Config) -> None:
     """The panel writes this into the log; it is how a parent learns to repair it."""
     result = prov.provision("ayse", "Ayşe", config)
 
