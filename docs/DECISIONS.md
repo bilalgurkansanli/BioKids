@@ -750,3 +750,33 @@ child forty more minutes that ran out in complete silence, ending in a shutdown 
 warning at all. Re-arming every tick makes the warning set a function of the current
 remaining time rather than of how it got there. The ledger only marks the child dirty
 when the set actually changes, so the cost is a set comparison.
+**D-134 [claude] The child's screens get their own strings, not the panel's.**
+Two failure screens reused `error.unknown` and `error.daemon_unreachable`, which are
+written for a parent: formal address, and in one case "try restarting the computer" —
+advice a six-year-old can neither follow nor should. The time-up screen had the same
+shape of bug from the other direction: it announced a shutdown for all three end
+actions (D-43), so a child told to save their work watched the screen merely lock, and
+learned that the sentence is not true. The daemon knew which action was configured and
+simply never sent it; `shell_state` now does.
+
+**D-135 [claude] Every button says what happened, and the child's screens name no
+parent.** Two findings from the same sweep: a list of catalogue strings that exist,
+are translated, and are rendered by nothing. That list is worth re-running — it is how
+both of these surfaced, and `dev/check_i18n.py` cannot catch them, because a string
+nobody uses is not a string that is missing.
+
+"+10 dk", "Lock" and "Turn off" redirected to `/today?granted=1`, `?locked=1`,
+`?poweroff=1`, `?error=daemon` — and `today.html` read none of them. The parent pressed
+the button, the page reloaded, and nothing said whether it worked. The failure case is
+the one that matters: a grant that never reached a stopped daemon looked exactly like a
+grant that worked, so a parent walked away believing their child had ten more minutes.
+`today.grant.done` and its two siblings had been sitting translated in both catalogues,
+never rendered.
+
+The blocked screen's one button said "Anneme sor" — ask my mum. `/ask-a-parent` is
+parent-neutral: BioKids has a single parent account and the request goes to whoever
+holds it. A child whose account holder is their father, or who has no mother, was sent
+to find someone who is not there. `shell.blocked.ask_father` existed and was never
+rendered, which is a second button that was planned and never added — and two gendered
+buttons doing the same thing would have been the wrong fix. The body of that screen
+already said "you can ask a grown-up"; the button now agrees with it.

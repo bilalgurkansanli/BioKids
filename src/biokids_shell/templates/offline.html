@@ -10,5 +10,8 @@
   #}
   <div class="tile__icon" style="font-size:5rem" aria-hidden="true">🌙</div>
   <h1>{{ _('shell.locked.title') }}</h1>
-  <p>{{ _('error.daemon_unreachable') }}</p>
+  {# The panel's version of this tells the reader to restart the machine and
+     addresses them as "siz". Both are right for a parent and wrong for a
+     six-year-old, who can do nothing about it except find someone. #}
+  <p>{{ _('shell.error.offline') }}</p>
 {% endblock %}

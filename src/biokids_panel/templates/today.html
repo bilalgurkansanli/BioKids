@@ -3,6 +3,15 @@
 
 {% block content %}
   <h1>{{ _('today.title') }}</h1>
+  {% if notice %}
+    {# The outcome of the button the parent just pressed. A failure has to be
+       loud: a grant that never reached a stopped daemon otherwise looks
+       exactly like one that worked. #}
+    <div class="notice notice--{{ notice.tone }}"
+         role="{{ 'alert' if notice.tone == 'danger' else 'status' }}">
+      {{ notice.text }}
+    </div>
+  {% endif %}
   <div id="cards">
     {% include "partials/child_cards.html" %}
   </div>

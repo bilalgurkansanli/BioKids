@@ -5,7 +5,16 @@
 {% block title %}{{ _('shell.timeup.title') }}{% endblock %}
 {% block inner %}
   <h1>{{ _('shell.timeup.title') }}</h1>
-  <p>{{ _('shell.timeup.body') }}</p>
+  {# One of three end actions, and the child is told which. Saying "the
+     computer will shut down" when the screen will merely lock costs the
+     sentence its credibility the second time it is read. An unknown or missing
+     action falls back to the neutral wording rather than guessing. #}
+  {% set end_action = state.end_action | default('', true) %}
+  {% if end_action in ('poweroff', 'lock', 'logout') %}
+    <p>{{ _('shell.timeup.body.' ~ end_action) }}</p>
+  {% else %}
+    <p>{{ _('shell.timeup.body') }}</p>
+  {% endif %}
   {% if state.countdown_seconds %}
     <p class="countdown" id="countdown" data-seconds="{{ state.countdown_seconds }}">
       {{ _('shell.timeup.countdown', seconds=state.countdown_seconds) }}

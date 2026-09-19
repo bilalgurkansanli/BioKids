@@ -23,7 +23,7 @@ import contextlib
 import datetime as dt
 import json
 import logging
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Iterator, Sequence
 from typing import Annotated, Any
 from urllib.parse import quote
 
@@ -127,6 +127,45 @@ def see_other(url: str) -> RedirectResponse:
 
 def _needs_setup(session: Session) -> bool:
     return not repo.setup_complete(session)
+
+
+def _action_notice(
+    request: Request, tr: Translator, children: Sequence[dict[str, Any]]
+) -> dict[str, str] | None:
+    """What to tell the parent about the button they just pressed.
+
+    The three actions redirect here with their outcome in the query string, and
+    for a long time nothing read it: the page reloaded and said nothing, so a
+    grant that never reached a stopped daemon was indistinguishable from one
+    that worked. The sentence is assembled here rather than in the template
+    because it needs the child's name and a translation, and templates are a bad
+    place to keep either.
+    """
+    query = request.query_params
+
+    failure = query.get("error", "")
+    if failure:
+        key = "error.daemon_unreachable" if failure == "daemon" else "error.save_failed"
+        return {"tone": "danger", "text": tr(key)}
+
+    def name_of(raw: str) -> str:
+        try:
+            wanted = int(raw)
+        except ValueError:
+            return ""
+        for child in children:
+            if int(child.get("child_id", 0)) == wanted:
+                return str(child.get("display_name", ""))
+        return ""
+
+    for flag, key in (("granted", "today.grant.done"), ("locked", "today.lock.done")):
+        raw = query.get(flag, "")
+        if raw:
+            return {"tone": "ok", "text": tr(key, name=name_of(raw))}
+
+    if query.get("poweroff"):
+        return {"tone": "ok", "text": tr("today.poweroff.done")}
+    return None
 
 
 def _guard(
@@ -284,6 +323,7 @@ def register_routes(app: FastAPI) -> None:
         if blocked:
             return blocked
         status, reachable = _daemon_status(ctx, session)
+        children = status.get("children", [])
         return render(
             ctx,
             request,
@@ -291,8 +331,9 @@ def register_routes(app: FastAPI) -> None:
             state,
             tr,
             "today.html",
-            children=status.get("children", []),
+            children=children,
             daemon_up=reachable,
+            notice=_action_notice(request, tr, children),
         )
 
     @app.get("/today/cards", response_class=HTMLResponse)
@@ -355,7 +396,7 @@ def register_routes(app: FastAPI) -> None:
         ok = _call_daemon(
             ctx, Op.GRANT_TIME, child_id=child_id, seconds=seconds, actor=_actor(state)
         )
-        return see_other("/today?granted=1" if ok else "/today?error=daemon")
+        return see_other(f"/today?granted={child_id}" if ok else "/today?error=daemon")
 
     @app.post("/children/{child_id}/lock")
     def lock_now(
@@ -372,7 +413,7 @@ def register_routes(app: FastAPI) -> None:
         if not auth.csrf_ok(state, csrf_token):
             return see_other("/today?error=csrf")
         ok = _call_daemon(ctx, Op.LOCK_NOW, child_id=child_id, actor=_actor(state))
-        return see_other("/today?locked=1" if ok else "/today?error=daemon")
+        return see_other(f"/today?locked={child_id}" if ok else "/today?error=daemon")
 
     @app.post("/children/{child_id}/poweroff")
     def poweroff(

@@ -32,7 +32,23 @@
   {% set fraction = (remaining / quota) if quota > 0 else 0 %}
   {% set tone = 'danger' if fraction <= 0.10 else ('warn' if fraction <= 0.25 else 'ok') %}
 
-  <article class="card child-card" data-child="{{ child.child_id }}">
+  {#
+    The three attributes live.js reads. They are written here, in the template,
+    so that the strings it substitutes are the translated ones: a countdown
+    assembled in JavaScript would be an English sentence in a Turkish product,
+    and a second implementation of a number the daemon already sends.
+
+    `data-label-remaining` is deliberately absent for a child who is not
+    managed or whose state is unknown. live.js then leaves the text alone, and
+    the server's sentence - "no rules are set for this user" - survives instead
+    of being replaced by a countdown for a child nobody is counting.
+  #}
+  <article class="card child-card" data-child="{{ child.child_id }}"
+           data-quota="{{ quota }}"
+           {% if child.managed and not child.unknown %}
+           data-label-remaining="{{ _('today.remaining', minutes='{minutes}') }}"
+           data-label-time-up="{{ _('today.time_up') }}"
+           {% endif %}>
     <div class="child-card__head">
       <span class="avatar" aria-hidden="true">{{ child.avatar|avatar }}</span>
       <span class="child-card__name">{{ child.display_name }}</span>

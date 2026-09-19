@@ -153,11 +153,8 @@ msgstr "Burası senin için değil"
 msgid "shell.blocked.body"
 msgstr "Bu sayfayı açamıyoruz. İstersen bir büyüğüne sorabilirsin."
 
-msgid "shell.blocked.ask_mother"
-msgstr "Anneme sor"
-
-msgid "shell.blocked.ask_father"
-msgstr "Babama sor"
+msgid "shell.blocked.ask"
+msgstr "Büyüğüme sor"
 
 msgid "shell.blocked.asked"
 msgstr "Sorduk! Cevap gelince haber vereceğiz."
@@ -175,7 +172,22 @@ msgid "shell.timeup.title"
 msgstr "Bugünlük bu kadar"
 
 msgid "shell.timeup.body"
+msgstr "İşini kaydet. Bugünlük süren doldu."
+
+msgid "shell.timeup.body.poweroff"
 msgstr "İşini kaydet. Bilgisayar birazdan kapanacak."
+
+msgid "shell.timeup.body.lock"
+msgstr "İşini kaydet. Ekran birazdan kilitlenecek."
+
+msgid "shell.timeup.body.logout"
+msgstr "İşini kaydet. Oturumun birazdan kapanacak."
+
+msgid "shell.error.unknown"
+msgstr "Bir şey ters gitti. Tekrar dene."
+
+msgid "shell.error.offline"
+msgstr "BioKids şu an cevap vermiyor. Bir büyüğüne söyle."
 
 msgid "shell.timeup.countdown"
 msgstr "{seconds} saniye"

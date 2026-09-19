@@ -33,7 +33,12 @@
     {% if tailscale.public %}
       <div class="notice notice--danger" role="alert">
         <div class="notice__title">{{ _('remote.funnel_warning') }}</div>
-        <p class="small">{{ _('remote.no_port_forward') }}</p>
+        {# The alarm is about Funnel, so the advice has to be about Funnel. It
+           used to say "do not forward ports on your modem", which the parent
+           has not done - they go and look at their router, find nothing, and
+           conclude the warning is spurious. #}
+        <p class="small">{{ _('remote.funnel_warning.help') }}</p>
+        <p class="small"><code>sudo tailscale funnel off</code></p>
       </div>
     {% endif %}
 

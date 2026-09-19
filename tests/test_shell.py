@@ -307,7 +307,11 @@ def test_the_block_screen_never_shows_a_url_or_an_error_code(client: TestClient)
     assert "example.com" not in visible
     assert "filter.blocked" not in visible
     assert "http" not in visible
-    assert "Anneme sor" in visible
+    # Parent-neutral on purpose: BioKids has one parent account, and naming
+    # the mother sends a child whose account holder is their father looking for
+    # someone who is not there.
+    assert "Büyüğüme sor" in visible
+    assert "Anneme" not in visible and "Babama" not in visible
     assert 'value="https://example.com/bad"' in page, "but the request still carries it"
 
 
@@ -364,8 +368,69 @@ def test_the_launcher_holds_when_the_daemon_is_gone(config: Config) -> None:
     client = TestClient(app)
 
     page = client.get("/").text
-    assert "Boya" not in page
-    assert "BioKids servisine ulaşılamıyor" in page
+    assert "Boya" not in page, "no application may be launchable with nothing supervising"
+    assert "cevap vermiyor" in page, "the child is told why there is nothing here"
+
+
+def test_the_launcher_does_not_address_a_six_year_old_as_siz(config: Config) -> None:
+    """This screen used to borrow the panel's sentence, and the panel means a parent.
+
+    That sentence is formal - correct for a parent - and it tells the reader to
+    restart the machine, which a six-year-old can neither do nor should. The
+    shared string stays as it is; the child's screen gets its own words.
+    """
+    app = create_app(config)
+    app.state.shell.client = FakeShellDaemon(None)  # type: ignore[assignment]
+    page = TestClient(app).get("/").text
+
+    assert "deneyin" not in page, "the child is addressed as 'siz'"
+    assert "yeniden başlat" not in page, "advice only a parent can act on"
+    assert "büyüğüne" in page, "a child with nothing working needs a person, not a command"
+
+
+def test_the_time_up_screen_says_what_will_actually_happen(
+    config: Config, daemon: FakeShellDaemon
+) -> None:
+    """Three end actions (D-43), and the screen used to announce the same one.
+
+    A child told to save because the computer is about to shut down, whose
+    screen then merely locks, has learned that the warning is not true - which
+    is the one thing this screen cannot afford, because the next time it says it
+    the machine really will power off.
+    """
+    assert daemon.data is not None
+    wording = {}
+    for action in ("poweroff", "lock", "logout"):
+        daemon.data.update(
+            allow=False,
+            reason_code="quota.exhausted",
+            end_action=action,
+            countdown_seconds=90,
+        )
+        app = create_app(config)
+        app.state.shell.client = daemon  # type: ignore[assignment]
+        wording[action] = TestClient(app).get("/").text
+
+    assert "kapanacak" in wording["poweroff"]
+    assert "kilitlenecek" in wording["lock"], "a lock was announced as a shutdown"
+    assert "kapanacak" not in wording["lock"]
+    assert "Oturumun" in wording["logout"]
+
+
+def test_an_unknown_end_action_falls_back_rather_than_guessing(
+    config: Config, daemon: FakeShellDaemon
+) -> None:
+    """A daemon that sent no end action must not make the screen claim one."""
+    assert daemon.data is not None
+    daemon.data.update(
+        allow=False, reason_code="quota.exhausted", end_action="", countdown_seconds=90
+    )
+    app = create_app(config)
+    app.state.shell.client = daemon  # type: ignore[assignment]
+    page = TestClient(app).get("/").text
+
+    assert "süren doldu" in page
+    assert "kapanacak" not in page and "kilitlenecek" not in page
 
 
 def test_english_renders_for_an_english_child(

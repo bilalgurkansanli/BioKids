@@ -153,11 +153,8 @@ msgstr "This is not for you"
 msgid "shell.blocked.body"
 msgstr "We cannot open this page. You can ask a grown-up if you like."
 
-msgid "shell.blocked.ask_mother"
-msgstr "Ask mum"
-
-msgid "shell.blocked.ask_father"
-msgstr "Ask dad"
+msgid "shell.blocked.ask"
+msgstr "Ask a grown-up"
 
 msgid "shell.blocked.asked"
 msgstr "We asked! We will tell you when there is an answer."
@@ -175,7 +172,22 @@ msgid "shell.timeup.title"
 msgstr "That is it for today"
 
 msgid "shell.timeup.body"
-msgstr "Save your work. The computer will shut down shortly."
+msgstr "Save your work. That is all the time for today."
+
+msgid "shell.timeup.body.poweroff"
+msgstr "Save your work. The computer will turn off in a moment."
+
+msgid "shell.timeup.body.lock"
+msgstr "Save your work. The screen will lock in a moment."
+
+msgid "shell.timeup.body.logout"
+msgstr "Save your work. You will be signed out in a moment."
+
+msgid "shell.error.unknown"
+msgstr "Something went wrong. Try again."
+
+msgid "shell.error.offline"
+msgstr "BioKids is not answering right now. Tell a grown-up."
 
 msgid "shell.timeup.countdown"
 msgstr "{seconds} seconds"

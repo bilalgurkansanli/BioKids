@@ -593,6 +593,87 @@ def test_the_today_screen_shows_a_childs_remaining_time(
     assert "TuxPaint" in page
 
 
+def test_the_today_card_carries_what_live_js_reads(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    """live.js reads three attributes off the card; the template must write them.
+
+    Each absence had its own visible consequence, and none of them raised
+    anything: without `data-label-remaining` the updater fell back to a bare
+    "{minutes}" and the tick after page load replaced "42 dk kaldi" with "42";
+    without `data-quota` the ring returned early and stayed frozen while the
+    number under it counted down.
+
+    Asserted as a contract rather than through a browser, because the failure
+    mode is a missing attribute, not broken JavaScript.
+    """
+    daemon.status = {
+        "children": [
+            {
+                "child_id": 1,
+                "display_name": "Elif",
+                "avatar": "fox",
+                "managed": True,
+                "online": True,
+                "app": "TuxPaint",
+                "remaining_seconds": 42 * 60,
+                "remaining_minutes": 42,
+                "quota_seconds": 60 * 60,
+                "granted_seconds": 0,
+                "used_seconds": 18 * 60,
+                "allow": True,
+                "reason_code": "allowed",
+                "end_action": "poweroff",
+            }
+        ]
+    }
+    login(client)
+    page = client.get("/today").text
+
+    assert 'data-quota="3600"' in page, "the ring cannot move without the quota"
+    assert "data-label-remaining=" in page
+    assert "dk kald" in page, "the live label has to carry the Turkish, not just a number"
+    assert "{minutes}" in page, "live.js substitutes into the translated sentence"
+    assert "data-label-time-up=" in page
+
+
+def test_an_unmanaged_child_is_not_given_a_countdown_by_the_live_updater(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    """No label means the server owns the line.
+
+    A child with no policy shows "no rules are set for this user". Handing
+    live.js a label would let the next tick overwrite that with minutes
+    remaining - inventing supervision that is not happening, on the one screen
+    a parent trusts to tell them whether it is.
+    """
+    daemon.status = {
+        "children": [
+            {
+                "child_id": 1,
+                "display_name": "Elif",
+                "avatar": "fox",
+                "managed": False,
+                "online": True,
+                "app": "",
+                "remaining_seconds": 0,
+                "remaining_minutes": 0,
+                "quota_seconds": 0,
+                "granted_seconds": 0,
+                "used_seconds": 0,
+                "allow": True,
+                "reason_code": "allowed",
+                "end_action": "poweroff",
+            }
+        ]
+    }
+    login(client)
+    page = client.get("/today").text
+
+    assert "kural tan" in page, "the parent is told there are no rules"
+    assert "data-label-remaining=" not in page, "live.js would overwrite that sentence"
+
+
 def test_the_audit_view_renders_and_filters(
     client: TestClient, family_ready: None, db: Database
 ) -> None:
@@ -878,3 +959,97 @@ def test_changing_an_existing_passphrase_needs_the_old_one(
         parent = repo.get_parent(session)
         assert parent is not None
         assert security.verify_secret(parent.passphrase_hash, PASSPHRASE)
+
+
+# ------------------------------------------------- what the buttons report back
+
+
+def _one_child(daemon: FakeDaemon) -> None:
+    daemon.status = {
+        "children": [
+            {
+                "child_id": 1,
+                "display_name": "Elif",
+                "avatar": "fox",
+                "managed": True,
+                "online": True,
+                "app": "",
+                "remaining_seconds": 42 * 60,
+                "remaining_minutes": 42,
+                "quota_seconds": 60 * 60,
+                "granted_seconds": 0,
+                "used_seconds": 18 * 60,
+                "allow": True,
+                "reason_code": "allowed",
+                "end_action": "poweroff",
+            }
+        ]
+    }
+
+
+def test_granting_time_tells_the_parent_it_worked(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    """The three buttons redirect with their outcome, and nothing rendered it."""
+    _one_child(daemon)
+    login(client)
+    response = client.post(
+        "/children/1/grant",
+        data={"minutes": 10, "csrf_token": csrf_of(client)},
+        follow_redirects=True,
+    )
+    assert "10 dakika eklendi" in response.text
+    assert "Elif" in response.text
+
+
+def test_a_grant_that_never_reached_the_daemon_does_not_look_like_success(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    """The dangerous half. Silence and success were the same page.
+
+    A parent presses "+10 dk" with the daemon stopped, the page reloads
+    unchanged, and they walk away believing their child has ten more minutes.
+    """
+    _one_child(daemon)
+    login(client)
+    token = csrf_of(client)
+    daemon.up = False
+
+    response = client.post(
+        "/children/1/grant",
+        data={"minutes": 10, "csrf_token": token},
+        follow_redirects=True,
+    )
+
+    assert "ulaşılamıyor" in response.text, "a failed grant said nothing at all"
+    assert "dakika eklendi" not in response.text
+
+
+def test_locking_and_powering_off_report_back_too(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    _one_child(daemon)
+    login(client)
+    token = csrf_of(client)
+
+    locked = client.post(
+        "/children/1/lock", data={"csrf_token": token}, follow_redirects=True
+    )
+    assert "kilitlendi" in locked.text
+
+    off = client.post(
+        "/children/1/poweroff",
+        data={"confirm": "yes", "csrf_token": token},
+        follow_redirects=True,
+    )
+    assert "kapatılıyor" in off.text
+
+
+def test_a_plain_today_carries_no_notice(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    """A banner that is always there is a banner nobody reads."""
+    _one_child(daemon)
+    login(client)
+    page = client.get("/today").text
+    assert "notice--ok" not in page

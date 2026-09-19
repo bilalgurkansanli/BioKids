@@ -50,9 +50,20 @@
     var card = cardFor(data.child_id);
     if (!card) return;
 
-    if (typeof data.remaining_minutes === "number") {
-      var label = card.getAttribute("data-label-remaining") || "{minutes}";
-      text(card, "remaining", label.replace("{minutes}", data.remaining_minutes));
+    /* No label means the server owns this line: an unmanaged child, or one
+     * whose state the daemon could not report. Writing a countdown over
+     * "no rules are set for this user" would invent supervision that is not
+     * happening, which is worse than a number going stale. */
+    var label = card.getAttribute("data-label-remaining");
+    if (label && typeof data.remaining_minutes === "number") {
+      var timeUp = card.getAttribute("data-label-time-up");
+      text(
+        card,
+        "remaining",
+        data.remaining_minutes <= 0 && timeUp
+          ? timeUp
+          : label.replace("{minutes}", data.remaining_minutes)
+      );
     }
     if (typeof data.remaining_seconds === "number") {
       updateRing(card, data.remaining_seconds, Number(card.getAttribute("data-quota")) || 0);
