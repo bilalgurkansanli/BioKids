@@ -425,9 +425,7 @@ async def test_a_child_cannot_reach_another_childs_state(
     assert response.data["display_name"] == "Elif"
 
 
-async def test_a_child_cannot_grant_themselves_time(
-    machine: Machine, clock: FakeClock
-) -> None:
+async def test_a_child_cannot_grant_themselves_time(machine: Machine, clock: FakeClock) -> None:
     """The privileged operations are simply not on the launcher's socket."""
     complete_the_wizard(machine.panel, QUOTA_MINUTES)
     await machine.boot()
