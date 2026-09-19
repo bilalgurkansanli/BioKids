@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import shutil
 import subprocess
 from collections.abc import Sequence
@@ -30,6 +31,10 @@ from pathlib import Path
 from typing import Any
 
 from biokids_core.config import Config, get_config
+
+UNIX_USER_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
+"""What the panel already enforces when a parent types a user name. Repeated
+here because this module interpolates it into a systemd unit name."""
 
 # `pwd` is POSIX-only and typeshed says so, so it is reached through a module
 # shim rather than spelled out: `mypy --strict` runs on the Windows host this
@@ -230,6 +235,79 @@ def _own(path: Path, uid: int, gid: int) -> None:
     chown = getattr(os, "chown", None)
     if chown is not None:
         chown(path, uid, gid)
+
+
+PROVISION_UNIT = "biokids-provision@{user}.service"
+"""The unit that does this on a packaged machine. See `provision_via_systemd`."""
+
+
+def systemd_escape(value: str) -> str:
+    """`%i` for a Unix user name.
+
+    Usernames are `[a-z_][a-z0-9_-]*` (UNIX_USER_RE in the panel), and of those
+    characters only `-` is special to systemd, escaped as `\x2d`. Everything
+    else passes through, which keeps the unit name readable in `journalctl`.
+    Anything outside that set never reaches here, because `provision_via_systemd`
+    refuses it.
+    """
+    return value.replace("-", r"\x2d")
+
+
+def provision_via_systemd(
+    unix_user: str,
+    *,
+    timeout: float = 150.0,
+) -> ProvisionResult | None:
+    """Ask `biokids-provision@<user>.service` to do it, or return None.
+
+    The panel runs under `ProtectSystem=strict` and `ProtectHome=yes`, so it
+    cannot write /etc/passwd or the child's home directory itself, and widening
+    that sandbox would trade a real bound on every other panel bug for this one
+    feature. The privileged half lives in its own unit instead.
+
+    Returns None when there is no systemd to ask - a developer running the panel
+    by hand, the test suite, a container - so the caller can fall back to doing
+    the work in-process, which is what `biokids-admin provision-child` does and
+    what the unit itself ends up running.
+    """
+    if not UNIX_USER_RE.match(unix_user):
+        # Never interpolated into a unit name unchecked. A name that cannot be a
+        # Unix user cannot be a child either.
+        return ProvisionResult(
+            unix_user=unix_user, problems=[f"{unix_user!r} is not a valid user name"]
+        )
+
+    systemctl = _find("systemctl")
+    if systemctl is None:
+        return None
+
+    unit = PROVISION_UNIT.format(user=systemd_escape(unix_user))
+    try:
+        finished = subprocess.run(
+            [systemctl, "start", "--wait", unit],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return ProvisionResult(unix_user=unix_user, problems=[f"{unit}: {exc}"])
+
+    if finished.returncode != 0:
+        detail = (finished.stderr or finished.stdout).strip()[:300]
+        return ProvisionResult(
+            unix_user=unix_user,
+            problems=[f"{unit} failed: {detail or f'exit {finished.returncode}'}"],
+        )
+
+    # The unit ran the same code this module exposes, so its outcome is on disk:
+    # read it back rather than parsing the journal.
+    result = ProvisionResult(unix_user=unix_user)
+    result.account_existed = account_exists(unix_user)
+    result.account_created = result.account_existed
+    if not result.account_existed:
+        result.problems.append(f"{unit} reported success but {unix_user} still does not exist")
+    return result
 
 
 def provision(

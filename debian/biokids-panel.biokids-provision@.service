@@ -1,0 +1,47 @@
+[Unit]
+# Creating a child's Unix account, in a unit of its own.
+#
+# The panel cannot do this itself, and must not be changed so that it can. Its
+# sandbox (SECURITY.md section 2) is ProtectSystem=strict and ProtectHome=yes,
+# so /etc is read-only and /home is an empty tmpfs: `adduser` fails with EROFS
+# and the child's dotfiles cannot be written. Relaxing that would mean
+# ReadWritePaths=/etc /home and ProtectHome=no on a process that also serves
+# HTTP, which trades a real bound on every other panel bug for one feature.
+#
+# So the privileged part is here instead, where it is one command with one
+# argument that does one thing. `biokids-admin provision-child` validates the
+# user name, refuses anything that is not a configured child, and is idempotent
+# (D-130), so a repeated or malformed start achieves nothing.
+#
+# %i is the child's Unix user name, systemd-escaped by the caller.
+Description=Prepare the Unix account and session for BioKids child %i
+Documentation=man:biokids-admin(8)
+After=biokids-daemon.service
+# Nothing here is worth starting the machine's whole graphical stack for, and a
+# failure must reach the parent through the panel's audit log, not through a
+# unit that hangs a boot.
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+ExecStart=/usr/bin/biokids-admin provision-child %i
+
+# Deliberately unsandboxed, and deliberately tiny. Writing /etc/passwd,
+# /etc/shadow and /home/%i is the entire job; a sandbox that allowed those would
+# be a sandbox that allowed the thing we are worried about. What bounds this
+# unit is that it runs one fixed command, not that it runs it in a cage.
+#
+# It still gets the cheap restrictions that cost nothing here.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+MemoryDenyWriteExecute=yes
+
+# adduser can be slow on a machine that is also installing packages, and a
+# parent is watching a spinner while this runs.
+TimeoutStartSec=120

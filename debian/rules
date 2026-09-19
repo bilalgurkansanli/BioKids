@@ -124,6 +124,11 @@ override_dh_python3:
 #     debian/biokids-daemon.biokids-daemon.service, find nothing, and ship a
 #     daemon package with no unit at all.
 #
+# biokids-provision@.service is a template and gets the same treatment for the
+# same reason: --name= picks the source filename, --no-enable/--no-start because
+# a template has no instance to start, and biokids-panel.service is then named
+# positionally so --remaining-packages does not act on the template.
+#
 #   * the second call names biokids-daemon.service as a positional argument
 #     instead. That keeps the generated enable/start snippets scoped to it;
 #     without the argument dh_installsystemd acts on every unit already in the
@@ -132,6 +137,8 @@ override_dh_python3:
 override_dh_installsystemd:
 	dh_installsystemd -pbiokids-daemon --name=biokids-lockdown --no-enable --no-start
 	dh_installsystemd -pbiokids-daemon biokids-daemon.service
+	dh_installsystemd -pbiokids-panel --name=biokids-provision@ --no-enable --no-start
+	dh_installsystemd -pbiokids-panel biokids-panel.service
 	dh_installsystemd --remaining-packages
 
 # The shell and the voice service belong to a child's session and are enabled

@@ -884,3 +884,30 @@ falls back to `Config()`; it needs almost nothing from the file, and locking aga
 the default database path is worth far more than not locking. Every other subcommand
 still refuses a file it cannot read, because guessing is the wrong answer when nobody
 is in danger.
+
+**D-142 [claude] Creating a child's Unix account lives in its own unit, not in the
+panel's sandbox.** The panel runs under `ProtectSystem=strict` and `ProtectHome=yes`
+(SECURITY.md §2), so `/etc` is read-only and `/home` is an empty tmpfs: `adduser` fails
+with EROFS and the child's dotfiles cannot be written. Provisioning moved into the
+panel in D-130 and nobody went back to the unit, so on a real `.deb` install the parent
+finished the wizard, set a quota, rebooted, and there was no avatar on the greeter at
+all. That is the Phase 0 exit criterion, and it could not be met as packaged.
+
+The fix is **not** to widen the sandbox. `ReadWritePaths=/etc /home` plus
+`ProtectHome=no` on a process that also serves HTTP trades a real bound on every other
+panel bug for one feature. Instead `biokids-provision@.service` runs one fixed command
+with one argument — `biokids-admin provision-child %i` — and the panel reaches it with
+`systemctl start --wait`. The unit is deliberately unsandboxed, because writing
+`/etc/passwd` and `/home/<child>` is the whole job and a sandbox permitting those would
+permit the thing we are worried about; what bounds it is that it does exactly one
+thing. The instance name is checked against `UNIX_USER_RE` and `-` escaped as `\x2d`
+before it is interpolated, because it becomes a unit name.
+
+`provision_via_systemd` returns `None` when there is no systemd to ask, and the caller
+then does the work in-process — which is what `biokids-admin provision-child` itself
+does, and what the unit ends up running. So a developer running the panel by hand, and
+the test suite, still get a child.
+
+Whether a unit with `ProtectSystem=strict` and `SystemCallFilter=@system-service` can
+reach systemd at all is the first thing to check on the VM; it is expected to work, and
+`debian/README.source` §7 item 1 says what the symptom is if it does not.

@@ -16,6 +16,7 @@ honest about not having worked.
 
 from __future__ import annotations
 
+import pathlib
 from pathlib import Path
 from typing import Any
 
@@ -313,3 +314,98 @@ def test_nothing_above_the_home_directory_is_touched(
         assert Path(path) == home or home in Path(path).parents, (
             f"chowned {path}, which is outside the child's home"
         )
+
+
+# --------------------------------------------- the sandbox the panel really runs in
+
+
+def test_the_panel_unit_cannot_write_etc_or_home() -> None:
+    """The reason provisioning had to move out of the panel process.
+
+    `ProtectSystem=strict` makes the hierarchy read-only except ReadWritePaths,
+    and `ProtectHome=yes` mounts an empty tmpfs over /home. So `adduser` fails
+    with EROFS and the child's dotfiles cannot be written — on a real .deb
+    install the parent finished the wizard and there was no account at all.
+
+    Asserted on the unit file, because that is where the constraint lives and
+    because nothing else in the suite reads it.
+    """
+    root = pathlib.Path(__file__).resolve().parent.parent
+    unit = (root / "debian/biokids-panel.service").read_text(encoding="utf-8")
+    rw = [line for line in unit.splitlines() if line.startswith("ReadWritePaths=")]
+
+    assert "ProtectSystem=strict" in unit
+    assert "ProtectHome=yes" in unit
+    assert rw, "the unit stopped declaring ReadWritePaths"
+    assert "/etc " not in rw[0] and not rw[0].rstrip().endswith("/etc"), (
+        "the panel was given /etc; the whole point of the provision unit was not to"
+    )
+    assert "/home" not in rw[0], "the panel was given /home"
+
+
+def test_the_provision_unit_runs_one_fixed_command() -> None:
+    """Its safety is that it does one thing, not that it is sandboxed.
+
+    It cannot be sandboxed: writing /etc/passwd and /home/<child> is the job. So
+    what bounds it is the command line — one argument, which
+    `provision_via_systemd` has already checked against UNIX_USER_RE.
+    """
+    root = pathlib.Path(__file__).resolve().parent.parent
+    unit = (root / "debian/biokids-panel.biokids-provision@.service").read_text(
+        encoding="utf-8"
+    )
+
+    execs = [line for line in unit.splitlines() if line.startswith("ExecStart=")]
+    assert execs == ["ExecStart=/usr/bin/biokids-admin provision-child %i"], execs
+    assert "Type=oneshot" in unit, "the panel waits for it; it has to be oneshot"
+    assert "NoNewPrivileges=yes" in unit
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["../../etc/passwd", "root; rm -rf /", "elif ali", "", "Elif", "a" * 40],
+)
+def test_a_name_that_is_not_a_user_never_reaches_systemd(
+    name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The one argument is interpolated into a unit name, so it is checked first."""
+    monkeypatch.setattr(
+        prov, "_find", lambda _p: pytest.fail("systemctl was reached with a bad name")
+    )
+    result = prov.provision_via_systemd(name)
+    assert result is not None and not result.ok
+    assert "not a valid user name" in " ".join(result.problems)
+
+
+def test_without_systemd_the_caller_is_told_to_do_it_itself(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """None, not a failure: a developer running the panel by hand still gets a child."""
+    monkeypatch.setattr(prov, "_find", lambda _p: None)
+    assert prov.provision_via_systemd("elif") is None
+
+
+def test_a_unit_that_reports_success_without_creating_the_account_is_not_believed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`systemctl start --wait` exiting 0 is not the same as the child existing."""
+
+    class Finished:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    monkeypatch.setattr(prov, "_find", lambda _p: "/usr/bin/systemctl")
+    monkeypatch.setattr(prov.subprocess, "run", lambda *_a, **_k: Finished())
+    monkeypatch.setattr(prov, "_pwd", FakePwd({}))
+
+    result = prov.provision_via_systemd("elif")
+
+    assert result is not None and not result.ok
+    assert "still does not exist" in " ".join(result.problems)
+
+
+def test_a_hyphenated_user_becomes_a_valid_unit_name() -> None:
+    """systemd reads `-` in an instance name as a path separator."""
+    assert prov.systemd_escape("ali-veli") == r"ali\x2dveli"
+    assert prov.systemd_escape("elif") == "elif"

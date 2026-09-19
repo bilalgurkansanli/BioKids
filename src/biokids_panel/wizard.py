@@ -29,7 +29,7 @@ from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
 from biokids_core.db.models import Child, Parent, utcnow
 from biokids_core.i18n import Translator
 from biokids_core.ipc import Op
-from biokids_core.provision import ProvisionResult, provision
+from biokids_core.provision import ProvisionResult, provision, provision_via_systemd
 from biokids_core.types import AgeBand, EndAction, FilterMode
 from biokids_panel import auth
 from biokids_panel.app import (
@@ -366,7 +366,14 @@ def provision_child(session: Session, child: Child) -> ProvisionResult:
     still finish adding the child - the parent can repair it afterwards with
     `biokids-admin provision-child`, and the audit entry says which it was.
     """
-    result = provision(child.unix_user, child.display_name)
+    # On a packaged machine the panel cannot do this itself: its sandbox makes
+    # /etc read-only and /home an empty tmpfs (SECURITY.md section 2). The
+    # privileged half lives in biokids-provision@.service. `None` means there is
+    # no systemd to ask - a panel started by hand, or the test suite - and then
+    # the work happens here, unsandboxed, exactly as it always did.
+    result = provision_via_systemd(child.unix_user)
+    if result is None:
+        result = provision(child.unix_user, child.display_name)
     repo.audit(
         session,
         actor="system",

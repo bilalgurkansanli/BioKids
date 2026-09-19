@@ -341,24 +341,40 @@ debian/biokids-core.templates.
 
 Everything below is unverified, in roughly the order it will bite:
 
- 1. **The build does not complete yet**, and that is not a packaging bug. The
-    .install files claim the Python package of every component, and dh_install
-    fails on a glob that matches nothing. src/biokids_ai is an empty directory:
-    git does not even record it, so on a CI checkout it is absent entirely and
-    nothing lands at dist-packages/biokids_ai. One __init__.py is the whole of
-    the fix, and it belongs to whoever writes the AI layer; nothing here should
-    be softened to hide the gap, because a biokids-ai package that ships no
-    worker is worse than a build that says so.
+ 1. **Provisioning a child now needs systemd, and that path has never run.**
+    The panel cannot create a Unix account itself: ProtectSystem=strict makes
+    /etc read-only and ProtectHome=yes mounts an empty tmpfs over /home, so
+    `adduser` fails with EROFS and the child's dotfiles cannot be written. The
+    privileged half therefore lives in biokids-provision@.service, and the panel
+    reaches it with `systemctl start --wait biokids-provision@<child>.service`.
 
-    src/biokids_shell is a different case and does not block the build:
-    setuptools finds it as a namespace package and its static/ tree is package
-    data, so dist-packages/biokids_shell does get created and the .install glob
-    matches. What it does not have is a __main__.py, so the /usr/bin/biokids-shell
-    console script generated from [project.scripts] points at a module that does
-    not exist. The package installs; the launcher exits immediately. That is
-    T5's to close, not this file's.
+    Three things about that are unverified on this host, in order of risk:
 
- 2. **Debian binary package names.** Every one of these was written from
+      a. **Can the sandboxed panel talk to systemd at all?** Connecting to
+         /run/systemd/private or the system bus from a unit with
+         ProtectSystem=strict and SystemCallFilter=@system-service is expected to
+         work - a read-only mount does not stop connect(2) on a socket - but it
+         has not been tried. If it does not, the symptom is a child added in the
+         panel with no Unix account and a problem row in the audit log saying so,
+         which is at least honest. Check it first on the VM.
+
+      b. **`systemctl start --wait` on a template.** The panel blocks on this for
+         up to 150 s while a parent watches a spinner; the unit's own
+         TimeoutStartSec is 120.
+
+      c. **The instance name.** `provision_via_systemd` checks the name against
+         UNIX_USER_RE and escapes `-` as `\x2d` before interpolating. Confirm
+         with a hyphenated child that `systemd-escape` agrees.
+
+ 2. **The build has not been run, but the two things that used to block it are
+    gone.** src/biokids_ai/__init__.py now exists, so the dh_install glob for
+    biokids-ai matches, and src/biokids_shell/__main__.py exists, so the
+    /usr/bin/biokids-shell console script points at a real module.
+    `dev/check_packaging.py` now runs in CI and re-checks that class of mistake -
+    every path a .install file names must exist or be produced by debian/rules -
+    but it is a source-tree check, not a build.
+
+ 3. **Debian binary package names.** Every one of these was written from
     memory and must be checked with `apt-cache policy` on trixie before the
     first upload: python3-argon2, python3-cryptography, python3-dbus-next,
     python3-fastapi, python3-uvicorn, python3-jinja2, python3-multipart,
@@ -368,14 +384,14 @@ Everything below is unverified, in roughly the order it will bite:
     be wrong; if dbus-next is not packaged, that is a decision for T3.1 and not
     something to paper over here.
 
- 3. **The dist-info glob.** biokids-core.install claims
+ 4. **The dist-info glob.** biokids-core.install claims
     `usr/lib/python3/dist-packages/biokids-*`, which is the wheel metadata
     directory. With pybuild-plugin-pyproject that is `biokids-0.1.0.dist-info`.
     If the build falls back to the legacy setuptools path it will be an
     `.egg-info` instead - still matched by the glob, but check what actually
     lands there, because dh_install fails on a glob that matches nothing.
 
- 4. **The systemd sandbox has never been started.** In particular:
+ 5. **The systemd sandbox has never been started.** In particular:
     MemoryDenyWriteExecute=yes against argon2-cffi and cryptography (cffi only
     needs W|X memory for callbacks, which neither creates, but this is worth
     five minutes of `systemctl start` on the VM);
@@ -385,13 +401,13 @@ Everything below is unverified, in roughly the order it will bite:
     relies on systemd turning `$$` into a literal dollar before /bin/sh sees
     it. `systemd-analyze verify` on all five units is the cheapest first check.
 
- 5. **The purge question.** The flow - config script registers the template at
+ 6. **The purge question.** The flow - config script registers the template at
     unpack, postrm asks at purge - is standard but has not been exercised. Test
     it as T8.5 says: install, use, remove (data must survive), purge (must ask,
     and must keep the data if the answer is no). Also test a purge under
     DEBIAN_FRONTEND=noninteractive, where the data must survive.
 
- 6. **biokids-admin has since landed.** The lockdown unit and the daemon's
+ 7. **biokids-admin has since landed.** The lockdown unit and the daemon's
     ExecStopPost both run `/usr/bin/biokids-admin lockdown`, which was
     specified rather than observed when this packaging was written;
     biokids_core.admin now exists and provides `lockdown`, `status`,
@@ -403,13 +419,13 @@ Everything below is unverified, in roughly the order it will bite:
     TimeoutStopSec. Test it with `systemctl kill -s KILL biokids-daemon`, which
     is what T3.7 asks for anyway.
 
- 7. **graphical-session.target.** The user units are WantedBy it, which assumes
+ 8. **graphical-session.target.** The user units are WantedBy it, which assumes
     XFCE's systemd session integration is active. If it is not, the session
     configuration from T5.7 has to start them explicitly, and the units'
     [Install] sections become decoration. Check with
     `systemctl --user list-units 'graphical-session*'` inside a child session.
 
- 8. **/var/lib/biokids/evidence is 0700 root**, as specified. The screen
+ 9. **/var/lib/biokids/evidence is 0700 root**, as specified. The screen
     watcher runs as biokids-ai and therefore cannot write there, or even
     traverse into /var/lib/biokids. That is fine today - the AI layer is Phase
     2 - and the right fix is probably for the watcher to hand frames to the
@@ -417,7 +433,7 @@ Everything below is unverified, in roughly the order it will bite:
     since the daemon is already the single writer of everything else. Decide it
     with AI-LAYER.md, not here.
 
- 9. **Upgrade behaviour.** Nothing here has ever seen a second version
+ 10. **Upgrade behaviour.** Nothing here has ever seen a second version
     installed over a first: the conffile prompt for config.toml, the conffile
     prompt for the logrotate file, `alembic upgrade head` across a real
     migration, and a daemon left running across the upgrade. T8.5 covers all of
