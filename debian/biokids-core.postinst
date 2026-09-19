@@ -21,8 +21,13 @@ ALEMBIC_INI=/usr/share/biokids/alembic.ini
 
 case "$1" in
     configure)
-        # The group that owns the daemon socket and the extension token. The
-        # child's launcher is a member; the child's login session is not.
+        # The group that owns the privileged daemon socket and the extension
+        # token. Membership means every operation: granting time, unlocking a
+        # session, powering the machine off. The panel runs as root and so has
+        # it; the child does not and must never be added (D-123). The child's
+        # launcher reaches the daemon over /run/biokids/shell.sock instead,
+        # where the daemon identifies the caller from its uid and answers about
+        # that child only.
         if ! getent group "$BIOKIDS_GROUP" >/dev/null; then
             addgroup --system "$BIOKIDS_GROUP"
         fi
@@ -52,8 +57,8 @@ case "$1" in
         install -d -o root -g root -m 0755 "$RUN_DIR"
 
         # The token the browser extension presents to the daemon. Readable by
-        # the biokids group so the child's session can pass it on, and written
-        # under a temporary name so a reader never sees a half-written file.
+        # the biokids group, and written under a temporary name so a reader
+        # never sees a half-written file.
         # Regenerating it would silently disconnect the extension, so it is
         # generated once and then left alone.
         if [ ! -e "$CONF_DIR/ext.token" ]; then
