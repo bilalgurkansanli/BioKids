@@ -29,6 +29,7 @@ from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
 from biokids_core.db.models import Child, Parent, utcnow
 from biokids_core.i18n import Translator
 from biokids_core.ipc import Op
+from biokids_core.provision import ProvisionResult, provision
 from biokids_core.types import AgeBand, EndAction, FilterMode
 from biokids_panel import auth
 from biokids_panel.app import (
@@ -219,6 +220,7 @@ def register_wizard(app: FastAPI) -> None:
         if child is None:
             return _render_step(ctx, request, session, state, tr, 4, error=tr(error))
 
+        provision_child(session, child)
         repo.set_setting(session, SETTING_PENDING_CHILD, str(child.id))
         repo.audit(
             session,
@@ -348,6 +350,38 @@ def register_wizard(app: FastAPI) -> None:
         session.commit()
         _call_daemon(ctx, Op.RELOAD)
         return see_other("/wizard/11")
+
+
+def provision_child(session: Session, child: Child) -> ProvisionResult:
+    """Give the new child an account to log in to, and say so in the log.
+
+    Without this a parent adds a child, the screen fills with quotas and
+    windows, and nothing on the machine changed: `unix_user` names an account
+    that does not exist, so there is no avatar on the login screen and nothing
+    to supervise. The failure is silent and looks exactly like success, which is
+    the worst way for it to fail.
+
+    Never fatal. The panel runs as root and normally succeeds, but a machine
+    where `adduser` is absent, or where biokids-shell was not installed, must
+    still finish adding the child - the parent can repair it afterwards with
+    `biokids-admin provision-child`, and the audit entry says which it was.
+    """
+    result = provision(child.unix_user, child.display_name)
+    repo.audit(
+        session,
+        actor="system",
+        action="child_provisioned",
+        target=f"child:{child.id}",
+        detail=result.as_detail(),
+        severity="info" if result.ok else "warning",
+    )
+    if not result.ok:
+        log.warning(
+            "could not fully provision %s: %s",
+            child.unix_user,
+            "; ".join(result.problems),
+        )
+    return result
 
 
 def create_child(

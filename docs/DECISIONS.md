@@ -691,3 +691,25 @@ sequential version branches.
 `docs/*.md`.** A single giant file would be re-read in full every session and would
 still be skimmed. Keep `CLAUDE.md` under about 200 lines and push detail into `docs/`,
 with a pointer table telling Claude Code which doc to open for which task.
+**D-130 [claude] Adding a child provisions their Unix account; the packaging never does.**
+`create_child` wrote a row whose `unix_user` named an account that did not exist, and
+nothing put the child's XFCE configuration in a home directory. Both failures look
+exactly like success: the panel fills with quotas and a friendly avatar, and the machine
+is unchanged. There is no avatar on the login screen, or the child logs in to an ordinary
+XFCE desktop with Alt+F4 and a file manager while the Today card says they are managed.
+
+Provisioning belongs at the moment a parent adds a child — `biokids_core.provision`,
+called from the wizard's fourth step and from the children screen — and **not** in
+`postinst`. Maintainer scripts run before any child exists and cannot know their names,
+and `/etc/xdg/autostart` would start a kiosk launcher inside the *parent's* session too.
+`biokids-admin provision-child` is the repair path for a machine that was set up before
+`biokids-shell` was installed, or a home restored from a backup without its dotfiles.
+
+Constraints, each of which is asserted in `tests/test_provision.py`:
+`adduser --disabled-password` with no supplementary groups — emphatically not `biokids`,
+which can grant time and power the machine off (D-123). Idempotent: an existing account
+is left alone and a file a parent edited is not overwritten unless asked. Never fatal to
+the request — a machine without `adduser` must still finish adding the child, with the
+reason in the audit log. And nothing here ever removes a home directory: taking a child
+out of BioKids must not delete their drawings.
+
