@@ -1,0 +1,46 @@
+{% extends "wizard/_base.html" %}
+{% block step_title %}{{ _('wizard.time.title') }}{% endblock %}
+
+{% block step %}
+  <p class="muted">{{ _('wizard.time.help') }}</p>
+
+  <form class="card" method="post" action="/wizard/6">
+    <div class="field">
+      <label for="weekday">{{ _('time.weekday_quota') }}</label>
+      <input id="weekday" name="weekday_quota_min" type="number" min="0" max="1440" step="15"
+             value="{{ default_weekday }}" inputmode="numeric" autofocus>
+      <span class="help">{{ _('time.quota.help') }}</span>
+    </div>
+
+    <div class="field">
+      <label for="weekend">{{ _('time.weekend_quota') }}</label>
+      <input id="weekend" name="weekend_quota_min" type="number" min="0" max="1440" step="15"
+             value="{{ default_weekend }}" inputmode="numeric">
+    </div>
+
+    <div class="field">
+      <label for="window">{{ _('time.windows') }}</label>
+      <input id="window" name="window" type="text" placeholder="16:00-20:00">
+      <span class="help">{{ _('time.windows.help') }}</span>
+    </div>
+
+    <fieldset>
+      <legend>{{ _('time.end_action') }}</legend>
+      {% for action in end_actions %}
+        <div class="checkline">
+          <input type="radio" id="ea-{{ action }}" name="end_action" value="{{ action }}"
+                 {% if (policy and policy.end_action == action) or (not policy and action == 'poweroff') %}checked{% endif %}>
+          <label for="ea-{{ action }}">
+            {{ _('end_action.' ~ action) }}
+            <span class="help">{{ _('end_action.' ~ action ~ '.help') }}</span>
+          </label>
+        </div>
+      {% endfor %}
+    </fieldset>
+
+    <div class="wizard-actions">
+      <button class="btn btn--primary" type="submit">{{ _('common.next') }}</button>
+      <a class="btn btn--quiet" href="/wizard/7">{{ _('common.skip') }}</a>
+    </div>
+  </form>
+{% endblock %}

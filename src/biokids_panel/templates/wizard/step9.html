@@ -1,0 +1,20 @@
+{% extends "wizard/_base.html" %}
+{% block step_title %}{{ _('wizard.email.title') }}{% endblock %}
+
+{#
+  Phase 0 stub. BioKids runs no mail service of its own (D-38) — a parent enters
+  their own SMTP details and the walkthrough for a Gmail app password lands with
+  the rest of the notification work.
+#}
+{% block step %}
+  <div class="notice notice--warn">
+    <div class="notice__title">{{ _('common.coming_soon') }}</div>
+    <p class="small">{{ _('common.coming_soon.help') }}</p>
+  </div>
+
+  <form method="post" action="/wizard/9">
+    <div class="wizard-actions">
+      <button class="btn btn--primary" type="submit">{{ _('common.next') }}</button>
+    </div>
+  </form>
+{% endblock %}

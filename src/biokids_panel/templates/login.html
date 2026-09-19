@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ _('login.title') }} · {{ _('panel.title') }}{% endblock %}
+
+{% block content %}
+  <h1>{{ _('login.title') }}</h1>
+
+  {% if request.query_params.get('recovered') %}
+    <div class="notice notice--ok" role="status">{{ _('login.recovery.ok') }}</div>
+  {% endif %}
+  {% if request.query_params.get('pin_changed') %}
+    <div class="notice notice--ok" role="status">{{ _('audit.action.pin_changed') }}</div>
+  {% endif %}
+
+  <form class="card" method="post" action="/login">
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="field">
+      <label for="pin">{{ _('login.pin') }}</label>
+      <input class="pin-input" id="pin" name="pin" type="password" inputmode="numeric"
+             autocomplete="current-password" pattern="[0-9]{6}" maxlength="6"
+             required autofocus {% if lockout_minutes %}disabled{% endif %}>
+      <span class="help">{{ _('login.pin.help') }}</span>
+    </div>
+    <button class="btn btn--primary" type="submit" {% if lockout_minutes %}disabled{% endif %}>
+      {{ _('login.submit') }}
+    </button>
+  </form>
+
+  <p><a href="/recovery">{{ _('login.forgot') }}</a></p>
+{% endblock %}

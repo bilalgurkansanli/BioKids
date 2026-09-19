@@ -1,0 +1,22 @@
+{% extends "wizard/_base.html" %}
+{% block step_title %}{{ _('wizard.language.title') }}{% endblock %}
+
+{% block step %}
+  <form class="card" method="post" action="/wizard/1">
+    <div class="field">
+      <label for="lang">{{ _('wizard.language.title') }}</label>
+      <select id="lang" name="lang" autofocus>
+        <option value="tr" {% if not family or family.locale == 'tr' %}selected{% endif %}>Türkçe</option>
+        <option value="en" {% if family and family.locale == 'en' %}selected{% endif %}>English</option>
+      </select>
+      <span class="help">{{ _('wizard.language.help') }}</span>
+    </div>
+
+    <div class="notice">
+      <div class="notice__title">{{ _('privacy.headline') }}</div>
+      <p class="small">{{ _('privacy.body') }}</p>
+    </div>
+
+    <button class="btn btn--primary" type="submit">{{ _('common.next') }}</button>
+  </form>
+{% endblock %}

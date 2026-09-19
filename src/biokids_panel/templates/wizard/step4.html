@@ -1,0 +1,52 @@
+{% extends "wizard/_base.html" %}
+{% block step_title %}{{ _('wizard.child.title') }}{% endblock %}
+
+{% block step %}
+  <p class="muted">{{ _('wizard.child.help') }}</p>
+
+  <form class="card" method="post" action="/wizard/4">
+    <div class="field">
+      <label for="name">{{ _('child.name') }}</label>
+      <input id="name" name="display_name" type="text" maxlength="64" required autofocus
+             value="{{ child.display_name if child else '' }}">
+    </div>
+
+    <div class="field">
+      <label for="year">{{ _('child.birth_year') }}</label>
+      <input id="year" name="birth_year" type="number" inputmode="numeric" required
+             min="{{ this_year - 14 }}" max="{{ this_year }}"
+             value="{{ child.birth_year if child else this_year - 6 }}">
+    </div>
+
+    <div class="field">
+      <label for="user">{{ _('child.unix_user') }}</label>
+      <input id="user" name="unix_user" type="text" pattern="[a-z][a-z0-9_-]{1,31}"
+             value="{{ child.unix_user if child else '' }}" autocapitalize="none"
+             autocomplete="off" spellcheck="false">
+      <span class="help">{{ _('child.unix_user.help') }}</span>
+    </div>
+
+    <fieldset>
+      <legend>{{ _('child.avatar') }}</legend>
+      <div class="tile-grid">
+        {% for slug, glyph in avatars %}
+          <label class="tile-pick">
+            <input type="radio" name="avatar" value="{{ slug }}"
+                   {% if (child and child.avatar == slug) or (not child and loop.first) %}checked{% endif %}>
+            <span aria-hidden="true" style="font-size:1.6rem">{{ glyph }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <div class="field">
+      <label for="locale">{{ _('child.locale') }}</label>
+      <select id="locale" name="locale">
+        <option value="tr" {% if not child or child.locale == 'tr' %}selected{% endif %}>Türkçe</option>
+        <option value="en" {% if child and child.locale == 'en' %}selected{% endif %}>English</option>
+      </select>
+    </div>
+
+    <button class="btn btn--primary" type="submit">{{ _('common.next') }}</button>
+  </form>
+{% endblock %}

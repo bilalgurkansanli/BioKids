@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}{{ _('nav.settings') }} · {{ _('panel.title') }}{% endblock %}
+
+{% block content %}
+  <h1>{{ _('nav.settings') }}</h1>
+
+  {% if request.query_params.get('error') == 'pin' %}
+    <div class="notice notice--danger" role="alert">{{ _('login.wrong', remaining='') }}</div>
+  {% endif %}
+
+  {# ---------------------------------------------------------- language #}
+  <form class="card" method="post" action="/settings/language">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <h2>{{ _('wizard.language.title') }}</h2>
+    <div class="field">
+      <label for="lang">{{ _('wizard.language.title') }}</label>
+      <select id="lang" name="lang">
+        <option value="tr" {% if family and family.locale == 'tr' %}selected{% endif %}>Türkçe</option>
+        <option value="en" {% if family and family.locale == 'en' %}selected{% endif %}>English</option>
+      </select>
+      <span class="help">{{ _('wizard.language.help') }}</span>
+    </div>
+    <button class="btn" type="submit">{{ _('common.save') }}</button>
+  </form>
+
+  {# ------------------------------------------------------ phone access #}
+  <section class="card">
+    <h2>{{ _('wizard.remote.title') }}</h2>
+    <p class="status {% if tailscale.ready %}status--online{% endif %}">
+      {{ _(tailscale.status_key) }}
+    </p>
+
+    {% if tailscale.public %}
+      <div class="notice notice--danger" role="alert">
+        <div class="notice__title">{{ _('remote.funnel_warning') }}</div>
+        <p class="small">{{ _('remote.no_port_forward') }}</p>
+      </div>
+    {% endif %}
+
+    {% if tailscale.url %}
+      <p><strong>{{ _('remote.url') }}:</strong> <code>{{ tailscale.url }}</code></p>
+      <p class="muted small">{{ _('remote.only_tailnet') }}</p>
+    {% else %}
+      <p class="muted">{{ _('remote.localhost_only') }}</p>
+    {% endif %}
+
+    {% if tailscale.state == 'absent' %}
+      <p class="muted small">{{ _('remote.install.help') }}</p>
+    {% else %}
+      <form method="post" action="/settings/remote">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <input type="hidden" name="enable" value="{% if tailscale.serves(panel_port) %}off{% else %}on{% endif %}">
+        <button class="btn {% if not tailscale.serves(panel_port) %}btn--primary{% endif %}" type="submit">
+          {% if tailscale.serves(panel_port) %}{{ _('remote.disable') }}{% else %}{{ _('remote.enable') }}{% endif %}
+        </button>
+      </form>
+    {% endif %}
+
+    <p class="muted small">{{ _('remote.no_port_forward') }}</p>
+  </section>
+
+  {# --------------------------------------------------------------- PIN #}
+  <form class="card" method="post" action="/settings/pin">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <h2>{{ _('login.pin') }}</h2>
+    <div class="field">
+      <label for="cur">{{ _('login.pin') }}</label>
+      <input id="cur" name="current_pin" type="password" inputmode="numeric"
+             pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required>
+    </div>
+    <div class="field">
+      <label for="new">{{ _('wizard.parent.pin') }}</label>
+      <input id="new" name="new_pin" type="password" inputmode="numeric"
+             pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" required>
+      <span class="help">{{ _('wizard.parent.pin.help') }}</span>
+    </div>
+    <button class="btn" type="submit">{{ _('common.save') }}</button>
+  </form>
+
+  {# ---------------------------------------------------- service health #}
+  <section class="card">
+    <h2>{{ _('audit.actor.daemon') }}</h2>
+    <p class="status {% if daemon_up %}status--online{% else %}status--blocked{% endif %}">
+      {% if daemon_up %}{{ _('common.on') }}{% else %}{{ _('today.daemon_down') }}{% endif %}
+    </p>
+    {% if not daemon_up %}
+      <p class="muted small">{{ _('error.daemon_unreachable') }}</p>
+    {% endif %}
+  </section>
+
+  <section class="card card--flat">
+    <h2>{{ _('common.coming_soon') }}</h2>
+    <p class="muted">{{ _('common.coming_soon.help') }}</p>
+    <ul class="muted small">
+      <li>{{ _('wizard.filter.title') }}</li>
+      <li>{{ _('wizard.email.title') }}</li>
+      <li>{{ _('wizard.extras.title') }}</li>
+    </ul>
+  </section>
+{% endblock %}

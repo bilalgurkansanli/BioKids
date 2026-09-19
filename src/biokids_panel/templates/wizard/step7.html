@@ -1,0 +1,35 @@
+{% extends "wizard/_base.html" %}
+{% block step_title %}{{ _('wizard.filter.title') }}{% endblock %}
+
+{#
+  Phase 0 records the choice and does not yet enforce it. The step is present
+  rather than absent so the shape of the flow is right from the start, and it
+  says so plainly instead of implying a protection that is not there.
+#}
+{% block step %}
+  <div class="notice notice--warn">
+    <div class="notice__title">{{ _('common.coming_soon') }}</div>
+    <p class="small">{{ _('common.coming_soon.help') }}</p>
+  </div>
+
+  <form class="card" method="post" action="/wizard/7">
+    <fieldset>
+      <legend>{{ _('wizard.filter.title') }}</legend>
+      {% for mode in modes %}
+        <div class="checkline">
+          <input type="radio" id="m-{{ mode }}" name="mode" value="{{ mode }}"
+                 {% if mode == suggested_mode %}checked{% endif %}>
+          <label for="m-{{ mode }}">
+            {{ _('filter_mode.' ~ mode) }}
+            <span class="help">{{ _('filter_mode.' ~ mode ~ '.help') }}</span>
+          </label>
+        </div>
+      {% endfor %}
+    </fieldset>
+
+    <div class="wizard-actions">
+      <button class="btn btn--primary" type="submit">{{ _('common.next') }}</button>
+      <a class="btn btn--quiet" href="/wizard/8">{{ _('common.skip') }}</a>
+    </div>
+  </form>
+{% endblock %}

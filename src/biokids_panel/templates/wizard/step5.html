@@ -1,0 +1,33 @@
+{% extends "wizard/_base.html" %}
+{% block step_title %}{{ _('wizard.apps.title') }}{% endblock %}
+
+{% block step %}
+  <p class="muted">{{ _('wizard.apps.help') }}</p>
+
+  <form class="card" method="post" action="/wizard/5">
+    <div class="tile-grid">
+      {% for app in catalog %}
+        {% if app.kind != '__gone__' %}
+        <label class="tile-pick">
+          <input type="checkbox" name="apps" value="{{ app.slug }}"
+                 {% if app.slug in suggested %}checked{% endif %}
+                 {% if app.slug not in installed %}disabled{% endif %}>
+          <span>
+            <strong>{{ app.name_tr if locale == 'tr' else app.name_en }}</strong>
+            {% if app.slug not in installed %}
+              <span class="help">{{ _('common.none') }}</span>
+            {% else %}
+              <span class="help">{{ _('category.' ~ app.default_category) }}</span>
+            {% endif %}
+          </span>
+        </label>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <div class="wizard-actions">
+      <button class="btn btn--primary" type="submit">{{ _('common.next') }}</button>
+      <a class="btn btn--quiet" href="/wizard/6">{{ _('common.skip') }}</a>
+    </div>
+  </form>
+{% endblock %}

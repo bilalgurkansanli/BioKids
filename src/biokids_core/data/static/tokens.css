@@ -1,0 +1,127 @@
+/* BioKids design tokens — UX.md §1.
+ *
+ * One file, shared by the parent panel and the child launcher. Never hardcode a
+ * colour or a size anywhere else; if a value is needed twice it belongs here.
+ *
+ * Art direction: warm, rounded, high contrast, generous whitespace. Deliberately
+ * not the saturated primary-colour clip-art palette most children's software
+ * defaults to — that reads as cheap to parents, and parents are half the
+ * audience.
+ */
+
+:root {
+  /* brand */
+  --bio-coral:  #FF6B5B;   /* Zio */
+  --bio-amber:  #FFB020;
+  --bio-teal:   #1FB6A6;   /* Sio */
+  --bio-indigo: #4B54C8;
+
+  /* semantic */
+  --ok:     #2EA86A;
+  --warn:   #F2A32B;
+  --danger: #E04A3F;
+
+  /* surfaces */
+  --bg:       #FBF7F2;     /* warm off-white, not clinical grey */
+  --surface:  #FFFFFF;
+  --ink:      #221E1C;
+  --ink-soft: #6B625C;
+  --line:     #E7DED5;
+
+  /* geometry: generous, rounded, nothing sharp */
+  --r-sm: 10px;
+  --r-md: 18px;
+  --r-lg: 28px;
+  --r-pill: 999px;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 16px;
+  --sp-4: 24px;
+  --sp-5: 40px;
+  --sp-6: 64px;
+
+  --shadow-1: 0 2px 6px rgba(34, 30, 28, .08);
+  --shadow-2: 0 8px 24px rgba(34, 30, 28, .12);
+
+  --font-ui: "Inter", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-kid: "Fredoka", "Baloo 2", "Comic Neue", var(--font-ui);
+
+  /* Set by the parent panel's accessibility settings and inherited by the
+   * launcher, which is why it is a token and not a launcher-local value. */
+  --font-scale: 1;
+
+  /* Interactive target sizes. UX.md §2.4: 64px for 4–7, 44px for 8–10. */
+  --target-young: 64px;
+  --target-older: 44px;
+}
+
+/* Fonts are vendored as WOFF2 in assets/fonts/ and served from /static/fonts/.
+ * Never loaded from Google Fonts: offline is a hard requirement, and a font
+ * request is a tracking request.
+ *
+ * Each @font-face is declared with `font-display: swap` and a full system
+ * fallback stack above, so a machine where the vendored files are missing gets
+ * a readable page rather than invisible text. */
+@font-face {
+  font-family: "Inter";
+  src: url("/static/fonts/Inter-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/static/fonts/Inter-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fredoka";
+  src: url("/static/fonts/Fredoka-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* A dyslexia-friendly option, offered in the parent panel (UX.md §5). It is
+ * applied by setting `data-font="dyslexic"` on <html>. */
+@font-face {
+  font-family: "OpenDyslexic";
+  src: url("/static/fonts/OpenDyslexic-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+html[data-font="dyslexic"] {
+  --font-ui: "OpenDyslexic", var(--font-ui);
+  --font-kid: "OpenDyslexic", var(--font-kid);
+}
+
+/* High contrast, also a parent-panel setting. Colour is never the only signal
+ * anywhere in BioKids, so this only has to raise contrast, not add meaning. */
+html[data-contrast="high"] {
+  --bg: #FFFFFF;
+  --surface: #FFFFFF;
+  --ink: #000000;
+  --ink-soft: #3A3430;
+  --line: #A79C92;
+  --ok: #1B7A46;
+  --warn: #9A5B00;
+  --danger: #A3160C;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,315 @@
+"""The PIN gate, the lockout, and the passphrase gate for destructive actions.
+
+Three secrets, three jobs (D-48):
+
+* the **PIN** is what a parent actually uses on a phone at 22:00, so it is six
+  digits and the lockout is what makes that defensible;
+* the **passphrase** guards anything that can turn protection off, because a PIN
+  a ten-year-old watched being typed must not be enough to uninstall BioKids;
+* the **recovery code** is one of the two ways back in (D-50). The other is
+  `sudo biokids-admin reset-pin`. There is no email reset and no back door.
+
+The lockout counter lives on the `parent` row rather than in memory, so
+restarting the panel — which a child could do by cutting the power — does not
+clear it.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import logging
+from dataclasses import dataclass
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from biokids_core import repo, security
+from biokids_core.config import Config
+from biokids_core.db.models import PanelSession, Parent, utcnow
+
+log = logging.getLogger(__name__)
+
+SESSION_COOKIE = "biokids_session"
+CSRF_FIELD = "csrf_token"
+PASSPHRASE_GRACE_MINUTES = 5
+"""How long one passphrase confirmation covers. Long enough that a single
+destructive flow does not ask three times, short enough that a phone left on a
+kitchen table is not a standing authorisation."""
+
+
+@dataclass(frozen=True, slots=True)
+class LoginResult:
+    ok: bool
+    token: str = ""
+    error_key: str = ""
+    remaining_attempts: int = 0
+    lockout_minutes: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class AuthState:
+    """Who is asking, as far as one request is concerned."""
+
+    parent: Parent | None
+    session: PanelSession | None
+
+    @property
+    def authenticated(self) -> bool:
+        return self.parent is not None and self.session is not None
+
+    def passphrase_fresh(self, now: dt.datetime | None = None) -> bool:
+        if self.session is None or self.session.passphrase_ok_until is None:
+            return False
+        return self.session.passphrase_ok_until > (now or utcnow())
+
+
+# ------------------------------------------------------------------- lockout
+
+
+def lockout_remaining_minutes(parent: Parent, now: dt.datetime | None = None) -> int:
+    if parent.pin_locked_until is None:
+        return 0
+    now = now or utcnow()
+    if parent.pin_locked_until <= now:
+        return 0
+    return max(1, int((parent.pin_locked_until - now).total_seconds() // 60) + 1)
+
+
+def _next_lockout_minutes(parent: Parent, config: Config) -> int:
+    """Doubles on each lockout served, capped. The first is fifteen minutes."""
+    base = config.panel.pin_lockout_minutes
+    minutes = base * (2**parent.pin_lockout_level)
+    return min(minutes, config.panel.pin_lockout_max_minutes)
+
+
+# --------------------------------------------------------------------- login
+
+
+def attempt_login(
+    session: Session,
+    config: Config,
+    pin: str,
+    *,
+    user_agent: str = "",
+    now: dt.datetime | None = None,
+) -> LoginResult:
+    """Check a PIN and, on success, mint a session token.
+
+    Every attempt goes to the audit log, successful or not (D-48). A parent
+    looking at the audit log after a suspicious afternoon should be able to see
+    exactly how many times someone tried.
+    """
+    now = now or utcnow()
+    parent = repo.get_parent(session)
+    if parent is None:
+        return LoginResult(ok=False, error_key="error.invalid_input")
+
+    locked = lockout_remaining_minutes(parent, now)
+    if locked:
+        repo.audit(
+            session,
+            actor=f"parent:{parent.id}",
+            action="login_locked",
+            detail={"minutes_remaining": locked},
+            severity="warning",
+        )
+        return LoginResult(ok=False, error_key="login.locked", lockout_minutes=locked)
+
+    if not security.verify_secret(parent.pin_hash, pin.strip()):
+        parent.pin_failures += 1
+        remaining = max(0, config.panel.pin_attempts - parent.pin_failures)
+        detail: dict[str, object] = {"failures": parent.pin_failures}
+
+        if remaining == 0:
+            minutes = _next_lockout_minutes(parent, config)
+            parent.pin_locked_until = now + dt.timedelta(minutes=minutes)
+            parent.pin_lockout_level += 1
+            parent.pin_failures = 0
+            detail["lockout_minutes"] = minutes
+            repo.audit(
+                session,
+                actor=f"parent:{parent.id}",
+                action="login_locked",
+                detail=detail,
+                severity="warning",
+            )
+            return LoginResult(ok=False, error_key="login.locked", lockout_minutes=minutes)
+
+        repo.audit(
+            session,
+            actor=f"parent:{parent.id}",
+            action="login_failed",
+            detail=detail,
+            severity="warning",
+        )
+        return LoginResult(ok=False, error_key="login.wrong", remaining_attempts=remaining)
+
+    parent.pin_failures = 0
+    parent.pin_locked_until = None
+    parent.pin_lockout_level = 0
+    if security.needs_rehash(parent.pin_hash):
+        parent.pin_hash = security.hash_secret(pin.strip())
+
+    token = security.generate_token()
+    session.add(
+        PanelSession(
+            token_hash=security.token_fingerprint(token),
+            parent_id=parent.id,
+            created_at=now,
+            last_seen_at=now,
+            user_agent=user_agent[:255],
+        )
+    )
+    repo.audit(session, actor=f"parent:{parent.id}", action="login_ok")
+    session.flush()
+    return LoginResult(ok=True, token=token)
+
+
+def resolve(
+    session: Session,
+    config: Config,
+    token: str | None,
+    *,
+    now: dt.datetime | None = None,
+) -> AuthState:
+    """Turn a cookie into a parent, expiring the session if it went idle.
+
+    The idle timeout is enforced on read rather than by a background sweep, so
+    it is correct even if the panel was not running for the intervening hours.
+    """
+    if not token:
+        return AuthState(parent=None, session=None)
+    now = now or utcnow()
+
+    row = session.scalar(
+        select(PanelSession).where(PanelSession.token_hash == security.token_fingerprint(token))
+    )
+    if row is None:
+        return AuthState(parent=None, session=None)
+
+    idle_limit = dt.timedelta(minutes=config.panel.session_idle_minutes)
+    if now - row.last_seen_at > idle_limit:
+        session.delete(row)
+        session.flush()
+        return AuthState(parent=None, session=None)
+
+    row.last_seen_at = now
+    parent = session.get(Parent, row.parent_id)
+    if parent is None:  # pragma: no cover - a deleted parent is not a normal state
+        session.delete(row)
+        return AuthState(parent=None, session=None)
+    return AuthState(parent=parent, session=row)
+
+
+def logout(session: Session, token: str | None) -> None:
+    if not token:
+        return
+    row = session.scalar(
+        select(PanelSession).where(PanelSession.token_hash == security.token_fingerprint(token))
+    )
+    if row is not None:
+        session.delete(row)
+        session.flush()
+
+
+def logout_everywhere(session: Session, parent_id: int) -> int:
+    rows = session.scalars(
+        select(PanelSession).where(PanelSession.parent_id == parent_id)
+    ).all()
+    for row in rows:
+        session.delete(row)
+    session.flush()
+    return len(rows)
+
+
+# ---------------------------------------------------------------- passphrase
+
+
+def confirm_passphrase(
+    session: Session,
+    state: AuthState,
+    passphrase: str,
+    *,
+    now: dt.datetime | None = None,
+) -> bool:
+    """Open the grace window for destructive actions, or refuse."""
+    if state.parent is None or state.session is None:
+        return False
+    if not security.verify_secret(state.parent.passphrase_hash, passphrase.strip()):
+        repo.audit(
+            session,
+            actor=f"parent:{state.parent.id}",
+            action="passphrase_failed",
+            severity="warning",
+        )
+        return False
+    now = now or utcnow()
+    state.session.passphrase_ok_until = now + dt.timedelta(minutes=PASSPHRASE_GRACE_MINUTES)
+    session.flush()
+    return True
+
+
+# ------------------------------------------------------------------ recovery
+
+
+def attempt_recovery(
+    session: Session,
+    code: str,
+    new_pin: str,
+) -> LoginResult:
+    """The eight-word code, then a new PIN. Logged loudly (D-50)."""
+    parent = repo.get_parent(session)
+    if parent is None:
+        return LoginResult(ok=False, error_key="error.invalid_input")
+
+    if not security.verify_recovery_code(parent.recovery_hash, code):
+        repo.audit(
+            session,
+            actor="system",
+            action="recovery_failed",
+            severity="warning",
+        )
+        return LoginResult(ok=False, error_key="login.recovery.wrong")
+
+    try:
+        pin = security.validate_pin(new_pin)
+    except ValueError as exc:
+        return LoginResult(ok=False, error_key=str(exc))
+
+    parent.pin_hash = security.hash_secret(pin)
+    parent.pin_failures = 0
+    parent.pin_locked_until = None
+    parent.pin_lockout_level = 0
+    logout_everywhere(session, parent.id)
+    repo.audit(
+        session,
+        actor="system",
+        action="recovery_used",
+        detail={"note": "the PIN was reset with the eight-word recovery code"},
+        severity="alert",
+    )
+    session.flush()
+    return LoginResult(ok=True)
+
+
+# ---------------------------------------------------------------------- CSRF
+
+
+def csrf_token(state: AuthState) -> str:
+    """A token derived from the session, so it needs no extra storage.
+
+    The panel is reachable only over localhost or the family's own tailnet, and
+    the cookie is `SameSite=Strict`, so this is the third layer rather than the
+    first. It costs one hash and closes the gap where a page left open in a
+    child's browser could be made to POST.
+    """
+    if state.session is None:
+        return ""
+    return security.token_fingerprint(f"csrf:{state.session.token_hash}")[:32]
+
+
+def csrf_ok(state: AuthState, presented: str | None) -> bool:
+    expected = csrf_token(state)
+    if not expected:
+        return False
+    return bool(presented) and security.constant_time_equals(expected, presented or "")

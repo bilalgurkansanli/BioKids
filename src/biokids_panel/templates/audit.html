@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ _('audit.title') }} · {{ _('panel.title') }}{% endblock %}
+
+{% block content %}
+  <h1>{{ _('audit.title') }}</h1>
+  <p class="muted">{{ _('audit.help') }}</p>
+
+  <form class="card card--flat" method="get" action="/audit">
+    <div class="row row--wrap">
+      <div class="field grow">
+        <label for="f-child">{{ _('audit.filter.child') }}</label>
+        <select id="f-child" name="child">
+          <option value="">{{ _('common.all') }}</option>
+          {% for c in children %}
+            <option value="{{ c.id }}" {% if filter_child == c.id %}selected{% endif %}>
+              {{ c.display_name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field grow">
+        <label for="f-action">{{ _('audit.filter.action') }}</label>
+        <select id="f-action" name="action">
+          <option value="">{{ _('common.all') }}</option>
+          {% for a in actions %}
+            <option value="{{ a }}" {% if filter_action == a %}selected{% endif %}>
+              {{ _('audit.action.' ~ a) }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field grow">
+        <label for="f-day">{{ _('audit.filter.date') }}</label>
+        <input id="f-day" name="day" type="date" value="{{ filter_day }}">
+      </div>
+    </div>
+    <button class="btn" type="submit">{{ _('common.search') }}</button>
+  </form>
+
+  {% if not entries %}
+    <div class="card"><p>{{ _('audit.empty') }}</p></div>
+  {% else %}
+    <div class="card table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ _('audit.filter.date') }}</th>
+            <th>{{ _('audit.filter.action') }}</th>
+            <th>{{ _('audit.filter.child') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in entries %}
+            <tr class="sev-{{ entry.severity }}">
+              <td>{{ entry.ts|when }}</td>
+              <td>
+                {{ _('audit.action.' ~ entry.action) }}
+                <div class="muted small">
+                  {% if entry.actor.startswith('parent') %}
+                    {{ _('audit.actor.parent') }}
+                  {% elif entry.actor == 'daemon' %}
+                    {{ _('audit.actor.daemon') }}
+                  {% elif entry.actor == 'cli' %}
+                    {{ _('audit.actor.cli') }}
+                  {% else %}
+                    {{ _('audit.actor.system') }}
+                  {% endif %}
+                </div>
+              </td>
+              <td class="muted small">{{ entry.target }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% set qs = "&child=" ~ (filter_child or "") ~ "&action=" ~ filter_action ~ "&day=" ~ filter_day %}
+    <div class="row">
+      {% if page > 1 %}
+        <a class="btn" href="/audit?page={{ page - 1 }}{{ qs }}">{{ _('common.back') }}</a>
+      {% endif %}
+      {% if has_more %}
+        <a class="btn" href="/audit?page={{ page + 1 }}{{ qs }}">{{ _('common.next') }}</a>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}{{ _('time.title') }} · {{ child.display_name }}{% endblock %}
+
+{#
+  Under seven visible controls (UX.md §3.3): two quotas, two window fields, what
+  happens at the end, and the on/off switch. Breaks and earned time live behind
+  Advanced, because most parents never touch them and a screen of thirty inputs
+  is a screen nobody finishes.
+#}
+{% block content %}
+  <h1>{{ child.display_name }} — {{ _('time.title') }}</h1>
+
+  <form class="card" method="post" action="/children/{{ child.id }}/time">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+
+    <div class="field">
+      <label for="weekday">{{ _('time.weekday_quota') }}</label>
+      <input id="weekday" name="weekday_quota_min" type="number" min="0" max="1440" step="5"
+             value="{{ policy.weekday_quota_min }}" inputmode="numeric">
+      <span class="help">{{ _('time.quota.help') }}</span>
+    </div>
+
+    <div class="field">
+      <label for="weekend">{{ _('time.weekend_quota') }}</label>
+      <input id="weekend" name="weekend_quota_min" type="number" min="0" max="1440" step="5"
+             value="{{ policy.weekend_quota_min }}" inputmode="numeric">
+    </div>
+
+    <div class="field">
+      <label for="wd-windows">{{ _('time.windows.weekday') }}</label>
+      <input id="wd-windows" name="weekday_windows" type="text" placeholder="16:00-20:00"
+             value="{{ windows.weekday|join(', ') }}">
+      <span class="help">{{ _('time.windows.help') }}</span>
+    </div>
+
+    <div class="field">
+      <label for="we-windows">{{ _('time.windows.weekend') }}</label>
+      <input id="we-windows" name="weekend_windows" type="text" placeholder="10:00-20:00"
+             value="{{ windows.weekend|join(', ') }}">
+    </div>
+
+    <fieldset>
+      <legend>{{ _('time.end_action') }}</legend>
+      {% for action in end_actions %}
+        <div class="checkline">
+          <input type="radio" id="ea-{{ action }}" name="end_action" value="{{ action }}"
+                 {% if policy.end_action == action %}checked{% endif %}>
+          <label for="ea-{{ action }}">
+            {{ _('end_action.' ~ action) }}
+            <span class="help">{{ _('end_action.' ~ action ~ '.help') }}</span>
+          </label>
+        </div>
+      {% endfor %}
+    </fieldset>
+
+    <div class="checkline">
+      <input type="checkbox" id="enabled" name="enabled" {% if policy.enabled %}checked{% endif %}>
+      <label for="enabled">
+        {{ _('time.enabled') }}
+        <span class="help">{{ _('time.enabled.help') }}</span>
+      </label>
+    </div>
+
+    <details class="advanced">
+      <summary>{{ _('common.advanced') }}</summary>
+
+      <div class="checkline">
+        <input type="checkbox" id="break_enabled" name="break_enabled"
+               {% if policy.break_enabled %}checked{% endif %}>
+        <label for="break_enabled">
+          {{ _('time.break_enabled') }}
+          <span class="help">{{ _('time.break.help') }}</span>
+        </label>
+      </div>
+      <div class="row row--wrap">
+        <div class="field grow">
+          <label for="bw">{{ _('time.break_enabled') }} — {{ _('common.minutes') }}</label>
+          <input id="bw" name="break_work_min" type="number" min="5" max="240"
+                 value="{{ policy.break_work_min }}">
+        </div>
+        <div class="field grow">
+          <label for="br">{{ _('shell.break.title') }} — {{ _('common.minutes') }}</label>
+          <input id="br" name="break_rest_min" type="number" min="1" max="60"
+                 value="{{ policy.break_rest_min }}">
+        </div>
+      </div>
+
+      <div class="checkline">
+        <input type="checkbox" id="earn_enabled" name="earn_enabled"
+               {% if policy.earn_enabled %}checked{% endif %}>
+        <label for="earn_enabled">
+          {{ _('time.earn_enabled') }}
+          <span class="help">{{ _('time.earn.help') }}</span>
+        </label>
+      </div>
+      <div class="row row--wrap">
+        <div class="field grow">
+          <label for="ratio">{{ _('time.earn_enabled') }} ×</label>
+          <input id="ratio" name="earn_ratio" type="number" min="0" max="5" step="0.5"
+                 value="{{ policy.earn_ratio }}">
+        </div>
+        <div class="field grow">
+          <label for="cap">{{ _('common.all') }} — {{ _('common.minutes') }}</label>
+          <input id="cap" name="earn_cap_min" type="number" min="0" max="480"
+                 value="{{ policy.earn_cap_min }}">
+        </div>
+      </div>
+    </details>
+
+    <div class="wizard-actions">
+      <button class="btn btn--primary" type="submit">{{ _('common.save') }}</button>
+      <a class="btn btn--quiet" href="/children">{{ _('common.cancel') }}</a>
+    </div>
+  </form>
+{% endblock %}

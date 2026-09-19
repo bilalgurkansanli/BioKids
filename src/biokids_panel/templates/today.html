@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ _('today.title') }} · {{ _('panel.title') }}{% endblock %}
+
+{% block content %}
+  <h1>{{ _('today.title') }}</h1>
+  <div id="cards">
+    {% include "partials/child_cards.html" %}
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="/static/live.js" defer></script>
+{% endblock %}

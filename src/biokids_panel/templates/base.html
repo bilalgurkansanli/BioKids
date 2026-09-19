@@ -1,0 +1,82 @@
+{#
+  The panel shell.
+
+  Everything below works with JavaScript disabled. `live.js` upgrades the Today
+  screen to live counters when it loads; nothing depends on it.
+#}
+<!DOCTYPE html>
+<html lang="{{ locale }}" data-font="{{ font_choice|default('default') }}" data-contrast="{{ contrast|default('normal') }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4B54C8">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="no-referrer">
+  <title>{% block title %}{{ _('panel.title') }}{% endblock %}</title>
+
+  <link rel="stylesheet" href="/static/shared/tokens.css">
+  <link rel="stylesheet" href="/static/panel.css">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+</head>
+<body>
+  <a class="visually-hidden" href="#main">{{ _('nav.today') }}</a>
+
+  {% if auth.authenticated %}
+  <header class="topbar">
+    <a class="brand" href="/today">
+      {{ _('panel.title') }} <small>{{ _('panel.subtitle') }}</small>
+    </a>
+    <form method="post" action="/logout">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <button class="btn btn--quiet" type="submit">{{ _('nav.logout') }}</button>
+    </form>
+  </header>
+
+  <nav class="nav" aria-label="{{ _('panel.subtitle') }}">
+    <a href="/today" {% if path.startswith('/today') %}aria-current="page"{% endif %}>
+      <span class="icon" aria-hidden="true">🏠</span>{{ _('nav.today') }}
+    </a>
+    <a href="/children" {% if path.startswith('/children') %}aria-current="page"{% endif %}>
+      <span class="icon" aria-hidden="true">👧</span>{{ _('nav.children') }}
+    </a>
+    <a href="/audit" {% if path.startswith('/audit') %}aria-current="page"{% endif %}>
+      <span class="icon" aria-hidden="true">📋</span>{{ _('nav.audit') }}
+      {% if pending_requests %}<span class="badge">{{ pending_requests }}</span>{% endif %}
+    </a>
+    <a href="/settings" {% if path.startswith('/settings') %}aria-current="page"{% endif %}>
+      <span class="icon" aria-hidden="true">⚙️</span>{{ _('nav.settings') }}
+    </a>
+  </nav>
+  {% endif %}
+
+  <main class="page" id="main">
+    {% if error %}
+      <div class="notice notice--danger" role="alert">{{ error }}</div>
+    {% endif %}
+    {% if request.query_params.get('saved') %}
+      <div class="notice notice--ok" role="status">{{ _('common.saved') }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="legal">
+    <p><strong>{{ _('privacy.headline') }}</strong> — {{ _('privacy.body') }}</p>
+    <p>{{ _('disclaimer.headline') }}: {{ _('disclaimer.body') }}</p>
+    <p class="small">BioKids {{ version }}</p>
+  </footer>
+
+  {% block scripts %}{% endblock %}
+  <script>
+    /* Registering the service worker is what makes "Add to Home Screen" offer a
+       real app rather than a bookmark. It caches the shell only; live data is
+       never cached, because a stale "42 minutes left" is worse than no page. */
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("/sw.js").catch(function () {});
+      });
+    }
+  </script>
+</body>
+</html>

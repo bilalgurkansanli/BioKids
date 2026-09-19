@@ -737,6 +737,12 @@ msgstr "The panel currently opens only on this computer."
 msgid "remote.no_port_forward"
 msgstr "Do not set up port forwarding on your router. Do not put the panel on the internet."
 
+msgid "remote.funnel_warning"
+msgstr "Warning: this machine is exposed to the internet by Tailscale Funnel"
+
+msgid "remote.funnel_warning.help"
+msgstr "While Funnel is on, your panel address can be reached from the internet. We suggest turning it off."
+
 msgid "remote.only_tailnet"
 msgstr "Only devices on your own Tailscale network can reach this address."
 

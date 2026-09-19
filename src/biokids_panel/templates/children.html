@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ _('nav.children') }} · {{ _('panel.title') }}{% endblock %}
+
+{% block content %}
+  <h1>{{ _('nav.children') }}</h1>
+
+  {% if not children %}
+    <div class="card"><p>{{ _('today.no_children') }}</p></div>
+  {% endif %}
+
+  {% for child in children %}
+    <article class="card">
+      <div class="child-card__head">
+        <span class="avatar" aria-hidden="true">{{ child.avatar|avatar }}</span>
+        <span class="child-card__name">{{ child.display_name }}</span>
+        <span class="muted small">{{ _('age_band.' ~ child.age_band) }}</span>
+      </div>
+      <p class="muted small">{{ _('child.unix_user') }}: <code>{{ child.unix_user }}</code></p>
+      <div class="actions">
+        <a class="btn" href="/children/{{ child.id }}/time">{{ _('time.title') }}</a>
+      </div>
+    </article>
+  {% endfor %}
+
+  <div class="card card--flat">
+    <p class="muted">{{ _('common.coming_soon.help') }}</p>
+  </div>
+{% endblock %}

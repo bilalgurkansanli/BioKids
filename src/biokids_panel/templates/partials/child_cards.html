@@ -1,0 +1,103 @@
+{#
+  One card per child and nothing else (UX.md §3.2).
+
+  A parent glancing at this on their phone must understand it in three seconds
+  without reading a label twice, so: a ring, one line of state, three big
+  buttons. Everything else is a level down.
+#}
+{% if not daemon_up %}
+  <div class="notice notice--danger" role="alert">
+    <div class="notice__title">⚠ {{ _('today.daemon_down') }}</div>
+    <p class="small">{{ _('error.daemon_unreachable') }}</p>
+  </div>
+{% endif %}
+
+{% if pending_requests %}
+  <div class="requests-banner">
+    <span>{{ _('today.requests_pending', count=pending_requests) }}</span>
+    <a class="btn" href="/audit">{{ _('nav.requests') }}</a>
+  </div>
+{% endif %}
+
+{% if not children %}
+  <div class="card">
+    <h2>{{ _('today.no_children') }}</h2>
+    <a class="btn btn--primary" href="/children">{{ _('today.add_child') }}</a>
+  </div>
+{% endif %}
+
+{% for child in children %}
+  {% set remaining = child.remaining_seconds|int %}
+  {% set quota = child.quota_seconds|int + child.granted_seconds|default(0)|int %}
+  {% set fraction = (remaining / quota) if quota > 0 else 0 %}
+  {% set tone = 'danger' if fraction <= 0.10 else ('warn' if fraction <= 0.25 else 'ok') %}
+
+  <article class="card child-card" data-child="{{ child.child_id }}">
+    <div class="child-card__head">
+      <span class="avatar" aria-hidden="true">{{ child.avatar|avatar }}</span>
+      <span class="child-card__name">{{ child.display_name }}</span>
+      <span class="status {% if child.online %}status--online{% elif not child.allow %}status--blocked{% endif %}"
+            data-role="status">
+        {% if child.online %}{{ _('today.online') }}{% else %}{{ _('today.offline') }}{% endif %}
+      </span>
+    </div>
+
+    <div class="remaining">
+      {# r=40 gives a circumference of 251.33; the dash offset is the used part. #}
+      <svg class="ring ring--{{ tone }}" viewBox="0 0 100 100" role="img"
+           data-role="ring"
+           aria-label="{{ _('shell.remaining_label') }}: {{ remaining|minutes }} {{ _('common.minutes') }}">
+        <circle class="ring__track" cx="50" cy="50" r="40"></circle>
+        <circle class="ring__value" cx="50" cy="50" r="40"
+                stroke-dasharray="251.33"
+                stroke-dashoffset="{{ (251.33 * (1 - fraction))|round(2) }}"></circle>
+      </svg>
+
+      <div>
+        <div class="remaining__text" data-role="remaining">
+          {% if not child.managed %}
+            {{ _('policy.missing') }}
+          {% elif remaining > 0 %}
+            {{ _('today.remaining', minutes=remaining|minutes) }}
+          {% else %}
+            {{ _('today.time_up') }}
+          {% endif %}
+        </div>
+        <div class="remaining__sub" data-role="activity">
+          {% if child.reason_code == 'window.closed' %}
+            {{ _('today.window_closed') }}
+          {% elif child.online and child.app %}
+            {{ _('today.now_playing', app=child.app) }}
+          {% elif child.online %}
+            {{ _('today.idle') }}
+          {% else %}
+            {{ _('today.offline') }}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if child.managed %}
+    <div class="actions">
+      <form method="post" action="/children/{{ child.child_id }}/grant">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <input type="hidden" name="minutes" value="10">
+        <button class="btn btn--ok" type="submit">{{ _('today.grant_10') }}</button>
+      </form>
+      <form method="post" action="/children/{{ child.child_id }}/lock">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button class="btn" type="submit">{{ _('today.lock') }}</button>
+      </form>
+      <form method="post" action="/children/{{ child.child_id }}/poweroff"
+            onsubmit="return confirm('{{ _('today.poweroff.confirm', name=child.display_name) }}')">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <input type="hidden" name="confirm" value="yes">
+        <button class="btn btn--danger" type="submit">{{ _('today.poweroff') }}</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="muted small">{{ _('time.enabled.help') }}</p>
+    <a class="btn" href="/children/{{ child.child_id }}/time">{{ _('time.title') }}</a>
+    {% endif %}
+  </article>
+{% endfor %}

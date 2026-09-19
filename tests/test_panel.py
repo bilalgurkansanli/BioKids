@@ -1,0 +1,593 @@
+"""T4 — the parent panel.
+
+The tests that matter here are about the gate, not about the markup: that the
+wizard cannot be re-run once a family exists, that five wrong PINs lock the door
+and the sixth attempt is refused even after a restart, that a destructive action
+needs a CSRF token, and that every page still renders when the daemon is not
+answering — because a panel that breaks when the daemon dies is a panel that
+hides the one thing a parent needs to know.
+
+The daemon is faked at the client boundary, so none of this needs a socket.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+from typing import Any
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+from biokids_core import repo, security
+from biokids_core.config import Config
+from biokids_core.db import Database, Parent
+from biokids_core.db.models import utcnow
+from biokids_core.errors import IpcError
+from biokids_core.ipc import Response
+from biokids_panel import auth
+from biokids_panel.app import create_app
+
+PIN = "284913"
+PASSPHRASE = "acik kapi mavi deniz"
+
+
+class FakeDaemon:
+    """Stands in for the daemon socket. Records what the panel asked for."""
+
+    def __init__(self, *, up: bool = True) -> None:
+        self.up = up
+        self.calls: list[tuple[str, dict[str, Any]]] = []
+        self.status: dict[str, Any] = {"children": [], "ticks": 0}
+
+    def call(self, op: str, **args: Any) -> Response:
+        if not self.up:
+            raise IpcError("the daemon is not running")
+        self.calls.append((str(op), args))
+        if str(op) == "get_status":
+            return Response(ok=True, data=self.status)
+        return Response(ok=True, data={})
+
+    def available(self) -> bool:
+        return self.up
+
+    def ran(self, op: str) -> bool:
+        return any(name == op for name, _ in self.calls)
+
+
+@pytest.fixture
+def daemon() -> FakeDaemon:
+    return FakeDaemon()
+
+
+@pytest.fixture
+def client(config: Config, db: Database, daemon: FakeDaemon) -> TestClient:
+    app = create_app(config)
+    app.state.ctx.client = daemon  # type: ignore[assignment]
+    return TestClient(app)
+
+
+@pytest.fixture
+def family_ready(db: Database, config: Config) -> None:
+    """A finished setup: one parent with a PIN, one child, one policy."""
+    from biokids_core.db import Child, Policy
+
+    with db.session() as session:
+        family = repo.get_or_create_family(session)
+        family.setup_completed_at = utcnow()
+        session.add(
+            Parent(
+                display_name="Anne",
+                pin_hash=security.hash_secret(PIN),
+                passphrase_hash=security.hash_secret(PASSPHRASE),
+                recovery_hash=security.hash_secret(
+                    "bulut deniz elma fener gemi halka inci kale"
+                ),
+            )
+        )
+        child = Child(unix_user="elif", display_name="Elif", birth_year=2020)
+        session.add(child)
+        session.flush()
+        session.add(Policy(child_id=child.id))
+
+
+def login(client: TestClient, pin: str = PIN) -> None:
+    response = client.post("/login", data={"pin": pin}, follow_redirects=False)
+    assert response.status_code == 303, response.text
+    assert auth.SESSION_COOKIE in response.cookies
+
+
+def _audit_rows(page: str) -> str:
+    """Just the table body, so a filter assertion is not fooled by the dropdown."""
+    start = page.index("<tbody>")
+    return page[start : page.index("</tbody>", start)]
+
+
+def csrf_of(client: TestClient) -> str:
+    """Pull the token out of a rendered page, the way a browser would."""
+    page = client.get("/today").text
+    marker = 'name="csrf_token" value="'
+    start = page.index(marker) + len(marker)
+    return page[start : page.index('"', start)]
+
+
+# -------------------------------------------------------------------- setup
+
+
+def test_a_fresh_install_goes_straight_to_the_wizard(client: TestClient) -> None:
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/wizard/1"
+
+
+def test_every_page_redirects_to_the_wizard_until_setup_is_done(client: TestClient) -> None:
+    for path in ("/today", "/children", "/audit", "/settings", "/login"):
+        response = client.get(path, follow_redirects=False)
+        assert response.status_code == 303
+        assert response.headers["location"] == "/wizard/1", path
+
+
+def test_the_wizard_refuses_to_run_twice(client: TestClient, family_ready: None) -> None:
+    response = client.get("/wizard/1", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
+
+
+def test_the_whole_wizard_can_be_completed(
+    client: TestClient, db: Database, daemon: FakeDaemon
+) -> None:
+    assert (
+        client.post("/wizard/1", data={"lang": "tr"}, follow_redirects=False).status_code == 303
+    )
+
+    page = client.get("/wizard/2").text
+    assert "PIN" in page
+    assert (
+        client.post(
+            "/wizard/2",
+            data={"name": "Anne", "pin": PIN, "pin_again": PIN},
+            follow_redirects=False,
+        ).status_code
+        == 303
+    )
+
+    # The recovery code is rendered once and posted back; only its hash is kept.
+    page = client.get("/wizard/3").text
+    marker = 'name="recovery" value="'
+    start = page.index(marker) + len(marker)
+    recovery = page[start : page.index('"', start)]
+    assert len(recovery.split()) == 8
+
+    assert (
+        client.post(
+            "/wizard/3",
+            data={"passphrase": PASSPHRASE, "recovery": recovery, "written_down": "on"},
+            follow_redirects=False,
+        ).status_code
+        == 303
+    )
+
+    this_year = dt.date.today().year
+    assert (
+        client.post(
+            "/wizard/4",
+            data={
+                "display_name": "Elif",
+                "birth_year": this_year - 6,
+                "unix_user": "elif",
+                "avatar": "fox",
+                "locale": "tr",
+            },
+            follow_redirects=False,
+        ).status_code
+        == 303
+    )
+
+    client.post("/wizard/5", data={"apps": ["tuxpaint", "gcompris"]}, follow_redirects=False)
+    client.post(
+        "/wizard/6",
+        data={"weekday_quota_min": 45, "weekend_quota_min": 90, "window": "16:00-20:00"},
+        follow_redirects=False,
+    )
+    client.post("/wizard/7", data={"mode": "allowlist"}, follow_redirects=False)
+    client.post("/wizard/8", data={"enable": ""}, follow_redirects=False)
+    client.post("/wizard/9", follow_redirects=False)
+    done = client.post("/wizard/10", data={"voices": "on"}, follow_redirects=False)
+    assert done.status_code == 303
+
+    with db.session() as session:
+        assert repo.setup_complete(session)
+        child = repo.get_child_by_user(session, "elif")
+        assert child is not None
+        policy = repo.get_or_create_policy(session, child.id)
+        assert policy.weekday_quota_min == 45
+        assert policy.windows["weekday"] == ["16:00-20:00"]
+        assert {
+            slug for _, app in repo.list_child_apps(session, child.id) for slug in [app.slug]
+        } == {
+            "tuxpaint",
+            "gcompris",
+        }
+
+    assert daemon.ran("reload"), "the daemon is told to pick up the new policy"
+
+
+def test_the_wizard_refuses_a_guessable_pin(client: TestClient) -> None:
+    client.post("/wizard/1", data={"lang": "tr"})
+    response = client.post(
+        "/wizard/2", data={"name": "Anne", "pin": "111111", "pin_again": "111111"}
+    )
+    assert response.status_code == 200
+    assert "wizard.parent.pin.weak" not in response.text, "the key must be translated"
+    assert "tahmin" in response.text or "guess" in response.text
+
+
+def test_the_wizard_refuses_two_different_pins(client: TestClient) -> None:
+    client.post("/wizard/1", data={"lang": "tr"})
+    response = client.post(
+        "/wizard/2", data={"name": "Anne", "pin": "284913", "pin_again": "284914"}
+    )
+    assert response.status_code == 200
+    assert "aynı değil" in response.text
+
+
+def test_the_recovery_code_must_be_confirmed_written_down(client: TestClient) -> None:
+    client.post("/wizard/1", data={"lang": "tr"})
+    client.post("/wizard/2", data={"name": "Anne", "pin": PIN, "pin_again": PIN})
+    response = client.post(
+        "/wizard/3", data={"passphrase": PASSPHRASE, "recovery": "a b c d e f g h"}
+    )
+    assert response.status_code == 200
+    assert "yazdığınızı onaylayın" in response.text
+
+
+# --------------------------------------------------------------------- auth
+
+
+def test_the_right_pin_signs_in(client: TestClient, family_ready: None) -> None:
+    login(client)
+    assert client.get("/today").status_code == 200
+
+
+def test_five_wrong_pins_lock_the_door(
+    client: TestClient, family_ready: None, db: Database, config: Config
+) -> None:
+    for _ in range(config.panel.pin_attempts):
+        assert client.post("/login", data={"pin": "000001"}).status_code == 401
+
+    locked = client.post("/login", data={"pin": PIN})
+    assert locked.status_code == 401
+    assert "dakika sonra" in locked.text
+
+    with db.session() as session:
+        parent = repo.get_parent(session)
+        assert parent is not None
+        assert parent.pin_locked_until is not None
+
+
+def test_a_lockout_survives_a_panel_restart(
+    config: Config, db: Database, family_ready: None, daemon: FakeDaemon
+) -> None:
+    """A child who pulls the power must not be able to clear the counter."""
+    first = TestClient(create_app(config))
+    first.app.state.ctx.client = daemon  # type: ignore[attr-defined]
+    for _ in range(config.panel.pin_attempts):
+        first.post("/login", data={"pin": "000001"})
+
+    second = TestClient(create_app(config))
+    second.app.state.ctx.client = daemon  # type: ignore[attr-defined]
+    response = second.post("/login", data={"pin": PIN})
+    assert response.status_code == 401
+    assert "dakika sonra" in response.text
+
+
+def test_every_pin_attempt_lands_in_the_audit_log(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    client.post("/login", data={"pin": "000001"})
+    login(client)
+    with db.session() as session:
+        actions = [entry.action for entry in repo.recent_audit(session, limit=20)]
+    assert "login_failed" in actions
+    assert "login_ok" in actions
+
+
+def test_an_idle_session_expires(
+    client: TestClient, family_ready: None, db: Database, config: Config
+) -> None:
+    login(client)
+    with db.session() as session:
+        from biokids_core.db import PanelSession
+
+        row = session.query(PanelSession).one()
+        row.last_seen_at = utcnow() - dt.timedelta(
+            minutes=config.panel.session_idle_minutes + 1
+        )
+
+    response = client.get("/today", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"].startswith("/login")
+
+
+def test_signing_out_invalidates_the_session(client: TestClient, family_ready: None) -> None:
+    login(client)
+    client.post("/logout", follow_redirects=False)
+    assert client.get("/today", follow_redirects=False).status_code == 303
+
+
+def test_the_recovery_code_resets_the_pin(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    response = client.post(
+        "/recovery",
+        data={"code": "Bulut Deniz Elma Fener Gemi Halka Inci Kale", "pin": "551234"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    login(client, "551234")
+    with db.session() as session:
+        actions = [e.action for e in repo.recent_audit(session, limit=10)]
+    assert "recovery_used" in actions
+
+
+def test_a_wrong_recovery_code_changes_nothing(client: TestClient, family_ready: None) -> None:
+    response = client.post("/recovery", data={"code": "not the code", "pin": "551234"})
+    assert response.status_code == 400
+    assert client.post("/login", data={"pin": "551234"}).status_code == 401
+
+
+# ------------------------------------------------------------ parent actions
+
+
+def test_granting_time_reaches_the_daemon(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    login(client)
+    token = csrf_of(client)
+    response = client.post(
+        "/children/1/grant",
+        data={"minutes": 10, "csrf_token": token},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    _, args = next(c for c in daemon.calls if c[0] == "grant_time")
+    assert args["seconds"] == 600
+    assert args["child_id"] == 1
+
+
+def test_an_action_without_a_csrf_token_is_refused(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    login(client)
+    response = client.post("/children/1/lock", data={}, follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"].endswith("error=csrf")
+    assert not daemon.ran("lock_now")
+
+
+def test_a_wild_grant_value_is_clamped(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    login(client)
+    client.post(
+        "/children/1/grant",
+        data={"minutes": 999999, "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    _, args = next(c for c in daemon.calls if c[0] == "grant_time")
+    assert args["seconds"] == 4 * 3600
+
+
+def test_shutting_down_requires_an_explicit_confirmation(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    login(client)
+    token = csrf_of(client)
+    client.post(
+        "/children/1/poweroff",
+        data={"csrf_token": token, "confirm": "no"},
+        follow_redirects=False,
+    )
+    assert not daemon.ran("poweroff_now")
+
+    client.post(
+        "/children/1/poweroff",
+        data={"csrf_token": token, "confirm": "yes"},
+        follow_redirects=False,
+    )
+    assert daemon.ran("poweroff_now")
+
+
+# ------------------------------------------------------------ time settings
+
+
+def test_saving_time_rules_writes_the_policy_and_reloads_the_daemon(
+    client: TestClient, family_ready: None, db: Database, daemon: FakeDaemon
+) -> None:
+    login(client)
+    response = client.post(
+        "/children/1/time",
+        data={
+            "weekday_quota_min": 45,
+            "weekend_quota_min": 120,
+            "weekday_windows": "16:00-20:00, 08:00-09:00",
+            "weekend_windows": "",
+            "end_action": "lock",
+            "enabled": "on",
+            "csrf_token": csrf_of(client),
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    with db.session() as session:
+        policy = repo.get_or_create_policy(session, 1)
+        assert policy.weekday_quota_min == 45
+        assert policy.windows["weekday"] == ["16:00-20:00", "08:00-09:00"]
+        assert policy.end_action == "lock"
+        actions = [e.action for e in repo.recent_audit(session, limit=10)]
+    assert "policy_changed" in actions
+    assert daemon.ran("reload")
+
+
+def test_a_malformed_window_is_rejected_with_a_readable_message(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    response = client.post(
+        "/children/1/time",
+        data={
+            "weekday_quota_min": 45,
+            "weekday_windows": "dört-sekiz",
+            "end_action": "lock",
+            "csrf_token": csrf_of(client),
+        },
+    )
+    assert response.status_code == 400
+    assert "16:00-20:00" in response.text
+    with db.session() as session:
+        assert repo.get_or_create_policy(session, 1).weekday_quota_min == 60
+
+
+def test_a_quota_cannot_exceed_a_day(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    client.post(
+        "/children/1/time",
+        data={
+            "weekday_quota_min": 99999,
+            "end_action": "poweroff",
+            "csrf_token": csrf_of(client),
+        },
+        follow_redirects=False,
+    )
+    with db.session() as session:
+        assert repo.get_or_create_policy(session, 1).weekday_quota_min == 24 * 60
+
+
+# ------------------------------------------------------- daemon unreachable
+
+
+def test_the_today_screen_says_so_when_the_daemon_is_down(
+    config: Config, db: Database, family_ready: None
+) -> None:
+    """The one thing a parent must never be left guessing about."""
+    app = create_app(config)
+    app.state.ctx.client = FakeDaemon(up=False)  # type: ignore[assignment]
+    client = TestClient(app)
+    login(client)
+
+    page = client.get("/today")
+    assert page.status_code == 200
+    assert "yanıt vermiyor" in page.text
+
+
+def test_settings_still_renders_without_the_daemon(
+    config: Config, db: Database, family_ready: None
+) -> None:
+    app = create_app(config)
+    app.state.ctx.client = FakeDaemon(up=False)  # type: ignore[assignment]
+    client = TestClient(app)
+    login(client)
+    assert client.get("/settings").status_code == 200
+
+
+# ------------------------------------------------------------------- pages
+
+
+def test_the_today_screen_shows_a_childs_remaining_time(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    daemon.status = {
+        "children": [
+            {
+                "child_id": 1,
+                "display_name": "Elif",
+                "avatar": "fox",
+                "managed": True,
+                "online": True,
+                "app": "TuxPaint",
+                "remaining_seconds": 42 * 60,
+                "remaining_minutes": 42,
+                "quota_seconds": 60 * 60,
+                "granted_seconds": 0,
+                "used_seconds": 18 * 60,
+                "allow": True,
+                "reason_code": "allowed",
+                "end_action": "poweroff",
+            }
+        ]
+    }
+    login(client)
+    page = client.get("/today").text
+    assert "Elif" in page
+    assert "42" in page
+    assert "TuxPaint" in page
+
+
+def test_the_audit_view_renders_and_filters(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    with db.session() as session:
+        repo.audit(session, actor="daemon", action="quota_exhausted", target="child:1")
+        repo.audit(session, actor="parent:1", action="time_granted", target="child:1")
+    login(client)
+
+    assert "Günlük süre doldu" in _audit_rows(client.get("/audit").text)
+
+    # The filter dropdown lists every action that exists, so only the table body
+    # can say what the filter actually did.
+    rows = _audit_rows(client.get("/audit?action=time_granted").text)
+    assert "Süre eklendi" in rows
+    assert "Günlük süre doldu" not in rows
+
+
+def test_the_manifest_is_a_valid_pwa_manifest(client: TestClient, family_ready: None) -> None:
+    response = client.get("/manifest.webmanifest")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["display"] == "standalone"
+    assert any(icon["purpose"] == "any maskable" for icon in body["icons"])
+
+
+def test_the_service_worker_is_served_from_the_root(client: TestClient) -> None:
+    """At /static/sw.js it could never control a navigation to /today."""
+    response = client.get("/sw.js")
+    assert response.status_code == 200
+    assert response.headers["service-worker-allowed"] == "/"
+
+
+def test_english_renders_when_the_family_chose_english(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    with db.session() as session:
+        family = repo.get_family(session)
+        assert family is not None
+        family.locale = "en"
+    login(client)
+    assert "Today" in client.get("/today").text
+
+
+# --------------------------------------------------------------- bind guard
+
+
+def test_the_panel_refuses_to_bind_to_a_reachable_address() -> None:
+    """D-33 in one function: the moment 0.0.0.0 works, someone forwards a port."""
+    from biokids_panel.__main__ import check_loopback
+
+    assert check_loopback("127.0.0.1") == "127.0.0.1"
+    assert check_loopback("localhost") == "localhost"
+    for host in ("0.0.0.0", "192.168.1.5", "::"):
+        with pytest.raises(SystemExit, match="loopback only"):
+            check_loopback(host)
+
+
+def test_the_csrf_token_is_tied_to_the_session(session: Session) -> None:
+    from biokids_core.db import PanelSession
+
+    one = auth.AuthState(parent=None, session=PanelSession(token_hash="a" * 64, parent_id=1))
+    two = auth.AuthState(parent=None, session=PanelSession(token_hash="b" * 64, parent_id=1))
+    assert auth.csrf_token(one) != auth.csrf_token(two)
+    assert not auth.csrf_ok(one, auth.csrf_token(two))
+    assert auth.csrf_ok(one, auth.csrf_token(one))

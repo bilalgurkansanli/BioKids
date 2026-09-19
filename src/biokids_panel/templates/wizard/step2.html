@@ -1,0 +1,27 @@
+{% extends "wizard/_base.html" %}
+{% block step_title %}{{ _('wizard.parent.title') }}{% endblock %}
+
+{% block step %}
+  <form class="card" method="post" action="/wizard/2">
+    <div class="field">
+      <label for="name">{{ _('wizard.parent.name') }}</label>
+      <input id="name" name="name" type="text" maxlength="64" autofocus
+             value="{{ parent.display_name if parent else '' }}" autocomplete="name">
+    </div>
+
+    <div class="field">
+      <label for="pin">{{ _('wizard.parent.pin') }}</label>
+      <input class="pin-input" id="pin" name="pin" type="password" inputmode="numeric"
+             pattern="[0-9]{6}" maxlength="6" required autocomplete="new-password">
+      <span class="help">{{ _('wizard.parent.pin.help') }}</span>
+    </div>
+
+    <div class="field">
+      <label for="pin2">{{ _('wizard.parent.pin_again') }}</label>
+      <input class="pin-input" id="pin2" name="pin_again" type="password" inputmode="numeric"
+             pattern="[0-9]{6}" maxlength="6" required autocomplete="new-password">
+    </div>
+
+    <button class="btn btn--primary" type="submit">{{ _('common.next') }}</button>
+  </form>
+{% endblock %}

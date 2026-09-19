@@ -1,0 +1,27 @@
+{% extends "wizard/_base.html" %}
+{% block step_title %}{{ _('wizard.passphrase.title') }}{% endblock %}
+
+{% block step %}
+  <form class="card" method="post" action="/wizard/3">
+    <div class="field">
+      <label for="pass">{{ _('wizard.passphrase.field') }}</label>
+      <input id="pass" name="passphrase" type="password" minlength="10" required autofocus
+             autocomplete="new-password">
+      <span class="help">{{ _('wizard.passphrase.help') }}</span>
+    </div>
+
+    <h2>{{ _('wizard.recovery.title') }}</h2>
+    <p class="help">{{ _('wizard.recovery.help') }}</p>
+    {# Generated fresh for this render and never stored in plaintext: only its
+       argon2 hash survives the POST (D-50). #}
+    <p class="recovery-code">{{ recovery }}</p>
+    <input type="hidden" name="recovery" value="{{ recovery }}">
+
+    <div class="checkline">
+      <input type="checkbox" id="written" name="written_down" required>
+      <label for="written">{{ _('wizard.recovery.confirm') }}</label>
+    </div>
+
+    <button class="btn btn--primary" type="submit">{{ _('common.next') }}</button>
+  </form>
+{% endblock %}

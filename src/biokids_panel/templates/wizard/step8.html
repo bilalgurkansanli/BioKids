@@ -1,0 +1,47 @@
+{% extends "wizard/_base.html" %}
+{% block step_title %}{{ _('wizard.remote.title') }}{% endblock %}
+
+{% block step %}
+  <p class="muted">{{ _('wizard.remote.help') }}</p>
+
+  <div class="card">
+    <p class="status {% if tailscale.ready %}status--online{% endif %}">
+      {{ _(tailscale.status_key) }}
+    </p>
+
+    {% if tailscale.public %}
+      <div class="notice notice--danger" role="alert">
+        <div class="notice__title">{{ _('remote.funnel_warning') }}</div>
+        <p class="small">{{ _('remote.no_port_forward') }}</p>
+      </div>
+    {% endif %}
+
+    {% if panel_url %}
+      <p><strong>{{ _('remote.url') }}:</strong> <code>{{ panel_url }}</code></p>
+      {% if qr %}
+        <div class="qr">{{ qr|safe }}</div>
+        <p class="muted small">{{ _('remote.qr.help') }}</p>
+      {% endif %}
+      <p class="muted small">{{ _('remote.only_tailnet') }}</p>
+    {% elif tailscale.state == 'absent' %}
+      <p class="muted">{{ _('remote.install.help') }}</p>
+    {% else %}
+      <p class="muted">{{ _('remote.localhost_only') }}</p>
+    {% endif %}
+
+    <p class="muted small">{{ _('remote.no_port_forward') }}</p>
+  </div>
+
+  <form method="post" action="/wizard/8">
+    <div class="wizard-actions">
+      {% if tailscale.state != 'absent' and not tailscale.serves(panel_port) %}
+        <button class="btn btn--primary" type="submit" name="enable" value="on">
+          {{ _('remote.enable') }}
+        </button>
+      {% endif %}
+      <button class="btn btn--quiet" type="submit" name="enable" value="">
+        {{ _('common.skip') }}
+      </button>
+    </div>
+  </form>
+{% endblock %}

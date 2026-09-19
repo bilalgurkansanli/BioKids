@@ -1,0 +1,24 @@
+{#
+  The wizard frame: a progress strip, the step, and the two actions.
+
+  Every step is skippable with a sane default (D-49), so "Şimdilik geç" is
+  always present except on the two that create the account. The strip is a set
+  of bars rather than "Step 4 of 10" alone, because a parent on a phone wants to
+  know how much is left, not to do arithmetic.
+#}
+{% extends "base.html" %}
+
+{% block title %}{{ _('wizard.title') }} · {{ _('panel.title') }}{% endblock %}
+
+{% block content %}
+  <p class="muted small">{{ _('wizard.step', current=step, total=total_steps) }}</p>
+  <div class="steps" aria-hidden="true">
+    {% for n in range(1, total_steps + 1) %}
+      <span class="{% if n < step %}done{% elif n == step %}now{% endif %}"></span>
+    {% endfor %}
+  </div>
+
+  <h1>{% block step_title %}{{ _('wizard.title') }}{% endblock %}</h1>
+
+  {% block step %}{% endblock %}
+{% endblock %}

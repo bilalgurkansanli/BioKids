@@ -737,6 +737,12 @@ msgstr "Panel şu an sadece bu bilgisayardan açılıyor."
 msgid "remote.no_port_forward"
 msgstr "Modeminizde port yönlendirme yapmayın. Paneli internete açmayın."
 
+msgid "remote.funnel_warning"
+msgstr "Dikkat: bu cihaz Tailscale Funnel ile internete açık"
+
+msgid "remote.funnel_warning.help"
+msgstr "Funnel açıkken panel adresinize internetten de ulaşılabilir. Kapatmanızı öneririz."
+
 msgid "remote.only_tailnet"
 msgstr "Bu adrese sadece sizin Tailscale ağınızdaki cihazlar erişebilir."
 
