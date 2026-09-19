@@ -1,0 +1,311 @@
+# The BioKids application catalog (D-20).
+#
+# Apps are data, not code. This file is installed to
+# /usr/share/biokids/catalog/catalog.toml and loaded into the `app` table on
+# install and upgrade. A parent picks from it in the wizard; nothing a parent
+# did not enable ever appears on a child's screen.
+#
+# Fields:
+#   slug              stable identifier; never renamed once released
+#   name_tr/name_en   the tile label
+#   exec              argv, as a list. Empty for `builtin` and `web` tiles
+#   package           the Debian package that provides `exec`; empty for builtins
+#   kind              app | web | builtin
+#   default_category  games | learning | web | free   (the parent may reassign)
+#   min_age/max_age   what the wizard pre-selects for a child of that age
+#
+# An app whose package is not installed is simply not shown. The metapackage
+# `biokids-desktop` pulls in the ones marked as part of the default set.
+
+[[app]]
+slug = "gcompris"
+name_tr = "GCompris"
+name_en = "GCompris"
+exec = ["gcompris-qt"]
+package = "gcompris-qt"
+kind = "app"
+icon = "blocks"
+default_category = "learning"
+min_age = 4
+max_age = 10
+description_tr = "Sayılar, harfler, renkler ve yüzlerce küçük oyun."
+description_en = "Numbers, letters, colours and hundreds of small activities."
+
+[[app]]
+slug = "tuxpaint"
+name_tr = "Boya"
+name_en = "Paint"
+exec = ["tuxpaint"]
+package = "tuxpaint"
+kind = "app"
+icon = "brush"
+default_category = "free"
+min_age = 4
+max_age = 10
+description_tr = "Resim yapma programı. Damgalar ve sesli fırçalar var."
+description_en = "A drawing program with stamps and noisy brushes."
+
+[[app]]
+slug = "tuxmath"
+name_tr = "Sayılar"
+name_en = "Numbers"
+exec = ["tuxmath"]
+package = "tuxmath"
+kind = "app"
+icon = "numbers"
+default_category = "learning"
+min_age = 5
+max_age = 10
+description_tr = "Dört işlemi oyunla öğreten bir uygulama."
+description_en = "Arithmetic practice disguised as a game."
+
+[[app]]
+slug = "klavaro"
+name_tr = "Klavye"
+name_en = "Typing"
+exec = ["klavaro"]
+package = "klavaro"
+kind = "app"
+icon = "keyboard"
+default_category = "learning"
+min_age = 7
+max_age = 10
+description_tr = "On parmak klavye kullanmayı öğretir."
+description_en = "Touch-typing practice."
+
+[[app]]
+slug = "stellarium"
+name_tr = "Gökyüzü"
+name_en = "Sky"
+exec = ["stellarium"]
+package = "stellarium"
+kind = "app"
+icon = "star"
+default_category = "learning"
+min_age = 6
+max_age = 10
+description_tr = "Gerçek yıldız haritası. Bu gece hangi gezegen görünüyor?"
+description_en = "A real star map. Which planet is out tonight?"
+
+[[app]]
+slug = "kolourpaint"
+name_tr = "Çizim"
+name_en = "Draw"
+exec = ["kolourpaint"]
+package = "kolourpaint"
+kind = "app"
+icon = "palette"
+default_category = "free"
+min_age = 6
+max_age = 10
+description_tr = "Basit bir çizim ve resim düzenleme programı."
+description_en = "A simple drawing and image editing program."
+
+[[app]]
+slug = "supertux"
+name_tr = "SuperTux"
+name_en = "SuperTux"
+exec = ["supertux2"]
+package = "supertux"
+kind = "app"
+icon = "penguin"
+default_category = "games"
+min_age = 5
+max_age = 10
+description_tr = "Zıplayarak ilerlenen klasik bir platform oyunu."
+description_en = "A classic jump-and-run platformer."
+
+[[app]]
+slug = "frozen-bubble"
+name_tr = "Balonlar"
+name_en = "Bubbles"
+exec = ["frozen-bubble"]
+package = "frozen-bubble"
+kind = "app"
+icon = "bubble"
+default_category = "games"
+min_age = 4
+max_age = 10
+description_tr = "Aynı renk balonları eşleştirme oyunu."
+description_en = "Match the coloured bubbles."
+
+[[app]]
+slug = "gnome-mahjongg"
+name_tr = "Eşleştirme"
+name_en = "Mahjongg"
+exec = ["gnome-mahjongg"]
+package = "gnome-mahjongg"
+kind = "app"
+icon = "tiles"
+default_category = "games"
+min_age = 7
+max_age = 10
+description_tr = "Sakin bir taş eşleştirme oyunu."
+description_en = "A calm tile-matching game."
+
+[[app]]
+slug = "libreoffice-writer"
+name_tr = "Yazı"
+name_en = "Writer"
+exec = ["libreoffice", "--writer"]
+package = "libreoffice-writer"
+kind = "app"
+icon = "document"
+default_category = "learning"
+min_age = 8
+max_age = 10
+description_tr = "Ödev ve hikâye yazmak için."
+description_en = "For homework and stories."
+
+[[app]]
+slug = "libreoffice-calc"
+name_tr = "Tablo"
+name_en = "Calc"
+exec = ["libreoffice", "--calc"]
+package = "libreoffice-calc"
+kind = "app"
+icon = "table"
+default_category = "learning"
+min_age = 9
+max_age = 10
+description_tr = "Hesap tablosu."
+description_en = "A spreadsheet."
+
+[[app]]
+slug = "files"
+name_tr = "Dosyalarım"
+name_en = "My files"
+exec = ["thunar", "~"]
+package = "thunar"
+kind = "app"
+icon = "folder"
+default_category = "free"
+min_age = 8
+max_age = 10
+description_tr = "Kendi klasörüne erişim. Sadece 8 yaş ve üzeri için önerilir."
+description_en = "Access to their own folder. Suggested for ages 8 and up."
+
+# --- web tiles -------------------------------------------------------------
+# These open the child's Chromium at a URL. In allowlist mode the address is
+# added to the child's allowlist when the tile is enabled, so a tile can never
+# be a link to a page the filter would block.
+
+[[app]]
+slug = "eba"
+name_tr = "EBA"
+name_en = "EBA"
+exec = []
+url = "https://www.eba.gov.tr"
+package = ""
+kind = "web"
+icon = "school"
+default_category = "learning"
+min_age = 6
+max_age = 10
+description_tr = "Millî Eğitim'in ders portalı. Kazanılan süre için doğal hedef."
+description_en = "Turkey's national schools portal."
+
+[[app]]
+slug = "trtcocuk"
+name_tr = "TRT Çocuk"
+name_en = "TRT Çocuk"
+exec = []
+url = "https://www.trtcocuk.net.tr"
+package = ""
+kind = "web"
+icon = "tv"
+default_category = "web"
+min_age = 4
+max_age = 8
+description_tr = "TRT'nin çocuk sitesi: çizgi film ve oyunlar."
+description_en = "Turkey's public broadcaster's children's site."
+
+[[app]]
+slug = "scratch"
+name_tr = "Scratch"
+name_en = "Scratch"
+exec = []
+url = "https://scratch.mit.edu"
+package = ""
+kind = "web"
+icon = "cat"
+default_category = "learning"
+min_age = 8
+max_age = 10
+description_tr = "Blokları birleştirerek kendi oyununu yap."
+description_en = "Build your own games by snapping blocks together."
+
+[[app]]
+slug = "vikipedi-cocuk"
+name_tr = "Vikipedi"
+name_en = "Wikipedia"
+exec = []
+url = "https://tr.wikipedia.org"
+package = ""
+kind = "web"
+icon = "book"
+default_category = "learning"
+min_age = 8
+max_age = 10
+description_tr = "Ansiklopedi. Ödev için."
+description_en = "The encyclopaedia, for homework."
+
+# --- built-in tiles --------------------------------------------------------
+# Served by the launcher itself. They have no process and consume no category
+# time; `biokids-shell` renders them directly.
+
+[[app]]
+slug = "browser"
+name_tr = "İnternet"
+name_en = "Web"
+exec = []
+package = ""
+kind = "builtin"
+icon = "globe"
+default_category = "web"
+min_age = 4
+max_age = 10
+description_tr = "Tarayıcı. Hangi sitelere girebileceğini siz belirlersiniz."
+description_en = "The browser. You decide which sites open."
+
+[[app]]
+slug = "volume"
+name_tr = "Ses"
+name_en = "Sound"
+exec = []
+package = ""
+kind = "builtin"
+icon = "speaker"
+default_category = "free"
+min_age = 4
+max_age = 10
+description_tr = "Ses seviyesi."
+description_en = "Volume."
+
+[[app]]
+slug = "brightness"
+name_tr = "Parlaklık"
+name_en = "Brightness"
+exec = []
+package = ""
+kind = "builtin"
+icon = "sun"
+default_category = "free"
+min_age = 4
+max_age = 10
+description_tr = "Ekran parlaklığı."
+description_en = "Screen brightness."
+
+[[app]]
+slug = "shutdown"
+name_tr = "Kapat"
+name_en = "Shut down"
+exec = []
+package = ""
+kind = "builtin"
+icon = "power"
+default_category = "free"
+min_age = 4
+max_age = 10
+description_tr = "Bilgisayarı kapatır. Önce sorar."
+description_en = "Shuts the computer down. It asks first."
