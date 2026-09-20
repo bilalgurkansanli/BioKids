@@ -731,6 +731,11 @@ class Supervisor:
         """
         if not self.config.voice.enabled:
             return
+        if runtime.policy is not None and not runtime.policy.voice_enabled:
+            # The per-child switch, which the wizard has always offered and
+            # nothing ever honoured. A parent who turns the voices off for one
+            # child still gets the card on screen; it is the sound that stops.
+            return
         self.bus.publish(
             EventKind.SPEAK,
             child_id=runtime.child_id,

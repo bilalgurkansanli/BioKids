@@ -34,6 +34,15 @@ from biokids_core.config import Config, get_config
 
 log = logging.getLogger(__name__)
 
+MANAGED_POLICY_DIR = Path("/etc/chromium/policies/managed")
+"""The only place Chromium on Linux reads a managed policy from.
+
+Not `<user-data-dir>/policies/managed/`, which is where this file used to write
+one: `--user-data-dir` adds no policy source, so every lockdown T5.2 promises
+was inert and `chrome://policy` in the kiosk profile was empty."""
+
+POLICY_FILENAME = "biokids-kiosk.json"
+
 RESTART_BACKOFF_MAX = 30.0
 """If Chromium is crash-looping, back off rather than spinning the CPU. The
 child still sees a locked screen, because the session is the desktop and the
@@ -78,6 +87,9 @@ class KioskSupervisor:
 
     config: Config = field(default_factory=get_config)
     profile_dir: Path | None = None
+    _policy_dir: Path | None = None
+    """Overridden only by the tests. Production always uses MANAGED_POLICY_DIR,
+    because that is the one Chromium reads."""
     process: asyncio.subprocess.Process | None = None
     restarts: int = 0
     _stopping: bool = False
@@ -93,20 +105,74 @@ class KioskSupervisor:
     def profile(self) -> Path:
         return self.profile_dir or (Path.home() / ".config" / "biokids" / "kiosk")
 
-    def write_policy(self) -> Path:
-        """Chromium reads `<user-data-dir>/policies/managed/*.json` for a profile."""
-        target = self.profile() / "policies" / "managed"
-        target.mkdir(parents=True, exist_ok=True)
-        path = target / "biokids-kiosk.json"
-        # Written atomically: a half-written policy file is one Chromium ignores
-        # entirely, and a Chromium with no policy is a browser with no limits.
-        temp = path.with_suffix(".json.tmp")
-        temp.write_text(
-            json.dumps(kiosk_policy(self.origin), indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
-        temp.replace(path)
-        return path
+    @property
+    def policy_dir(self) -> Path:
+        """Where Chromium on Linux actually looks. Not the profile directory."""
+        return self._policy_dir or MANAGED_POLICY_DIR
+
+    def policy_path(self) -> Path:
+        return self.policy_dir / POLICY_FILENAME
+
+    def policy_in_force(self) -> bool:
+        """Is there a managed policy at the path Chromium actually reads?
+
+        Not "did we write one": for a long time the answer to that was yes and
+        the answer to this was no, because the file went to
+        `<user-data-dir>/policies/managed/`, which Chromium's Linux policy
+        loader does not look at. `--user-data-dir` adds no policy source; only
+        `/etc/chromium/policies/{managed,recommended}` is read.
+        """
+        path = self.policy_path()
+        if not path.is_file():
+            return False
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return False
+        allowed = loaded.get("URLAllowlist") or []
+        return any(self.origin in str(entry) for entry in allowed)
+
+    def write_policy(self) -> Path | None:
+        """Put the policy where Chromium reads it, or say loudly that we cannot.
+
+        `/etc/chromium/policies/managed/` is root-owned and the launcher runs as
+        the child, so on a packaged machine this is already there - the package
+        ships it, because the policy depends on nothing but host:port and that is
+        the same for every child. This method is what covers a developer running
+        as root, and what turns "no policy" from silence into an error.
+
+        Returns None when the policy is not in force. A caller that treated a
+        returned path as "the kiosk is locked down" was the shape of the
+        original bug, so there is no path to return when it is not true.
+        """
+        path = self.policy_path()
+        try:
+            self.policy_dir.mkdir(parents=True, exist_ok=True)
+            # Written atomically: a half-written policy file is one Chromium
+            # ignores entirely, and a Chromium with no policy is a browser with
+            # no limits.
+            temp = path.with_suffix(".json.tmp")
+            temp.write_text(
+                json.dumps(kiosk_policy(self.origin), indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            temp.replace(path)
+            return path
+        except OSError as exc:
+            if self.policy_in_force():
+                # The package put it there. This is the normal path: the child
+                # cannot write /etc and does not need to.
+                log.debug("the managed policy is already in place at %s", path)
+                return path
+            log.error(
+                "no Chromium managed policy at %s (%s). The kiosk will start with "
+                "NO policy at all: no URL allowlist, DevTools available, downloads "
+                "unrestricted. Install biokids-shell, or run "
+                "`biokids-admin` as root to write it.",
+                path,
+                exc,
+            )
+            return None
 
     def argv(self) -> list[str]:
         return [

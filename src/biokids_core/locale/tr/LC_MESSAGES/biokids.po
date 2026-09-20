@@ -458,6 +458,9 @@ msgstr "Simge"
 msgid "child.unix_user"
 msgstr "Bilgisayardaki kullanıcı adı"
 
+msgid "child.unix_user.taken"
+msgstr "Bu kullanıcı adı başka bir çocuğa ait. Başka bir ad seçin."
+
 msgid "child.unix_user.help"
 msgstr "Giriş ekranında görünecek hesap. Sadece küçük harf ve rakam."
 

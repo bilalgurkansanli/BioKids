@@ -14,7 +14,10 @@ browser or a sound card.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import pathlib
+import shutil
 from typing import Any
 
 import pytest
@@ -22,8 +25,14 @@ from fastapi.testclient import TestClient
 
 from biokids_core.config import Config
 from biokids_core.types import AgeBand, Reason
+from biokids_shell import launcher as launcher_module
 from biokids_shell.app import create_app
-from biokids_shell.kiosk import KioskSupervisor, kiosk_policy
+from biokids_shell.kiosk import (
+    MANAGED_POLICY_DIR,
+    POLICY_FILENAME,
+    KioskSupervisor,
+    kiosk_policy,
+)
 from biokids_shell.launcher import AppLauncher, LaunchRequest
 
 
@@ -471,11 +480,68 @@ def test_the_kiosk_policy_closes_the_obvious_ways_out() -> None:
 
 def test_the_kiosk_policy_is_written_atomically(config: Config, tmp_path: Any) -> None:
     """A half-written policy is one Chromium ignores entirely."""
-    supervisor = KioskSupervisor(config, profile_dir=tmp_path / "kiosk")
+    supervisor = KioskSupervisor(
+        config, profile_dir=tmp_path / "kiosk", _policy_dir=tmp_path / "managed"
+    )
     path = supervisor.write_policy()
-    assert path.is_file()
+    assert path is not None and path.is_file()
     assert not list(path.parent.glob("*.tmp")), "no temporary file is left behind"
     assert '"URLBlocklist"' in path.read_text(encoding="utf-8")
+
+
+def test_the_policy_goes_where_chromium_actually_reads_it(config: Config) -> None:
+    """Not `<user-data-dir>/policies/managed/`, which is where it used to go.
+
+    Chromium's Linux policy loader reads only /etc/chromium/policies/{managed,
+    recommended}; `--user-data-dir` adds no policy source. So the file was
+    written, the docstring said Chromium reads it, and `chrome://policy` in the
+    kiosk profile was empty - URLBlocklist ["*"] never applied, DevTools
+    available, downloads unrestricted. CLAUDE.md section 3 and
+    ARCHITECTURE.md already named the fixed path; only the code disagreed.
+    """
+    supervisor = KioskSupervisor(config)
+    assert supervisor.policy_dir == MANAGED_POLICY_DIR
+    assert (
+        str(supervisor.policy_dir).replace("\\", "/").endswith("/etc/chromium/policies/managed")
+    )
+    assert "user-data-dir" not in str(supervisor.policy_dir)
+
+
+def test_a_kiosk_with_no_policy_is_not_reported_as_locked_down(
+    config: Config, tmp_path: Any
+) -> None:
+    """The launcher runs as the child and cannot write /etc.
+
+    On a packaged machine the file is already there. When it is not, returning a
+    path would tell the caller the kiosk is locked down when it is a browser
+    with no limits - so there is no path to return.
+    """
+    unwritable = tmp_path / "nope"
+    unwritable.write_text("not a directory", encoding="utf-8")
+    supervisor = KioskSupervisor(config, _policy_dir=unwritable / "managed")
+
+    assert supervisor.policy_in_force() is False
+    assert supervisor.write_policy() is None
+
+
+def test_a_policy_the_package_already_placed_is_accepted(config: Config, tmp_path: Any) -> None:
+    """The normal path on a real machine: root put it there, the child reads it."""
+    managed = tmp_path / "managed"
+    KioskSupervisor(config, _policy_dir=managed).write_policy()
+
+    child_view = KioskSupervisor(config, _policy_dir=managed)
+    assert child_view.policy_in_force() is True
+
+
+def test_a_policy_for_a_different_origin_does_not_count(config: Config, tmp_path: Any) -> None:
+    """A stale file from a changed port is not the policy this kiosk needs."""
+    managed = tmp_path / "managed"
+    managed.mkdir(parents=True)
+    (managed / POLICY_FILENAME).write_text(
+        json.dumps(kiosk_policy("127.0.0.1:9999")), encoding="utf-8"
+    )
+
+    assert KioskSupervisor(config, _policy_dir=managed).policy_in_force() is False
 
 
 def test_the_kiosk_is_pointed_at_the_launcher_and_nothing_else(config: Config) -> None:
@@ -553,3 +619,90 @@ def test_the_virtual_terminal_guards_are_actually_shipped() -> None:
     shipped = (root / "debian/biokids-shell.install").read_text(encoding="utf-8")
     assert "logind.conf.d" in shipped, "the file exists but no package installs it"
     assert "xorg.conf.d" in shipped, "the file exists but no package installs it"
+
+
+# ------------------------------------------- launching returns when the app starts
+
+
+class _FakeProcess:
+    """A `systemd-run --scope` that has already exec'd into the application."""
+
+    def __init__(self, *, returncode: int | None = None, stderr: bytes = b"") -> None:
+        self.returncode = returncode
+        self._stderr = stderr
+        self.waits = 0
+
+    async def wait(self) -> int | None:
+        self.waits += 1
+        if self.returncode is None:
+            # The application is running. This is the call that used to block
+            # until the child quit TuxPaint.
+            await asyncio.Event().wait()
+        return self.returncode
+
+    async def communicate(self) -> tuple[bytes, bytes]:
+        """What the old code awaited. Blocks while the application is running,
+        which is precisely the defect: it returned when the child closed it."""
+        if self.returncode is None:
+            await asyncio.Event().wait()
+        return b"", self._stderr
+
+    @property
+    def stderr(self) -> Any:
+        payload = self._stderr
+
+        class _Reader:
+            async def read(self) -> bytes:
+                return payload
+
+        return _Reader()
+
+
+async def test_launching_returns_while_the_app_is_still_running(
+    config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`systemd-run --scope` execs the app; it does not fork and return.
+
+    So `communicate()` waited for the whole life of the application:
+    `report_activity` reached the daemon only after the child closed it, and the
+    launch result was the app's own exit status - which meant that when the
+    daemon stopped the scope at quota time, the launcher reported the launch had
+    failed.
+    """
+    launcher = AppLauncher(config)
+    running = _FakeProcess(returncode=None)
+
+    async def fake_exec(*_a: Any, **_k: Any) -> Any:
+        return running
+
+    monkeypatch.setattr(shutil, "which", lambda _n: "/usr/bin/systemd-run")
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setattr(launcher_module, "SCOPE_REFUSAL_TIMEOUT_S", 0.05)
+
+    request = LaunchRequest(slug="tuxpaint", name="Boya", kind="app", exec_cmd="tuxpaint")
+    result = await asyncio.wait_for(launcher.launch(request), timeout=5)
+
+    assert result.ok is True
+    assert result.unit and result.unit.startswith("biokids-app-tuxpaint")
+    assert launcher.running["tuxpaint"] == result.unit
+
+
+async def test_a_refused_scope_is_still_reported_as_a_failure(
+    config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Not waiting must not mean not noticing. A refusal happens before the exec."""
+    launcher = AppLauncher(config)
+    refused = _FakeProcess(returncode=1, stderr=b"Failed to start transient scope unit")
+
+    async def fake_exec(*_a: Any, **_k: Any) -> Any:
+        return refused
+
+    monkeypatch.setattr(shutil, "which", lambda _n: "/usr/bin/systemd-run")
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setattr(launcher_module, "SCOPE_REFUSAL_TIMEOUT_S", 0.05)
+
+    request = LaunchRequest(slug="tuxpaint", name="Boya", kind="app", exec_cmd="tuxpaint")
+    result = await asyncio.wait_for(launcher.launch(request), timeout=5)
+
+    assert result.ok is False
+    assert "tuxpaint" not in launcher.running, "a refused launch was recorded as running"

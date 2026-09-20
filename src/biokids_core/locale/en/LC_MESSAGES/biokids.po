@@ -458,6 +458,9 @@ msgstr "Picture"
 msgid "child.unix_user"
 msgstr "Username on the computer"
 
+msgid "child.unix_user.taken"
+msgstr "That account name belongs to another child. Please choose a different one."
+
 msgid "child.unix_user.help"
 msgstr "The account shown on the login screen. Lower-case letters and digits only."
 

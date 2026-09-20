@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from biokids_core import repo, security
 from biokids_core.config import Config
-from biokids_core.db import Database, Parent
+from biokids_core.db import AuditLog, Database, Parent
 from biokids_core.db.models import utcnow
 from biokids_core.errors import IpcError
 from biokids_core.ipc import Response
@@ -1137,3 +1137,88 @@ def test_the_login_page_does_not_forward_a_hostile_next(
 def test_the_login_form_carries_a_cleaned_next(client: TestClient, family_ready: None) -> None:
     page = client.get("/login?next=//evil.example.com/").text
     assert "evil.example.com" not in page
+
+
+def test_adding_a_second_mehmet_does_not_delete_the_first(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """ "Mehmet Ali" and "Mehmet Can" both fold to `mehmet`.
+
+    `create_child` did `existing or Child(...)` and then wrote the new details
+    over the row it found, so the older brother vanished from the panel while it
+    said a child had been added - and the two shared one Linux account, one
+    daily quota and one ledger.
+    """
+    login(client)
+    this_year = dt.date.today().year
+    for name in ("Mehmet Ali", "Mehmet Can"):
+        client.post(
+            "/children",
+            data={
+                "display_name": name,
+                "birth_year": this_year - 7,
+                "unix_user": "",
+                "avatar": "fox",
+                "locale": "tr",
+                "csrf_token": csrf_of(client),
+            },
+            follow_redirects=False,
+        )
+
+    with db.session() as session:
+        children = repo.list_children(session)
+        names = sorted(c.display_name for c in children)
+        users = sorted(c.unix_user for c in children)
+
+    assert "Mehmet Ali" in names, f"the first brother was overwritten: {names}"
+    assert "Mehmet Can" in names, f"the second brother was not added: {names}"
+    assert len(set(users)) == len(users), f"two children share one account: {users}"
+
+
+def test_a_username_the_parent_typed_is_never_pointed_at_someone_else(
+    client: TestClient, family_ready: None
+) -> None:
+    """A suggested name is ours to adjust; a typed one is theirs."""
+    login(client)
+    response = client.post(
+        "/children",
+        data={
+            "display_name": "Baska Cocuk",
+            "birth_year": dt.date.today().year - 8,
+            "unix_user": "elif",
+            "avatar": "cat",
+            "locale": "tr",
+            "csrf_token": csrf_of(client),
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    assert "ba\u015fka bir \u00e7ocu\u011fa ait" in response.text
+
+
+def test_the_audit_day_filter_uses_the_parents_day(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """Rows are naive UTC; the filter compared them against local midnight.
+
+    In Istanbul (UTC+3) that drops everything between 00:00 and 03:00 - exactly
+    the window a parent asking "what happened last night" means. The unfiltered
+    list showed the row under today and filtering for today hid it.
+    """
+    now_local = dt.datetime.now().astimezone()
+    early = now_local.replace(hour=1, minute=30, second=0, microsecond=0)
+    as_utc = early.astimezone(dt.UTC).replace(tzinfo=None)
+
+    with db.session() as session:
+        repo.audit(session, actor="daemon", action="quota_exhausted", target="child:1")
+        session.flush()
+        row = session.query(AuditLog).order_by(AuditLog.id.desc()).first()
+        assert row is not None
+        row.ts = as_utc
+        session.commit()
+
+    login(client)
+    page = client.get(f"/audit?day={early.date().isoformat()}").text
+    assert "G\u00fcnl\u00fck s\u00fcre doldu" in _audit_rows(page), (
+        "a 01:30 event fell out of its own day"
+    )

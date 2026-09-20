@@ -984,3 +984,51 @@ The open redirect fixed in 3cc49a3 was only half fixed: `GET /login` never appli
 `safe_next`, so an already-signed-in parent following a link was redirected off-site
 immediately, and for everyone else the raw value was rendered into the form as a hidden
 field and posted back.
+
+**D-147 [claude] An auto-suggested account name may be adjusted; a typed one may not.**
+`_suggest_user` keeps only the first word, so "Mehmet Ali" and "Mehmet Can" both fold to
+`mehmet`, and `create_child` did `existing or Child(...)` and wrote the second child's
+details over the first one's row. The older brother vanished from the panel, the panel
+said a child had been added, and the two shared one Linux account, one daily quota and
+one ledger — whoever logged in second was enforced against the other's time.
+
+A name BioKids invented is BioKids' to adjust, so a collision takes the next free
+variant. A name the parent typed is theirs, and quietly pointing it at a different
+child's account is not a correction we are entitled to make: that one is refused with a
+message.
+
+**D-148 [claude] The per-child voice switch is honoured, and the audit day is the
+parent's day.** Two settings written and never read. The wizard's "Sesler" checkbox
+wrote `policy.voice_enabled` and `load_policy` had no field to copy it into, so a parent
+who unticked it because the baby was asleep got the warnings spoken anyway — and there
+is nowhere else in the panel to turn the voices off. The only gate on speech was
+`config.voice.enabled`, a machine-level flag in `/etc/biokids/config.toml` that nothing
+in the product ever writes.
+
+And the audit screen's date filter built local-midnight boundaries and compared them
+against timestamps stored as naive UTC. In Istanbul (UTC+3, the project default) every
+row between 00:00 and 03:00 fell out of its own day — exactly the window a parent asking
+"what happened last night" means. The unfiltered list showed the 01:30 row under today
+and filtering for today hid it.
+
+**D-149 [claude] The kiosk policy goes where Chromium reads it, and a launch returns
+when the app starts.** `write_policy` wrote to `<user-data-dir>/policies/managed/` and
+its docstring asserted Chromium reads that. It does not: the Linux policy loader reads
+only `/etc/chromium/policies/{managed,recommended}`, and `--user-data-dir` adds no
+policy source. CLAUDE.md §3 and ARCHITECTURE.md already named the fixed path; the code
+was the only thing that disagreed. So every lockdown T5.2 promises was inert —
+`chrome://policy` empty, `URLBlocklist: ["*"]` unapplied, DevTools available, downloads
+unrestricted — with only a keydown handler left, whose Ctrl list does not include
+Ctrl+Shift+I.
+
+The policy depends on nothing but `host:port`, which is identical for every child, so
+the package ships it and the launcher verifies it rather than writing it. When it is not
+in force `write_policy` returns None rather than a path, because a caller that treats a
+returned path as "the kiosk is locked down" is the original bug restated.
+
+`systemd-run --scope` does not fork and return: it registers its own PID into the scope
+and execs the command, so `communicate()` waited for the whole life of the application.
+`report_activity` reached the daemon only after the child closed the app, and the launch
+result was the app's own exit status — so when the daemon stopped the scope at quota
+time, the launcher reported that the launch had failed. A refusal happens before the
+exec and is therefore immediate, so a short bounded wait tells the two apart.

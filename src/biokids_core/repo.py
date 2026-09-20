@@ -133,6 +133,7 @@ def load_policy(
         earn_idle_pause_min=row.earn_idle_pause_min,
         earn_spendable_general=row.earn_spendable_general,
         category_limits_min=load_category_limits(session, child.id),
+        voice_enabled=row.voice_enabled,
         filter_mode=_enum_or(FilterMode, row.filter_mode, FilterMode.ALLOWLIST),
         ai_enabled=row.ai_enabled,
         ai_block_enabled=row.ai_block_enabled,

@@ -209,6 +209,14 @@ class ChildPolicy:
 
     category_limits_min: dict[Category, int] = field(default_factory=dict)
 
+    voice_enabled: bool = True
+    """Whether Zio and Sio speak for this child.
+
+    Per child, unlike `config.voice.enabled`, which is the machine-level switch
+    in /etc/biokids/config.toml. The wizard has always written this column and
+    for a long time nothing read it, so a parent who unticked "Sesler" because
+    the baby was asleep got the warnings spoken anyway."""
+
     filter_mode: FilterMode = FilterMode.ALLOWLIST
     ai_enabled: bool = False
     ai_block_enabled: bool = False

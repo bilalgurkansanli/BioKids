@@ -125,6 +125,24 @@ def see_other(url: str) -> RedirectResponse:
     return RedirectResponse(url, status_code=303)
 
 
+def _utc_bounds_of_local_day(day: dt.date) -> tuple[dt.datetime, dt.datetime]:
+    """The parent's day, expressed the way the rows are stored.
+
+    `AuditLog.ts` is naive UTC (`utcnow()`), and the screen renders it by
+    attaching UTC and converting to local. The filter did neither: it built
+    local-midnight boundaries and compared them raw, so in Istanbul (UTC+3)
+    every row between 00:00 and 03:00 fell out of its own day - which is the
+    window a parent asking "what happened last night" means. The unfiltered
+    list showed the 01:30 row under today and filtering for today hid it.
+    """
+    local_start = dt.datetime.combine(day, dt.time.min).astimezone()
+    local_end = dt.datetime.combine(day, dt.time.max).astimezone()
+    return (
+        local_start.astimezone(dt.UTC).replace(tzinfo=None),
+        local_end.astimezone(dt.UTC).replace(tzinfo=None),
+    )
+
+
 def _needs_setup(session: Session) -> bool:
     return not repo.setup_complete(session)
 
@@ -721,8 +739,7 @@ def register_routes(app: FastAPI) -> None:
         if day:
             with contextlib.suppress(ValueError):
                 chosen = dt.date.fromisoformat(day)
-                since = dt.datetime.combine(chosen, dt.time.min)
-                until = dt.datetime.combine(chosen, dt.time.max)
+                since, until = _utc_bounds_of_local_day(chosen)
         entries = repo.recent_audit(
             session,
             limit=per_page,

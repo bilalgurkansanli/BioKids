@@ -420,6 +420,7 @@ def create_child(
     adding the first one in January. Returns the child, or None and an i18n key.
     """
     name = display_name.strip()[:64]
+    typed = bool(unix_user.strip())
     user = (unix_user.strip() or _suggest_user(name)).lower()
     this_year = dt.date.today().year
 
@@ -429,6 +430,21 @@ def create_child(
         return None, "error.invalid_input"
 
     existing = repo.get_child_by_user(session, user)
+    if existing is not None and existing.display_name != name:
+        # A different child already owns this account name.
+        #
+        # `_suggest_user` keeps only the first word, so "Mehmet Ali" and
+        # "Mehmet Can" both fold to `mehmet`, and this function used to write
+        # the second child's details straight over the first one's row: the
+        # older brother vanished from the panel and the two shared one quota and
+        # one ledger.
+        if typed:
+            # The parent chose this name. Quietly pointing it at somebody else's
+            # account is not a correction we are entitled to make.
+            return None, "child.unix_user.taken"
+        user = _free_user(session, user)
+        existing = None
+
     child = existing or Child(unix_user=user, display_name=name, birth_year=birth_year)
     child.display_name = name
     child.birth_year = birth_year
@@ -521,6 +537,24 @@ def _pending_child(session: Session) -> Child | None:
         return repo.get_child(session, int(raw))
     children = repo.list_children(session)
     return children[0] if children else None
+
+
+def _free_user(session: Session, wanted: str) -> str:
+    """`mehmet`, then `mehmet2`, `mehmet3` - the first one nobody has.
+
+    Only ever applied to a name BioKids suggested itself. A name the parent
+    typed is refused on collision rather than adjusted, because a parent who
+    types `mehmet` means *that* account.
+    """
+    if repo.get_child_by_user(session, wanted) is None:
+        return wanted
+    for suffix in range(2, 100):
+        candidate = f"{wanted}{suffix}"[:32]
+        if repo.get_child_by_user(session, candidate) is None:
+            return candidate
+    # Ninety-eight children called Mehmet. The caller validates the name and
+    # will refuse this one, which is a better outcome than overwriting a row.
+    return f"{wanted}-taken"
 
 
 def _suggest_user(display_name: str) -> str:

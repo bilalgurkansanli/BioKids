@@ -20,6 +20,7 @@ than at a packaged binary, so "İnternet" is accounted for exactly like TuxPaint
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import shlex
 import shutil
@@ -29,6 +30,13 @@ from pathlib import Path
 from biokids_core.config import Config, get_config
 
 log = logging.getLogger(__name__)
+
+SCOPE_REFUSAL_TIMEOUT_S = 1.5
+"""How long to wait before deciding systemd-run did not refuse.
+
+A refusal happens before the exec and so is immediate; anything still alive
+after this has become the application itself."""
+
 
 UNIT_PREFIX = "biokids-app"
 
@@ -58,6 +66,8 @@ class AppLauncher:
     counter: int = 0
     running: dict[str, str] = field(default_factory=dict)
     """slug -> unit name, so a second tap re-focuses rather than starting a second copy."""
+    _drains: set[asyncio.Task[None]] = field(default_factory=set)
+    """Live stderr drains. Held so the event loop cannot collect one mid-flight."""
 
     async def launch(self, request: LaunchRequest) -> LaunchResult:
         argv = self.build_argv(request)
@@ -103,18 +113,65 @@ class AppLauncher:
             return LaunchResult(ok=False, error="error.unknown")
 
         if unit:
-            # systemd-run --scope returns once the scope exists, so a non-zero
-            # exit here means the scope was refused and nothing is running.
-            _out, err = await process.communicate()
-            if process.returncode not in (0, None):
-                log.error(
-                    "systemd-run refused %s: %s",
-                    request.slug,
-                    err.decode("utf-8", "replace").strip(),
-                )
+            # `systemd-run --scope` does NOT fork and return. It registers its
+            # own PID into the transient scope and then execs the command, so
+            # the process we are holding *is* the application: awaiting it waits
+            # for the child to close TuxPaint.
+            #
+            # What that cost: `report_activity` reached the daemon only after
+            # the app was closed, so the daemon believed the child was in an app
+            # they had just left; and the launch result was the application's own
+            # exit status, so when the daemon stopped the scope at quota time -
+            # SIGTERM, non-zero - the launcher reported that the launch had
+            # failed.
+            #
+            # A refusal happens before the exec and is therefore fast, so a short
+            # bounded wait separates "systemd said no" from "the app is running".
+            refused = await self._refused_quickly(process, request.slug)
+            if refused:
                 return LaunchResult(ok=False, error="error.unknown")
             self.running[request.slug] = unit
         return LaunchResult(ok=True, unit=unit)
+
+    async def _refused_quickly(self, process: asyncio.subprocess.Process, slug: str) -> bool:
+        """Did systemd-run refuse, or is the application now running?
+
+        A refusal is a non-zero exit within the first moment, before the exec.
+        Anything still alive after that has become the application, and waiting
+        on it is waiting for the child to finish playing.
+        """
+        try:
+            await asyncio.wait_for(process.wait(), timeout=SCOPE_REFUSAL_TIMEOUT_S)
+        except TimeoutError:
+            # Still running: the exec happened. Drain stderr in the background
+            # so a chatty application cannot fill the pipe and block itself.
+            # Held in a set: a task with no reference can be collected
+            # mid-flight, which would put the pipe back where it started.
+            task = asyncio.create_task(self._drain(process, slug))
+            self._drains.add(task)
+            task.add_done_callback(self._drains.discard)
+            return False
+
+        if process.returncode in (0, None):
+            # Exited cleanly and immediately. Some applications fork a real
+            # window and exit; treat that as launched rather than refused.
+            return False
+
+        err = b""
+        if process.stderr is not None:
+            with contextlib.suppress(Exception):
+                err = await process.stderr.read()
+        log.error("systemd-run refused %s: %s", slug, err.decode("utf-8", "replace").strip())
+        return True
+
+    async def _drain(self, process: asyncio.subprocess.Process, slug: str) -> None:
+        """Read the application's stderr so the pipe cannot fill, and log it."""
+        if process.stderr is None:
+            return
+        with contextlib.suppress(Exception):
+            data = await process.stderr.read()
+            if data:
+                log.debug("%s wrote to stderr: %s", slug, data.decode("utf-8", "replace")[:500])
 
     def build_argv(self, request: LaunchRequest) -> list[str] | None:
         """What to actually run, or None when the tile has nothing to start."""
