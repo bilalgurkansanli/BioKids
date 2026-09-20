@@ -306,9 +306,22 @@ def register_wizard(app: FastAPI) -> None:
                 session,
                 actor="system",
                 action="remote_access_changed",
-                detail={"enabled": True, "ok": result.ok},
+                detail={
+                    "enabled": True,
+                    "ok": result.ok,
+                    "error": result.error,
+                    "detail": result.detail[:300],
+                },
+                severity="info" if result.ok else "warning",
             )
             session.commit()
+            if not result.ok:
+                # The whole point of this step is "you can reach the panel from
+                # your phone". Walking the parent on to step 9 after it failed
+                # means they finish setup believing something that is not true,
+                # and find out when they are not at the machine.
+                log.warning("wizard: remote access could not be enabled: %s", result.detail)
+                return see_other("/wizard/8?error=remote")
         _ = state
         return see_other("/wizard/9")
 

@@ -177,7 +177,43 @@ def base_context(
         "pending_requests": pending,
         "avatars": AVATARS,
         "version": _version(),
+        "flash": flash_for(request, tr),
     }
+
+
+#: `?error=<slug>` to the sentence a parent reads. A slug containing a dot is
+#: taken to be a catalogue key already - that is how a ValueError from
+#: `validate_pin` reaches the screen - and anything unrecognised falls back to a
+#: generic failure rather than being dropped, because dropping it is the bug
+#: this table exists to fix.
+ERROR_KEYS: dict[str, str] = {
+    "csrf": "error.stale_form",
+    "daemon": "error.daemon_unreachable",
+    "pin": "login.wrong",
+    "passphrase": "auth.passphrase.wrong",
+    "remote": "remote.failed",
+    "provision": "child.provision_failed",
+}
+
+
+def flash_for(request: Request, tr: Translator) -> dict[str, str] | None:
+    """The outcome of the thing the parent just did, for every page at once.
+
+    Assembled here rather than in each template because the bug was templates
+    that did not know about it: five redirect targets carried an `?error=` that
+    nothing rendered, so a rejected passphrase change and a successful one
+    produced the same page.
+    """
+    query = request.query_params
+
+    failure = query.get("error", "")
+    if failure:
+        key = ERROR_KEYS.get(failure, failure if "." in failure else "error.unknown")
+        return {"tone": "danger", "text": tr(key, remaining="", minutes="")}
+
+    if query.get("saved"):
+        return {"tone": "ok", "text": tr("common.saved")}
+    return None
 
 
 def request_locale(request: Request, session: Session) -> str:

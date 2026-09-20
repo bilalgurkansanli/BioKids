@@ -55,8 +55,15 @@
     {% if error %}
       <div class="notice notice--danger" role="alert">{{ error }}</div>
     {% endif %}
-    {% if request.query_params.get('saved') %}
-      <div class="notice notice--ok" role="status">{{ _('common.saved') }}</div>
+    {#
+      Every `?error=` and `?saved=` the panel redirects with, rendered in one
+      place. It used to be per-template, which meant most of them were rendered
+      nowhere at all: a parent who mistyped their current passphrase, or whose
+      daemon was down, got the same page back with nothing said.
+    #}
+    {% if flash %}
+      <div class="notice notice--{{ flash.tone }}"
+           role="{{ 'alert' if flash.tone == 'danger' else 'status' }}">{{ flash.text }}</div>
     {% endif %}
     {% block content %}{% endblock %}
   </main>

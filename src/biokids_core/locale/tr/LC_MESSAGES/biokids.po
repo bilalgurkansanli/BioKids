@@ -824,6 +824,15 @@ msgstr "Girilen bilgi doğru değil. Kontrol edip tekrar deneyin."
 msgid "error.save_failed"
 msgstr "Ayar kaydedilemedi, tekrar deneyin."
 
+msgid "error.stale_form"
+msgstr "Bu form artık geçerli değil. Sayfayı yenileyip tekrar deneyin."
+
+msgid "remote.failed"
+msgstr "Telefondan erişim ayarı değiştirilemedi."
+
+msgid "child.provision_failed"
+msgstr "Çocuk eklendi ama bilgisayarda hesabı açılamadı."
+
 msgid "error.unknown"
 msgstr "Beklenmedik bir şey oldu. Tekrar deneyin."
 

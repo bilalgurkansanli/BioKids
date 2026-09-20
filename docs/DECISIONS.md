@@ -953,3 +953,34 @@ The Synthesizer holds engines, plural, each with its own cache, and `render` loo
 voices and engines. `status` now reports the engine that actually spoke rather than the
 one that was selected, which is how a machine silent for a week still said
 `backend: "piper"`.
+
+**D-146 [claude] Every `?error=` the panel redirects with is rendered, in one place.**
+Eight findings had one cause: a route computed an outcome, put it in a URL, and no
+template read it. `settings.html` rendered exactly one key (`pin`); `children.html`
+rendered none. So a parent who mistyped their current passphrase, submitted a stale
+form, or acted while the daemon was down got the same page back with nothing changed
+and nothing said — which is indistinguishable from success.
+
+The flash is assembled in `base_context` and rendered in `base.html`, so it covers
+every page including ones not yet written. A slug containing a dot is treated as a
+catalogue key already, which is how a `ValueError` from `validate_pin` reaches the
+screen; anything unrecognised falls back to a generic failure rather than being
+dropped, because dropping it is the bug.
+
+Three callers separately threw away a result. `_call_daemon` returns a bool and the
+time-rules route ignored it, so "Kaydedildi" appeared over a reload that never landed
+and the child kept running on the old quota. `remote.enable()`'s `detail` — the only
+thing that says *why* Tailscale refused — was never logged. And `provision_child()`'s
+failure was discarded by both callers, so a child with no Unix account looked exactly
+like a child with one, and the parent found out weeks later when there was no profile
+on the greeter.
+
+Wizard step 8 is the sharpest of the three: its entire purpose is "you can reach the
+panel from your phone", and it walked the parent on to step 9 after Tailscale had
+failed. They finish setup believing something untrue and discover it when they are not
+at the machine.
+
+The open redirect fixed in 3cc49a3 was only half fixed: `GET /login` never applied
+`safe_next`, so an already-signed-in parent following a link was redirected off-site
+immediately, and for everyone else the raw value was rendered into the form as a hidden
+field and posted back.

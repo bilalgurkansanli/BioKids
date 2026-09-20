@@ -235,12 +235,17 @@ def register_routes(app: FastAPI) -> None:
     ) -> Response:
         if _needs_setup(session):
             return see_other("/wizard/1")
+        # Checked here too, not only on the POST. An already-signed-in parent is
+        # redirected straight away, and the value is rendered into the form as a
+        # hidden field - so an unchecked `next` here is the same open redirect
+        # one step earlier, reached by following a link while signed in.
+        target = auth.safe_next(next)
         if state.authenticated:
-            return see_other(next)
+            return see_other(target)
         parent = repo.get_parent(session)
         locked = auth.lockout_remaining_minutes(parent) if parent else 0
         return render(
-            ctx, request, session, state, tr, "login.html", next=next, lockout_minutes=locked
+            ctx, request, session, state, tr, "login.html", next=target, lockout_minutes=locked
         )
 
     @app.post("/login")
@@ -504,9 +509,14 @@ def register_routes(app: FastAPI) -> None:
             target=f"child:{child.id}",
             detail={"unix_user": child.unix_user},
         )
-        provision_child(session, child)
+        provisioned = provision_child(session, child)
         session.commit()
         _call_daemon(ctx, Op.RELOAD)
+        if not provisioned.ok:
+            # The row exists and the quota is set, but there is no account to
+            # log in to. Saying "saved" here is how a parent finds out weeks
+            # later that their child never had a profile on the greeter.
+            return see_other(f"/children/{child.id}/time?error=provision")
         return see_other(f"/children/{child.id}/time?saved=1")
 
     @app.get("/children/{child_id}/time", response_class=HTMLResponse)
@@ -682,7 +692,11 @@ def register_routes(app: FastAPI) -> None:
             severity="warning" if turning_off else "info",
         )
         session.commit()
-        _call_daemon(ctx, Op.RELOAD)
+        # A policy the daemon never heard about is not a policy that has been
+        # applied, and "Kaydedildi" over a failed reload is the panel telling a
+        # parent their change took effect when it did not.
+        if not _call_daemon(ctx, Op.RELOAD):
+            return see_other(f"/children/{child_id}/time?error=daemon")
         return see_other(f"/children/{child_id}/time?saved=1")
 
     # ---------------------------------------------------------------- audit
@@ -875,16 +889,30 @@ def register_routes(app: FastAPI) -> None:
 
         port = ctx.config.panel.port
         result = remote.enable(port) if enable == "on" else remote.disable(port)
+        if not result.ok:
+            # `RemoteResult.detail` is the only thing that says *why* tailscale
+            # refused, and it was being dropped on the floor: the parent saw an
+            # unrendered error slug in a URL and the journal said nothing.
+            log.warning(
+                "remote access could not be %s: %s (%s)",
+                "enabled" if enable == "on" else "disabled",
+                result.error,
+                result.detail,
+            )
         repo.audit(
             session,
             actor=_actor(state),
             action="remote_access_changed",
-            detail={"enabled": enable == "on", "ok": result.ok},
+            detail={
+                "enabled": enable == "on",
+                "ok": result.ok,
+                "error": result.error,
+                "detail": result.detail[:300],
+            },
+            severity="info" if result.ok else "warning",
         )
         session.commit()
-        return see_other(
-            "/settings?saved=1" if result.ok else f"/settings?error={result.error}"
-        )
+        return see_other("/settings?saved=1" if result.ok else "/settings?error=remote")
 
     # ---------------------------------------------------------------- PWA
 

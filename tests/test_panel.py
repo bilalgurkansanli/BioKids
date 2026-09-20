@@ -1051,3 +1051,89 @@ def test_a_plain_today_carries_no_notice(
     login(client)
     page = client.get("/today").text
     assert "notice--ok" not in page
+
+
+# ------------------------------- the outcomes that reached a URL and stopped there
+
+
+def test_a_rejected_passphrase_change_says_so(client: TestClient, family_ready: None) -> None:
+    """`?error=passphrase` was put in a URL that nothing rendered.
+
+    settings.html rendered exactly one error key, `pin`. Everything else -
+    a wrong current passphrase, a stale form, a daemon that is down - produced
+    the same page back with nothing changed and nothing said, which is
+    indistinguishable from success.
+    """
+    login(client)
+    response = client.post(
+        "/settings/passphrase",
+        data={
+            "current_pin": PIN,
+            "current_passphrase": "yanlis parola bu",
+            "new_passphrase": "yeni gizli kapi mavi",
+            "csrf_token": csrf_of(client),
+        },
+        follow_redirects=True,
+    )
+    assert "Parola doğru değil" in response.text
+
+
+def test_a_stale_form_says_what_to_do_about_it(client: TestClient, family_ready: None) -> None:
+    """`?error=csrf` reached no template at all."""
+    login(client)
+    response = client.post(
+        "/settings/pin",
+        data={"current_pin": PIN, "new_pin": "551234", "csrf_token": "wrong"},
+        follow_redirects=True,
+    )
+    assert "Sayfayı yenileyip" in response.text
+
+
+def test_saving_time_rules_with_the_daemon_down_does_not_say_saved(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    """A policy the daemon never heard about has not been applied.
+
+    `_call_daemon` returns a bool that this caller threw away, so "Kaydedildi"
+    appeared whether or not the reload ever landed - and the child keeps running
+    on the old quota while the parent believes the new one is in force.
+    """
+    login(client)
+    token = csrf_of(client)
+    daemon.up = False
+
+    response = client.post(
+        "/children/1/time",
+        data={
+            "weekday_quota_min": 45,
+            "weekend_quota_min": 90,
+            "window": "16:00-20:00",
+            "end_action": "lock",
+            "enabled": "on",
+            "csrf_token": token,
+        },
+        follow_redirects=True,
+    )
+
+    assert "ulaşılamıyor" in response.text
+    assert "Kaydedildi" not in response.text
+
+
+def test_the_login_page_does_not_forward_a_hostile_next(
+    client: TestClient, family_ready: None
+) -> None:
+    """The POST was checked and the GET was not, which is the same hole one step up.
+
+    An already-signed-in parent following a link is redirected straight away,
+    and for everyone else the value is rendered into the form as a hidden field
+    and posted back.
+    """
+    login(client)
+    response = client.get("/login?next=//evil.example.com/", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/today"
+
+
+def test_the_login_form_carries_a_cleaned_next(client: TestClient, family_ready: None) -> None:
+    page = client.get("/login?next=//evil.example.com/").text
+    assert "evil.example.com" not in page

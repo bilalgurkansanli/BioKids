@@ -4,10 +4,6 @@
 {% block content %}
   <h1>{{ _('nav.settings') }}</h1>
 
-  {% if request.query_params.get('error') == 'pin' %}
-    <div class="notice notice--danger" role="alert">{{ _('login.wrong', remaining='') }}</div>
-  {% endif %}
-
   {# ---------------------------------------------------------- language #}
   <form class="card" method="post" action="/settings/language">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">

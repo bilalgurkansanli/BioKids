@@ -824,6 +824,15 @@ msgstr "Something entered is not right. Please check and try again."
 msgid "error.save_failed"
 msgstr "The setting could not be saved, please try again."
 
+msgid "error.stale_form"
+msgstr "This form is no longer valid. Reload the page and try again."
+
+msgid "remote.failed"
+msgstr "The remote access setting could not be changed."
+
+msgid "child.provision_failed"
+msgstr "The child was added, but their account on this computer could not be created."
+
 msgid "error.unknown"
 msgstr "Something unexpected happened. Please try again."
 
