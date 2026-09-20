@@ -366,7 +366,7 @@ async def test_granting_time_during_the_countdown_cancels_it(
     await run_for(supervisor, clock, 70)
     assert runner.ran("loginctl", "lock-session")
 
-    supervisor.grant_time(1, 600)
+    await supervisor.grant_time(1, 600)
     await run_for(supervisor, clock, 200)
 
     assert not runner.ran("systemctl", "poweroff")
@@ -388,7 +388,7 @@ async def test_granted_time_re_arms_a_warning_that_is_ahead_again(
     first = [str(p.get("event")) for p in events_of(bus, EventKind.SPEAK)]
     assert first.count("warn_10") == 1
 
-    supervisor.grant_time(1, 10 * 60)
+    await supervisor.grant_time(1, 10 * 60)
     await run_for(supervisor, clock, 11 * 60)
 
     again = [str(p.get("event")) for p in events_of(bus, EventKind.SPEAK)]
@@ -431,7 +431,7 @@ async def test_granting_ten_minutes_changes_what_the_status_reports(
     await run_for(supervisor, clock, 600)
 
     before = supervisor.status()["children"][0]["remaining_seconds"]
-    supervisor.grant_time(1, 600)
+    await supervisor.grant_time(1, 600)
     after = supervisor.status()["children"][0]["remaining_seconds"]
     assert after - before == 600
 
@@ -446,7 +446,7 @@ async def test_a_grant_is_worth_its_full_value_even_if_barely_any_time_was_used(
     await run_for(supervisor, clock, 60)
 
     before = supervisor.status()["children"][0]["remaining_seconds"]
-    supervisor.grant_time(1, 600)
+    await supervisor.grant_time(1, 600)
     after = supervisor.status()["children"][0]["remaining_seconds"]
     assert after - before == 600
 
@@ -1338,3 +1338,103 @@ def test_a_failed_persist_leaves_the_ledger_usable(
             ledger.tick([TickInput(child_id=child.id, active=True, idle=False)])
         ledger.persist()
         assert ledger.state(child.id).general_used_s >= 10, "accounting never resumed"
+
+
+async def test_granting_time_lets_a_locked_out_child_back_in(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    session: Session,
+) -> None:
+    """The child is at the password prompt of an account that has no password.
+
+    The quota runs out, `loginctl lock-session` locks the screen, the child asks
+    for more time and the parent presses "+10 dk". The panel said "Elif için 10
+    dakika eklendi", the card showed 10:00 - and nothing unlocked the session.
+    `Enforcer.unlock_sessions` existed and was called from nowhere in the whole
+    product, so on a deliberately passwordless account (D-99) there was no way
+    back in at all.
+    """
+    set_quota(session, 1, 20, end_action=EndAction.LOCK.value)
+    await supervisor.start()
+    logged_in = source.log_in("elif")
+
+    await run_for(supervisor, clock, 25 * 60)
+    assert source.sessions[0].locked, "the child was never locked in the first place"
+    runner.calls.clear()
+
+    await supervisor.grant_time(1, 10 * 60)
+
+    assert any(
+        call[:2] == ("loginctl", "unlock-session") and call[2] == logged_in.session_id
+        for call in runner.calls
+    ), f"the child was left at the lock screen: {runner.calls}"
+
+
+async def test_a_grant_that_does_not_open_the_window_does_not_open_the_screen(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    session: Session,
+) -> None:
+    """Bedtime is not negotiable by granting quota.
+
+    "+10 dk" outside the allowed hours must not unlock a screen the window is
+    there to keep shut - the extra minutes are real, and they are for tomorrow.
+    """
+    set_quota(session, 1, 60, end_action=EndAction.LOCK.value)
+    with session.no_autoflush:
+        policy = session.get(Policy, 1)
+        assert policy is not None
+        policy.windows = {"weekday": ["06:00-07:00"], "weekend": ["06:00-07:00"]}
+        session.commit()
+
+    await supervisor.start()
+    source.log_in("elif")
+    await run_for(supervisor, clock, 5 * 60)
+    runner.calls.clear()
+
+    await supervisor.grant_time(1, 10 * 60)
+
+    assert not any("unlock-session" in " ".join(call) for call in runner.calls), (
+        f"a grant opened a screen the window had closed: {runner.calls}"
+    )
+
+
+async def test_the_machine_does_not_power_off_between_two_windows(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    session: Session,
+) -> None:
+    """Before school and after school is one day with two windows, not two days.
+
+    Every closed window used to produce WINDOW_CLOSED, which TERMINAL_LOCK
+    routes to the end action - poweroff by default. So the computer shut itself
+    down a couple of minutes after the morning window, while the child was told
+    "see you tomorrow" and still had their whole quota and a window at four.
+    """
+    with session.no_autoflush:
+        policy = session.get(Policy, 1)
+        assert policy is not None
+        policy.windows = {
+            "weekday": ["07:30-08:15", "16:00-19:00"],
+            "weekend": ["07:30-08:15", "16:00-19:00"],
+        }
+        policy.end_action = EndAction.POWEROFF.value
+        session.commit()
+
+    clock.wall = dt.datetime(2026, 9, 21, 8, 20, 0)
+    await supervisor.start()
+    source.log_in("elif")
+
+    await run_for(supervisor, clock, 10 * 60)
+
+    assert not any("poweroff" in " ".join(call) for call in runner.calls), (
+        f"the day ended at 08:20 for a child whose next window opens at 16:00: {runner.calls}"
+    )
+    decision = supervisor.children[1].last_decision
+    assert decision is not None and decision.reason_code == "window.waiting"

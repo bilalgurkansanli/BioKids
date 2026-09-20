@@ -1069,3 +1069,87 @@ def test_a_cloned_request_falls_through_to_stock_and_says_it_degraded(
     assert result.voice is not None
     assert result.voice.kind == "stock", "the robot answered for the family's own voice"
     assert result.degraded is True, "a silent downgrade is the bug"
+
+
+def test_a_piper_with_no_model_hands_over_to_espeak(
+    voice_config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The chain has to be a chain, not a choice made once at construction.
+
+    `which("piper")` says a binary exists, not that it can speak. BioKids ships
+    no Piper model - Phase 0 bundles none, and the one Turkish voice is
+    CC-BY-NC-SA - so a parent who reads the package description and installs
+    piper got `SynthError("no voice model")` for every line, for ever, while
+    espeak-ng sat installed and untried. The only trace was two lines in the
+    child's own journal, and `status` still reported `backend: "piper"`.
+    """
+
+    class Finished:
+        returncode = 0
+        stdout = b"RIFF....WAVEfmt " + b"\x00" * 64
+        stderr = b""
+
+    monkeypatch.setattr(PiperSynth, "available", lambda _self: True)
+    monkeypatch.setattr(EspeakSynth, "available", lambda _self: True)
+    monkeypatch.setattr(synth_module.subprocess, "run", lambda *_a, **_k: Finished())
+
+    chain = Synthesizer.from_config(voice_config)
+    assert len(chain.engines) == 2, "espeak must be in the chain, not replaced by piper"
+
+    # No model on disk, which is every Phase 0 machine.
+    stock = VoiceSpec(persona="zio", locale="tr", kind="stock", profile_id="stock:zio:tr")
+    result = chain.render("Beş dakika kaldı.", [stock])
+
+    assert result.spoken, "the machine went silent with a working engine installed"
+    assert result.degraded is True, "a silent downgrade is the bug"
+    assert chain.backend.name == "espeak-ng", (
+        f"status would report {chain.backend.name!r} while espeak did the speaking"
+    )
+
+
+def test_status_reports_the_engine_that_actually_spoke(
+    voice_config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """It reported the engine that had been selected, which is not the same thing."""
+    monkeypatch.setattr(PiperSynth, "available", lambda _self: True)
+    monkeypatch.setattr(EspeakSynth, "available", lambda _self: True)
+
+    chain = Synthesizer.from_config(voice_config)
+    assert chain.backend.name == "piper", "before anything is spoken, the preferred one"
+
+    class Finished:
+        returncode = 0
+        stdout = b"RIFF....WAVEfmt " + b"\x00" * 64
+        stderr = b""
+
+    monkeypatch.setattr(synth_module.subprocess, "run", lambda *_a, **_k: Finished())
+    chain.render(
+        "Merhaba.",
+        [VoiceSpec(persona="zio", locale="tr", kind="stock", profile_id="stock:zio:tr")],
+    )
+    assert chain.backend.name == "espeak-ng"
+
+
+def test_a_cached_line_is_found_whichever_engine_made_it(
+    voice_config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each engine has its own cache directory, so the lookup has to try all of them."""
+
+    class Finished:
+        returncode = 0
+        stdout = b"RIFF....WAVEfmt " + b"\x00" * 64
+        stderr = b""
+
+    monkeypatch.setattr(PiperSynth, "available", lambda _self: True)
+    monkeypatch.setattr(EspeakSynth, "available", lambda _self: True)
+    monkeypatch.setattr(synth_module.subprocess, "run", lambda *_a, **_k: Finished())
+
+    chain = Synthesizer.from_config(voice_config)
+    stock = VoiceSpec(persona="zio", locale="tr", kind="stock", profile_id="stock:zio:tr")
+
+    first = chain.render("Bir dakika kaldı.", [stock])
+    second = chain.render("Bir dakika kaldı.", [stock])
+
+    assert first.spoken and second.spoken
+    assert second.cached is True, "espeak's cache entry was not found on the second ask"
+    assert second.path == first.path

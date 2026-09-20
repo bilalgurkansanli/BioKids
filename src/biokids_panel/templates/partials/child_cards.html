@@ -92,6 +92,8 @@
             {{ _('error.daemon_unreachable') }}
           {% elif child.reason_code == 'window.closed' %}
             {{ _('today.window_closed') }}
+          {% elif child.reason_code == 'window.waiting' %}
+            {{ _('today.window_waiting') }}
           {% elif child.online and child.app %}
             {{ _('today.now_playing', app=child.app) }}
           {% elif child.online %}

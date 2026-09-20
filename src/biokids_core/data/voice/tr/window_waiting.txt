@@ -1,0 +1,4 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}
+Şimdi ara verme vakti {name}. Birazdan yine oynayabilirsin.
+Şu an kullanma saatin değil yavrum. Sonra görüşürüz.
+Şimdilik kapatıyoruz {name}. Saatin gelince haber veririm.

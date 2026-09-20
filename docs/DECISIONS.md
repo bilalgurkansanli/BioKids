@@ -911,3 +911,45 @@ the test suite, still get a child.
 Whether a unit with `ProtectSystem=strict` and `SystemCallFilter=@system-service` can
 reach systemd at all is the first thing to check on the VM; it is expected to work, and
 `debian/README.source` §7 item 1 says what the symptom is if it does not.
+
+**D-143 [claude] A gap between two of today's windows is a pause, not the end of the day.**
+`window_open` is `any(w.contains(...))` and nothing could ask "is another window still
+ahead today?", so every closed window produced `Reason.WINDOW_CLOSED` — which
+`TERMINAL_LOCK` routes to the end action, poweroff by default. A parent who sets
+"07:30-08:15 before school, 16:00-19:00 after school", which is the natural way two
+windows get used, had the computer shut itself down at 08:17 while Zio said "Yarın
+görüşürüz" and the child still had their whole daily quota.
+
+`Reason.WINDOW_WAITING` is the new answer for a window that is still ahead. The screen
+locks and nothing else happens; the child gets `window_waiting.txt` rather than
+`time_up.txt`. The screens had already drifted the other way, which is the same
+confusion from the other side: `window_closed.html` says "you can open it again when
+your hours come", which is the *waiting* message, while the speech was `time_up`, the
+*day is over* message.
+
+**D-144 [claude] Granting time unlocks the screen, because nothing else can.**
+`grant_time`'s own comment said "the lock screen comes down" and nothing brought it
+down: `_clear_end_sequence` clears the daemon's bookkeeping, not logind's.
+`Enforcer.unlock_sessions` existed and was called from nowhere in the product. So the
+quota ran out, the screen locked, the child asked for more time, the parent pressed
+"+10 dk", the panel said "10 dakika eklendi" and the card showed 10:00 — and the child
+was still at the password prompt of an account that deliberately has no password
+(D-99), with nothing in BioKids able to let them in.
+
+`grant_time` is async for this reason. The unlock happens only when the grant actually
+bought usable time: "+10 dk" outside the allowed hours must not open a screen the
+window is there to keep shut, and those extra minutes are for tomorrow.
+
+**D-145 [claude] The voice fallback is a chain of engines, not a choice made once.**
+`from_config` picked one backend on `which("piper")`, and `render` then looped over
+*voices* only. But a binary existing is not the same as it being able to speak: BioKids
+ships no Piper model, so a parent who read the package description and installed piper
+got `SynthError("no voice model")` for every line, for ever, while espeak-ng sat
+installed by Recommends and untried. Both docstrings already described the correct
+behaviour — `from_config` said "Piper, then espeak-ng, then silence" and VOICE.md §6
+says "cloned → stock Piper → espeak-ng → banner" — and neither was what the code did.
+
+The Synthesizer holds engines, plural, each with its own cache, and `render` loops over
+voices and engines. `status` now reports the engine that actually spoke rather than the
+one that was selected, which is how a machine silent for a week still said
+`backend: "piper"`.

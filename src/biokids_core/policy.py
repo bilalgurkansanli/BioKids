@@ -79,15 +79,24 @@ def evaluate(
     # 2 — outside the allowed window. Checked before the quota so that a child
     #     with hours of quota left still stops at bedtime.
     if not policy.window_open(now_wall):
+        # Between two of today's windows, or after the last one? The first is a
+        # pause and the second is the end of the day, and they were the same
+        # answer: a parent with "07:30-08:15" and "16:00-19:00" had the machine
+        # power itself off at 08:17 while the child was told "see you tomorrow".
+        opens_in = policy.seconds_until_window_opens(now_wall)
+        waiting = opens_in is not None
         return Decision(
             allow=False,
             action=Action.LOCK,
-            reason_code=Reason.WINDOW_CLOSED,
+            reason_code=Reason.WINDOW_WAITING if waiting else Reason.WINDOW_CLOSED,
             speak=SpeechRequest(
-                event="time_up",
-                vars={"name": policy.display_name},
+                event="window_waiting" if waiting else "time_up",
+                vars={
+                    "name": policy.display_name,
+                    "minutes": max(1, round((opens_in or 0) / 60)),
+                },
                 priority="high",
-                expression="sleepy",
+                expression="neutral" if waiting else "sleepy",
             ),
             remaining_seconds=0,
         )

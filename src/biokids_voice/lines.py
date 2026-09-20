@@ -45,7 +45,14 @@ LOG = logging.getLogger(__name__)
 _CORE_DIR: Final = Path(biokids_core.__file__ or ".").resolve().parent
 BUNDLED_LINES_DIR: Final = _CORE_DIR / "data" / "voice"
 
-DEFAULT_EVENTS: Final = ("welcome", "warn_10", "warn_5", "warn_1", "time_up")
+DEFAULT_EVENTS: Final = (
+    "welcome",
+    "warn_10",
+    "warn_5",
+    "warn_1",
+    "time_up",
+    "window_waiting",
+)
 """What Phase 0 ships. VOICE.md §5 lists six more events for later phases; they
 need no code, only two more text files each."""
 

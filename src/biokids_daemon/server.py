@@ -258,7 +258,7 @@ class DaemonServer:
         child_id = _int_arg(request, "child_id")
         seconds = _int_arg(request, "seconds", default=600)
         actor = str(request.args.get("actor", "parent"))
-        data = self.supervisor.grant_time(child_id, seconds, actor)
+        data = await self.supervisor.grant_time(child_id, seconds, actor)
         return Response(id=request.id, ok=True, data=data)
 
     async def _lock_now(self, request: Request) -> Response:

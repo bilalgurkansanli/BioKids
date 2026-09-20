@@ -432,6 +432,9 @@ msgstr "{name} çalışırken bilgisayar kapanacak. Emin misiniz?"
 msgid "today.requests_pending"
 msgstr "{count} bekleyen istek var"
 
+msgid "today.window_waiting"
+msgstr "Saatini bekliyor"
+
 msgid "today.window_closed"
 msgstr "kullanım saati dışında"
 
@@ -558,6 +561,9 @@ msgstr "Kural değiştirildi"
 
 msgid "audit.action.time_granted"
 msgstr "Süre eklendi"
+
+msgid "audit.action.session_unlocked"
+msgstr "Oturum kilidi açıldı"
 
 msgid "audit.action.session_locked"
 msgstr "Oturum kilitlendi"

@@ -636,6 +636,28 @@ class Supervisor:
         self.ledger.rearm_warnings(runtime.child_id, day, remaining)
         self.bus.publish(EventKind.END_SEQUENCE, child_id=runtime.child_id, cancelled=True)
 
+    async def _unlock(self, runtime: ChildRuntime) -> None:
+        """Let the child back into a session BioKids locked.
+
+        The counterpart to `_lock`, and for a long time there was none: the
+        enforcer could lock and could unlock, and only one of the two was ever
+        called. On an account with no password - which is every child account,
+        by D-99 - a lock nobody lifts is a child who cannot get back in at all.
+        """
+        presence = self.watcher.presence(runtime.unix_user)
+        locked = [s.session_id for s in presence.sessions if s.locked]
+        if not locked:
+            return
+        ok = await self.enforcer.unlock_sessions(tuple(locked))
+        log.info("unlocked %s session(s) for %s: %s", len(locked), runtime.unix_user, ok)
+        repo.audit(
+            self.session,
+            actor="daemon",
+            action="session_unlocked",
+            target=f"child:{runtime.child_id}",
+            detail={"sessions": len(locked), "ok": ok},
+        )
+
     async def _lock(
         self, runtime: ChildRuntime, presence: UserPresence, *, only_unlocked: bool = False
     ) -> None:
@@ -979,7 +1001,22 @@ class Supervisor:
         )
         return int(row.id)
 
-    def grant_time(self, child_id: int, seconds: int, actor: str = "parent") -> dict[str, Any]:
+    async def grant_time(
+        self, child_id: int, seconds: int, actor: str = "parent"
+    ) -> dict[str, Any]:
+        """Extend the day, and let the child back in if the screen was already locked.
+
+        Async because of that second half. The comment below used to say "the
+        lock screen comes down" and nothing brought it down: `_clear_end_sequence`
+        clears the daemon's own bookkeeping, not logind's. `Enforcer.unlock_sessions`
+        existed and was called from nowhere in the whole product.
+
+        What that cost: the quota runs out, the screen locks, the child asks for
+        more time, the parent presses "+10 dk" on their phone, the panel says
+        "Elif icin 10 dakika eklendi" and the card shows 10:00 - and the child is
+        still at the password prompt of an account that deliberately has no
+        password (D-99), with nothing in BioKids able to let them in.
+        """
         runtime = self._require(child_id)
         day = self.clock.read().wall.date()
         state = self.ledger.grant(child_id, seconds, day)
@@ -993,6 +1030,11 @@ class Supervisor:
         # The extension pushed the end of the day back, so the lock screen comes
         # down and the warnings that are now in the future can fire again.
         self._clear_end_sequence(runtime, day, decision.remaining_seconds)
+        if decision.allow and decision.remaining_seconds > 0:
+            # Only when the grant actually bought time. A "+10 dk" that still
+            # leaves the window closed must not open a screen the window is
+            # supposed to keep shut.
+            await self._unlock(runtime)
         self.ledger.rearm_warnings(child_id, day, decision.remaining_seconds)
         self.ledger.persist()
 

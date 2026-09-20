@@ -36,7 +36,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from shutil import which
-from typing import Final, Protocol
+from typing import Final, Protocol, cast
 
 from biokids_core.config import Config, PathsConfig, get_config
 from biokids_core.errors import BioKidsError
@@ -497,11 +497,44 @@ class SynthResult:
 
 
 class Synthesizer:
-    """The cloned → stock → nothing chain of VOICE.md §6, with the cache in front."""
+    """The cloned → stock → espeak → nothing chain of VOICE.md §6, cache in front.
 
-    def __init__(self, backend: Synth, cache: VoiceCache) -> None:
-        self.backend = backend
-        self.cache = cache
+    Holds *engines*, plural. Choosing one at construction is what made the chain
+    not a chain: `which("piper")` says a binary exists, not that it can speak,
+    and BioKids ships no Piper model - so a family who installed piper got
+    "no voice model" for every line for ever while espeak-ng sat there unused.
+    """
+
+    def __init__(
+        self,
+        engines: Synth | Sequence[tuple[Synth, VoiceCache]],
+        cache: VoiceCache | None = None,
+    ) -> None:
+        if cache is not None:
+            # The one-engine form, which the tests and `from_config`'s simpler
+            # paths still use.
+            engines = [(cast("Synth", engines), cache)]
+        self.engines: list[tuple[Synth, VoiceCache]] = list(
+            cast("Sequence[tuple[Synth, VoiceCache]]", engines)
+        )
+        if not self.engines:
+            raise ValueError("a synthesizer needs at least one engine")
+        self._spoke_with: Synth | None = None
+
+    @property
+    def backend(self) -> Synth:
+        """Whichever engine last actually produced audio, else the preferred one.
+
+        `status` reports this. Before the fix it reported the engine that had
+        been *selected*, which is how a machine that had been silent for a week
+        still said `backend: "piper"`.
+        """
+        return self._spoke_with or self.engines[0][0]
+
+    @property
+    def cache(self) -> VoiceCache:
+        """The preferred engine's cache. Kept for `status` and the tests."""
+        return self.engines[0][1]
 
     @classmethod
     def from_config(cls, config: Config | None = None) -> Synthesizer:
@@ -520,22 +553,33 @@ class Synthesizer:
         deserves a reason in the log.
         """
         config = config or get_config()
+        engines: list[tuple[Synth, VoiceCache]] = []
+
         piper = PiperSynth(config.voice.piper_binary)
         if piper.available():
-            return cls(piper, VoiceCache.from_config(config))
+            engines.append((piper, VoiceCache.from_config(config)))
 
         espeak = EspeakSynth(config.voice.espeak_binary)
         if espeak.available():
-            LOG.info(
-                "%s is not installed; speaking with %s instead",
-                config.voice.piper_binary,
-                espeak.name,
-            )
+            # Always appended when present, never instead of Piper. A Piper that
+            # is installed but has no model raises on every line, and this is
+            # what catches that - which is the entire reason the chain is a list.
+            #
             # Its own cache directory, for the reason the stub has one: the key
             # describes the sentence and the voice, never the engine, so a
             # family who installs Piper later would otherwise keep hearing the
             # robot for every line they have already heard.
-            return cls(espeak, VoiceCache.from_config(config, subdir=ESPEAK_CACHE_SUBDIR))
+            engines.append((espeak, VoiceCache.from_config(config, subdir=ESPEAK_CACHE_SUBDIR)))
+
+        if engines:
+            if piper.available() and not espeak.available():
+                LOG.warning(
+                    "%s is installed but %s is not; if no voice model is present "
+                    "nothing will be spoken at all",
+                    config.voice.piper_binary,
+                    config.voice.espeak_binary,
+                )
+            return cls(engines)
 
         LOG.warning(
             "neither %s nor %s is installed: cards will appear but nothing will be spoken",
@@ -551,34 +595,47 @@ class Synthesizer:
         return cls(StubSynth(), VoiceCache.from_config(config, subdir=STUB_CACHE_SUBDIR))
 
     def render(self, text: str, voices: Sequence[VoiceSpec]) -> SynthResult:
-        """Try each voice in turn. Never raises; the worst case is no audio."""
+        """Every voice, through every engine, until one of them speaks.
+
+        Voice is the outer loop and engine the inner one, which is the order
+        VOICE.md §6 describes: the family's cloned Zio before the stock one,
+        and Piper before espeak-ng within each. Never raises; the worst case is
+        no audio and a card that carries the line as text.
+        """
         degraded = False
         for voice in voices:
             key = cache_key(text, voice)
-            hit = self.cache.get(key)
-            if hit is not None:
-                return SynthResult(hit, voice, cached=True, degraded=degraded)
+            for backend, cache in self.engines:
+                hit = cache.get(key)
+                if hit is not None:
+                    self._spoke_with = backend
+                    return SynthResult(hit, voice, cached=True, degraded=degraded)
 
-            destination = self.cache.path_for(key)
-            try:
-                self._render_whole(text, voice, destination)
-            except SynthError as exc:
-                LOG.warning(
-                    "voice %s/%s could not speak (%s); trying the next one",
-                    voice.persona,
-                    voice.kind,
-                    exc,
-                )
-                destination.unlink(missing_ok=True)
-                degraded = True
-                continue
-            self.cache.evict()
-            return SynthResult(destination, voice, cached=False, degraded=degraded)
+            for backend, cache in self.engines:
+                destination = cache.path_for(key)
+                try:
+                    self._render_whole(backend, text, voice, destination)
+                except SynthError as exc:
+                    LOG.warning(
+                        "%s could not speak %s/%s (%s); trying the next engine",
+                        backend.name,
+                        voice.persona,
+                        voice.kind,
+                        exc,
+                    )
+                    destination.unlink(missing_ok=True)
+                    degraded = True
+                    continue
+                cache.evict()
+                self._spoke_with = backend
+                return SynthResult(destination, voice, cached=False, degraded=degraded)
 
         LOG.warning("no voice could speak %r: the card will appear silently", text[:60])
         return SynthResult(degraded=True)
 
-    def _render_whole(self, text: str, voice: VoiceSpec, destination: Path) -> None:
+    def _render_whole(
+        self, backend: Synth, text: str, voice: VoiceSpec, destination: Path
+    ) -> None:
         """Build the file beside its cache entry and move it in when it is done.
 
         A `piper` killed halfway — the child logged out, the session ended, the
@@ -590,7 +647,7 @@ class Synthesizer:
         """
         partial = destination.with_name(f"{destination.stem}.part{destination.suffix}")
         try:
-            self.backend.render(text, voice, partial)
+            backend.render(text, voice, partial)
             partial.replace(destination)
         except OSError as exc:
             raise SynthError(f"could not store {destination.name}: {exc}") from exc

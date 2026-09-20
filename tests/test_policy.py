@@ -505,3 +505,59 @@ def test_reason_codes_are_keys_not_sentences() -> None:
         code = evaluate(policy, ledger_state, ctx, AFTERNOON).reason_code
         assert " " not in code
         assert code.islower()
+
+
+# ---------------------------------------------- a pause between windows is not bedtime
+
+
+def test_a_gap_between_two_windows_is_not_the_end_of_the_day() -> None:
+    """ "07:30-08:15 before school, 16:00-19:00 after school" is how windows get used.
+
+    Every closed window produced WINDOW_CLOSED, which the daemon routes to the
+    end action - poweroff by default. So the machine shut itself down at 08:17
+    while the child was told "see you tomorrow", with their whole daily quota
+    intact and a window opening at four.
+    """
+    policy = make_policy(
+        weekday_windows=(TimeWindow.parse("07:30-08:15"), TimeWindow.parse("16:00-19:00"))
+    )
+    at_0830 = dt.datetime(2026, 9, 21, 8, 30, 0)
+
+    decision = evaluate(policy, state(), ActivityContext(), at_0830)
+
+    assert decision.allow is False, "the child may not use it between windows"
+    assert decision.reason_code == Reason.WINDOW_WAITING
+    assert decision.reason_code != Reason.WINDOW_CLOSED, "this would power the machine off"
+    assert decision.speak is not None and decision.speak.event == "window_waiting"
+
+
+def test_after_the_last_window_the_day_really_is_over() -> None:
+    policy = make_policy(
+        weekday_windows=(TimeWindow.parse("07:30-08:15"), TimeWindow.parse("16:00-19:00"))
+    )
+    at_2100 = dt.datetime(2026, 9, 21, 21, 0, 0)
+
+    decision = evaluate(policy, state(), ActivityContext(), at_2100)
+
+    assert decision.reason_code == Reason.WINDOW_CLOSED
+    assert decision.speak is not None and decision.speak.event == "time_up"
+
+
+def test_before_the_only_window_of_the_day_the_child_is_waiting_not_finished() -> None:
+    """Morning, before the window opens. Nothing about that is the end of a day."""
+    policy = make_policy(weekday_windows=(TimeWindow.parse("16:00-19:00"),))
+    at_0900 = dt.datetime(2026, 9, 21, 9, 0, 0)
+
+    decision = evaluate(policy, state(), ActivityContext(), at_0900)
+
+    assert decision.reason_code == Reason.WINDOW_WAITING
+
+
+def test_seconds_until_the_next_window_opens() -> None:
+    policy = make_policy(
+        weekday_windows=(TimeWindow.parse("07:30-08:15"), TimeWindow.parse("16:00-19:00"))
+    )
+    at_0830 = dt.datetime(2026, 9, 21, 8, 30)
+    assert policy.seconds_until_window_opens(at_0830) == 7 * 3600 + 30 * 60
+    assert policy.seconds_until_window_opens(dt.datetime(2026, 9, 21, 21, 0)) is None
+    assert make_policy().seconds_until_window_opens(dt.datetime(2026, 9, 21, 9, 0)) is None

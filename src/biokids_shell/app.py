@@ -349,7 +349,7 @@ def _screen_for(data: dict[str, Any]) -> str | None:
     match str(data.get("reason_code", "")):
         case Reason.QUOTA_EXHAUSTED:
             return "time_up.html"
-        case Reason.WINDOW_CLOSED:
+        case Reason.WINDOW_CLOSED | Reason.WINDOW_WAITING:
             return "window_closed.html"
         case Reason.BREAK_ACTIVE | Reason.BREAK_DUE:
             return "break.html"

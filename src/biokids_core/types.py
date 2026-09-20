@@ -86,6 +86,12 @@ class Reason:
     ALLOWED: Final = "allowed"
     PENALTY_ACTIVE: Final = "penalty.active"
     WINDOW_CLOSED: Final = "window.closed"
+    WINDOW_WAITING: Final = "window.waiting"
+    """Between two of today's windows. The screen locks and nothing else happens.
+
+    Distinct from WINDOW_CLOSED, which means the last window of the day has
+    ended and the day is genuinely over. Treating the two as one shut the
+    machine down at 08:17 for a child whose next window opened at 16:00."""
     QUOTA_EXHAUSTED: Final = "quota.exhausted"
     QUOTA_WARNING: Final = "quota.warning"
     BREAK_DUE: Final = "break.due"
@@ -231,6 +237,22 @@ class ChildPolicy:
         if not windows:
             return True
         return any(w.contains(moment.time()) for w in windows)
+
+    def seconds_until_window_opens(self, moment: dt.datetime) -> int | None:
+        """How long until the next window of *this* day opens, or None.
+
+        None means no window is still ahead today - which is what makes the
+        difference between "wait until four o'clock" and "that is all for
+        today". A wrapping window (20:00-06:00) counts as ahead only by its
+        start, because its tail belongs to tomorrow's date.
+        """
+        windows = self.windows(moment.date())
+        if not windows:
+            return None
+        now_s = _seconds_of_day(moment.time())
+        starts = [_seconds_of_day(w.start) for w in windows]
+        ahead = [start - now_s for start in starts if start > now_s]
+        return min(ahead) if ahead else None
 
     def seconds_until_window_closes(self, moment: dt.datetime) -> int | None:
         """None when no window constrains the child right now."""

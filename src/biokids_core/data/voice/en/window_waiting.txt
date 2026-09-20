@@ -1,0 +1,4 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}
+Time for a pause, {name}. You can play again in a little while.
+These are not your hours right now, sweetheart. See you later.
+We are stopping for now, {name}. I will tell you when your time comes.

@@ -432,6 +432,9 @@ msgstr "The computer will shut down while {name} is using it. Are you sure?"
 msgid "today.requests_pending"
 msgstr "{count} requests waiting"
 
+msgid "today.window_waiting"
+msgstr "Waiting for their next window"
+
 msgid "today.window_closed"
 msgstr "outside allowed hours"
 
@@ -558,6 +561,9 @@ msgstr "Rules changed"
 
 msgid "audit.action.time_granted"
 msgstr "Time added"
+
+msgid "audit.action.session_unlocked"
+msgstr "Session unlocked"
 
 msgid "audit.action.session_locked"
 msgstr "Session locked"
