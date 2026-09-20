@@ -1070,3 +1070,35 @@ not have, leaving a hole where the number belonged.
 `/usr/lib/python3` on an installed machine — so `_load_characters()` returned `{}` in
 silence and every real install had a first-run screen introducing "ben Zio" next to
 nothing. The packaging ships them now, and a missing character is logged.
+
+**D-151 [claude] The daemon writes the Chromium managed policy.**
+Found by verifying `docs/VM-RUNBOOK.md` against the repository: the runbook said the
+package ships the policy file, and nothing shipped it. D-149 had moved the *reader* to
+`/etc/chromium/policies/managed/` — the only directory Chromium on Linux reads — and
+asserted somebody else would put the file there.
+
+The architecture had already decided who: `PathsConfig.chromium_policy_dir` exists,
+`biokids-daemon.service` carries `-/etc/chromium/policies/managed` in its
+`ReadWritePaths` with a comment explaining why the `-` prefix is needed, and
+`biokids-daemon.postrm` removes `*biokids*` from that directory on purge. Every part of
+the plan was in place except the line that writes the file. So `chrome://policy` was
+empty on every machine and the kiosk was an ordinary browser with an ordinary
+Ctrl+Shift+I.
+
+The daemon is the only BioKids process that can write it — root, and the unit whose
+sandbox names the directory — and the policy depends on nothing but the launcher's host
+and port, so one file covers every child. The launcher, running as the child, only
+checks that it is there. A failure is logged at error level and is not fatal: a daemon
+that refuses to start because Chromium is absent would be worse than a kiosk without a
+policy, and `biokids-shell` is what pulls Chromium in.
+
+**D-152 [claude] The wizard reports a failed provision, and does not stop for it.**
+D-146 fixed the children screen and left the wizard's step 4 discarding the same result
+— and the wizard is where the first child is always added, so the case that mattered
+most was the one still silent. A parent finished setup and found out at the greeter.
+
+It reports through the flash and continues, rather than holding the parent on step 4.
+On a machine where `adduser` is absent the database row is still correct and
+`biokids-admin provision-child` still repairs it, so refusing to move on would strand a
+parent halfway through a ten-step setup with no way forward — principle #4 in its
+smaller form. Visible is the requirement; blocking is not.

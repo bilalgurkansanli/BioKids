@@ -501,7 +501,11 @@ def test_the_policy_goes_where_chromium_actually_reads_it(config: Config) -> Non
     ARCHITECTURE.md already named the fixed path; only the code disagreed.
     """
     supervisor = KioskSupervisor(config)
-    assert supervisor.policy_dir == MANAGED_POLICY_DIR
+    assert supervisor.policy_dir == config.paths.chromium_policy_dir
+    # The default is the real path. A test run only moves it because
+    # BIOKIDS_PREFIX moves every path, which is what makes the suite
+    # runnable on a machine that has no /etc/chromium.
+    assert str(MANAGED_POLICY_DIR).replace("\\", "/") == "/etc/chromium/policies/managed"
     assert (
         str(supervisor.policy_dir).replace("\\", "/").endswith("/etc/chromium/policies/managed")
     )

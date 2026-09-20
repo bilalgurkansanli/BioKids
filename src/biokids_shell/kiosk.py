@@ -35,11 +35,16 @@ from biokids_core.config import Config, get_config
 log = logging.getLogger(__name__)
 
 MANAGED_POLICY_DIR = Path("/etc/chromium/policies/managed")
-"""The only place Chromium on Linux reads a managed policy from.
+"""The only place Chromium on Linux reads a managed policy from, and the default
+for `PathsConfig.chromium_policy_dir`.
 
 Not `<user-data-dir>/policies/managed/`, which is where this file used to write
 one: `--user-data-dir` adds no policy source, so every lockdown T5.2 promises
-was inert and `chrome://policy` in the kiosk profile was empty."""
+was inert and `chrome://policy` in the kiosk profile was empty.
+
+The daemon writes the file - it runs as root and its unit carries this directory
+in `ReadWritePaths` - and the launcher, which runs as the child, only checks that
+it is there."""
 
 POLICY_FILENAME = "biokids-kiosk.json"
 
@@ -108,7 +113,7 @@ class KioskSupervisor:
     @property
     def policy_dir(self) -> Path:
         """Where Chromium on Linux actually looks. Not the profile directory."""
-        return self._policy_dir or MANAGED_POLICY_DIR
+        return self._policy_dir or self.config.paths.chromium_policy_dir
 
     def policy_path(self) -> Path:
         return self.policy_dir / POLICY_FILENAME

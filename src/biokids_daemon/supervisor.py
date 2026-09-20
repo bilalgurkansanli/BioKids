@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import datetime as dt
+import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any
@@ -152,6 +153,7 @@ class Supervisor:
         reading = self._ledger.begin()
         self.reload()
         await self.watcher.start()
+        self._write_kiosk_policy()
         self.started = True
 
         repo.audit(
@@ -187,6 +189,50 @@ class Supervisor:
         if self._ledger is None:
             raise RuntimeError("supervisor.start() has not been called")
         return self._ledger
+
+    def _write_kiosk_policy(self) -> None:
+        """Put the child's Chromium under managed policy (T5.2).
+
+        Here rather than in the launcher because this is the only BioKids
+        process that can: `/etc/chromium/policies/managed` is root-owned, and
+        this unit is the one whose `ReadWritePaths` names it. The launcher runs
+        as the child and can only check the result.
+
+        The policy depends on nothing but the launcher's host and port, which
+        are machine-wide, so one file covers every child.
+
+        Everything about this was already in place - the config key, the
+        ReadWritePath with a comment explaining its `-` prefix, the postrm that
+        removes the file on purge - except the line that writes it. So
+        `chrome://policy` was empty on every machine and the kiosk was an
+        ordinary browser with an ordinary Ctrl+Shift+I.
+        """
+        from biokids_shell.kiosk import POLICY_FILENAME, kiosk_policy
+
+        directory = self.config.paths.chromium_policy_dir
+        origin = f"{self.config.shell.host}:{self.config.shell.port}"
+        path = directory / POLICY_FILENAME
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+            temp = path.with_suffix(".json.tmp")
+            temp.write_text(
+                json.dumps(kiosk_policy(origin), indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            temp.replace(path)
+        except OSError as exc:
+            # Loud, and not fatal. A daemon that refuses to start because
+            # Chromium is not installed would be worse than a kiosk without a
+            # policy, and `biokids-shell` is what pulls Chromium in.
+            log.error(
+                "could not write the Chromium managed policy to %s (%s). If a child "
+                "uses the browser it will have NO policy: no URL allowlist, DevTools "
+                "available, downloads unrestricted.",
+                path,
+                exc,
+            )
+            return
+        log.info("Chromium managed policy written to %s for %s", path, origin)
 
     def reload(self) -> None:
         """Re-read children and policies. Called at start and on a `reload` op.

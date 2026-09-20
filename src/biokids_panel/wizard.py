@@ -226,7 +226,7 @@ def register_wizard(app: FastAPI) -> None:
         if child is None:
             return _render_step(ctx, request, session, state, tr, 4, error=tr(error))
 
-        provision_child(session, child)
+        provisioned = provision_child(session, child)
         repo.set_setting(session, SETTING_PENDING_CHILD, str(child.id))
         repo.audit(
             session,
@@ -240,6 +240,17 @@ def register_wizard(app: FastAPI) -> None:
             },
         )
         session.commit()
+        # Visible, not blocking. The children screen reports this (D-146) and
+        # the wizard did not, which matters more here because the wizard is
+        # where the first child is always added - a parent finished setup with
+        # no Unix account for their child and found out at the greeter.
+        #
+        # But it must not be a dead end: on a machine where `adduser` is absent
+        # the row is still right and `biokids-admin provision-child` still
+        # repairs it, so stopping the setup here would strand a parent halfway
+        # through with no way on (principle #4).
+        if not provisioned.ok:
+            return see_other("/wizard/5?error=provision")
         return see_other("/wizard/5")
 
     @app.post("/wizard/5", dependencies=[Open])
