@@ -3,19 +3,33 @@
 Zio and Sio. See `docs/VOICE.md` for the specification and `docs/DECISIONS.md`
 D-91 … D-94 for why the feature has the shape it has.
 
-## No voice model is bundled yet
+## No voice model is bundled, and the question is settled
 
-**This package ships no Piper voice, in any language.** Bundling one is deferred
-(T6.1), and it is deferred for a licensing reason rather than a scheduling one:
-Piper's catalogue aggregates datasets under different terms and some of them are
-not redistributable. `docs/VOICE.md` §3 is the rule.
+**This package ships no Piper voice, in any language** — not because the
+decision is pending, but because it was made. `docs/VOICE.md` §3 required each
+licence to be checked before bundling; that was done on 2026-09-20 and the answer
+was that there is nothing to bundle:
 
-Before any `.onnx` voice is added to this repository or to a `.deb`:
+* `tr_TR-dfki-medium` — the only Turkish voice left in the catalogue — is trained
+  on a dataset licensed CC-BY-NC-SA-4.0, which is not redistributable here.
+* `tr_TR-fahrettin-*` and `tr_TR-fettah-*` were **removed from the catalogue at
+  their contributors' request**. A voice whose contributor asked for it to be
+  taken down is not one to keep a copy of.
+* `piper-tts` is not packaged in Debian 13 at all.
+
+So **espeak-ng** speaks: Debian main, GPL-3+, Turkish, voices inside the package,
+no model file and no network. It sounds like a 1990s robot, which is the honest
+trade against a four-year-old being shown a card they cannot read yet. Piper is
+still tried first and still wins wherever a family installs it. See D-137 and
+D-145.
+
+If a Turkish Piper voice with a redistributable dataset ever appears, bundling it
+is still the better outcome. Before any `.onnx` is added to this repository:
 
 1. Record the voice, its upstream dataset and its licence in
    `assets/voices/LICENSES.md`.
 2. Confirm the licence is MIT-compatible (D-30). A voice that may not be
-   redistributed is downloaded at first run instead of being bundled.
+   redistributed is not bundled.
 
 Until then the fallback chain ends where VOICE.md §6 says it should: the
 character card appears with the sentence written on it, and nothing is spoken.

@@ -132,15 +132,19 @@ a crash:
 
 Stated here rather than discovered later:
 
-- **No Piper voice is bundled** (T6.1). Piper's catalogue aggregates datasets with
-  different terms and `docs/VOICE.md` §3 requires each licence to be checked first;
-  `assets/voices/LICENSES.md` is the gate. Until it is done the warnings are shown on the
-  character card rather than spoken.
+- **No Piper voice is bundled, and none will be** (T6.1). The licences were checked as
+  `docs/VOICE.md` §3 requires, and the answer was no: `tr_TR-dfki-medium`'s dataset is
+  CC-BY-NC-SA, and `fahrettin` and `fettah` were withdrawn from the Piper catalogue at
+  their contributors' request. `piper-tts` is not in Debian 13 either. The warnings are
+  spoken by **espeak-ng** instead — Debian main, GPL-3+, Turkish, no model file and no
+  download — and Piper is used wherever a family installs it themselves. See D-137 and
+  `assets/voices/LICENSES.md`.
 - **Nothing has been built as a `.deb`.** `debian/` is written against Debian policy but
   `dpkg-buildpackage` has never run, because the development host is Windows.
-  `debian/README.source` lists what that leaves unverified.
-- **The exit criterion has not been run on a VM.** A passing acceptance test says the
-  pieces agree with each other, not that Chromium starts.
+  `debian/README.source` §7 lists what that leaves unverified.
+- **The exit criterion has not been run on a machine.** A passing acceptance test says
+  the pieces agree with each other, not that Chromium starts. `docs/VM-RUNBOOK.md` is
+  that work as a sequence.
 
 No telemetry, analytics, crash reporting or version ping has been added, and none will
 be. The complete inventory of outbound connections is `docs/SECURITY.md` §4.

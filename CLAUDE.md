@@ -170,9 +170,13 @@ setup wizard, reaches the panel from their phone over Tailscale, sets a daily qu
 and the child session enforces it with spoken warnings.
 
 T0–T8 are written and tested; `tests/test_acceptance.py` runs the exit criterion end
-to end in one process. **T9 is not done**, and `docs/ROADMAP.md` lists the three things
-standing between here and it: no Piper voice is bundled because the licences have not
-been checked, nothing has been built as a `.deb` because the development host is
-Windows, and the criterion has not been run on a VM.
+to end in one process. **T9 is not done**, and what is left is now only the VM:
+nothing has ever been built as a `.deb`, and the criterion has never been run on a
+machine. `docs/VM-RUNBOOK.md` is that work, step by step, with every command checked
+against this repository.
+
+The voice question is closed (D-137): there is no Turkish Piper voice anyone may
+redistribute and `piper-tts` is not in Debian 13, so espeak-ng speaks the warnings and
+Piper is used only where a family installs it themselves.
 
 Nothing about the ISO belongs in Phase 0.

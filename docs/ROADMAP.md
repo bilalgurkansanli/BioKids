@@ -39,21 +39,29 @@ above end to end in one process — the real wizard, policy engine, ledger, daem
 launcher and both sockets' handlers — with only logind, `systemctl` and the socket
 transport faked.
 
-**Three things are still open, and none of them is code:**
+**Two things are still open, and both of them are the VM:**
 
-1. **No Piper voice is bundled** (T6.1), so the warnings are shown rather than spoken.
-   Piper's catalogue aggregates datasets with different terms and `docs/VOICE.md` §3
-   says to check each licence first; `assets/voices/LICENSES.md` is the gate. A machine
-   with no voice still warns the child on the character card, which always carries the
-   line as text.
-2. **Nothing has been built or installed as a `.deb`.** `debian/` is complete and
+1. **Nothing has been built or installed as a `.deb`.** `debian/` is complete and
    written against Debian policy, but `dpkg-buildpackage` has never run — the
-   development host is Windows, and `debian/README.source` lists exactly what that
+   development host is Windows, and `debian/README.source` §7 lists exactly what that
    leaves unverified.
-3. **The criterion has not been run on a VM.** A passing test says the pieces agree
-   with each other, not that Chromium starts. T9 still ends with a screen recording.
+2. **The criterion has not been run on a machine.** A passing test says the pieces
+   agree with each other, not that Chromium starts, that logind answers, or that the
+   sandboxed panel can reach systemd. T9 still ends with a screen recording.
 
-*Estimate: 6–8 sessions. The first seven task groups are done.*
+`docs/VM-RUNBOOK.md` is both of those as a sequence: build, install, wizard, child
+session, the T8.5 dpkg matrix, the virtual-terminal guards, and the exit criterion.
+Every command in it is checked against this repository, and each step says what a pass
+looks like and which item of `debian/README.source` §7 it closes.
+
+**The voice was a third blocker and is now closed** (D-137). The licences were checked,
+and the answer was no: `tr_TR-dfki-medium`'s dataset is CC-BY-NC-SA, `fahrettin` and
+`fettah` were withdrawn from the Piper catalogue at their contributors' request, and
+`piper-tts` is not in Debian 13 at all. So there is nothing to bundle and nothing worth
+downloading at first run. espeak-ng speaks the warnings — in Debian main, GPL-3+,
+Turkish, no model file — and Piper is still preferred wherever a family installs it.
+
+*Estimate: 1–2 sessions on a VM. Every task group is written and tested.*
 
 ---
 

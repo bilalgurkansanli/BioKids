@@ -6,9 +6,12 @@ entirely on your own machine.**
 *Çocuklar için, tamamen kendi bilgisayarınızda çalışan ebeveyn kontrollü Linux sistemi.*
 
 > ⚠️ **Early development — Phase 0.** The daemon, the parent panel, the child
-> launcher and the voice service are built and tested; there is no release yet and
-> no `.deb` has been installed on a machine that was not a development VM. See
-> [`docs/ROADMAP.md`](docs/ROADMAP.md) for what is done and what is not.
+> launcher and the voice service are built and tested — 541 tests, `mypy --strict`,
+> and an acceptance test that runs the exit criterion end to end in one process.
+> But **nothing has ever been built as a `.deb` or installed on any machine**: the
+> development host is Windows, so `dpkg-buildpackage` has never run. There is no
+> release and no tag. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for what is done,
+> and [`docs/VM-RUNBOOK.md`](docs/VM-RUNBOOK.md) for exactly what is left.
 
 ---
 
