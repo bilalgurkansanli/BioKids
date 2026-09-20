@@ -32,7 +32,7 @@ from biokids_core.db.models import AccessRequest
 from biokids_core.db.session import Database
 from biokids_core.ipc import EventKind
 from biokids_core.ledger import TickInput, TimeLedger
-from biokids_core.policy import evaluate
+from biokids_core.policy import evaluate, general_allowance_seconds
 from biokids_core.types import (
     Action,
     ActivityContext,
@@ -513,6 +513,15 @@ class Supervisor:
         already_done = bool(runtime.end_action_sessions)
         if already_done and not unenforced and not retry_due:
             return
+        if runtime.end_action_failures > 0 and not retry_due:
+            # The backoff was dead code. `already_done` is only true once the
+            # action has succeeded at least once, so an action that has never
+            # worked - polkit refusing poweroff, an inhibitor holding it, an
+            # empty session list - fell straight past the guard and was retried
+            # every tick, writing an alert-severity audit row each time and
+            # re-escalating to lockdown every thirty seconds for the rest of the
+            # day. The retry schedule existed and nothing consulted it.
+            return
 
         action = self._end_action_for(runtime, presence, policy)
         # Applications first, so an unsaved drawing gets its SIGTERM before the
@@ -558,7 +567,33 @@ class Supervisor:
                 runtime.unix_user,
                 runtime.end_action_failures,
             )
-            await self.enforcer.lockdown(presence.lockable_session_ids)
+            targets = presence.lockable_session_ids
+            if not targets:
+                # Nothing to lock. Recording an alert-level "lockdown" here
+                # would tell a parent reading the audit log that the machine was
+                # secured when nothing happened at all - and an empty session
+                # list is one ordinary way to fail three times in the first
+                # place, so this is the likely case rather than the odd one.
+                log.error(
+                    "the end action for %s failed %s times and there is no session "
+                    "to lock; nothing has been secured",
+                    runtime.unix_user,
+                    runtime.end_action_failures,
+                )
+                repo.audit(
+                    self.session,
+                    actor="daemon",
+                    action="daemon_failed",
+                    target=f"child:{runtime.child_id}",
+                    detail={
+                        "what": "end action failed and no session could be locked",
+                        "attempts": runtime.end_action_failures,
+                    },
+                    severity="alert",
+                )
+                self.session.commit()
+                return
+            await self.enforcer.lockdown(targets)
             repo.audit(
                 self.session,
                 actor="daemon",
@@ -895,7 +930,12 @@ class Supervisor:
                     }
                 )
 
-        quota = policy.quota_minutes(day) * 60 if policy else 0
+        # The whole allowance, earned minutes included - not the bare quota.
+        # The shell draws its ring as remaining/quota and clamps to 1, so a
+        # child who earned thirty bonus minutes watched a full circle that did
+        # not move for half an hour: the one thing a four-year-old is meant to
+        # be able to read said nothing was being used.
+        quota = general_allowance_seconds(policy, state) if policy else 0
         return {
             "child_id": child_id,
             "display_name": runtime.display_name,
@@ -961,18 +1001,28 @@ class Supervisor:
         self.session.commit()
 
     async def child_requested_shutdown(self, child_id: int) -> bool:
-        """The shutdown tile (D-100). Refused while a sibling is still logged in."""
+        """The shutdown tile (D-100). Refused while anyone else is still logged in.
+
+        Anyone, not just a sibling. This used to iterate `self.children`, so it
+        refused when the other user was another managed child and allowed it
+        when the other user was a parent: mum switches user so her son can play,
+        he taps "Kapat" when he is finished, and the machine goes down with her
+        session and her unsaved work still open. The code already knew this harm
+        was worth refusing; it was only looking in the wrong list.
+        """
         runtime = self._require(child_id)
-        others = [
-            other
-            for other in self.children.values()
-            if other.child_id != child_id and self.watcher.presence(other.unix_user).present
-        ]
+        # Ask logind now rather than trusting the last tick's snapshot. This is
+        # a rare and irreversible action taken on demand, and up to ten seconds
+        # of staleness is exactly long enough for a parent to have just sat
+        # down at their own account.
+        with contextlib.suppress(Exception):
+            await self.watcher.refresh()
+        others = self._others_logged_in(runtime)
         if others:
             log.info(
                 "%s asked to shut down, but %s is still logged in",
                 runtime.unix_user,
-                ", ".join(o.unix_user for o in others),
+                ", ".join(others),
             )
             return False
 

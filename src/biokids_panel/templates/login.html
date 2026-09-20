@@ -11,6 +11,16 @@
     <div class="notice notice--ok" role="status">{{ _('audit.action.pin_changed') }}</div>
   {% endif %}
 
+  {% if lockout_minutes %}
+    {# The POST said why. A reload, a reopened PWA or coming back on a phone
+       rendered the same page with the PIN box and the button both disabled and
+       not one word of explanation - a parent who has forgotten their PIN and is
+       already anxious meets a form that does nothing. #}
+    <div class="notice notice--danger" role="alert">
+      {{ _('login.locked', minutes=lockout_minutes) }}
+    </div>
+  {% endif %}
+
   <form class="card" method="post" action="/login">
     <input type="hidden" name="next" value="{{ next }}">
     <div class="field">

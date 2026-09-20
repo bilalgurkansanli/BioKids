@@ -346,6 +346,9 @@ msgstr "The 6-digit PIN you chose during setup."
 msgid "login.submit"
 msgstr "Sign in"
 
+msgid "auth.pin.wrong"
+msgstr "That PIN is not right."
+
 msgid "login.wrong"
 msgstr "That PIN is not right. {remaining} attempts left."
 

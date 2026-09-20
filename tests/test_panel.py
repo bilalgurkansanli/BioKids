@@ -1222,3 +1222,109 @@ def test_the_audit_day_filter_uses_the_parents_day(
     assert "G\u00fcnl\u00fck s\u00fcre doldu" in _audit_rows(page), (
         "a 01:30 event fell out of its own day"
     )
+
+
+def test_a_locked_out_parent_is_told_why_the_form_is_dead(
+    client: TestClient, family_ready: None
+) -> None:
+    """The POST explained it; a reload did not.
+
+    Reopening the PWA from the home screen, or coming back on a phone, rendered
+    a 200 page with the PIN box and the button both disabled and not one word
+    saying why - to a parent who has forgotten their PIN and is already anxious.
+    """
+    for _ in range(6):
+        client.post("/login", data={"pin": "000000"}, follow_redirects=False)
+
+    page = client.get("/login").text
+
+    assert "disabled" in page, "the lockout is not being enforced at all"
+    assert "Çok fazla hatalı deneme" in page, "the form is dead and says nothing"
+
+
+def test_the_settings_pin_notice_is_a_whole_sentence(
+    client: TestClient, family_ready: None
+) -> None:
+    """It borrowed the login sentence, which counts down attempts this form has none of."""
+    login(client)
+    response = client.post(
+        "/settings/pin",
+        data={"current_pin": "999999", "new_pin": "551234", "csrf_token": csrf_of(client)},
+        follow_redirects=True,
+    )
+    assert "PIN doğru değil." in response.text
+    assert "deneme hakkınız kaldı" not in response.text, (
+        "the settings form does not lock, and must not imply that it does"
+    )
+    assert ".  " not in response.text.split("PIN doğru değil.")[1][:40]
+
+
+def test_a_rejected_window_does_not_save_the_quotas_anyway(
+    client: TestClient, db: Database, daemon: FakeDaemon
+) -> None:
+    """ "16.00-20.00" - dots, which is how times are often typed in Turkish.
+
+    The two quota lines ran before the parse and `get_db` commits on the way
+    out, so the parent got the error page with their quotas already saved and
+    their end-action choice silently reverted to the form default, poweroff.
+    """
+    client.post("/wizard/1", data={"lang": "tr"}, follow_redirects=False)
+    client.post(
+        "/wizard/2",
+        data={"name": "Anne", "pin": PIN, "pin_again": PIN},
+        follow_redirects=False,
+    )
+    page = client.get("/wizard/3").text
+    marker = 'name="recovery" value="'
+    start = page.index(marker) + len(marker)
+    recovery = page[start : page.index('"', start)]
+    client.post(
+        "/wizard/3",
+        data={"passphrase": PASSPHRASE, "recovery": recovery, "written_down": "on"},
+        follow_redirects=False,
+    )
+    client.post(
+        "/wizard/4",
+        data={
+            "display_name": "Elif",
+            "birth_year": dt.date.today().year - 6,
+            "unix_user": "elif",
+            "avatar": "fox",
+            "locale": "tr",
+        },
+        follow_redirects=False,
+    )
+
+    # A first, valid submission: the parent chose "lock".
+    client.post(
+        "/wizard/6",
+        data={
+            "weekday_quota_min": 30,
+            "weekend_quota_min": 30,
+            "window": "16:00-20:00",
+            "end_action": "lock",
+        },
+        follow_redirects=False,
+    )
+
+    # Then they come back to raise the quota and mistype the window.
+    response = client.post(
+        "/wizard/6",
+        data={
+            "weekday_quota_min": 45,
+            "weekend_quota_min": 90,
+            "window": "16.00-20.00",
+            "end_action": "lock",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 200, "a bad window must not redirect onwards"
+
+    with db.session() as session:
+        child = repo.get_child_by_user(session, "elif")
+        assert child is not None
+        policy = repo.get_or_create_policy(session, child.id)
+        assert policy.weekday_quota_min != 45, "the rejected submission saved its quotas anyway"
+        assert policy.end_action != "poweroff", (
+            "the parent's end-action choice was reverted to the form default"
+        )

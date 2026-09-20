@@ -143,7 +143,12 @@ def filter_when(value: object) -> str:
     if local.date() == today:
         return local.strftime("%H:%M")
     if local.date() == today - dt.timedelta(days=1):
-        return f"{local:%H:%M}"
+        # Yesterday returned a bare time, identical to today's. The table shows
+        # fifty rows, which routinely spans two days, so a parent looking for
+        # "when did the computer shut itself off" read "23:40 - Günlük süre
+        # doldu" and could not tell which night it was. Only rows two days old
+        # carried a date at all.
+        return f"{local:%d.%m %H:%M}"
     return local.strftime("%d.%m %H:%M")
 
 
@@ -189,7 +194,7 @@ def base_context(
 ERROR_KEYS: dict[str, str] = {
     "csrf": "error.stale_form",
     "daemon": "error.daemon_unreachable",
-    "pin": "login.wrong",
+    "pin": "auth.pin.wrong",
     "passphrase": "auth.passphrase.wrong",
     "remote": "remote.failed",
     "provision": "child.provision_failed",

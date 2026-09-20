@@ -243,6 +243,8 @@ class TimeLedger:
 
         elapsed = int(awake)
         day_rolled = previous.wall.date() != day
+        if day_rolled:
+            self._carry_over(item.child_id, previous.wall.date(), row)
 
         result = self._apply(item, row, elapsed, day)
         return TickResult(
@@ -259,6 +261,38 @@ class TimeLedger:
             day_rolled_over=day_rolled,
             state=self.state(item.child_id, day),
         )
+
+    def _carry_over(self, child_id: int, yesterday: dt.date, today_row: LedgerDay) -> None:
+        """Move an unfinished timeout or break onto the new day's row.
+
+        The counters live on the calendar-day row and `_apply` counts them down
+        on whichever row the clock is pointing at, so at 00:00 the ledger
+        switched to a fresh row whose `penalty_remaining_s` and
+        `break_remaining_s` are zero: a parent's fifteen-minute timeout given at
+        23:55 ended at midnight, silently, and a forced break did the same.
+
+        Quota does not carry - a new day is a new allowance, which is the whole
+        point of a daily quota. A punishment is not an allowance.
+        """
+        previous = self._day_row_readonly(child_id, yesterday)
+        if previous is None:
+            return
+        moved: dict[str, int] = {}
+        if previous.penalty_remaining_s > 0:
+            today_row.penalty_remaining_s = max(
+                today_row.penalty_remaining_s, previous.penalty_remaining_s
+            )
+            moved["penalty_s"] = previous.penalty_remaining_s
+            previous.penalty_remaining_s = 0
+        if previous.break_remaining_s > 0:
+            today_row.break_remaining_s = max(
+                today_row.break_remaining_s, previous.break_remaining_s
+            )
+            moved["break_s"] = previous.break_remaining_s
+            previous.break_remaining_s = 0
+        if moved:
+            log.info("carried %s across midnight for child %s", moved, child_id)
+            self._mark_dirty(child_id)
 
     # ------------------------------------------------------------ accounting
 

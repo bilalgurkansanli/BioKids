@@ -25,6 +25,7 @@ from fastapi.testclient import TestClient
 
 from biokids_core.config import Config
 from biokids_core.types import AgeBand, Reason
+from biokids_shell import app as shell_app
 from biokids_shell import launcher as launcher_module
 from biokids_shell.app import create_app
 from biokids_shell.kiosk import (
@@ -706,3 +707,27 @@ async def test_a_refused_scope_is_still_reported_as_a_failure(
 
     assert result.ok is False
     assert "tuxpaint" not in launcher.running, "a refused launch was recorded as running"
+
+
+def test_the_character_art_is_found_on_an_installed_machine(
+    config: Config, tmp_path: Any
+) -> None:
+    """`CHARACTER_DIR` is two levels above the package.
+
+    In a checkout that is `assets/`; on an installed machine it is
+    `/usr/lib/python3`, so `_load_characters()` returned {} without a word in
+    the log. The first-run screen introduced "ben Zio" next to nothing and every
+    speech card had an empty character slot.
+    """
+    installed = config.paths.share_dir / "characters"
+    installed.mkdir(parents=True, exist_ok=True)
+    (installed / "zio.svg").write_text('<svg class="bk-char"/>', encoding="utf-8")
+    (installed / "sio.svg").write_text('<svg class="bk-char"/>', encoding="utf-8")
+
+    found = shell_app._load_characters(config)
+
+    assert set(found) == {"zio", "sio"}
+    assert installed in shell_app.character_dirs(config)
+    assert shell_app.character_dirs(config)[0] == installed, (
+        "the installed copy must win over a source checkout"
+    )

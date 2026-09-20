@@ -1438,3 +1438,106 @@ async def test_the_machine_does_not_power_off_between_two_windows(
     )
     decision = supervisor.children[1].last_decision
     assert decision is not None and decision.reason_code == "window.waiting"
+
+
+# ------------------------------------------------- the machine belongs to everyone
+
+
+async def test_the_shutdown_tile_refuses_while_a_parent_is_logged_in(
+    supervisor: Supervisor, clock: FakeClock, source: FakeSessionSource, runner: RecordingRunner
+) -> None:
+    """Mum switches user so her son can play; he taps "Kapat" when he is done.
+
+    The check iterated `self.children`, so it refused when the other user was
+    another managed child and allowed it when the other user was a parent - and
+    the machine went down with her session and her unsaved work still open. The
+    code already knew this harm was worth refusing; it was looking in the wrong
+    list.
+    """
+    await supervisor.start()
+    source.log_in("elif")
+    source.log_in("anne")
+
+    allowed = await supervisor.child_requested_shutdown(1)
+
+    assert allowed is False
+    assert not any("poweroff" in " ".join(call) for call in runner.calls)
+
+
+async def test_a_child_alone_can_still_shut_the_machine_down(
+    supervisor: Supervisor, clock: FakeClock, source: FakeSessionSource, runner: RecordingRunner
+) -> None:
+    """D-100 gives the child that tile on purpose; refusing always is not the fix."""
+    await supervisor.start()
+    source.log_in("elif")
+
+    allowed = await supervisor.child_requested_shutdown(1)
+
+    assert allowed is True
+    assert any("poweroff" in " ".join(call) for call in runner.calls)
+
+
+# ------------------------------------------------------- the ring the child reads
+
+
+async def test_earned_minutes_make_the_ring_move(
+    supervisor: Supervisor, clock: FakeClock, source: FakeSessionSource, session: Session
+) -> None:
+    """The shell draws remaining/quota and clamps to 1.
+
+    Sending the bare quota while `remaining_seconds` included the bonus meant a
+    child who earned thirty minutes watched a full circle that did not move for
+    half an hour - the one thing a four-year-old is meant to be able to read.
+    """
+    set_quota(
+        session,
+        1,
+        60,
+        earn_enabled=True,
+        earn_ratio=1.0,
+        earn_cap_min=60,
+        earn_min_session_min=1,
+    )
+    await supervisor.start()
+    source.log_in("elif")
+    await run_learning(supervisor, clock, 600)
+
+    state = supervisor.shell_state(1)
+
+    assert state["quota_seconds"] >= state["remaining_seconds"], (
+        f"remaining {state['remaining_seconds']} exceeds quota {state['quota_seconds']}: "
+        "the ring cannot move"
+    )
+    assert state["quota_seconds"] > 60 * 60, "the earned minutes are missing from the total"
+
+
+# ---------------------------------------------------- a punishment outlives a day
+
+
+def test_a_timeout_is_not_cancelled_by_midnight(
+    config: Config, db: Database, child: Child
+) -> None:
+    """The counters live on the calendar-day row, and `_apply` counts down on it.
+
+    So at 00:00 the ledger moved to a fresh row whose penalty is zero: a parent
+    who gave a fifteen-minute timeout at 23:55 had it end five minutes later, in
+    silence, and the child went straight back to what they were doing.
+    """
+    from biokids_core.ledger import TimeLedger
+
+    clock = FakeClock(wall=dt.datetime(2026, 9, 21, 23, 55, 0))
+    with db.session() as own:
+        ledger = TimeLedger(own, clock, config)
+        ledger.begin()
+        ledger.start_penalty(child.id, 15 * 60)
+        assert ledger.state(child.id).penalty_remaining_s == 15 * 60
+
+        # Over midnight, one tick at a time.
+        for _ in range(7):
+            clock.advance(60)
+            ledger.tick([TickInput(child_id=child.id, active=True, idle=False)])
+
+        left = ledger.state(child.id).penalty_remaining_s
+
+    assert left > 0, "the timeout evaporated at midnight"
+    assert left <= 10 * 60, f"the timeout stopped counting down instead: {left}s left"

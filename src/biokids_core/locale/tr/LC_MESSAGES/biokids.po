@@ -346,6 +346,9 @@ msgstr "Kurulumda belirlediğiniz 6 haneli PIN."
 msgid "login.submit"
 msgstr "Giriş"
 
+msgid "auth.pin.wrong"
+msgstr "PIN doğru değil."
+
 msgid "login.wrong"
 msgstr "PIN doğru değil. {remaining} deneme hakkınız kaldı."
 

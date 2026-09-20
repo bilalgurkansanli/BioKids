@@ -1032,3 +1032,41 @@ and execs the command, so `communicate()` waited for the whole life of the appli
 result was the app's own exit status — so when the daemon stopped the scope at quota
 time, the launcher reported that the launch had failed. A refusal happens before the
 exec and is therefore immediate, so a short bounded wait tells the two apart.
+
+**D-150 [claude] The fifteen medium and low findings.** Grouped because they share one
+property: each is small enough to live with and wrong enough that a parent who noticed
+would not trust the rest.
+
+*The daemon.* The end-action backoff was dead code — `already_done` is only true once
+the action has succeeded, so an action that never worked was retried every tick and
+re-escalated to lockdown every thirty seconds for the rest of the day. A lockdown with
+an empty session list was audited at alert severity as though the machine had been
+secured. The child's shutdown tile checked `self.children`, so it refused when the other
+user was a sibling and allowed it when the other user was a parent — mum switches user,
+her son taps "Kapat", and the machine goes down with her unsaved work. The shell was
+sent the bare quota while `remaining_seconds` included earned minutes, so the ring a
+four-year-old is meant to read sat at full for the length of the bonus. And penalty and
+break counters live on the calendar-day row, so a fifteen-minute timeout given at 23:55
+ended at midnight, silently; they now carry over, while quota does not, because a new
+day is a new allowance and a punishment is not an allowance.
+
+*The panel.* The session cookie was minted once with an absolute `Max-Age`, so D-51's
+idle timeout threw out a parent who had been working for thirty minutes. The shutdown
+confirmation existed only in an `onsubmit` handler, so with JavaScript off a mis-tap on
+"Kapat" — which sits beside "Kilitle" in the same row of three — powered the machine off
+under a child with no chance to cancel. A wrong PIN at the turn-protection-off gate was
+not audited on an install with no passphrase, which is the one install where a child who
+watched the PIN being typed can keep guessing. The lockout page was a disabled form with
+no explanation. Wizard step 6 wrote the quotas before parsing the window, and `get_db`
+commits on the way out, so a parent who typed "16.00-20.00" got the error page with
+their quotas already saved and their end-action choice reverted to the form default. The
+completion screen was unreachable: step 10 redirects to /wizard/11 and the gate that
+stops a configured machine being re-set-up bounced it to the login page, so ten steps
+ended at a bare PIN prompt. Yesterday's audit rows rendered identically to today's. And
+the settings page reused the login sentence, which counts down attempts that form does
+not have, leaving a hole where the number belonged.
+
+*The shell.* `CHARACTER_DIR` is two levels above the package — `assets/` in a checkout,
+`/usr/lib/python3` on an installed machine — so `_load_characters()` returned `{}` in
+silence and every real install had a first-run screen introducing "ben Zio" next to
+nothing. The packaging ships them now, and a missing character is logged.

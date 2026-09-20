@@ -117,7 +117,19 @@ def render(
     context = base_context(request, session, state, tr)
     context.update(values)
     html = ctx.env.get_template(template).render(**context)
-    return HTMLResponse(html, status_code=status_code)
+    response = HTMLResponse(html, status_code=status_code)
+    if state.authenticated:
+        # Slide the cookie with the session it represents. Without this the
+        # browser drops it thirty minutes after sign-in however busy the parent
+        # has been, which is not the idle timeout D-51 describes.
+        #
+        # Re-sent from the request rather than from the session row: only the
+        # hash is stored, which is the point - the raw token exists in the
+        # parent's browser and nowhere else.
+        token = request.cookies.get(auth.SESSION_COOKIE)
+        if token:
+            _set_session_cookie(response, token, ctx.config)
+    return response
 
 
 def see_other(url: str) -> RedirectResponse:
@@ -454,6 +466,10 @@ def register_routes(app: FastAPI) -> None:
         if not auth.csrf_ok(state, csrf_token):
             return see_other("/today?error=csrf")
         if confirm != "yes":
+            # Reachable with JavaScript off, where the onsubmit confirm() never
+            # runs and a mis-tap on "Kapat" - which sits beside "Kilitle" in the
+            # same row of three - would otherwise power the machine off under a
+            # child with no chance to cancel.
             return see_other(f"/today?confirm=poweroff&child={child_id}")
         ok = _call_daemon(ctx, Op.POWEROFF_NOW, actor=_actor(state))
         return see_other("/today?poweroff=1" if ok else "/today?error=daemon")
@@ -605,11 +621,24 @@ def register_routes(app: FastAPI) -> None:
             if parent is not None and not parent.passphrase_hash:
                 # No passphrase on this install: the PIN, re-entered, is the
                 # fallback. Never a dead end (principle #4).
-                if security.verify_secret(parent.pin_hash, passphrase.strip()) and (
-                    state.session is not None
-                ):
+                accepted = security.verify_secret(parent.pin_hash, passphrase.strip())
+                if accepted and state.session is not None:
                     state.session.passphrase_ok_until = utcnow() + dt.timedelta(
                         minutes=auth.PASSPHRASE_GRACE_MINUTES
+                    )
+                if not accepted:
+                    # Audited, like every other failure at this gate. Without
+                    # this, a child who watched the PIN being typed could guess
+                    # at "turn protection off" indefinitely on an install with
+                    # no passphrase, and a parent checking the log for "did
+                    # somebody try to switch BioKids off" saw nothing at all.
+                    repo.audit(
+                        session,
+                        actor=_actor(state),
+                        action="passphrase_failed",
+                        target=f"child:{child_id}",
+                        detail={"via": "pin_fallback"},
+                        severity="warning",
                     )
             else:
                 auth.confirm_passphrase(session, state, passphrase)
@@ -984,6 +1013,16 @@ def register_routes(app: FastAPI) -> None:
 
 
 def _set_session_cookie(response: Response, token: str, config: Config) -> None:
+    """Mint or refresh the session cookie.
+
+    Refreshed on every authenticated request, not only at sign-in. D-51 says
+    "30 minutes idle, then PIN again", and `auth.resolve` implements exactly
+    that server-side by sliding `last_seen_at` - but the cookie was minted once
+    with an absolute Max-Age, so a parent who signed in at 20:00 and spent half
+    an hour setting quotas for two children was thrown back to the PIN screen at
+    20:30 while actively using the panel. The server thought the session was
+    alive; the browser had already dropped the cookie.
+    """
     response.set_cookie(
         auth.SESSION_COOKIE,
         token,

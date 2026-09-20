@@ -44,6 +44,14 @@ TEMPLATE_DIR = SHELL_DIR / "templates"
 STATIC_DIR = SHELL_DIR / "static"
 SHARED_STATIC_DIR = SHELL_DIR.parent / "biokids_core" / "data" / "static"
 CHARACTER_DIR = SHELL_DIR.parent.parent / "assets" / "characters"
+"""The source tree's copy. Two levels above the package is `assets/` in a
+checkout and `/usr/lib/python3` on an installed machine, so this alone meant Zio
+and Sio were invisible on every real install - the first-run screen introduced
+"ben Zio" next to nothing, and every speech card had an empty character slot."""
+
+INSTALLED_CHARACTER_DIR = "characters"
+"""Under the share directory, beside `catalog/` and `voice/`, which is where the
+packaging already puts data the code needs to find at runtime."""
 
 TILE_ICONS: dict[str, str] = {
     "blocks": "🧩",
@@ -106,7 +114,7 @@ class ShellState:
         self.env.filters["icon"] = lambda name: TILE_ICONS.get(str(name), TILE_ICONS["app"])
         self.env.filters["avatar"] = lambda slug: AVATARS.get(str(slug), AVATARS["fox"])
         self.env.filters["expression"] = set_expression
-        self.characters = _load_characters()
+        self.characters = _load_characters(config)
 
 
 EXPRESSIONS = ("neutral", "happy", "concerned", "sleepy")
@@ -130,13 +138,35 @@ def set_expression(svg: str, expression: str) -> str:
     return f"{svg[:insert_at]} is-{expression}{svg[insert_at:]}"
 
 
-def _load_characters() -> dict[str, str]:
+def character_dirs(config: Config | None = None) -> list[Path]:
+    """Where to look for Zio and Sio, installed copy first.
+
+    The same shape as the catalogue and the voice lines: `/usr/share/biokids/...`
+    on a real machine, the source tree when running from a checkout.
+    """
+    config = config or get_config()
+    return [config.paths.share_dir / INSTALLED_CHARACTER_DIR, CHARACTER_DIR]
+
+
+def _load_characters(config: Config | None = None) -> dict[str, str]:
     """Inline Zio and Sio, so the card needs no network and no second request."""
     found: dict[str, str] = {}
     for persona in ("zio", "sio"):
-        path = CHARACTER_DIR / f"{persona}.svg"
-        if path.is_file():
-            found[persona] = path.read_text(encoding="utf-8")
+        for directory in character_dirs(config):
+            path = directory / f"{persona}.svg"
+            if path.is_file():
+                found[persona] = path.read_text(encoding="utf-8")
+                break
+    missing = [p for p in ("zio", "sio") if p not in found]
+    if missing:
+        # Said out loud. It used to return {} in silence, and the only symptom
+        # was a child's screen with a hole where a character should be.
+        log.warning(
+            "character art for %s not found in %s; the speech card will have an "
+            "empty character slot",
+            ", ".join(missing),
+            " or ".join(str(d) for d in character_dirs(config)),
+        )
     return found
 
 

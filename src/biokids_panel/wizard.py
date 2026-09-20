@@ -90,9 +90,15 @@ def register_wizard(app: FastAPI) -> None:
         tr: Tr,
         step: int,
     ) -> Response:
-        if repo.setup_complete(session):
-            return see_other("/login")
         step = max(1, min(step, TOTAL_STEPS + 1))
+        if repo.setup_complete(session) and step <= TOTAL_STEPS:
+            # The gate that stops a configured machine being re-set-up (D-128),
+            # but it caught the confirmation screen too: step 10 redirects to
+            # /wizard/11 and setup is complete by then, so the parent pressed
+            # "Bitir" at the end of ten steps and landed on a bare PIN prompt
+            # with nothing saying the setup had worked or the child been
+            # created. Step 11 renders nothing a parent can change.
+            return see_other("/login")
         return _render_step(ctx, request, session, state, tr, step)
 
     @app.post("/wizard/1", dependencies=[Open])
@@ -264,17 +270,23 @@ def register_wizard(app: FastAPI) -> None:
         child = _pending_child(session)
         if child is None:
             return see_other("/wizard/4")
-        policy = repo.get_or_create_policy(session, child.id)
-        policy.weekday_quota_min = max(0, min(weekday_quota_min, 24 * 60))
-        policy.weekend_quota_min = max(0, min(weekend_quota_min, 24 * 60))
-        try:
-            from biokids_core.types import TimeWindow
+        # Parsed before anything is written. The two quota lines used to run
+        # first, and `get_db` commits on the way out, so a parent who typed
+        # "16.00-20.00" - dots, which is how times are often written in Turkish
+        # - got the error page with their quotas already saved and their
+        # end-action choice silently reverted to the form default, poweroff.
+        from biokids_core.types import TimeWindow
 
+        try:
             windows = [str(TimeWindow.parse(window))] if window.strip() else []
         except ValueError:
             return _render_step(
                 ctx, request, session, state, tr, 6, error=tr("time.windows.invalid")
             )
+
+        policy = repo.get_or_create_policy(session, child.id)
+        policy.weekday_quota_min = max(0, min(weekday_quota_min, 24 * 60))
+        policy.weekend_quota_min = max(0, min(weekend_quota_min, 24 * 60))
         policy.windows = {"weekday": windows, "weekend": windows}
         try:
             policy.end_action = EndAction(end_action).value
