@@ -133,7 +133,7 @@ recovery.
 
 **D-25 [owner] Phase 0 = `.deb` only. ISO comes later.** See `docs/ROADMAP.md`.
 
-**D-26 [owner] Single monorepo:** `github.com/bilalgurkansanli/biokids`.
+**D-26 [owner] Single monorepo:** `github.com/bilalgurkansanli/BioKids`.
 One Debian *source* package producing several *binary* packages.
 
 **D-27 [claude] We run our own APT repository, built with `aptly`, hosted on GitHub Pages.**

@@ -1,6 +1,6 @@
 [Unit]
 Description=BioKids voice companions, Zio and Sio
-Documentation=https://github.com/bilalgurkansanli/biokids
+Documentation=https://github.com/bilalgurkansanli/BioKids
 # A user unit in the child's session: speech needs the session's audio, and
 # nothing here needs privileges. It ducks whatever else is playing while it
 # speaks, which is only possible from inside the same PipeWire graph.

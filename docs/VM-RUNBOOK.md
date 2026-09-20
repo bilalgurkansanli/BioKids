@@ -621,7 +621,7 @@ has been pushed anywhere, and the only branch is `master`:
 ```bash
 git log --oneline | wc -l     # read what you are about to publish
 git branch -M main            # CLAUDE.md §6 says PRs go into `main`
-git remote add origin git@github.com:bilalgurkansanli/biokids.git
+git remote add origin git@github.com:bilalgurkansanli/BioKids.git
 git push -u origin main
 ```
 

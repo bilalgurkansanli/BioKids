@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/bilalgurkansanli/biokids/security/advisories/new
+    url: https://github.com/bilalgurkansanli/BioKids/security/advisories/new
     about: Please report privately, not as a public issue. See SECURITY.md.

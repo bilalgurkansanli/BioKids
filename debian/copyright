@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: BioKids
 Upstream-Contact: Bilal Gurkan Sanli <bilalsanli129@gmail.com>
-Source: https://github.com/bilalgurkansanli/biokids
+Source: https://github.com/bilalgurkansanli/BioKids
 Comment: BioKids is MIT throughout, and deliberately so: a dependency whose
  licence would force this project to change its own is not accepted, which
  keeps the packaging free of per-file exceptions. Programs BioKids only

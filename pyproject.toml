@@ -54,7 +54,7 @@ biokids-admin = "biokids_core.admin:main"
 
 [project.urls]
 Homepage = "https://biokids.bilalgurkansanli.com"
-Repository = "https://github.com/bilalgurkansanli/biokids"
+Repository = "https://github.com/bilalgurkansanli/BioKids"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

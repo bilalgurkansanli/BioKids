@@ -1,6 +1,6 @@
 [Unit]
 Description=BioKids lockdown - lock every child session
-Documentation=https://github.com/bilalgurkansanli/biokids
+Documentation=https://github.com/bilalgurkansanli/BioKids
 # Deliberately no Requires= or After= on biokids-daemon.service: this unit runs
 # precisely because the daemon is not there. Nothing it needs may be tied to
 # something that has just died.

@@ -4,7 +4,7 @@
 # a Recommends, and a machine without it must still get its launcher.
 Wants=biokids-voice.service
 Description=BioKids child launcher
-Documentation=https://github.com/bilalgurkansanli/biokids
+Documentation=https://github.com/bilalgurkansanli/BioKids
 # This is a user unit: it runs inside the child's own session, as the child,
 # with no privileges of any kind. Every decision about what may run and for how
 # long is the daemon's, reached over /run/biokids/daemon.sock.

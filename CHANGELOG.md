@@ -148,4 +148,4 @@ be. The complete inventory of outbound connections is `docs/SECURITY.md` §4.
 Two placeholders are outstanding before the repository can be made public: the security
 contact in `SECURITY.md` and the enforcement contact in `CODE_OF_CONDUCT.md`.
 
-[Unreleased]: https://github.com/bilalgurkansanli/biokids/commits/main
+[Unreleased]: https://github.com/bilalgurkansanli/BioKids/commits/main

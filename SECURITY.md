@@ -17,7 +17,7 @@ demonstrates the problem.
 Two channels, either is fine:
 
 - **GitHub private vulnerability report** —
-  <https://github.com/bilalgurkansanli/biokids/security/advisories/new>.
+  <https://github.com/bilalgurkansanli/BioKids/security/advisories/new>.
   Preferred: the report, the fix and the advisory stay in one place.
 - **Email** — `<SECURITY CONTACT — NOT YET SET>`
 

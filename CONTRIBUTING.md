@@ -46,7 +46,7 @@ with a GPU when you get to it.
 Debian 13 ships Python 3.13 and that is the only version supported.
 
 ```bash
-git clone https://github.com/bilalgurkansanli/biokids
+git clone https://github.com/bilalgurkansanli/BioKids
 cd biokids
 python3 -m venv .venv
 source .venv/bin/activate

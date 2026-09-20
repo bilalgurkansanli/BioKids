@@ -1,6 +1,6 @@
 [Unit]
 Description=BioKids parent panel
-Documentation=https://github.com/bilalgurkansanli/biokids
+Documentation=https://github.com/bilalgurkansanli/BioKids
 # The panel's three action buttons go straight to the daemon socket. It starts
 # without the daemon and says so on screen rather than failing, but there is no
 # reason to start it first.

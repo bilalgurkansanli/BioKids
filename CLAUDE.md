@@ -20,7 +20,7 @@ Two deliverables, in this order:
 
 Never work on the ISO before the packages work. See `docs/ROADMAP.md`.
 
-**Repository:** `github.com/bilalgurkansanli/biokids` (single monorepo)
+**Repository:** `github.com/bilalgurkansanli/BioKids` (single monorepo)
 **License:** MIT
 **Author:** Bilal Gürkan Şanlı (Furkan), under the BioStudio label
 **Site:** biokids.bilalgurkansanli.com (built separately, not in this repo)

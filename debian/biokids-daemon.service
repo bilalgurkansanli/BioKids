@@ -1,6 +1,6 @@
 [Unit]
 Description=BioKids enforcement daemon
-Documentation=https://github.com/bilalgurkansanli/biokids
+Documentation=https://github.com/bilalgurkansanli/BioKids
 # Session state comes from logind. Without it the daemon has nothing to account
 # against, so start after it rather than racing it.
 After=systemd-logind.service
