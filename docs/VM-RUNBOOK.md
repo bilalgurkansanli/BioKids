@@ -22,19 +22,33 @@ written on today's tree, it says so rather than leaving you to discover it.
 
 ## 0. Before you start
 
+Everything in this section happens **once, before the snapshot**, so that every
+rollback returns to a machine that already has it.
+
 ### 0.1 The VM
 
-Per `docs/TASKS-PHASE0.md` T0.1: Debian 13 (trixie), 4 GB RAM, 2 vCPU, 30 GB
-disk, the XFCE task, Guest Additions, and a shared folder to the repo.
+Debian 13 (trixie) netinst in VirtualBox: 4 GB RAM, 2 vCPU, 30 GB disk (T0.1).
+At the installer's **Software selection** screen tick **Xfce**, **SSH server** and
+**standard system utilities**.
 
-**Snapshot it as `clean-debian-13` before installing anything.** You roll back to
-it three times — before §5, §6 and §7 — because each needs dpkg state that has
-not been poked at. §1 to §4 run on one machine, in order.
+SSH is chosen there on purpose. §6 disables Ctrl+Alt+F1–F12, and a shell that
+does not go through the graphical session is how you get back into a broken one.
+Put in by the installer it is part of the snapshot and survives every rollback;
+installed afterwards, each rollback would quietly take it away.
 
-**Build somewhere the rollback cannot reach.** `dpkg-buildpackage` writes the
-`.deb` files into the parent directory; if that is inside the VM's own disk, a
-rollback destroys them and §5 to §7 each begin with a rebuild. Build in the
-shared folder, or copy the `.deb` set onto the host before rolling back.
+Then the Guest Additions (Devices → Insert Guest Additions CD image). If the
+installer asks for a compiler and kernel headers:
+`sudo apt install build-essential linux-headers-amd64`.
+
+Then a shared folder: **name `BioKids`**, pointing at the repository on the host
+(`C:\Users\bilal\Desktop\BioKids`), **auto-mount** on. It appears at
+`/media/sf_BioKids`, and reading it needs the `vboxsf` group:
+
+```bash
+sudo adduser "$USER" vboxsf     # then log out and back in
+ls /media/sf_BioKids/debian     # must list files
+ip -4 addr show                 # note the IP, for ssh
+```
 
 ### 0.2 Two accounts
 
@@ -42,32 +56,20 @@ Create a parent account (`anne`, or your own name) and **do not create a child
 account by hand.** Creating the child is the product's job — §3.1 — and doing it
 yourself hides the single riskiest unknown in this runbook.
 
-### 0.3 A second way in
+### 0.3 Three things every later step assumes
 
 ```bash
-sudo apt install openssh-server && sudo systemctl enable --now ssh
-ip -4 addr show           # note the IP
-```
+sudo apt install -y git
 
-If §6 goes wrong you will want a shell that does not go through the graphical
-session, and by then Ctrl+Alt+F1–F12 will be gone.
+# Where built packages live: on the host, where no rollback can reach them.
+# `dist/` is already in .gitignore.
+echo 'export D=/media/sf_BioKids/dist' >> ~/.bashrc && . ~/.bashrc
 
-**This does not survive a rollback.** The snapshot predates it and no BioKids
-package depends on `openssh-server`, so §6 repeats these two lines after rolling
-back. That is not an oversight in the runbook; it is the order the snapshot
-forces.
+# git refuses a repository owned by another user, and vboxsf files are root's.
+git config --global --add safe.directory /media/sf_BioKids
 
-### 0.4 Reading the database
-
-Several checks below look inside `/var/lib/biokids/biokids.db`. **The `sqlite3`
-command-line tool is not on a stock Debian 13 machine** and no BioKids package
-pulls it in — `biokids-core` depends on `python3-sqlalchemy`, which is the Python
-binding, not the CLI. Rather than add a package to the machine under test, these
-use `python3`, which is certainly there:
-
-```bash
-# save this once per machine; it does not survive a rollback
-cat > /tmp/bkq <<'EOF'
+# A read-only way into the database.
+sudo tee /usr/local/bin/bkq >/dev/null <<'EOF'
 #!/bin/sh
 exec python3 -c "
 import sqlite3, sys
@@ -76,33 +78,51 @@ for row in con.execute(sys.argv[1]):
     print(*row)
 " "$1"
 EOF
-chmod +x /tmp/bkq
+sudo chmod 755 /usr/local/bin/bkq
 ```
 
-Then `sudo /tmp/bkq "select name from sqlite_master where type='table'"`.
+`bkq` exists because the `sqlite3` command-line tool is not on a stock Debian 13
+machine and no BioKids package pulls it in — `biokids-core` depends on
+`python3-sqlalchemy`, which is the Python binding, not the tool. It lives in
+`/usr/local/bin` rather than `/tmp` because `/tmp` is emptied at every boot and
+§7.3 reboots. Use it as `sudo bkq "select name from sqlite_master where type='table'"`.
+
+### 0.4 Snapshot
+
+Now, and not before: **snapshot as `clean-debian-13`.** You roll back to it three
+times — before §5, §6 and §7. §1 to §4 run on this machine, in order.
+
+The snapshot holds SSH, `git`, `bkq` and `$D`, and **no Python packaging tools**.
+That is deliberate. `dh-python`, `python3-setuptools` and friends on a test
+machine could quietly satisfy a runtime dependency `debian/control` forgot to
+declare, and the clean installs in §5 and §7 exist to catch exactly that. So
+every package the later sections need is built in §1, while the tools are here.
 
 ---
 
 ## 1. Build the packages
 
-On the VM, from the shared folder (or a `git clone`):
+**On the VM's own disk, not in the shared folder.** `dpkg-buildpackage` writes
+the `.deb` files into the *parent* directory. From `/media/sf_BioKids` that is
+`/media/`, which is not shared and would be gone at the next rollback — and a
+shared folder is a fragile place to run a build in any case. So clone, build, and
+copy the results onto the host:
 
 ```bash
+git clone /media/sf_BioKids ~/src/BioKids && cd ~/src/BioKids
 sudo apt-get install -y --no-install-recommends build-essential devscripts debhelper dh-python gnupg po-debconf pybuild-plugin-pyproject python3-all python3-setuptools lintian
-```
-
-```bash
 chmod +x debian/rules && dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring
+mkdir -p "$D/v1" && cp ../biokids*_0.1.0-1_* "$D/v1/"
 ```
 
-The `chmod` is not paranoia: the tree is authored on Windows, where the execute
-bit is not something `.gitattributes` carries.
+The clone is of what is **committed**; edits on the host that are not committed
+are not in it. `debian/rules` is committed executable, so on a clone the `chmod`
+changes nothing — it is there for a checkout that lost the bit.
 
 `-Ppkg.biokids.nokeyring` skips `biokids-archive-keyring`, which needs the real
-archive key and can only be built by the release workflow. Eight packages should
-appear in the parent directory.
+archive key and can only be built by the release workflow.
 
-**Pass:** eight `.deb` files and no error.
+**Pass:** eight `.deb` files in `$D/v1`, and no error.
 
 **If `dh_install` fails on a glob that matches nothing**, run
 `python3 dev/check_packaging.py` — it checks that exact class of mistake from the
@@ -147,6 +167,21 @@ by §2, because it needs the services to actually run.
 What you are looking for is anything *else*: a misspelled directive, an invalid
 value, a `SystemCallFilter` group that does not exist.
 
+### 1.3 The upgrade build — now, while the tools are here
+
+§5.2 tests an upgrade, which needs a second version. Build it here so §5 can run
+on a rolled-back machine that has no build tools at all:
+
+```bash
+dch -i "Test upgrade" && dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring
+V=$(dpkg-parsechangelog -SVersion)      # 0.1.0-2
+mkdir -p "$D/v2" && cp ../biokids*_${V}_* "$D/v2/"
+ls "$D/v1" "$D/v2"                      # the same eight packages, two versions
+```
+
+`dch` edits `debian/changelog` in the clone, never in the repository on the host
+— one more reason the build does not happen in the shared folder.
+
 ---
 
 ## 2. Install
@@ -172,14 +207,16 @@ trixie, that is a T3.1 decision and not something to paper over here.
 ### 2.1 Install
 
 ```bash
-sudo apt install ../biokids_*.deb ../biokids-core_*.deb ../biokids-daemon_*.deb ../biokids-panel_*.deb ../biokids-shell_*.deb ../biokids-voice_*.deb
+sudo apt install "$D"/v1/biokids_*.deb "$D"/v1/biokids-core_*.deb \
+  "$D"/v1/biokids-daemon_*.deb "$D"/v1/biokids-panel_*.deb \
+  "$D"/v1/biokids-shell_*.deb "$D"/v1/biokids-voice_*.deb
 ```
 
 Then the desktop metapackage, which pulls XFCE, LightDM, Chromium and the
 application catalogue:
 
 ```bash
-sudo apt install ../biokids-desktop_*.deb
+sudo apt install "$D"/v1/biokids-desktop_*.deb
 ```
 
 **Pass:**
@@ -379,30 +416,21 @@ as in §2 and run the wizard.
 Let the child use the machine for a few minutes so there is real data.
 
 ```bash
-sudo /tmp/bkq "select count(*) from ledger_day"
+sudo bkq "select count(*) from ledger_day"
 ```
 
 Note the number. It has to survive the next two steps.
 
 ### 5.2 Upgrade
 
-**Move the first build out of the way first** — `dpkg-buildpackage` writes into
-the parent directory and nothing cleans it, so after a rebuild each glob matches
-two versions of the same package:
+To the `v2` packages built in §1.3. **Upgrade all six together:** every package
+pins `biokids-core` and `biokids` to `(= ${binary:Version})`, so upgrading a
+subset leaves the rest unsatisfiable:
 
 ```bash
-mkdir -p ../v1 && mv ../biokids*_0.1.0-1_all.deb ../v1/
-dch -i "Test upgrade" && dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring
-```
-
-**Upgrade all six together.** Every package pins `biokids-core` and `biokids` to
-`(= ${binary:Version})`, so upgrading a subset leaves the rest unsatisfiable:
-
-```bash
-V=$(dpkg-parsechangelog -SVersion)
-sudo apt install ../biokids_${V}_all.deb ../biokids-core_${V}_all.deb \
-  ../biokids-daemon_${V}_all.deb ../biokids-panel_${V}_all.deb \
-  ../biokids-shell_${V}_all.deb ../biokids-voice_${V}_all.deb
+sudo apt install "$D"/v2/biokids_*.deb "$D"/v2/biokids-core_*.deb \
+  "$D"/v2/biokids-daemon_*.deb "$D"/v2/biokids-panel_*.deb \
+  "$D"/v2/biokids-shell_*.deb "$D"/v2/biokids-voice_*.deb
 ```
 
 **Do the upgrade while the child is logged in with the launcher open.** That is
@@ -455,7 +483,7 @@ re-registers the debconf template and, through `debian/biokids-core.config`,
 clears the `seen` flag so the question is asked again:
 
 ```bash
-sudo apt install ../v1/biokids-core_*.deb ../v1/biokids-daemon_*.deb ../v1/biokids-panel_*.deb
+sudo apt install "$D"/v1/biokids-core_*.deb "$D"/v1/biokids-daemon_*.deb "$D"/v1/biokids-panel_*.deb
 sudo apt purge biokids-core          # answer YES this time
 sudo ls -l /var/lib/biokids/         # gone
 ```
@@ -479,16 +507,14 @@ question nobody heard is no.
 
 ## 6. T5.7 — the virtual terminal guards
 
-Roll back to `clean-debian-13`. **Snapshot again before installing**, and note
-that the rollback took your sshd with it:
+Roll back to `clean-debian-13`, and **snapshot again before installing** — this
+is the step that can leave you with a graphical session you cannot get back into.
+SSH came with the snapshot (§0.1); confirm it answers **before** installing
+anything, because the packages are what disable the VT switch:
 
 ```bash
-sudo apt install openssh-server && sudo systemctl enable --now ssh
-ip -4 addr show
+ssh <you>@<vm-ip> true && echo ssh-ok     # from the Windows host
 ```
-
-Do that **before** installing BioKids, because the packages are what disable the
-VT switch.
 
 Then install as in §2, **run the wizard and add Elif** — there is no child
 account on a rolled-back machine, and §0.2 forbids making one by hand.
@@ -644,10 +670,10 @@ one fails:
 Between attempts at §3 and §7, this throws away the data without reinstalling:
 
 ```bash
-sudo sh dev/reset.sh --system
+sudo sh /media/sf_BioKids/dev/reset.sh --system
 ```
 
-`sh` explicitly, because the file is committed without the execute bit — the same
-Windows problem §1's `chmod` is about. It does not touch `/etc/biokids`: the
+From the shared folder, so it works on a rolled-back machine with no clone; and
+through `sh` explicitly, because the file is committed without the execute bit. It does not touch `/etc/biokids`: the
 configuration and the secret key belong to the machine rather than to the family,
 and losing the key loses every stored SMTP password with it.
