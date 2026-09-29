@@ -52,6 +52,37 @@ jobs:
       - name: pytest
         run: pytest --cov=biokids_core --cov=biokids_daemon --cov-report=term-missing
 
+  tests-on-trixie:
+    name: tests against Debian 13's libraries
+    # lint-and-test installs the newest release of everything from PyPI. An
+    # installed BioKids never sees those: it runs on what trixie ships, which is
+    # years older in places - argon2-cffi 21.1 against 25.1 - and the first real
+    # install failed on an import only the newer one has (D-154).
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the distribution's libraries, not PyPI's
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            python3 python3-pytest python3-pytest-asyncio python3-httpx \
+            python3-alembic python3-sqlalchemy python3-fastapi \
+            python3-uvicorn python3-jinja2 python3-argon2 \
+            python3-cryptography python3-itsdangerous \
+            python3-python-multipart python3-qrcode python3-dbus-next
+        env:
+          DEBIAN_FRONTEND: noninteractive
+
+      - name: pytest, as an ordinary user
+        # Not as root. Root can chown to any uid and run adduser, so a test that
+        # reaches the real machine passes as root - and changes the machine.
+        run: |
+          useradd --create-home tester
+          chown -R tester: "$GITHUB_WORKSPACE"
+          runuser -u tester -- env PYTHONPATH=src python3 -m pytest -p no:cacheprovider
+
   license-check:
     name: dependency licenses
     runs-on: ubuntu-latest
@@ -97,9 +128,9 @@ jobs:
           dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring
 
       - name: lintian
-        # `bad-distribution-in-changes-file` fires because the changelog targets
-        # trixie, which lintian does not recognise as a distribution name until
-        # it is released. Suppressed here and in release.yml, together.
+        # `bad-distribution-in-changes-file` is suppressed for the same reason
+        # as in release.yml: a release changelog names this project's own suite,
+        # which is not one of Debian's. Suppressed in both places, together.
         run: |
           lintian --fail-on error \
             --suppress-tags bad-distribution-in-changes-file \

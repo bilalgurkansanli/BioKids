@@ -475,6 +475,9 @@ def test_silence_is_cached_apart_from_real_audio(
 ) -> None:
     """Installing Piper later must not leave a family with yesterday's silence."""
     monkeypatch.setattr(PiperSynth, "available", lambda _self: False)
+    # And no espeak-ng either, or on a machine that has it - every machine with
+    # biokids-voice installed - the chain speaks and the stub is never reached.
+    monkeypatch.setattr(EspeakSynth, "available", lambda _self: False)
     stubbed = Synthesizer.from_config(voice_config)
     assert isinstance(stubbed.backend, StubSynth)
     assert stubbed.cache.directory == voice_config.paths.voice_cache_dir / STUB_CACHE_SUBDIR

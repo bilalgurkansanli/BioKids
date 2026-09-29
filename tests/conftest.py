@@ -15,11 +15,35 @@ from pathlib import Path
 import pytest
 from sqlalchemy.orm import Session
 
+from biokids_core import provision, remote
 from biokids_core.clock import FakeClock
 from biokids_core.config import Config, set_config
 from biokids_core.db import Child, Database, Family, Parent, Policy
 from biokids_core.ledger import TimeLedger
 from biokids_core.types import AgeBand
+
+
+@pytest.fixture(autouse=True)
+def no_real_system_commands(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No test reaches systemctl, adduser or tailscale on the machine running it.
+
+    Found by running the suite under strace on a Debian 13 VM (D-154). Adding a
+    child in the panel tests ran the real `systemctl start --wait
+    biokids-provision@elif.service`, and the remote-access step ran the real
+    `tailscale status --json`. As an ordinary user the first is refused; as root
+    on a machine with BioKids installed it creates real accounts. On the Windows
+    host neither program exists, which is why nobody noticed.
+
+    So every test starts on a machine that has neither - the one the tests were
+    written against. A test that needs one fakes it explicitly, as
+    test_provision.py and test_remote.py do.
+    """
+    monkeypatch.setattr(provision, "_find", lambda _program: None)
+    monkeypatch.setattr(
+        remote,
+        "run_command",
+        lambda _argv, _timeout: remote.CommandResult(returncode=127, missing=True),
+    )
 
 
 @pytest.fixture

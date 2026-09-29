@@ -1134,3 +1134,37 @@ shipped.
 raise `empty-binary-package` for a metapackage or check user units against
 `WantedBy=` — and were removed, because an override that matches nothing hides the
 next real warning of the same name.
+
+**D-154 [claude] The suite runs against what Debian 13 ships, and touches nothing.**
+The first install of the D-153 packages failed in the postinst: `biokids_core.security`
+imported `argon2.exceptions.InvalidHashError`, which arrived in argon2-cffi 21.2, and
+trixie ships 21.1. The development venv had 25.1 from PyPI, as did CI, and
+`pyproject.toml` asked for `>=23.1` - a floor the .deb could never meet, because an
+installed BioKids runs on the distribution's packages, not on these. The package was
+left unconfigured, which is the loud failure the postinst promises; but it was a failure
+no test could have caught, because no test ran on trixie's libraries.
+
+So three changes. The import uses `InvalidHash`, which is an alias in every later release.
+The floors in `pyproject.toml` are now exactly trixie's versions, and `cryptography`,
+imported by `security.py` and never declared, is listed. And CI has a job that runs the
+suite in a `debian:trixie` container against apt's packages, as an ordinary user. Run
+that way on the VM, with this one import fixed, the only failures were in the tests
+themselves.
+
+*`python3-multipart` is the wrong package.* In trixie that name is defnull's `multipart`
+1.2.1; FastAPI needs Kludex's `python-multipart`, which Debian packages as
+`python3-python-multipart` - and which Provides `python3-multipart`, so apt happened to
+pick it on the VM. With the real package winning the resolution instead, the panel's
+forms would not parse. `debian/control` now names the right one.
+
+*The tests reached the real machine.* Run under `strace -f -e execve` on the VM, the
+suite executed `systemctl start --wait biokids-provision@elif.service` - and `kerem`,
+`mehmet` - from the panel tests, and `tailscale status --json` from the remote-access
+ones. As an ordinary user systemd refused; as root on a machine with BioKids installed,
+it would have created those accounts. On the Windows host neither program exists, which
+is why nobody saw it. An autouse fixture in `tests/conftest.py` now gives every test a
+machine with neither, and a test that wants one fakes it explicitly. Separately,
+`test_provision` faked `shutil.which` to mean "no adduser", but `_find` then looks in
+`/usr/sbin` itself and found the real one; and four tests there chowned to a made-up uid,
+which is EPERM for an ordinary user and a stranger's file for root. CI's new job runs as
+an ordinary user so that the next such test fails instead of succeeding.

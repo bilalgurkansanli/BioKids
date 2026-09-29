@@ -69,6 +69,11 @@ def with_user(monkeypatch: pytest.MonkeyPatch, home: Path) -> Any:
     entry = FakeEntry(home)
     fake = FakePwd({"ayse": entry})
     monkeypatch.setattr(prov, "_pwd", fake)
+    # The fake account's uid is not a real one. On Linux as an ordinary user a
+    # real chown to it fails with EPERM, and as root it succeeds and leaves
+    # files owned by a stranger; neither is what these tests are about. The
+    # tests that are about ownership record the calls instead.
+    monkeypatch.setattr(prov.os, "chown", lambda *_a: None, raising=False)
     return fake
 
 
@@ -96,7 +101,10 @@ def test_provision_refuses_to_report_success_when_it_could_not_create_the_accoun
     monkeypatch: pytest.MonkeyPatch, config: Config
 ) -> None:
     monkeypatch.setattr(prov, "_pwd", FakePwd({}))
-    monkeypatch.setattr(prov.shutil, "which", lambda _name: None)
+    # `_find`, not `shutil.which`: when `which` finds nothing, `_find` goes on
+    # to look in /usr/sbin - so on a Linux machine faking `which` alone ran the
+    # real adduser, and under root would have created a real account.
+    monkeypatch.setattr(prov, "_find", lambda _program: None)
 
     result = prov.provision("ayse", "Ayşe", config)
 

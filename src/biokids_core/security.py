@@ -21,7 +21,11 @@ from pathlib import Path
 from typing import Final
 
 from argon2 import PasswordHasher
-from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
+
+# `InvalidHash`, not `InvalidHashError`: the newer name arrived in argon2-cffi
+# 21.2, and Debian 13 ships 21.1. The old name is still an alias in every later
+# release, so this one import works on both (D-154).
+from argon2.exceptions import InvalidHash, VerificationError, VerifyMismatchError
 from cryptography.fernet import Fernet, InvalidToken
 
 # SECURITY.md §3: m=64MiB, t=3, p=4.
@@ -318,7 +322,7 @@ def verify_secret(stored_hash: str, candidate: str) -> bool:
         return False
     try:
         return _HASHER.verify(stored_hash, candidate)
-    except (VerifyMismatchError, VerificationError, InvalidHashError):
+    except (VerifyMismatchError, VerificationError, InvalidHash):
         return False
 
 
@@ -328,7 +332,7 @@ def needs_rehash(stored_hash: str) -> bool:
         return False
     try:
         return _HASHER.check_needs_rehash(stored_hash)
-    except InvalidHashError:
+    except InvalidHash:
         return True
 
 

@@ -262,7 +262,7 @@ value, a `SystemCallFilter` group that does not exist.
 on a rolled-back machine that has no build tools at all:
 
 ```bash
-dch -i "Test upgrade" && dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring
+dch --no-auto-nmu -i "Test upgrade" && dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring
 V=$(dpkg-parsechangelog -SVersion)      # 0.1.0-2
 mkdir -p "$D/v2" && cp ../biokids*_${V}_* "$D/v2/"
 ls "$D/v1" "$D/v2"                      # the same eight packages, two versions
@@ -270,6 +270,9 @@ ls "$D/v1" "$D/v2"                      # the same eight packages, two versions
 
 `dch` edits `debian/changelog` in the clone, never in the repository on the host
 — one more reason the build does not happen in the shared folder.
+`--no-auto-nmu` because otherwise `dch` notices you are not the `Maintainer` and
+makes a non-maintainer upload, `0.1.0-1.1`. That upgrades just as well, but the
+version is then not the one written above.
 
 ---
 
@@ -289,9 +292,13 @@ apt-cache policy python3-argon2 python3-cryptography python3-dbus-next \
   dnsmasq nftables espeak-ng chromium lightdm xfce4 2>&1 | grep -B1 -i "unable\|not found\|^$" | head -40
 ```
 
-**Pass:** every name resolves to a candidate version. `python3-dbus-next` is the
-one `README.source` singles out as most likely to be wrong; if it is not in
-trixie, that is a T3.1 decision and not something to paper over here.
+**Pass:** every name resolves to a candidate version. On Debian 13.7 all of them
+do, `python3-dbus-next` (0.2.3) included.
+
+A name that resolves can still be the wrong package. The first run found
+`python3-multipart` in `debian/control`: in trixie that is a different library,
+and the panel needs `python3-python-multipart` (D-154). Before trusting a new
+name, read its `Homepage:` in `apt-cache show`.
 
 ### 2.1 Install
 
@@ -320,6 +327,12 @@ sudo alembic -c /usr/share/biokids/alembic.ini current   # a head revision
 The last one is the postinst's `alembic upgrade head`. No revision means the
 migration did not run, and a daemon started against a schema-less database
 crash-loops — which pulls in `biokids-lockdown.service`.
+
+**If the postinst fails,** apt stops with the packages unpacked but not
+configured (`dpkg -l 'biokids*'` shows `iU` and `iF`) and nothing started. That
+is the intended failure. The first run failed exactly this way, on an import that
+trixie's argon2-cffi does not have (D-154). Fix the cause, rebuild, and install
+the new packages with the same command; dpkg configures them then.
 
 **Watch for:** `journalctl -u biokids-daemon -u biokids-panel -b --no-pager`.
 This is the first time either unit has started under its sandbox, and the runtime

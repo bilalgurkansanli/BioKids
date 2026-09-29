@@ -376,15 +376,13 @@ Everything below is unverified, in roughly the order it will bite:
     `-Ppkg.biokids.nokeyring` it produces eight packages, and lintian 2.122
     reports no errors and only `initial-upload-closes-no-bugs` as a warning.
 
- 3. **Debian binary package names.** Every one of these was written from
-    memory and must be checked with `apt-cache policy` on trixie before the
-    first upload: python3-argon2, python3-cryptography, python3-dbus-next,
-    python3-fastapi, python3-uvicorn, python3-jinja2, python3-multipart,
-    python3-itsdangerous, python3-qrcode, piper-tts, gcompris-qt, tuxpaint,
-    tuxmath, klavaro, stellarium, kolourpaint, supertux, frozen-bubble,
-    gnome-mahjongg. python3-dbus-next and piper-tts are the two most likely to
-    be wrong; if dbus-next is not packaged, that is a decision for T3.1 and not
-    something to paper over here.
+ 3. **Closed: Debian binary package names.** Checked with `apt-cache policy`
+    on Debian 13.7: every name in debian/control resolves in main, including
+    python3-dbus-next (0.2.3). Two did not survive as written. python3-multipart
+    is a different library in trixie (defnull's `multipart`); FastAPI needs
+    python3-python-multipart, which is what the panel now depends on (D-154).
+    mbrola-tr1 and mbrola-tr2 are in non-free, which a Suggests may name.
+    piper-tts is not in trixie at all, as D-137 already records.
 
  4. **Closed: the dist-info glob.** biokids-core.install claims
     `usr/lib/python3*/dist-packages/biokids-*`, the wheel metadata directory,
