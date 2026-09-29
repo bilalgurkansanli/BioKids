@@ -28,8 +28,24 @@ rollback returns to a machine that already has it.
 ### 0.1 The VM
 
 Debian 13 (trixie) netinst in VirtualBox: 4 GB RAM, 2 vCPU, 30 GB disk (T0.1).
-At the installer's **Software selection** screen tick **Xfce**, **SSH server** and
-**standard system utilities**.
+The ISO is `debian-13.x.y-amd64-netinst.iso` from
+<https://www.debian.org/CD/netinst/> — the `amd64` link.
+
+Four settings that a first install gets wrong, in the order you meet them:
+
+1. **Skip VirtualBox's unattended install.** VirtualBox 7 selects it by default
+   when you attach an ISO. It chooses its own desktop and user and never shows the
+   Software selection screen, so neither Xfce nor the SSH server gets picked.
+2. **SSH port forward**, in the VM's network settings before first boot: NAT →
+   Port Forwarding → host `127.0.0.1:2222` to guest port `22`. Under NAT the
+   guest's own address (`10.0.2.15`) is not reachable from the host, so the
+   forward is what makes `ssh -p 2222 <you>@127.0.0.1` work — and unlike a
+   bridged adapter, it works on any network the host happens to be on.
+3. **Leave the root password empty** in the Debian installer. Setting one means
+   the first user is *not* in the `sudo` group, and every `sudo` below fails.
+4. At **Software selection**, **untick GNOME** — it is ticked by default — and tick
+   **Xfce**, **SSH server** and **standard system utilities**. With GNOME left
+   ticked both desktops install and GNOME's session may become the default.
 
 SSH is chosen there on purpose. §6 disables Ctrl+Alt+F1–F12, and a shell that
 does not go through the graphical session is how you get back into a broken one.
@@ -47,7 +63,12 @@ Then a shared folder: **name `BioKids`**, pointing at the repository on the host
 ```bash
 sudo adduser "$USER" vboxsf     # then log out and back in
 ls /media/sf_BioKids/debian     # must list files
-ip -4 addr show                 # note the IP, for ssh
+```
+
+And from the Windows host, that the port forward works:
+
+```bash
+ssh -p 2222 <you>@127.0.0.1 true && echo ssh-ok
 ```
 
 ### 0.2 Two accounts
@@ -513,7 +534,7 @@ SSH came with the snapshot (§0.1); confirm it answers **before** installing
 anything, because the packages are what disable the VT switch:
 
 ```bash
-ssh <you>@<vm-ip> true && echo ssh-ok     # from the Windows host
+ssh -p 2222 <you>@127.0.0.1 true && echo ssh-ok     # from the Windows host
 ```
 
 Then install as in §2, **run the wizard and add Elif** — there is no child
