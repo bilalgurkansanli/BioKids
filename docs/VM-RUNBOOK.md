@@ -25,6 +25,52 @@ written on today's tree, it says so rather than leaving you to discover it.
 Everything in this section happens **once, before the snapshot**, so that every
 rollback returns to a machine that already has it.
 
+### 0.0 On a Windows 11 host: VirtualBox must get VT-x
+
+Found the hard way on the first real attempt, and it cost two installs. If
+Windows keeps its own hypervisor running, VirtualBox cannot use VT-x and falls
+back to running through Hyper-V ("NEM"). Linux guests are slow there and can
+hang outright — the Debian installer froze mid-download with the keyboard's
+Caps Lock and Scroll Lock blinking, which is a guest kernel panic.
+
+**Check, after starting any VM once:**
+
+```powershell
+Select-String "$env:USERPROFILE\VirtualBox VMs\<vm>\Logs\VBox.log" -Pattern "fall back to NEM|VT-x w/"
+```
+
+`VT-x w/ nested paging` is good. `Attempting fall back to NEM` means stop here.
+
+On Windows 11 **three** separate features keep the hypervisor on, and each has to
+be off; turning off only the first changes nothing you can see:
+
+| Feature | How to turn it off |
+|---|---|
+| Memory Integrity (HVCI) | Windows Security → Device security → Core isolation → Memory integrity: Off |
+| Virtualization-Based Security | `reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f` |
+| Windows Hello Enhanced Sign-in Security | `reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\WindowsHello" /v Enabled /t REG_DWORD /d 0 /f` |
+
+plus `bcdedit /set hypervisorlaunchtype off`, all from an administrator
+terminal, then a reboot. To see what is still holding it:
+
+```powershell
+(Get-CimInstance Win32_ComputerSystem).HypervisorPresent
+Get-ChildItem HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios | % { "$($_.PSChildName) $((Get-ItemProperty $_.PSPath).Enabled)" }
+```
+
+**These are Windows security features, and turning them off has costs** the
+owner of the machine should decide on. The one that surprised us: **turning off
+Enhanced Sign-in Security invalidates the Windows Hello PIN**, because the PIN's
+keys were held inside VBS — Windows asks for a new PIN at the next sign-in, and
+face or fingerprint may need re-enrolling. All of it is reversible: `/d 1`,
+`hypervisorlaunchtype auto`, Memory Integrity back on — at which point VirtualBox
+drops back to NEM.
+
+If a machine will not give up its hypervisor, **use Hyper-V instead of
+VirtualBox** rather than peeling off further security layers. This runbook is
+written for VirtualBox and would need adapting, but that is cheaper than a host
+you no longer trust.
+
 ### 0.1 The VM
 
 Debian 13 (trixie) netinst in VirtualBox: 4 GB RAM, 2 vCPU, 30 GB disk (T0.1).
