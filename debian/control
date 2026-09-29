@@ -144,6 +144,7 @@ Architecture: all
 Section: x11
 Depends: biokids-core (= ${binary:Version}),
          chromium,
+         light-locker,
          ${misc:Depends},
          ${python3:Depends}
 Recommends: biokids-voice

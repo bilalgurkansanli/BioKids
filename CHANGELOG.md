@@ -128,6 +128,25 @@ a crash:
   again, with nothing saying why.
 - **Re-recording a voice did not invalidate the audio it replaced.**
 
+Found on the first Debian 13 VM (`docs/VM-RUNBOOK.md`), none of it visible from Windows:
+
+- **The packages did not build** (D-153). `PYBUILD_NAME` sent the Python install to a
+  package that does not exist, and the `.install` files named a path `dh_python3` only
+  creates later. Lintian then found the postinst never loading debconf, so a `dpkg -i`
+  install could not ask the purge question, and five commands without manual pages.
+- **The first install failed in the postinst** (D-154): `security.py` used a name
+  argon2-cffi only gained after the 21.1 that Debian 13 ships. CI now also runs the
+  suite against trixie's own libraries. `python3-multipart` was the wrong library, and
+  the test suite ran the real `systemctl` and `tailscale` on the machine running it.
+- **A child could not log in** (D-155). Accounts are passwordless by design (D-99) and
+  Debian's LightDM had no way to let such an account in; it now uses a PAM service of
+  BioKids' own, for child accounts only.
+- **Nothing ever locked** (D-155). No screen locker was installed, and the dead-daemon
+  lockdown asked `loginctl` for JSON with the flag that selects a journal format, so it
+  parsed nothing and locked nobody. "+10 dk" could not unlock a locked child either.
+- **The kiosk ran without its browser policy** (D-155): the directory the daemon writes
+  it to did not exist on Debian.
+
 ### Known gaps
 
 Stated here rather than discovered later:
@@ -139,12 +158,11 @@ Stated here rather than discovered later:
   spoken by **espeak-ng** instead — Debian main, GPL-3+, Turkish, no model file and no
   download — and Piper is used wherever a family installs it themselves. See D-137 and
   `assets/voices/LICENSES.md`.
-- **Nothing has been built as a `.deb`.** `debian/` is written against Debian policy but
-  `dpkg-buildpackage` has never run, because the development host is Windows.
-  `debian/README.source` §7 lists what that leaves unverified.
-- **The exit criterion has not been run on a machine.** A passing acceptance test says
-  the pieces agree with each other, not that Chromium starts. `docs/VM-RUNBOOK.md` is
-  that work as a sequence.
+- **The exit criterion has not been run end to end.** The packages now build, install
+  and pass lintian on a Debian 13 VM, the wizard completes there and a child logs in to
+  the launcher; the spoken warnings, the phone over Tailscale and the reboot and clock
+  checks are still ahead. `docs/VM-RUNBOOK.md` is that work as a sequence, and
+  `debian/README.source` §7 what it leaves unverified.
 
 No telemetry, analytics, crash reporting or version ping has been added, and none will
 be. The complete inventory of outbound connections is `docs/SECURITY.md` §4.

@@ -11,7 +11,10 @@
 {% block title %}{{ _('wizard.title') }} · {{ _('panel.title') }}{% endblock %}
 
 {% block content %}
-  <p class="muted small">{{ _('wizard.step', current=step, total=total_steps) }}</p>
+  {# The closing screen comes after the last step; "Step 11 of 10" said so. #}
+  {% if step <= total_steps %}
+    <p class="muted small">{{ _('wizard.step', current=step, total=total_steps) }}</p>
+  {% endif %}
   <div class="steps" aria-hidden="true">
     {% for n in range(1, total_steps + 1) %}
       <span class="{% if n < step %}done{% elif n == step %}now{% endif %}"></span>

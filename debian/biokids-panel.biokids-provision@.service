@@ -10,11 +10,14 @@
 #
 # So the privileged part is here instead, where it is one command with one
 # argument that does one thing. `biokids-admin provision-child` validates the
-# user name, refuses anything that is not a configured child, and is idempotent
-# (D-130), so a repeated or malformed start achieves nothing.
+# user name, refuses an account that can administer the machine (D-155), and is
+# idempotent (D-130), so a repeated or malformed start achieves nothing.
 #
-# %i is the child's Unix user name, systemd-escaped by the caller.
-Description=Prepare the Unix account and session for BioKids child %i
+# The instance is the child's Unix user name, systemd-escaped by the caller, and
+# %I - not %i - is what hands it back unescaped. With %i a child called
+# `elif-nur` reached adduser as `elif\x2dnur` and got no account; found on the
+# VM by the runbook's hyphenated child, which is what that step is for.
+Description=Prepare the Unix account and session for BioKids child %I
 Documentation=man:biokids-admin(8)
 After=biokids-daemon.service
 # Nothing here is worth starting the machine's whole graphical stack for, and a
@@ -25,10 +28,10 @@ DefaultDependencies=no
 [Service]
 Type=oneshot
 RemainAfterExit=no
-ExecStart=/usr/bin/biokids-admin provision-child %i
+ExecStart=/usr/bin/biokids-admin provision-child %I
 
 # Deliberately unsandboxed, and deliberately tiny. Writing /etc/passwd,
-# /etc/shadow and /home/%i is the entire job; a sandbox that allowed those would
+# /etc/shadow and the child's home is the entire job; a sandbox that allowed those would
 # be a sandbox that allowed the thing we are worried about. What bounds this
 # unit is that it runs one fixed command, not that it runs it in a cage.
 #

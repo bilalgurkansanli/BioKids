@@ -726,7 +726,11 @@ class Supervisor:
         by D-99 - a lock nobody lifts is a child who cannot get back in at all.
         """
         presence = self.watcher.presence(runtime.unix_user)
-        locked = [s.session_id for s in presence.sessions if s.locked]
+        # Every session with a screen, not only the ones logind calls locked:
+        # light-locker never sets LockedHint, so on a real machine that filter
+        # found nothing and the grant unlocked nobody (D-155). Unlocking a
+        # session that is not locked is a no-op.
+        locked = list(presence.lockable_session_ids)
         if not locked:
             return
         ok = await self.enforcer.unlock_sessions(tuple(locked))

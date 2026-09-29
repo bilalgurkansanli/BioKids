@@ -58,6 +58,16 @@ AUTOSTART_DIR = Path(".config/autostart")
 AUTOSTART_FILE = "biokids-shell.desktop"
 
 
+CHILD_GROUP = "biokids-child"
+"""The accounts the LightDM greeter lets in without a password (D-99, D-155).
+/usr/lib/biokids/biokids-child-login is what reads it."""
+
+ADMIN_GROUPS = frozenset({"sudo", "adm", "biokids"})
+"""Membership in any of these keeps an account out of CHILD_GROUP, whatever
+else is true of it: it can administer the machine, read its logs, or grant
+time. The login helper refuses them too."""
+
+
 @dataclass
 class ProvisionResult:
     """What happened, in enough detail for an audit entry."""
@@ -65,6 +75,7 @@ class ProvisionResult:
     unix_user: str
     account_existed: bool = False
     account_created: bool = False
+    passwordless_login: bool = False
     files_written: list[str] = field(default_factory=list)
     problems: list[str] = field(default_factory=list)
 
@@ -76,6 +87,7 @@ class ProvisionResult:
         return {
             "unix_user": self.unix_user,
             "account_created": self.account_created,
+            "passwordless_login": self.passwordless_login,
             "files": self.files_written,
             "problems": self.problems,
         }
@@ -134,13 +146,91 @@ def _run(argv: Sequence[str]) -> tuple[bool, str]:
     return True, ""
 
 
+def _output(argv: Sequence[str]) -> str | None:
+    """stdout of a command that succeeded, or None."""
+    program = _find(argv[0])
+    if program is None:
+        return None
+    try:
+        result = subprocess.run(
+            [program, *argv[1:]],
+            capture_output=True,
+            text=True,
+            timeout=COMMAND_TIMEOUT,
+            check=False,
+            env={**os.environ, "LC_ALL": "C"},
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return result.stdout if result.returncode == 0 else None
+
+
+def groups_of(unix_user: str) -> set[str] | None:
+    """The account's groups, or None when they cannot be read."""
+    output = _output(["id", "-nG", "--", unix_user])
+    return set(output.split()) if output is not None else None
+
+
+def account_is_administrative(unix_user: str) -> bool:
+    """True for an account in any of ADMIN_GROUPS.
+
+    Never a child's account: made one, it would hand a parent's own session to
+    the kiosk, the quota and the power-off. Unreadable counts as no here, which
+    is safe because `grant_passwordless_login` refuses what it cannot read.
+    """
+    return bool((groups_of(unix_user) or set()) & ADMIN_GROUPS)
+
+
+def is_child_account(unix_user: str) -> bool:
+    """True for an account BioKids has already made a child's - from an earlier
+    install, say, whose database was purged while the accounts stayed."""
+    return CHILD_GROUP in (groups_of(unix_user) or set())
+
+
+def grant_passwordless_login(unix_user: str) -> tuple[bool, str]:
+    """Let this child in at the greeter by their picture alone - when that lowers nothing.
+
+    Returns (granted, reason). The account joins CHILD_GROUP only if it has no
+    usable password already and is in none of ADMIN_GROUPS. An account BioKids
+    created meets both by construction. An existing one might not: a parent who
+    types their own user name as the child's must not find their own account
+    one click from anyone at the login screen. Such an account keeps its
+    password and logs in with it, which is a reason, not a failure.
+
+    Anything this cannot read counts as a no.
+    """
+    groups = groups_of(unix_user)
+    if groups is None:
+        return False, f"could not read the groups of {unix_user}"
+    admin = sorted(groups & ADMIN_GROUPS)
+    if admin:
+        return False, f"{unix_user} is in {', '.join(admin)}"
+    if CHILD_GROUP in groups:
+        return True, ""
+
+    status_out = _output(["passwd", "--status", unix_user])
+    fields = status_out.split() if status_out else []
+    if len(fields) < 2:
+        return False, f"could not read the password status of {unix_user}"
+    # passwd(1): L locked, NP no password, P usable password.
+    if fields[1] == "P":
+        return False, f"{unix_user} has a password of its own"
+
+    ok, problem = _run(["adduser", "--quiet", unix_user, CHILD_GROUP])
+    if not ok:
+        return False, problem
+    log.info("%s can now log in at the greeter without a password", unix_user)
+    return True, ""
+
+
 def create_account(unix_user: str, display_name: str = "") -> tuple[bool, str]:
     """Create the child's Unix account, with nothing it should not have.
 
     No password: the login screen is a set of avatars and the real gate is the
-    quota, not the login (D-99). No sudo, no supplementary groups, and
-    emphatically not `biokids` — that group can grant time and power the machine
-    off (D-123).
+    quota, not the login (D-99). No sudo and emphatically not `biokids` — that
+    group can grant time and power the machine off (D-123). The one group a
+    child does get, CHILD_GROUP, is added afterwards by
+    `grant_passwordless_login`, which checks first.
     """
     argv = [
         "adduser",
@@ -327,6 +417,15 @@ def provision(
     result = ProvisionResult(unix_user=unix_user)
     result.account_existed = account_exists(unix_user)
 
+    if result.account_existed and account_is_administrative(unix_user):
+        # A parent who names their own account as the child's. Writing the
+        # session files would turn their desktop into the kiosk, and the daemon
+        # would ration their time and power the machine off (D-155).
+        result.problems.append(
+            f"{unix_user} can administer this machine; BioKids will not make it a child's"
+        )
+        return result
+
     if not result.account_existed:
         if not create:
             result.problems.append(f"{unix_user} does not exist on this machine")
@@ -336,6 +435,16 @@ def provision(
         if not created:
             result.problems.append(f"could not create {unix_user}: {problem}")
             return result
+
+    granted, reason = grant_passwordless_login(unix_user)
+    result.passwordless_login = granted
+    if not granted:
+        if result.account_created:
+            # An account BioKids made has no password, so without this the child
+            # has no way in at all.
+            result.problems.append(f"{unix_user} cannot log in by their picture: {reason}")
+        else:
+            log.info("%s keeps logging in with its own password: %s", unix_user, reason)
 
     written, problems = install_session_files(unix_user, config, overwrite=overwrite)
     result.files_written = written

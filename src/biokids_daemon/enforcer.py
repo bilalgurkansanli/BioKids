@@ -114,15 +114,38 @@ class Enforcer:
         return result.ok
 
     async def unlock_session(self, session_id: str) -> bool:
-        """Release a lock BioKids applied.
+        """Release a lock BioKids applied, and put the session back on screen.
 
-        Only a repair path. `loginctl unlock-session` emits logind's Unlock
-        signal, which not every screen locker acts on, so nothing a child needs
-        in order to carry on is allowed to depend on it — a break pauses them in
-        the launcher instead of locking the session.
+        `loginctl unlock-session` emits logind's Unlock signal. light-locker acts
+        on it, but by then it has handed the seat to the LightDM greeter and
+        nothing hands it back: on the VM the child's session was unlocked behind
+        a greeter still asking for a password the account does not have (D-155).
+        So the session is also activated - but only while the seat is showing a
+        greeter. A parent working in their own session when they grant time must
+        not have the screen taken from under them.
+
+        A break still pauses the child in the launcher rather than locking the
+        session, so nothing a child needs to carry on depends on this.
         """
         result = await self._run(["loginctl", "unlock-session", session_id])
+        if result.ok and await self._seat_shows_a_greeter(session_id):
+            await self._run(["loginctl", "activate", session_id])
         return result.ok
+
+    async def _seat_shows_a_greeter(self, session_id: str) -> bool:
+        """True when this session's seat is showing LightDM rather than a person."""
+        seat = await self._property(("show-session", session_id), "Seat")
+        if not seat:
+            return False
+        active = await self._property(("show-seat", seat), "ActiveSession")
+        if not active or active == session_id:
+            return False
+        session_class = await self._property(("show-session", active), "Class")
+        return session_class in {"greeter", "lock-screen"}
+
+    async def _property(self, target: tuple[str, str], name: str) -> str:
+        result = await self._run(["loginctl", *target, f"--property={name}", "--value"])
+        return result.stdout.strip() if result.ok else ""
 
     async def unlock_sessions(self, session_ids: Sequence[str]) -> bool:
         if not session_ids:

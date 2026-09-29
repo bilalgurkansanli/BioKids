@@ -364,7 +364,8 @@ def test_the_provision_unit_runs_one_fixed_command() -> None:
     )
 
     execs = [line for line in unit.splitlines() if line.startswith("ExecStart=")]
-    assert execs == ["ExecStart=/usr/bin/biokids-admin provision-child %i"], execs
+    # %I, the unescaped instance: with %i, `elif-nur` arrived as `elif\x2dnur`.
+    assert execs == ["ExecStart=/usr/bin/biokids-admin provision-child %I"], execs
     assert "Type=oneshot" in unit, "the panel waits for it; it has to be oneshot"
     assert "NoNewPrivileges=yes" in unit
 
@@ -417,3 +418,127 @@ def test_a_hyphenated_user_becomes_a_valid_unit_name() -> None:
     """systemd reads `-` in an instance name as a path separator."""
     assert prov.systemd_escape("ali-veli") == r"ali\x2dveli"
     assert prov.systemd_escape("elif") == "elif"
+
+
+# ------------------------------------------- logging in by picture (D-99, D-155)
+
+
+def fake_commands(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    groups: str | None,
+    status: str | None,
+    adduser_ok: bool = True,
+) -> list[list[str]]:
+    """`id -nG` and `passwd --status` answer from here; `adduser` is recorded."""
+    ran: list[list[str]] = []
+
+    def output(argv: list[str]) -> str | None:
+        if argv[0] == "id":
+            return groups
+        if argv[0] == "passwd":
+            return status
+        return None
+
+    def run(argv: list[str]) -> tuple[bool, str]:
+        ran.append(list(argv))
+        return adduser_ok, "" if adduser_ok else "adduser: group not found"
+
+    monkeypatch.setattr(prov, "_output", output)
+    monkeypatch.setattr(prov, "_run", run)
+    return ran
+
+
+def test_a_child_account_with_no_password_joins_the_login_group(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    locked = "elif L 09/30/2026 0 99999 7 -1"
+    ran = fake_commands(monkeypatch, groups="elif users", status=locked)
+
+    assert prov.grant_passwordless_login("elif") == (True, "")
+    assert ran == [["adduser", "--quiet", "elif", prov.CHILD_GROUP]]
+
+
+@pytest.mark.parametrize(
+    "groups", ["anne sudo", "anne adm", "anne biokids", "anne sudo biokids-child"]
+)
+def test_an_account_that_can_administer_the_machine_never_joins(
+    monkeypatch: pytest.MonkeyPatch, groups: str
+) -> None:
+    """Not even one already in the group: the login helper refuses those too."""
+    ran = fake_commands(monkeypatch, groups=groups, status="anne L 09/30/2026 0 99999 7 -1")
+
+    granted, reason = prov.grant_passwordless_login("anne")
+
+    assert not granted
+    assert "is in" in reason
+    assert ran == []
+
+
+def test_an_account_with_its_own_password_keeps_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A parent who types their own user name as the child's is not made passwordless."""
+    usable = "anne P 01/01/2026 0 99999 7 -1"
+    ran = fake_commands(monkeypatch, groups="anne users", status=usable)
+
+    granted, reason = prov.grant_passwordless_login("anne")
+
+    assert not granted
+    assert "password of its own" in reason
+    assert ran == []
+
+
+@pytest.mark.parametrize(
+    ("groups", "status"), [(None, "elif L"), ("elif users", None), ("elif users", "")]
+)
+def test_what_cannot_be_read_counts_as_no(
+    monkeypatch: pytest.MonkeyPatch, groups: str | None, status: str | None
+) -> None:
+    ran = fake_commands(monkeypatch, groups=groups, status=status)
+
+    granted, _reason = prov.grant_passwordless_login("elif")
+
+    assert not granted
+    assert ran == []
+
+
+def test_a_new_child_who_cannot_log_in_by_picture_is_a_problem(
+    monkeypatch: pytest.MonkeyPatch, config: Config
+) -> None:
+    """An account BioKids made has no password; without the group it has no way in."""
+    monkeypatch.setattr(prov, "_pwd", FakePwd({}))
+    monkeypatch.setattr(prov, "create_account", lambda _u, _n="": (True, ""))
+    monkeypatch.setattr(prov, "grant_passwordless_login", lambda _u: (False, "no group"))
+
+    result = prov.provision("elif", "Elif", config)
+
+    assert not result.ok
+    assert not result.passwordless_login
+    assert any("by their picture" in problem for problem in result.problems)
+
+
+def test_an_existing_account_that_keeps_its_password_is_not_a_problem(
+    with_user: Any, share: Path, config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        prov, "grant_passwordless_login", lambda _u: (False, "ayse has a password of its own")
+    )
+
+    result = prov.provision("ayse", "Ayşe", config)
+
+    assert result.ok
+    assert not result.passwordless_login
+    assert result.as_detail()["passwordless_login"] is False
+
+
+def test_an_administrative_account_is_never_made_a_childs(
+    with_user: Any, share: Path, home: Path, config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The session files would have turned the parent's own desktop into the kiosk."""
+    monkeypatch.setattr(prov, "account_is_administrative", lambda _user: True)
+
+    result = prov.provision("ayse", "Ayşe", config)
+
+    assert not result.ok
+    assert "administer" in " ".join(result.problems)
+    assert result.files_written == []
+    assert not (home / prov.AUTOSTART_DIR / prov.AUTOSTART_FILE).exists()

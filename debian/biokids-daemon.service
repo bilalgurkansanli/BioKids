@@ -54,8 +54,11 @@ RestrictSUIDSGID=yes
 MemoryDenyWriteExecute=yes
 SystemCallFilter=@system-service
 # The "-" prefixes matter: a missing path in ReadWritePaths= is a unit that
-# refuses to start, and /etc/chromium/policies/managed only exists once
-# Chromium is installed, which biokids-daemon does not require.
+# refuses to start, and /etc/dnsmasq.d only exists once dnsmasq is installed.
+# /etc/chromium/policies/managed and /etc/nftables.d are shipped empty by this
+# package (biokids-daemon.dirs), because nothing else creates them: Debian's
+# chromium does not, and a skipped entry leaves the daemon unable to write the
+# kiosk policy with only a log line to say so.
 ReadWritePaths=/var/lib/biokids /var/log/biokids /run/biokids -/etc/dnsmasq.d -/etc/chromium/policies/managed -/etc/nftables.d
 
 [Install]

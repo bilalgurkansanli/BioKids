@@ -1,0 +1,46 @@
+#!/bin/sh
+# BioKids: may this child log in at the LightDM greeter without a password?
+#
+# Called by pam_exec from /etc/pam.d/biokids-lightdm (D-99, D-155). Exit 0 lets
+# the login through with no password; any other status falls through to
+# Debian's ordinary lightdm stack, where a child's account - which has no
+# usable password - is refused, and everybody else types theirs as always.
+#
+# Three conditions, all required:
+#
+#   * the account is in biokids-child. Provisioning puts only accounts that
+#     have no usable password there, so this never lowers anybody's protection;
+#
+#   * it is in none of sudo, adm or biokids. Belt and braces: an account that
+#     can administer the machine, read its logs or grant time must never be one
+#     click away, however it came to be in biokids-child;
+#
+#   * it has no session a person sits at - logind class `user*` - already open.
+#     This is what separates logging in from unlocking. When the allowance runs
+#     out the daemon locks the session, and light-locker unlocks through this
+#     same greeter, so without this check a child could lift the lock by
+#     choosing their picture again. A locked child comes back when a parent
+#     grants time and the daemon unlocks the session. Only `user*` counts: the
+#     `manager` session systemd keeps for a few seconds after a logout, or for
+#     good under lingering, is not somebody at the screen.
+
+[ "$PAM_TYPE" = "auth" ] || exit 1
+user="$PAM_USER"
+[ -n "$user" ] || exit 1
+
+uid=$(id -u -- "$user" 2>/dev/null) || exit 1
+[ "$uid" -ge 1000 ] || exit 1
+
+case " $(id -nG -- "$user" 2>/dev/null) " in
+    *" sudo "* | *" adm "* | *" biokids "*) exit 1 ;;
+    *" biokids-child "*) ;;
+    *) exit 1 ;;
+esac
+
+for session in $(loginctl show-user "$uid" --property=Sessions --value 2>/dev/null); do
+    case "$(loginctl show-session "$session" --property=Class --value 2>/dev/null)" in
+        user*) exit 1 ;;
+    esac
+done
+
+exit 0

@@ -1168,3 +1168,69 @@ machine with neither, and a test that wants one fakes it explicitly. Separately,
 `/usr/sbin` itself and found the real one; and four tests there chowned to a made-up uid,
 which is EPERM for an ordinary user and a stranger's file for root. CI's new job runs as
 an ordinary user so that the next such test fails instead of succeeding.
+
+**D-155 [owner] A child logs in by their picture, and a lock holds.**
+Found by driving the runbook's §3-§4 on the VM. Each of these was invisible from Windows,
+and together they meant a child could not log in at all and, had they been able to, the
+backstop for a dead daemon would have locked nothing.
+
+*Logging in.* D-99 promised that choosing the child's picture is enough, and nothing
+implemented it. Provisioning creates the account with `--disabled-password`, Debian's
+LightDM has no passwordless rule, and it hides the user list besides: the greeter asked
+for a user name and then a password the account does not have. The owner chose a PAM
+service of BioKids' own over a per-child password or single-child autologin.
+`biokids-shell` ships `/etc/pam.d/biokids-lightdm` - `pam_nologin`, then
+`pam_exec /usr/lib/biokids/biokids-child-login` as `sufficient`, then `@include lightdm`
+unchanged - and `/usr/share/lightdm/lightdm.conf.d/50-biokids.conf`, which selects that
+service and shows the user list. No other package's file is touched. The helper lets an
+account in without a password only if it is in `biokids-child`, in none of `sudo`, `adm`
+or `biokids`, has uid >= 1000, and has no `user`-class session open. That last condition
+is what separates logging in from unlocking: light-locker unlocks through the same
+greeter. Provisioning adds an account to `biokids-child` only when it has no usable
+password already (`passwd --status`) and no administrative group, so a parent who types
+their own user name as the child's never makes their own account passwordless. Checked
+with `pamtester` and at the real greeter: Elif gets no password field; the parent, root
+and unknown names are asked for a password as before; a locked Elif gets a password field
+and an empty one is refused. LightDM reads its configuration only at start, so the
+wizard's closing screen now tells the parent to restart once - replacing a promised
+two-minute trial run that nothing offered, under a counter that read "Step 11 of 10".
+
+*Locking.* No screen locker was installed, so `loginctl lock-session` - the LOCK end
+action, and the whole of the D-106 lockdown - changed nothing on screen. `biokids-shell`
+now depends on `light-locker`, which XFCE starts from `/etc/xdg/autostart`.
+
+*The lockdown read nothing.* `biokids-admin lockdown` asked for `loginctl list-sessions
+--output=json`. For loginctl `--output=` is the journal format of `session-status`; the
+command printed its ordinary table, the JSON parse failed, and the lockdown logged
+"locked 0 session(s)" and exited 0. On every machine, since it was written: the tests fed
+it JSON. It now asks for `--json=short`, falls back to the table on a systemd without it,
+leaves `manager` and `background` sessions out of the count, and exits 1 when a child
+session stays unlocked, so the unit fails where the journal shows it.
+
+*Unlocking.* light-locker never sets `LockedHint`, and it unlocks behind the greeter:
+`loginctl unlock-session` alone left the seat on a password prompt. The grant path looked
+only at `LockedHint`, so "+10 dk" unlocked nobody. A grant now unlocks every `user`
+session of the child - a no-op on one that is not locked - and activates it when, and only
+when, the seat is showing a greeter, so a parent working in their own session keeps their
+screen. The daemon's re-lock on every tick is left as it is: with no `LockedHint` it
+repeats `lock-session` against a locked screen, which the VM showed to be harmless.
+
+*The browser policy.* Debian's `chromium` does not create `/etc/chromium/policies/managed`,
+so the `-` entry in the daemon's `ReadWritePaths=` was skipped, `/etc` stayed read-only
+and the D-151 policy was never written. The first thing the child saw was Chromium
+offering to translate the page, with its `⋮` menu. `biokids-daemon` ships the directory.
+
+*Whose account.* Checking that a parent's account is never made passwordless showed that
+provisioning still wrote the kiosk's session files into it - autostart included - and
+nothing stopped the panel creating a child whose `unix_user` was the parent's own, whose
+sessions the daemon would then ration and power off. An account in `sudo`, `adm` or
+`biokids` is now refused as a child's, by provisioning and by the child form alike, with
+its own message. A name BioKids *suggests* also steps past any existing account that is
+not already a BioKids child's - a child called Bilal on a machine whose parent logs in as
+`bilal` becomes `bilal2` - while one that is, left over from a purge, is reused, drawings
+and all.
+
+*The hyphenated child.* The runbook adds `elif-nur` for exactly this reason, and it found
+it: `biokids-provision@.service` passed `%i`, the *escaped* instance, so adduser was asked
+for `elif\x2dnur`, refused it, and the second child had no account. `%I` is the unescaped
+one. The panel said so, as D-152 intended - which is the only reason it was seen at once.

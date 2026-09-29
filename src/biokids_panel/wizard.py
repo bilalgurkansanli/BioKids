@@ -29,7 +29,14 @@ from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
 from biokids_core.db.models import Child, Parent, utcnow
 from biokids_core.i18n import Translator
 from biokids_core.ipc import Op
-from biokids_core.provision import ProvisionResult, provision, provision_via_systemd
+from biokids_core.provision import (
+    ProvisionResult,
+    account_exists,
+    account_is_administrative,
+    is_child_account,
+    provision,
+    provision_via_systemd,
+)
 from biokids_core.types import AgeBand, EndAction, FilterMode
 from biokids_panel import auth
 from biokids_panel.app import (
@@ -467,6 +474,15 @@ def create_child(
             return None, "child.unix_user.taken"
         user = _free_user(session, user)
         existing = None
+    elif existing is None and not typed and not _free_on_this_machine(user):
+        # The suggestion fell on somebody else's account: a child called Bilal
+        # on a machine whose parent logs in as `bilal`. Suggest past it (D-155).
+        user = _free_user(session, user)
+
+    if account_is_administrative(user):
+        # Typed, then. Made a child's, the parent's own account would get the
+        # kiosk, the quota and the power-off (D-155).
+        return None, "child.unix_user.admin"
 
     child = existing or Child(unix_user=user, display_name=name, birth_year=birth_year)
     child.display_name = name
@@ -567,17 +583,30 @@ def _free_user(session: Session, wanted: str) -> str:
 
     Only ever applied to a name BioKids suggested itself. A name the parent
     typed is refused on collision rather than adjusted, because a parent who
-    types `mehmet` means *that* account.
+    types `mehmet` means *that* account. "Nobody has" covers the machine as well
+    as the database: a suggestion must not land on the parent's own account.
     """
-    if repo.get_child_by_user(session, wanted) is None:
+
+    def free(candidate: str) -> bool:
+        return repo.get_child_by_user(session, candidate) is None and _free_on_this_machine(
+            candidate
+        )
+
+    if free(wanted):
         return wanted
     for suffix in range(2, 100):
         candidate = f"{wanted}{suffix}"[:32]
-        if repo.get_child_by_user(session, candidate) is None:
+        if free(candidate):
             return candidate
     # Ninety-eight children called Mehmet. The caller validates the name and
     # will refuse this one, which is a better outcome than overwriting a row.
     return f"{wanted}-taken"
+
+
+def _free_on_this_machine(unix_user: str) -> bool:
+    """No such account yet - or one BioKids already made a child's, which a
+    reinstall after a purge finds again and should reuse, drawings and all."""
+    return not account_exists(unix_user) or is_child_account(unix_user)
 
 
 def _suggest_user(display_name: str) -> str:

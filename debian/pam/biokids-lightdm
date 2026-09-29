@@ -1,0 +1,16 @@
+#%PAM-1.0
+#
+# BioKids: LightDM's login, with one rule in front of it (D-99, D-155).
+#
+# A child logs in by choosing their picture; the gate is the daily allowance,
+# not a password. /usr/lib/biokids/biokids-child-login decides who that
+# applies to - a child account with no session open - and for everyone else,
+# the parent included, this is exactly Debian's own lightdm service below,
+# password and all.
+#
+# LightDM uses this service because /usr/share/lightdm/lightdm.conf.d/
+# 50-biokids.conf says so. Removing biokids-shell removes both.
+
+auth    requisite   pam_nologin.so
+auth    sufficient  pam_exec.so quiet /usr/lib/biokids/biokids-child-login
+@include lightdm

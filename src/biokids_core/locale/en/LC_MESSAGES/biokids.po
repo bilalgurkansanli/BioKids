@@ -464,6 +464,9 @@ msgstr "Username on the computer"
 msgid "child.unix_user.taken"
 msgstr "That account name belongs to another child. Please choose a different one."
 
+msgid "child.unix_user.admin"
+msgstr "That account can administer this computer, so it cannot be a child's. Please choose a different name."
+
 msgid "child.unix_user.help"
 msgstr "The account shown on the login screen. Lower-case letters and digits only."
 
@@ -761,7 +764,7 @@ msgid "wizard.done.title"
 msgstr "Ready"
 
 msgid "wizard.done.help"
-msgstr "Setup is done. If you like, you can start a two-minute trial run."
+msgstr "Setup is done. Restart the computer once, and your child can then log in by choosing their picture."
 
 msgid "wizard.done.try"
 msgstr "Try it now"

@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import argparse
 import io
-import json
 import subprocess
 import sys
 from pathlib import Path
@@ -129,12 +128,17 @@ def test_lockdown_with_nobody_logged_in_is_a_success_not_an_error(
 def test_lockdown_still_reports_when_loginctl_refuses(
     config: Config, db: Database, family_with_children: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A lock that failed must still be written down; someone has to know."""
+    """A lock that failed must still be written down; someone has to know.
+
+    And the command fails, so that biokids-lockdown.service does too and the
+    journal shows it: a child session left unlocked is exactly the case
+    principle #3 is about.
+    """
     loginctl = FakeLoginctl([{"session": "c1", "user": "elif"}])
     loginctl.fail_lock = True
     loginctl.install(monkeypatch)
 
-    assert run_lockdown(config) == 0
+    assert run_lockdown(config) == 1
     with db.session() as session:
         entry = session.query(AuditLog).filter(AuditLog.action == "lockdown").one()
     assert entry.detail["sessions"] == []
@@ -170,25 +174,82 @@ def test_lockdown_survives_an_audit_write_that_fails(
     assert loginctl.locked == ["c1"], "the screens locked even though nothing was recorded"
 
 
-# ------------------------------------------------------- reading from loginctl
-
-
-def test_sessions_are_parsed_from_loginctl_json(monkeypatch: pytest.MonkeyPatch) -> None:
-    payload = json.dumps(
+def test_lockdown_does_not_count_sessions_with_no_screen(
+    config: Config, db: Database, family_with_children: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A child's `manager` session is systemd's, not a screen; it cannot be locked."""
+    loginctl = FakeLoginctl(
         [
-            {"session": "3", "uid": 1000, "user": "elif", "seat": "seat0"},
-            {"session": "4", "uid": 1001, "user": "kerem", "seat": "seat0"},
+            {"session": "96", "user": "elif", "class": "user"},
+            {"session": "98", "user": "elif", "class": "manager"},
+            {"session": "99", "user": "elif", "class": "background"},
         ]
     )
-    monkeypatch.setattr(
-        admin.subprocess,
-        "run",
-        lambda *a, **k: subprocess.CompletedProcess(a[0], 0, payload, ""),
+    loginctl.install(monkeypatch)
+
+    assert run_lockdown(config) == 0
+    assert loginctl.locked == ["96"]
+
+
+# ------------------------------------------------------- reading from loginctl
+
+#: `loginctl list-sessions --json=short` on Debian 13.7 (systemd 257), verbatim
+#: apart from the order: a parent over ssh, a child at the seat, and the greeter.
+SYSTEMD_257_JSON = (
+    '[{"session":"77","uid":1000,"user":"bilal","seat":null,"leader":76912,'
+    '"class":"user","tty":null,"idle":false,"since":null},'
+    '{"session":"96","uid":1001,"user":"elif","seat":"seat0","leader":80957,'
+    '"class":"user","tty":null,"idle":false,"since":null},'
+    '{"session":"98","uid":1001,"user":"elif","seat":null,"leader":80972,'
+    '"class":"manager","tty":null,"idle":false,"since":null},'
+    '{"session":"c4","uid":106,"user":"lightdm","seat":"seat0","leader":81800,'
+    '"class":"greeter","tty":null,"idle":false,"since":null}]'
+)
+
+
+def test_sessions_are_asked_for_as_json_the_way_loginctl_spells_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`--json=short`. `--output=json` is the journal format and prints a table.
+
+    That one flag meant the lockdown parsed nothing and locked nobody, on every
+    machine; found on the VM, because every test here fed it JSON (D-155).
+    """
+    seen: list[list[str]] = []
+
+    def run(argv: list[str], **_k: Any) -> Any:
+        seen.append(list(argv))
+        return subprocess.CompletedProcess(argv, 0, SYSTEMD_257_JSON, "")
+
+    monkeypatch.setattr(admin.subprocess, "run", run)
+    sessions = admin.list_sessions()
+
+    assert seen[0][:3] == ["loginctl", "list-sessions", "--json=short"]
+    assert "--output=json" not in seen[0]
+    assert {"session": "96", "user": "elif", "class": "user"} in sessions
+    assert {"session": "98", "user": "elif", "class": "manager"} in sessions
+    assert len(sessions) == 4
+
+
+def test_a_loginctl_without_json_is_read_as_a_table(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An older systemd refuses `--json`; SESSION UID USER lead every version's table."""
+    table = (
+        " 77 1000 bilal   -     76912 user          - no -\n"
+        " 96 1001 elif    seat0 80957 user          - no -\n"
+        " c4  106 lightdm seat0 81800 greeter       - no -\n"
     )
-    assert admin.list_sessions() == [
-        {"session": "3", "user": "elif"},
-        {"session": "4", "user": "kerem"},
-    ]
+
+    def run(argv: list[str], **_k: Any) -> Any:
+        if "--json=short" in argv:
+            refused = "unrecognized option '--json=short'"
+            return subprocess.CompletedProcess(argv, 1, "", refused)
+        return subprocess.CompletedProcess(argv, 0, table, "")
+
+    monkeypatch.setattr(admin.subprocess, "run", run)
+    sessions = admin.list_sessions()
+
+    assert [row["session"] for row in sessions] == ["77", "96", "c4"]
+    assert sessions[1]["user"] == "elif"
 
 
 @pytest.mark.parametrize(

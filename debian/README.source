@@ -343,30 +343,17 @@ debian/biokids-core.templates.
 
 Everything below is unverified, in roughly the order it will bite:
 
- 1. **Provisioning a child now needs systemd, and that path has never run.**
-    The panel cannot create a Unix account itself: ProtectSystem=strict makes
-    /etc read-only and ProtectHome=yes mounts an empty tmpfs over /home, so
-    `adduser` fails with EROFS and the child's dotfiles cannot be written. The
-    privileged half therefore lives in biokids-provision@.service, and the panel
-    reaches it with `systemctl start --wait biokids-provision@<child>.service`.
-
-    Three things about that are unverified on this host, in order of risk:
-
-      a. **Can the sandboxed panel talk to systemd at all?** Connecting to
-         /run/systemd/private or the system bus from a unit with
-         ProtectSystem=strict and SystemCallFilter=@system-service is expected to
-         work - a read-only mount does not stop connect(2) on a socket - but it
-         has not been tried. If it does not, the symptom is a child added in the
-         panel with no Unix account and a problem row in the audit log saying so,
-         which is at least honest. Check it first on the VM.
-
-      b. **`systemctl start --wait` on a template.** The panel blocks on this for
-         up to 150 s while a parent watches a spinner; the unit's own
-         TimeoutStartSec is 120.
-
-      c. **The instance name.** `provision_via_systemd` checks the name against
-         UNIX_USER_RE and escapes `-` as `\x2d` before interpolating. Confirm
-         with a hyphenated child that `systemd-escape` agrees.
+ 1. **Closed: provisioning through systemd works.** The panel cannot create a
+    Unix account itself: ProtectSystem=strict makes /etc read-only and
+    ProtectHome=yes mounts an empty tmpfs over /home. The privileged half lives
+    in biokids-provision@.service, and the panel reaches it with `systemctl
+    start --wait biokids-provision@<child>.service`. On the Debian 13 VM the
+    sandboxed panel reached systemd, the wizard's first child got an account
+    and session files owned by the child, and it took about two seconds. The
+    hyphenated child found one bug: the unit passed `%i`, the escaped instance,
+    to adduser; it passes `%I` now (D-155). `provision_via_systemd`'s own
+    escaping (`-` as the four characters backslash, x, 2, d) matches
+    `systemd-escape`.
 
  2. **Closed: the build runs.** The first real build failed in dh_install for
     two reasons no source-tree check had covered - PYBUILD_NAME redirected the

@@ -25,7 +25,7 @@ from biokids_core.db import AuditLog, Database, Parent
 from biokids_core.db.models import utcnow
 from biokids_core.errors import IpcError
 from biokids_core.ipc import Response
-from biokids_panel import auth
+from biokids_panel import auth, wizard
 from biokids_panel.app import create_app
 
 PIN = "284913"
@@ -194,6 +194,14 @@ def test_the_whole_wizard_can_be_completed(
     client.post("/wizard/9", follow_redirects=False)
     done = client.post("/wizard/10", data={"voices": "on"}, follow_redirects=False)
     assert done.status_code == 303
+
+    # The closing screen, as the VM showed it: "Adım 11 / 10", and a two-minute
+    # trial nothing offered. What a parent needs instead is the restart, because
+    # LightDM reads the login-by-picture setting only when it starts (D-155).
+    closing = client.get(done.headers["location"]).text
+    assert "yeniden başlatın" in closing
+    assert "Adım 11" not in closing
+    assert "deneme" not in closing
 
     with db.session() as session:
         assert repo.setup_complete(session)
@@ -1328,3 +1336,52 @@ def test_a_rejected_window_does_not_save_the_quotas_anyway(
         assert policy.end_action != "poweroff", (
             "the parent's end-action choice was reverted to the form default"
         )
+
+
+# --------------------------------------------- whose account a child gets (D-155)
+
+
+def test_a_parent_cannot_make_their_own_account_a_childs(
+    db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Typed by mistake, it would hand the parent's session to the kiosk and the quota."""
+    monkeypatch.setattr(wizard, "account_is_administrative", lambda user: user == "bilal")
+
+    with db.session() as session:
+        child, error = wizard.create_child(
+            session, display_name="Elif", birth_year=dt.date.today().year - 6, unix_user="bilal"
+        )
+        assert child is None
+        assert error == "child.unix_user.admin"
+        assert repo.get_child_by_user(session, "bilal") is None
+
+
+def test_a_suggested_name_steps_past_somebody_elses_account(
+    db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A child called Bilal, on a machine whose parent logs in as `bilal`."""
+    monkeypatch.setattr(wizard, "account_exists", lambda user: user == "bilal")
+    monkeypatch.setattr(wizard, "is_child_account", lambda _user: False)
+
+    with db.session() as session:
+        child, error = wizard.create_child(
+            session, display_name="Bilal", birth_year=dt.date.today().year - 6
+        )
+        assert error == ""
+        assert child is not None
+        assert child.unix_user == "bilal2"
+
+
+def test_a_suggested_name_reuses_a_childs_account_from_an_earlier_install(
+    db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A purge keeps the accounts (and the drawings); a reinstall finds them again."""
+    monkeypatch.setattr(wizard, "account_exists", lambda user: user == "elif")
+    monkeypatch.setattr(wizard, "is_child_account", lambda user: user == "elif")
+
+    with db.session() as session:
+        child, _error = wizard.create_child(
+            session, display_name="Elif", birth_year=dt.date.today().year - 6
+        )
+        assert child is not None
+        assert child.unix_user == "elif"

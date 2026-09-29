@@ -25,6 +25,7 @@ import argparse
 import getpass
 import json
 import logging
+import os
 import subprocess
 import sys
 from collections.abc import Sequence
@@ -148,32 +149,71 @@ def build_parser() -> argparse.ArgumentParser:
 # ------------------------------------------------------------------ lockdown
 
 
+LIST_SESSIONS_JSON = ("loginctl", "list-sessions", "--json=short", "--no-pager")
+"""`--json=`, not `--output=json`. For loginctl, `--output=` is the journal
+format of `session-status`, so `--output=json` printed the ordinary table, the
+JSON parse failed, and the lockdown locked nothing - on every machine, since the
+day it was written (D-155). The tests fed it JSON, so they could not tell."""
+
+LIST_SESSIONS_TABLE = ("loginctl", "list-sessions", "--no-legend", "--no-pager")
+"""The fallback for a systemd without `--json`: SESSION UID USER first, in
+every version, whatever columns follow."""
+
+
 def list_sessions() -> list[dict[str, str]]:
-    """Ask loginctl who is logged in, without needing the daemon or D-Bus bindings."""
+    """Ask loginctl who is logged in, without needing the daemon or D-Bus bindings.
+
+    JSON first; the plain table if this loginctl cannot do JSON. The table is
+    read under LC_ALL=C so a translated header cannot change it, although with
+    --no-legend there is none.
+    """
+    output = _loginctl_output(LIST_SESSIONS_JSON)
+    if output is not None:
+        try:
+            rows = json.loads(output or "[]")
+        except json.JSONDecodeError:
+            log.warning("loginctl --json gave something else; reading the table instead")
+        else:
+            return [
+                {
+                    "session": str(row.get("session", "")),
+                    "user": str(row.get("user", "")),
+                    "class": str(row.get("class") or ""),
+                }
+                for row in rows
+                if isinstance(row, dict)
+            ]
+
+    output = _loginctl_output(LIST_SESSIONS_TABLE)
+    if output is None:
+        return []
+    sessions: list[dict[str, str]] = []
+    for line in output.splitlines():
+        fields = line.split()
+        # A real row has a numeric UID second; anything else is not a session.
+        if len(fields) >= 3 and fields[1].isdigit():
+            sessions.append({"session": fields[0], "user": fields[2], "class": ""})
+    return sessions
+
+
+def _loginctl_output(argv: Sequence[str]) -> str | None:
+    """stdout of a loginctl call, or None when it could not be had."""
     try:
         result = subprocess.run(
-            ["loginctl", "list-sessions", "--output=json"],
+            list(argv),
             capture_output=True,
             text=True,
             timeout=LOGINCTL_TIMEOUT,
             check=False,
+            env={**os.environ, "LC_ALL": "C"},
         )
     except (OSError, subprocess.TimeoutExpired):
         log.exception("loginctl is not answering")
-        return []
+        return None
     if result.returncode != 0:
         log.error("loginctl exited %s: %s", result.returncode, result.stderr.strip())
-        return []
-    try:
-        rows = json.loads(result.stdout or "[]")
-    except json.JSONDecodeError:
-        log.error("loginctl returned something that is not JSON")
-        return []
-    return [
-        {"session": str(row.get("session", "")), "user": str(row.get("user", ""))}
-        for row in rows
-        if isinstance(row, dict)
-    ]
+        return None
+    return result.stdout
 
 
 def lock_session(session_id: str) -> bool:
@@ -207,16 +247,29 @@ def cmd_lockdown(_args: argparse.Namespace, config: Config) -> int:
         )
         return 1
 
-    locked = [
+    # A child's `manager` and `background` sessions have no screen to lock, and
+    # counting them would make "locked 1 of 3" look like a failure.
+    targets = [
         row["session"]
         for row in sessions
-        if row["user"] in child_users and lock_session(row["session"])
+        if row["user"] in child_users
+        and not row.get("class", "").startswith(("manager", "background"))
     ]
+    locked = [session_id for session_id in targets if lock_session(session_id)]
 
     log.warning(
         "lockdown: locked %s session(s) for %s", len(locked), ", ".join(sorted(child_users))
     )
     _audit_lockdown(config, locked, sorted(child_users))
+    if len(locked) < len(targets):
+        # Loud, so that the unit fails and the journal says so: a child session
+        # this could not lock is the very case principle #3 is about.
+        log.error(
+            "lockdown: %s child session(s) could not be locked: %s",
+            len(targets) - len(locked),
+            ", ".join(s for s in targets if s not in locked),
+        )
+        return 1
     return 0
 
 

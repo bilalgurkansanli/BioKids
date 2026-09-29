@@ -20,6 +20,7 @@ set -e
 . /usr/share/debconf/confmodule
 
 BIOKIDS_GROUP=biokids
+CHILD_GROUP=biokids-child
 AI_USER=biokids-ai
 CONF_DIR=/etc/biokids
 DATA_DIR=/var/lib/biokids
@@ -41,6 +42,15 @@ case "$1" in
             addgroup --system "$BIOKIDS_GROUP"
         fi
 
+        # The children the LightDM greeter lets in by their picture alone
+        # (D-99, D-155). Membership is decided by provisioning, which only ever
+        # adds an account that has no usable password and no administrative
+        # group, and /usr/lib/biokids/biokids-child-login checks both again.
+        # Created here because provisioning is biokids-core's and must find it.
+        if ! getent group "$CHILD_GROUP" >/dev/null; then
+            addgroup --system "$CHILD_GROUP"
+        fi
+
         # The screen watcher's account. Created here rather than in biokids-ai
         # so that ownership under /var/lib/biokids is settled once and turning
         # the optional package on later changes no permissions. It has no home,
@@ -51,7 +61,12 @@ case "$1" in
                     --shell /usr/sbin/nologin \
                     --gecos "BioKids screen watcher" "$AI_USER"
         fi
-        adduser --quiet "$AI_USER" "$BIOKIDS_GROUP"
+        # Guarded, because adduser warns on every upgrade otherwise, and a
+        # warning in apt's output on every upgrade teaches people to skip them.
+        case " $(id -nG "$AI_USER") " in
+            *" $BIOKIDS_GROUP "*) ;;
+            *) adduser --quiet "$AI_USER" "$BIOKIDS_GROUP" ;;
+        esac
 
         # These three are created here instead of being shipped in the package
         # because dpkg re-applies the recorded mode of a directory it owns on

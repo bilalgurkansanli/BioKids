@@ -99,6 +99,14 @@ override_dh_auto_install:
 	install -m 0644 src/biokids_shell/xfce/biokids-shell.desktop \
 		debian/tmp/usr/share/biokids/xfce/
 
+	# The greeter's "is this a child who may come in by their picture?"
+	# (D-155). Installed here rather than straight from a .install line because
+	# it must be executable, and a checkout made on Windows cannot promise the
+	# mode bit.
+	install -d debian/tmp/usr/lib/biokids
+	install -m 0755 debian/pam/biokids-child-login \
+		debian/tmp/usr/lib/biokids/biokids-child-login
+
 	sed -e 's,^script_location = .*,script_location = /usr/lib/python3/dist-packages/biokids_core/migrations,' \
 	    -e '/^prepend_sys_path[[:space:]]*=/d' \
 	    alembic.ini > debian/tmp/usr/share/biokids/alembic.ini

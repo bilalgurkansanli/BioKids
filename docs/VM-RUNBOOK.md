@@ -345,7 +345,13 @@ answers both.
 
 ## 3. The wizard
 
-Open `http://127.0.0.1:7878` on the VM and work through all ten steps.
+Open `http://127.0.0.1:7878` on the VM and work through all ten steps. If the
+VM's own desktop is slow, forward the port and use a browser on the host instead
+— the panel only ever listens on loopback, and this keeps it that way:
+
+```bash
+ssh -N -L 7878:127.0.0.1:7878 -p 2222 <you>@127.0.0.1     # on the Windows host
+```
 
 ### 3.1 Can the sandboxed panel reach systemd? — `README.source` §7 item 1
 
@@ -399,9 +405,19 @@ second child silently gets no account.
 
 ### 3.3 Step 8: Tailscale
 
+Tailscale is not in Debian's archive; it comes from Tailscale's own repository,
+which has a `trixie` suite:
+
 ```bash
-sudo apt install tailscale && sudo tailscale up
+sudo apt install curl
+curl -fsSL https://pkgs.tailscale.com/stable/debian/trixie.noarmor.gpg \
+  | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+curl -fsSL https://pkgs.tailscale.com/stable/debian/trixie.tailscale-keyring.list \
+  | sudo tee /etc/apt/sources.list.d/tailscale.list
+sudo apt update && sudo apt install tailscale && sudo tailscale up
 ```
+
+`tailscale up` prints a link; open it and sign in with **your** Tailscale account.
 
 Then complete step 8. The wizard now refuses to move on when `tailscale serve`
 fails (D-146), so if you land back on step 8 with an error, read
@@ -423,18 +439,24 @@ Press **Bitir** on step 10.
 
 **Pass:** the "Hazır — Kurulum tamam" screen with the child's avatar and a
 "Panele git" button — *not* a bare PIN prompt. That was broken until recently
-(D-150) and it is the last thing a parent sees.
+(D-150) and it is the last thing a parent sees. It asks for **one restart**:
+LightDM reads the login-by-picture setting (D-155) only when it starts. There is
+no "Adım 11 / 10" above it any more, and no promise of a trial run.
 
 ---
 
 ## 4. The child's session
 
-Log out and log in as `elif` from the LightDM greeter.
+Restart the VM, as the closing screen asked, and choose `elif` at the LightDM
+greeter.
 
 **Pass, in order:**
 
-1. There is an avatar for Elif on the greeter at all. (No avatar means §3.1
-   failed and you are testing the wrong thing.)
+1. Elif is in the greeter's user list, and choosing her shows **no password
+   field** — only "Oturum aç" (D-155). A password field means the login-by-picture
+   service is not in use: check `sudo lightdm --show-config | grep pam-service`
+   and `id elif` (must include `biokids-child`). No Elif at all means §3.1
+   failed and you are testing the wrong thing.
 2. The session lands directly in the launcher — full screen, tiles, the time
    ring. Not an XFCE desktop.
 3. **Zio or Sio is visible** on the first-run card. An empty character slot means
@@ -492,18 +514,36 @@ this path on a machine. With the child still logged in:
 sudo systemctl kill -s KILL biokids-daemon
 ```
 
-**Pass, within about five seconds:** the child's screen locks.
+**Pass, within about five seconds:** the child's screen locks, and the lockdown
+says it locked something:
 
 ```bash
 loginctl list-sessions
-journalctl -u biokids-lockdown.service -b --no-pager
+journalctl -u biokids-lockdown.service -b --no-pager   # "locked 1 session(s)", not 0
 ```
+
+"locked 0 session(s)" with a child logged in is the failure this step exists to
+catch; it is what every machine did until D-155.
+
+Then, still locked, choose Elif on the unlock screen: **a password field must
+appear, and an empty password must be refused.** A child who could lift the lock
+by choosing their picture would make the lock decoration. The way back is the
+parent's: from the panel, grant Elif ten minutes — the session must come back on
+screen without anyone typing anything.
 
 This is the direction that matters. §5.2 checks that lockdown does *not* fire
 during an upgrade; this checks that it *does* fire when the daemon dies. Sign
 Phase 0 off without it and "fail safe, not silent" has never been observed.
 
-Restart the daemon afterwards: `sudo systemctl start biokids-daemon`.
+The daemon restarts itself (`Restart=on-failure`), and the child **stays locked**
+until you grant time from the panel: a crash is not a reason to let them back in
+unsupervised. On the first run this took about ten seconds from the kill to the
+greeter, because light-locker shows its own lock window first.
+
+Seen through `VBoxManage controlvm … screenshotpng`, the screen can come back as
+horizontal streaks after the session returns from the greeter: that is VirtualBox's
+frame buffer after the VT switch, not the session. A mode change redraws it —
+`xrandr --output VGA-1 --mode 1024x768` on the child's display.
 
 ---
 

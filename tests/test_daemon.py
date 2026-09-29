@@ -29,7 +29,7 @@ from biokids_core.ipc import EventKind, Op, Request, Response
 from biokids_core.ledger import TickInput
 from biokids_core.types import EndAction
 from biokids_daemon.bus import EventBus
-from biokids_daemon.enforcer import Enforcer, RecordingRunner
+from biokids_daemon.enforcer import CommandResult, Enforcer, RecordingRunner
 from biokids_daemon.server import DaemonServer
 from biokids_daemon.sessions import FakeSessionSource, SessionWatcher
 from biokids_daemon.supervisor import ACTIVITY_TTL_SECONDS, Supervisor, run_forever
@@ -1541,3 +1541,109 @@ def test_a_timeout_is_not_cancelled_by_midnight(
 
     assert left > 0, "the timeout evaporated at midnight"
     assert left <= 10 * 60, f"the timeout stopped counting down instead: {left}s left"
+
+
+# ------------------------------------------------ light-locker, as it really is
+
+
+class LightLockerRunner(RecordingRunner):
+    """What light-locker does, as observed on Debian 13 (D-155).
+
+    It locks by handing the seat to the LightDM greeter, so the child's session
+    stops being the active one - and it never sets `LockedHint`. The fake the
+    rest of this file uses sets `LockedHint`, which is why nothing here noticed
+    that a grant looked only at `LockedHint` and so unlocked nobody.
+    """
+
+    def __init__(self, source: FakeSessionSource) -> None:
+        super().__init__()
+        self.source = source
+
+    async def __call__(self, argv: Sequence[str]) -> Any:
+        result = await super().__call__(argv)
+        if result.ok and list(argv[:2]) == ["loginctl", "lock-session"] and len(argv) > 2:
+            self.source.set(argv[2], active=False, state="online")
+        return result
+
+
+async def test_a_grant_unlocks_a_child_whose_locker_never_reports_the_lock(
+    db: Database,
+    bus: EventBus,
+    source: FakeSessionSource,
+    clock: FakeClock,
+    config: Config,
+    child: Child,
+    session: Session,
+) -> None:
+    runner = LightLockerRunner(source)
+    supervisor = Supervisor(
+        database=db,
+        bus=bus,
+        watcher=SessionWatcher(source),
+        enforcer=Enforcer(config, runner),
+        clock=clock,
+        config=config,
+    )
+    set_quota(session, 1, 20, end_action=EndAction.LOCK.value)
+    await supervisor.start()
+    logged_in = source.log_in("elif")
+
+    await run_for(supervisor, clock, 25 * 60)
+    assert runner.ran("loginctl", "lock-session", logged_in.session_id)
+    assert not source.sessions[0].locked, "the premise: LockedHint is never set"
+    runner.calls.clear()
+
+    await supervisor.grant_time(1, 10 * 60)
+
+    assert runner.ran("loginctl", "unlock-session", logged_in.session_id), (
+        f"the child was left at the greeter: {runner.calls}"
+    )
+
+
+class ScriptedLoginctl(RecordingRunner):
+    """Answers loginctl's `show-*` questions from a table, and records the rest."""
+
+    def __init__(self, answers: dict[tuple[str, ...], str]) -> None:
+        super().__init__()
+        self.answers = answers
+
+    async def __call__(self, argv: Sequence[str]) -> CommandResult:
+        await super().__call__(argv)
+        return CommandResult(tuple(argv), 0, stdout=self.answers.get(tuple(argv), ""))
+
+
+def seat_showing(active: str, active_class: str) -> dict[tuple[str, ...], str]:
+    """Session 96 is on seat0, and seat0 is showing `active`, of `active_class`."""
+    return {
+        ("loginctl", "show-session", "96", "--property=Seat", "--value"): "seat0",
+        ("loginctl", "show-seat", "seat0", "--property=ActiveSession", "--value"): active,
+        ("loginctl", "show-session", active, "--property=Class", "--value"): active_class,
+    }
+
+
+async def test_unlocking_brings_the_session_back_from_the_greeter(config: Config) -> None:
+    """light-locker unlocks behind the greeter; only activating the session ends it."""
+    runner = ScriptedLoginctl(seat_showing("c4", "greeter"))
+
+    assert await Enforcer(config, runner).unlock_session("96")
+
+    assert runner.ran("loginctl", "unlock-session", "96")
+    assert runner.ran("loginctl", "activate", "96")
+
+
+async def test_unlocking_never_takes_the_screen_from_a_parent(config: Config) -> None:
+    """A parent at the machine in their own session keeps it when they grant time."""
+    runner = ScriptedLoginctl(seat_showing("77", "user"))
+
+    await Enforcer(config, runner).unlock_session("96")
+
+    assert runner.ran("loginctl", "unlock-session", "96")
+    assert not runner.ran("loginctl", "activate", "96")
+
+
+async def test_a_session_already_on_screen_is_not_activated_again(config: Config) -> None:
+    runner = ScriptedLoginctl(seat_showing("96", "user"))
+
+    await Enforcer(config, runner).unlock_session("96")
+
+    assert not runner.ran("loginctl", "activate", "96")

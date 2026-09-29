@@ -19,8 +19,11 @@ case "$1" in
         rm -f /etc/dnsmasq.d/*biokids*
         rm -f /etc/chromium/policies/managed/*biokids*
         rm -f /etc/nftables.d/*biokids*
-        # Ours, shipped empty; goes only if nothing else put anything there.
+        # Ours, shipped empty; each goes only if nothing else put anything
+        # there. /etc/chromium itself belongs to chromium.
         rmdir /etc/nftables.d 2>/dev/null || true
+        rmdir /etc/chromium/policies/managed 2>/dev/null || true
+        rmdir /etc/chromium/policies 2>/dev/null || true
         ;;
 
     remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)

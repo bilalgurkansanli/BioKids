@@ -464,6 +464,9 @@ msgstr "Bilgisayardaki kullanıcı adı"
 msgid "child.unix_user.taken"
 msgstr "Bu kullanıcı adı başka bir çocuğa ait. Başka bir ad seçin."
 
+msgid "child.unix_user.admin"
+msgstr "Bu hesap bilgisayarı yönetebiliyor, çocuk hesabı olamaz. Başka bir ad seçin."
+
 msgid "child.unix_user.help"
 msgstr "Giriş ekranında görünecek hesap. Sadece küçük harf ve rakam."
 
@@ -761,7 +764,7 @@ msgid "wizard.done.title"
 msgstr "Hazır"
 
 msgid "wizard.done.help"
-msgstr "Kurulum tamam. Dilerseniz iki dakikalık bir deneme başlatabilirsiniz."
+msgstr "Kurulum tamam. Bilgisayarı bir kez yeniden başlatın; ardından çocuğunuz giriş ekranında resmini seçerek girebilir."
 
 msgid "wizard.done.try"
 msgstr "Şimdi dene"
