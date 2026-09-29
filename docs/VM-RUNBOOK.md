@@ -31,7 +31,7 @@ Debian 13 (trixie) netinst in VirtualBox: 4 GB RAM, 2 vCPU, 30 GB disk (T0.1).
 The ISO is `debian-13.x.y-amd64-netinst.iso` from
 <https://www.debian.org/CD/netinst/> — the `amd64` link.
 
-Four settings that a first install gets wrong, in the order you meet them:
+Five settings that a first install gets wrong, in the order you meet them:
 
 1. **Skip VirtualBox's unattended install.** VirtualBox 7 selects it by default
    when you attach an ISO. It chooses its own desktop and user and never shows the
@@ -46,6 +46,13 @@ Four settings that a first install gets wrong, in the order you meet them:
 4. At **Software selection**, **untick GNOME** — it is ticked by default — and tick
    **Xfce**, **SSH server** and **standard system utilities**. With GNOME left
    ticked both desktops install and GNOME's session may become the default.
+5. **Graphics controller: VBoxSVGA**, not the default VMSVGA (Settings → Display,
+   3D acceleration off, 128 MB). Found on the first real install: Debian 13's
+   `vmwgfx` driver logs *"vmwgfx seems to be running on an unsupported
+   hypervisor ... Please switch to a supported graphics device"* and the machine
+   stops at a black console after `/dev/sda1: clean`, with no login screen.
+   VirtualBox may flag VBoxSVGA with a yellow "invalid settings" note, because
+   it recommends VMSVGA for Linux; ignore it.
 
 SSH is chosen there on purpose. §6 disables Ctrl+Alt+F1–F12, and a shell that
 does not go through the graphical session is how you get back into a broken one.
