@@ -36,6 +36,11 @@ Five settings that a first install gets wrong, in the order you meet them:
 1. **Skip VirtualBox's unattended install.** VirtualBox 7 selects it by default
    when you attach an ISO. It chooses its own desktop and user and never shows the
    Software selection screen, so neither Xfce nor the SSH server gets picked.
+   **How to tell it happened anyway:** the installer never asks you a question,
+   and the finished machine logs in as `vboxuser` to a GNOME desktop. That
+   machine cannot be used here — GNOME runs on Wayland and BioKids is X11 and
+   Xfce only (D-12) — so delete it and start again. This is easy to miss; it
+   happened on the first real attempt.
 2. **SSH port forward**, in the VM's network settings before first boot: NAT →
    Port Forwarding → host `127.0.0.1:2222` to guest port `22`. Under NAT the
    guest's own address (`10.0.2.15`) is not reachable from the host, so the
