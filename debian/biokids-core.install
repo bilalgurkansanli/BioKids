@@ -3,11 +3,11 @@
 debian/etc/biokids/config.toml etc/biokids/
 
 usr/bin/biokids-admin
-usr/lib/python3/dist-packages/biokids_core
+usr/lib/python3*/dist-packages/biokids_core
 
 # The wheel metadata directory, whose name carries the version. It belongs to
 # whichever package owns the Python distribution, and that is this one.
-usr/lib/python3/dist-packages/biokids-*
+usr/lib/python3*/dist-packages/biokids-*
 
 usr/share/biokids/alembic.ini
 usr/share/biokids/catalog/catalog.toml

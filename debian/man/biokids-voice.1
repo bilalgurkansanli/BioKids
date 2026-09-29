@@ -1,0 +1,47 @@
+.TH BIOKIDS\-VOICE 1 2026\-09\-30 "biokids 0.1.0" "BioKids"
+.SH NAME
+biokids\-voice \- Zio and Sio, the BioKids voices
+.SH SYNOPSIS
+.B biokids\-voice
+.RB [ \-\-config
+.IR file ]
+.RB [ \-\-socket
+.IR path ]
+.RB [ \-\-no\-audio ]
+.RB [ \-\-log\-level
+.IR level ]
+.SH DESCRIPTION
+.B biokids\-voice
+speaks to the child: a welcome, and the warnings before time runs out.
+Each line is also shown on screen as a card.
+Speech is made on the machine, with
+.BR espeak\-ng (1)
+unless the family has installed Piper; nothing is sent anywhere.
+It runs in the child's own session as the systemd user unit
+.BR biokids\-voice.service ;
+the child's session starts it, not a person.
+.SH OPTIONS
+.TP
+.BI \-\-config " file"
+Read the configuration from
+.I file
+instead of
+.IR /etc/biokids/config.toml .
+.TP
+.BI \-\-socket " path"
+Listen on
+.I path
+instead of the configured socket.
+.TP
+.B \-\-no\-audio
+Show the cards but play nothing, for a machine with no sound card.
+.TP
+.BI \-\-log\-level " level"
+One of DEBUG, INFO, WARNING or ERROR.
+.SH FILES
+.TP
+.I /usr/share/biokids/voice/
+What Zio and Sio say, one file per event and language.
+.SH SEE ALSO
+.BR biokids\-shell (1),
+.BR espeak\-ng (1)

@@ -149,7 +149,10 @@ sudo apt install -y git
 echo 'export D=/media/sf_BioKids/dist' >> ~/.bashrc && . ~/.bashrc
 
 # git refuses a repository owned by another user, and vboxsf files are root's.
+# Both lines: `git status` checks the working tree, but `git clone` of a local
+# path runs git-upload-pack on the .git directory, which is checked on its own.
 git config --global --add safe.directory /media/sf_BioKids
+git config --global --add safe.directory /media/sf_BioKids/.git
 
 # A read-only way into the database.
 sudo tee /usr/local/bin/bkq >/dev/null <<'EOF'
@@ -215,13 +218,20 @@ and the build still fails, the checker has a gap; fix both.
 ### 1.1 lintian
 
 ```bash
-lintian --fail-on error --suppress-tags bad-distribution-in-changes-file ../biokids_*.changes
+lintian --fail-on error ../biokids_*.changes
 ```
 
-`bad-distribution-in-changes-file` is suppressed because the changelog targets
-trixie, which lintian does not recognise as a distribution name until it is
-released. **Read the warnings even though they do not fail the build** — this is
-the first time any of them has been seen.
+**Read the warnings even though they do not fail the build.** On the first run
+(lintian 2.122, Debian 13.7) the only one left is expected:
+
+* `initial-upload-closes-no-bugs` on every package. It asks for the Debian ITP
+  bug an initial upload closes, and these packages are not uploaded to Debian.
+
+Anything else is new. The first run found two real problems this way — the
+postinst did not load debconf, so a `dpkg -i` install never registered the
+purge question; and the template text said "answer yes", which means nothing
+next to a checkbox — plus four stale overrides and five missing manual pages.
+All are fixed; see D-153.
 
 ### 1.2 The units, before installing them
 
@@ -234,18 +244,14 @@ runtime half of that item (whether `MemoryDenyWriteExecute=` breaks argon2-cffi,
 whether `SystemCallFilter=@system-service` breaks dbus-next) can only be answered
 by §2, because it needs the services to actually run.
 
-**Four kinds of complaint are expected here and are not defects:**
+**Two complaints are expected here and are not defects** — on systemd 257
+(Debian 13.7) they are the only ones:
 
 * `Command /usr/bin/biokids-… is not executable` on every unit. Nothing is
   installed yet; §2 is the install.
-* `Unit biokids-lockdown.service not found` from the daemon's `OnFailure=`. The
-  file is `debian/biokids-daemon.biokids-lockdown.service` and only
-  `dh_installsystemd --name=` renames it on the way into the package.
-* `Unit biokids-voice.service not found` from the shell's `Wants=`. Same reason:
-  the file is `debian/biokids-voice.user.service`.
-* Complaints about `graphical-session.target` and `pipewire.service` on the two
-  `*.user.service` files. Those are **user** units and this loop verifies them as
-  system units.
+* `Command 'man biokids-admin(8)' failed with code 16` on the provisioning
+  template: its `Documentation=` page is not installed yet either. After §2,
+  `man biokids-admin` must open it.
 
 What you are looking for is anything *else*: a misspelled directive, an invalid
 value, a `SystemCallFilter` group that does not exist.

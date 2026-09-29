@@ -10,6 +10,15 @@
 
 set -e
 
+# Loaded first and unconditionally: sourcing it re-runs this script under a
+# debconf frontend, so nothing may happen before it. Nothing here asks a
+# question. What loading it buys is that debconf runs biokids-core.config on an
+# install that skipped apt's preconfigure step - `dpkg -i`, or apt without
+# apt-utils - and without that the purge question is never registered, so a
+# purge can never ask it (lintian: postinst-does-not-load-confmodule). It also
+# sends this script's stdout to stderr, which nothing below minds.
+. /usr/share/debconf/confmodule
+
 BIOKIDS_GROUP=biokids
 AI_USER=biokids-ai
 CONF_DIR=/etc/biokids

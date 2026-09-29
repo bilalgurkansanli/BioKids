@@ -1,0 +1,42 @@
+.TH BIOKIDS\-SHELL 1 2026\-09\-30 "biokids 0.1.0" "BioKids"
+.SH NAME
+biokids\-shell \- the BioKids child launcher
+.SH SYNOPSIS
+.B biokids\-shell
+.RB [ \-\-config
+.IR file ]
+.RB [ \-\-port
+.IR port ]
+.RB [ \-\-no\-kiosk ]
+.RB [ \-\-log\-level
+.IR level ]
+.SH DESCRIPTION
+.B biokids\-shell
+is the full\-screen launcher a child sees after logging in: the applications
+a parent allowed, and the time left today.
+It runs in the child's own session as the systemd user unit
+.BR biokids\-shell.service ,
+serves the launcher on
+.I http://127.0.0.1:7879/
+by default, and shows it in a Chromium kiosk window.
+The child's session starts it; it is not started by hand.
+.SH OPTIONS
+.TP
+.BI \-\-config " file"
+Read the configuration from
+.I file
+instead of
+.IR /etc/biokids/config.toml .
+.TP
+.BI \-\-port " port"
+Override the port.
+.TP
+.B \-\-no\-kiosk
+Serve the launcher without starting a browser.
+For development only.
+.TP
+.BI \-\-log\-level " level"
+One of debug, info, warning or error.
+.SH SEE ALSO
+.BR biokids\-voice (1),
+.BR biokids\-daemon (8)

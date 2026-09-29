@@ -1102,3 +1102,35 @@ On a machine where `adduser` is absent the database row is still correct and
 `biokids-admin provision-child` still repairs it, so refusing to move on would strand a
 parent halfway through a ten-step setup with no way forward — principle #4 in its
 smaller form. Visible is the requirement; blocking is not.
+
+**D-153 [claude] What the first real build found.**
+The first `dpkg-buildpackage` ever run, on a Debian 13.7 VM (runbook §1), failed in
+`dh_install`, and lintian then found more. None of it was visible from the Windows host.
+
+*pybuild's destination.* `export PYBUILD_NAME=biokids` in `debian/rules` tells pybuild
+there is one binary package, `python3-biokids`, and pybuild then replaces a destination
+of `debian/tmp` with `debian/python3-biokids` — so the eight `.install` files found
+nothing. Removed; a source package that splits one Python distribution across several
+binaries must not set it. And pybuild installs into the *versioned*
+`python3.13/dist-packages`, which `dh_python3` renames only after `dh_install` has run,
+so the `.install` files now say `usr/lib/python3*/dist-packages`.
+`dev/check_packaging.py` checks both.
+
+*debconf.* The postinst did not load `confmodule`. Under apt with apt-utils nothing
+shows, because apt preconfigures; under `dpkg -i` the config script never ran, the purge
+question was never registered, and a purge could not ask it. The data was kept — the
+postrm fails safe — but the one question the package asks was silently never asked. The
+template also said "answer yes", which means nothing to a frontend showing a checkbox;
+reworded in English and Turkish.
+
+*Manual pages.* Five commands had none, and `biokids-provision@.service` pointed
+`Documentation=` at a `biokids-admin(8)` nobody had written. They exist now, in
+`debian/man/`. `biokids-admin(8)` matters beyond lintian: it is the forgotten-PIN and
+dead-daemon recovery path, and a man page is readable with the network unplugged
+(principles #4 and #5). The checker now refuses a `man:` reference to a page that is not
+shipped.
+
+*Overrides.* Four lintian overrides no longer matched anything — lintian 2.122 does not
+raise `empty-binary-package` for a metapackage or check user units against
+`WantedBy=` — and were removed, because an override that matches nothing hides the
+next real warning of the same name.

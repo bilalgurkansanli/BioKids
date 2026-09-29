@@ -1,5 +1,5 @@
 usr/bin/biokids-voice
-usr/lib/python3/dist-packages/biokids_voice
+usr/lib/python3*/dist-packages/biokids_voice
 
 # The lines Zio and Sio say, at the path VOICE.md section 5 documents and
 # biokids_voice.lines reads before falling back to the copy inside the wheel.

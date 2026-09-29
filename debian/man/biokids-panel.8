@@ -1,0 +1,53 @@
+.TH BIOKIDS\-PANEL 8 2026\-09\-30 "biokids 0.1.0" "BioKids"
+.SH NAME
+biokids\-panel \- BioKids parent panel
+.SH SYNOPSIS
+.B biokids\-panel
+.RB [ \-\-config
+.IR file ]
+.RB [ \-\-port
+.IR port ]
+.RB [ \-\-log\-level
+.IR level ]
+.SH DESCRIPTION
+.B biokids\-panel
+serves the parent panel: the setup wizard, daily limits, the children's
+applications and the audit log.
+It runs as root under
+.BR systemd (1)
+as
+.B biokids\-panel.service
+and listens on the loopback address only, by default
+.IR http://127.0.0.1:7878/ .
+Another device reaches it through Tailscale, never through an open port.
+.SH OPTIONS
+.TP
+.BI \-\-config " file"
+Read the configuration from
+.I file
+instead of
+.IR /etc/biokids/config.toml .
+.TP
+.BI \-\-host " address"
+Override the bind address.
+Only loopback addresses are accepted.
+.TP
+.BI \-\-port " port"
+Override the port.
+.TP
+.BI \-\-log\-level " level"
+One of debug, info, warning or error.
+.TP
+.B \-\-reload
+Restart when the source changes.
+For development only.
+.SH FILES
+.TP
+.I /etc/biokids/config.toml
+Machine configuration.
+.TP
+.I /var/lib/biokids/biokids.db
+Settings, time history and the audit log.
+.SH SEE ALSO
+.BR biokids\-admin (8),
+.BR biokids\-daemon (8)

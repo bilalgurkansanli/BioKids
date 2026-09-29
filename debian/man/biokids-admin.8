@@ -1,0 +1,108 @@
+.TH BIOKIDS\-ADMIN 8 2026\-09\-30 "biokids 0.1.0" "BioKids"
+.SH NAME
+biokids\-admin \- BioKids recovery and administration commands
+.SH SYNOPSIS
+.B biokids\-admin
+.RB [ \-\-config
+.IR file ]
+.I command
+.RI [ options ]
+.SH DESCRIPTION
+.B biokids\-admin
+is for the moments the parent panel cannot help: a forgotten PIN, a daemon
+that has stopped, or a child the panel knows about who cannot log in.
+Run it as root.
+.PP
+It works without a network connection, and what it changes is written to
+the audit log the parent panel shows.
+.SH COMMANDS
+.TP
+.B lockdown
+Lock every child session that is logged in, through
+.BR loginctl (1),
+and record that in the audit log.
+.B biokids\-lockdown.service
+runs this when
+.B biokids\-daemon
+fails, so that a child is never left at an unsupervised machine.
+It does not need the daemon.
+If
+.I /etc/biokids/config.toml
+cannot be read, it locks using the built\-in defaults rather than not
+locking at all.
+.TP
+.B status
+Ask the daemon for each child's state: logged in or not, the minutes left
+today, and the application in use.
+Fails if the daemon is not answering.
+.TP
+.BR reset\-pin " [" \-\-stdin ]
+Set a new parent PIN.
+The PIN is asked for twice and never echoed.
+It is not accepted as an argument, because arguments are visible to every
+user on the machine.
+With
+.BR \-\-stdin ,
+one line is read from standard input instead, for scripts.
+This also clears any lockout left by wrong PIN attempts.
+It is one of the two ways back in after a forgotten PIN; the other is the
+recovery code the setup wizard showed.
+.TP
+.BI provision\-child " user"
+Make sure the child account
+.I user
+exists and logs in to the BioKids launcher.
+The panel does this when a parent adds a child; this command repairs it
+when that could not happen.
+An existing account is left alone, and nothing is ever deleted.
+.RS
+.TP
+.BI \-\-name " display\-name"
+The full name given to a newly created account.
+.TP
+.B \-\-no\-create
+Only repair the session files; fail if the account does not exist.
+.TP
+.B \-\-overwrite
+Replace session files that have been edited since they were installed.
+.RE
+.TP
+.B sync\-catalog
+Load the application catalogue into the database.
+It only adds: an application a parent disabled stays disabled, and one that
+has left the catalogue is marked unavailable rather than removed.
+The package runs this on every installation and upgrade.
+.TP
+.B version
+Print the installed version.
+.SH OPTIONS
+.TP
+.BI \-\-config " file"
+Read the configuration from
+.I file
+instead of
+.IR /etc/biokids/config.toml .
+.SH EXIT STATUS
+.B 0
+on success,
+.B 1
+when the command could not do its job, and
+.B 2
+for a PIN that was rejected or a usage error.
+.SH FILES
+.TP
+.I /etc/biokids/config.toml
+Machine configuration.
+.TP
+.I /var/lib/biokids/biokids.db
+Settings, time history and the audit log.
+.TP
+.I /run/biokids/daemon.sock
+Where the daemon listens.
+.TP
+.I /usr/share/biokids/catalog/catalog.toml
+The application catalogue.
+.SH SEE ALSO
+.BR biokids\-daemon (8),
+.BR biokids\-panel (8),
+.BR loginctl (1)

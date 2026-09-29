@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Fail on the packaging mistakes that only a real build would otherwise catch.
 
-Two of these have already cost a build each, and both are invisible from the
-source tree without a check like this one:
+Every check here has already cost a build, and each mistake is invisible from
+the source tree without a check like this one:
 
 * `debian/biokids-ai.install` claimed `usr/lib/python3/dist-packages/biokids_ai`
   while `src/biokids_ai/` did not exist. `dh_install` fails the whole build on a
@@ -12,6 +12,17 @@ source tree without a check like this one:
 * `debian/rules` installed nothing for the child's XFCE session, so the units
   shipped with `--no-enable` and nothing ever enabled them. That build was
   perfectly green. The child simply logged in to an ordinary desktop.
+
+* The first real `dpkg-buildpackage`, on a Debian 13 VM, failed in `dh_install`
+  twice over. `PYBUILD_NAME` in `debian/rules` made pybuild install into
+  `debian/python3-biokids` instead of `debian/tmp`; and pybuild installs into
+  the versioned `python3.13/dist-packages`, which `dh_python3` renames only
+  after `dh_install` has run - so `usr/lib/python3/dist-packages/...` in a
+  `.install` file matches nothing even in the right directory.
+
+* `biokids-provision@.service` said `Documentation=man:biokids-admin(8)` for a
+  page nobody had written. `systemd-analyze verify` was the first thing to
+  notice, on the VM; `systemctl help` would have been the second.
 
 So the rule this enforces is "everything the packaging names must exist, and
 everything shipped must be claimed by exactly one package". `dh_missing
@@ -34,8 +45,10 @@ SRC = ROOT / "src"
 
 #: What `dh_auto_install` puts under `debian/tmp` by itself, given pyproject's
 #: packages and scripts. Anything else has to be placed by `debian/rules`, and
-#: that is what `_installed_by_rules` reads.
-DIST_PACKAGES = "usr/lib/python3/dist-packages/"
+#: that is what `_installed_by_rules` reads. The glob is not a style choice: at
+#: `dh_install` time the directory is `python3.13/dist-packages`.
+DIST_PACKAGES = "usr/lib/python3*/dist-packages/"
+UNVERSIONED_DIST_PACKAGES = "usr/lib/python3/dist-packages/"
 BIN = "usr/bin/"
 
 
@@ -44,6 +57,8 @@ def problems() -> list[str]:
     found += _install_files_name_things_that_exist()
     found += _every_binary_package_has_an_install_file()
     found += _units_referenced_are_shipped()
+    found += _pybuild_installs_into_debian_tmp()
+    found += _manual_pages_exist()
     return found
 
 
@@ -54,7 +69,7 @@ def _install_files_name_things_that_exist() -> list[str]:
     """Every path in a `.install` file must be producible.
 
     Three kinds of line appear, and each is checkable without building:
-    `usr/lib/python3/dist-packages/<module>` needs `src/<module>/`;
+    `usr/lib/python3*/dist-packages/<module>` needs `src/<module>/`;
     `usr/bin/<script>` needs an entry point in pyproject.toml; and a line with
     a `debian/...` source needs that file to be in the tree.
     """
@@ -73,6 +88,14 @@ def _install_files_name_things_that_exist() -> list[str]:
             if source.startswith("debian/"):
                 if not (ROOT / source).exists():
                     out.append(f"{where}: {source} does not exist")
+                continue
+
+            if source.startswith(UNVERSIONED_DIST_PACKAGES):
+                out.append(
+                    f"{where}: {source} matches nothing at dh_install time. pybuild "
+                    "installs into python3.X/dist-packages and dh_python3 renames it "
+                    f"later; write {DIST_PACKAGES}..."
+                )
                 continue
 
             if source.startswith(DIST_PACKAGES):
@@ -138,6 +161,54 @@ def _units_referenced_are_shipped() -> list[str]:
                 f"rules: dh_installsystemd --name={unit} reads {wanted.name}, "
                 "which does not exist; the package would ship no unit at all"
             )
+    return out
+
+
+def _pybuild_installs_into_debian_tmp() -> list[str]:
+    """`PYBUILD_NAME` redirects the whole Python install away from debian/tmp.
+
+    pybuild treats it as naming the one binary package, `python3-<name>`, and
+    replaces a destination of `debian/tmp` with `debian/python3-<name>` - which
+    no `.install` file reads from. A source package that splits one Python
+    distribution across several binary packages must not set it.
+    """
+    rules = (DEBIAN / "rules").read_text(encoding="utf-8")
+    if re.search(r"^\s*(export\s+)?PYBUILD_NAME\s*[:?]?=", rules, re.M):
+        return [
+            "rules: PYBUILD_NAME is set, so pybuild installs into "
+            "debian/python3-<name> instead of debian/tmp and every .install file "
+            "finds nothing"
+        ]
+    return []
+
+
+def _manual_pages_exist() -> list[str]:
+    """Every page a `.manpages` file lists, and every page a unit points at.
+
+    A unit's `Documentation=man:page(N)` is what `systemctl help` opens, so a
+    reference to a page that is not shipped is a dead end at exactly the moment
+    somebody needs it. Pages live in `debian/man/`.
+    """
+    out: list[str] = []
+    shipped: set[str] = set()
+    for manifest in sorted(DEBIAN.glob("*.manpages")):
+        for number, raw in enumerate(manifest.read_text(encoding="utf-8").splitlines(), 1):
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            if not (ROOT / line).is_file():
+                out.append(f"{manifest.name}:{number}: {line} does not exist")
+                continue
+            shipped.add(Path(line).name)
+
+    for unit in sorted(DEBIAN.glob("*.service")):
+        text = unit.read_text(encoding="utf-8")
+        for page, section in re.findall(r"man:([A-Za-z0-9_.@-]+)\((\d)\)", text):
+            if f"{page}.{section}" not in shipped:
+                out.append(
+                    f"{unit.name}: Documentation=man:{page}({section}), but no "
+                    f".manpages file ships {page}.{section}"
+                )
     return out
 
 

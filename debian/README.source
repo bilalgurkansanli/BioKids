@@ -331,9 +331,11 @@ obligation with no reader.
 7. What could not be verified on the development host
 -----------------------------------------------------
 
-This packaging was written on Windows 11. `dpkg-buildpackage`, `lintian`,
-`piuparts` and `systemd-analyze verify` have never been run against it. Two
-things *were* verified mechanically, against the actual source: that
+This packaging was written on Windows 11. `dpkg-buildpackage`, `lintian` and
+`systemd-analyze verify` were first run against it on a Debian 13.7 VM
+(docs/VM-RUNBOOK.md section 1); what they found is D-153, and items 2 and 4
+below are closed by it. `piuparts` has still never been run. Two things were
+verified mechanically before that, against the actual source: that
 debian/etc/biokids/config.toml matches every default in
 src/biokids_core/config.py exactly, key for key and value for value; and that
 the msgids in debian/po reassemble to exactly the text in
@@ -366,13 +368,13 @@ Everything below is unverified, in roughly the order it will bite:
          UNIX_USER_RE and escapes `-` as `\x2d` before interpolating. Confirm
          with a hyphenated child that `systemd-escape` agrees.
 
- 2. **The build has not been run, but the two things that used to block it are
-    gone.** src/biokids_ai/__init__.py now exists, so the dh_install glob for
-    biokids-ai matches, and src/biokids_shell/__main__.py exists, so the
-    /usr/bin/biokids-shell console script points at a real module.
-    `dev/check_packaging.py` now runs in CI and re-checks that class of mistake -
-    every path a .install file names must exist or be produced by debian/rules -
-    but it is a source-tree check, not a build.
+ 2. **Closed: the build runs.** The first real build failed in dh_install for
+    two reasons no source-tree check had covered - PYBUILD_NAME redirected the
+    install to debian/python3-biokids, and pybuild installs into the versioned
+    python3.13/dist-packages that dh_python3 renames only later (D-153). Both
+    are fixed and `dev/check_packaging.py` now checks both. With
+    `-Ppkg.biokids.nokeyring` it produces eight packages, and lintian 2.122
+    reports no errors and only `initial-upload-closes-no-bugs` as a warning.
 
  3. **Debian binary package names.** Every one of these was written from
     memory and must be checked with `apt-cache policy` on trixie before the
@@ -384,12 +386,10 @@ Everything below is unverified, in roughly the order it will bite:
     be wrong; if dbus-next is not packaged, that is a decision for T3.1 and not
     something to paper over here.
 
- 4. **The dist-info glob.** biokids-core.install claims
-    `usr/lib/python3/dist-packages/biokids-*`, which is the wheel metadata
-    directory. With pybuild-plugin-pyproject that is `biokids-0.1.0.dist-info`.
-    If the build falls back to the legacy setuptools path it will be an
-    `.egg-info` instead - still matched by the glob, but check what actually
-    lands there, because dh_install fails on a glob that matches nothing.
+ 4. **Closed: the dist-info glob.** biokids-core.install claims
+    `usr/lib/python3*/dist-packages/biokids-*`, the wheel metadata directory,
+    and on trixie with pybuild-plugin-pyproject that is
+    `biokids-0.1.0.dist-info`, as expected.
 
  5. **The systemd sandbox has never been started.** In particular:
     MemoryDenyWriteExecute=yes against argon2-cffi and cryptography (cffi only
@@ -402,7 +402,9 @@ Everything below is unverified, in roughly the order it will bite:
     it. `systemd-analyze verify` on all five units is the cheapest first check.
 
  6. **The purge question.** The flow - config script registers the template at
-    unpack, postrm asks at purge - is standard but has not been exercised. Test
+    install, postrm asks at purge - is standard but has not been exercised. The
+    postinst now loads confmodule, without which a `dpkg -i` install never ran
+    the config script at all (D-153). Test
     it as T8.5 says: install, use, remove (data must survive), purge (must ask,
     and must keep the data if the answer is no). Also test a purge under
     DEBIAN_FRONTEND=noninteractive, where the data must survive.

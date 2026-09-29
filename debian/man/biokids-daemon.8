@@ -1,0 +1,57 @@
+.TH BIOKIDS\-DAEMON 8 2026\-09\-30 "biokids 0.1.0" "BioKids"
+.SH NAME
+biokids\-daemon \- BioKids time keeping and enforcement
+.SH SYNOPSIS
+.B biokids\-daemon
+.RB [ \-\-config
+.IR file ]
+.RB [ \-\-log\-level
+.IR level ]
+.SH DESCRIPTION
+.B biokids\-daemon
+counts each child's screen time and enforces the limits a parent set:
+it warns before time runs out, ends the session when it does, and keeps the
+record the parent panel shows.
+It runs as root under
+.BR systemd (1)
+as
+.B biokids\-daemon.service
+and is not meant to be started by hand.
+.PP
+If it fails,
+.B biokids\-lockdown.service
+locks every child session; see
+.BR biokids\-admin (8).
+.SH OPTIONS
+.TP
+.BI \-\-config " file"
+Read the configuration from
+.I file
+instead of
+.IR /etc/biokids/config.toml .
+.TP
+.BI \-\-log\-level " level"
+One of DEBUG, INFO, WARNING or ERROR.
+.TP
+.B \-\-no\-logind
+Run without systemd\-logind.
+For development only.
+.TP
+.B \-\-once
+Run a single tick and exit.
+For smoke tests only.
+.SH FILES
+.TP
+.I /etc/biokids/config.toml
+Machine configuration.
+.TP
+.I /var/lib/biokids/biokids.db
+Settings, time history and the audit log.
+.TP
+.I /run/biokids/daemon.sock
+The socket the panel and
+.BR biokids\-admin (8)
+talk to.
+.SH SEE ALSO
+.BR biokids\-admin (8),
+.BR biokids\-panel (8)

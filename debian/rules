@@ -7,8 +7,16 @@
 # every component's dependencies, and this file takes that single installed tree
 # apart into packages that each declare only what they really need. See
 # debian/README.source for what could not be verified on the development host.
-
-export PYBUILD_NAME=biokids
+#
+# PYBUILD_NAME is deliberately NOT set. pybuild reads it as "there is one
+# binary package, python3-$NAME" and quietly swaps a --destdir of debian/tmp for
+# debian/python3-biokids, a package that does not exist - so every .install
+# file finds nothing and dh_install fails the build. That was the first real
+# build's first error.
+#
+# pybuild also installs into the *versioned* python3.X/dist-packages and leaves
+# dh_python3 to move it to python3/dist-packages later, after dh_install. That
+# is why the .install files say `usr/lib/python3*/dist-packages`.
 
 # The archive keyring needs a key that only exists at release time. Under this
 # profile the package is not built at all (see debian/control) and the key is

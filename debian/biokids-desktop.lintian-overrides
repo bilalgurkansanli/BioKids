@@ -1,2 +1,0 @@
-# A metapackage ships no files on purpose: its dependency list is the package.
-biokids-desktop: empty-binary-package

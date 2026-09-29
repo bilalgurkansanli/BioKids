@@ -1,4 +1,4 @@
 # No unit and no /usr/bin entry point yet: the worker is started by the daemon
 # once a parent turns the feature on, and the model fetcher arrives with the
 # rest of the AI layer.
-usr/lib/python3/dist-packages/biokids_ai
+usr/lib/python3*/dist-packages/biokids_ai
