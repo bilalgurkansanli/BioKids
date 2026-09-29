@@ -34,7 +34,11 @@ The ISO is `debian-13.x.y-amd64-netinst.iso` from
 Five settings that a first install gets wrong, in the order you meet them:
 
 1. **Skip VirtualBox's unattended install.** VirtualBox 7 selects it by default
-   when you attach an ISO. It chooses its own desktop and user and never shows the
+   when you attach an ISO. The checkbox is worded differently between versions —
+   *"Skip Unattended Installation"*, which must be **ticked**, or *"Proceed with
+   Unattended Installation"* (Turkish UI: *"Katılımsız Kurulumla Devam Et"*),
+   which must be **unticked**. Either way the goal is the same: no unattended
+   install. It chooses its own desktop and user and never shows the
    Software selection screen, so neither Xfce nor the SSH server gets picked.
    **How to tell it happened anyway:** the installer never asks you a question,
    and the finished machine logs in as `vboxuser` to a GNOME desktop. That
