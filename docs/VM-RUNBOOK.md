@@ -463,7 +463,14 @@ greeter.
    `/usr/share/biokids/characters/` is missing (D-150).
 4. `Alt+F4` does nothing. `Ctrl+Alt+F2` does nothing (properly checked in §6).
 5. Tapping a tile opens the app **and the launcher responds immediately** — the
-   loading screen must not stay up until you close the app (D-149).
+   loading screen must not stay up until you close the app (D-149). A web tile
+   (TRT Çocuk, EBA) must open the site: Chromium's "This page is blocked" means
+   the daemon's policy does not name it (D-156) — check
+   `/etc/chromium/policies/managed/biokids-kiosk.json`. No window may ask the child
+   for a keyring password or offer to restore pages.
+6. Install `biokids-desktop` **before** the wizard, as §2.1 does: the app step
+   offers only what is installed then, and the panel has no apps screen yet to add
+   the rest later (D-156).
 
 ### 4.1 The user units — `README.source` §7 item 8
 

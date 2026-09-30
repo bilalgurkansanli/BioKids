@@ -23,6 +23,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlsplit
 
 from sqlalchemy.orm import Session
 
@@ -151,9 +152,10 @@ class Supervisor:
         self._session = self.database.factory()
         self._ledger = TimeLedger(self._session, self.clock, self.config)
         reading = self._ledger.begin()
+        # Writes the kiosk policy too, because the policy carries the children's
+        # web tiles and so has to follow every change to them.
         self.reload()
         await self.watcher.start()
-        self._write_kiosk_policy()
         self.started = True
 
         repo.audit(
@@ -198,8 +200,10 @@ class Supervisor:
         this unit is the one whose `ReadWritePaths` names it. The launcher runs
         as the child and can only check the result.
 
-        The policy depends on nothing but the launcher's host and port, which
-        are machine-wide, so one file covers every child.
+        One file covers every child, because Chromium reads only the
+        machine-wide directory. It carries the launcher's origin and the hosts
+        of every web tile enabled for any child (D-156), which is why `reload`
+        rewrites it: enabling EBA in the panel has to reach the browser.
 
         Everything about this was already in place - the config key, the
         ReadWritePath with a comment explaining its `-` prefix, the postrm that
@@ -216,7 +220,9 @@ class Supervisor:
             directory.mkdir(parents=True, exist_ok=True)
             temp = path.with_suffix(".json.tmp")
             temp.write_text(
-                json.dumps(kiosk_policy(origin), indent=2, ensure_ascii=False),
+                json.dumps(
+                    kiosk_policy(origin, self._web_tile_hosts()), indent=2, ensure_ascii=False
+                ),
                 encoding="utf-8",
             )
             temp.replace(path)
@@ -233,6 +239,24 @@ class Supervisor:
             )
             return
         log.info("Chromium managed policy written to %s for %s", path, origin)
+
+    def _web_tile_hosts(self) -> list[str]:
+        """The hosts of the web tiles enabled for any child, `www.` dropped.
+
+        Dropped because a host without a scheme also allows its subdomains in
+        Chromium's URL filter, so `trtcocuk.net.tr` covers `www.` and anything
+        the site sends a child on to; `www.trtcocuk.net.tr` would not cover the
+        bare domain.
+        """
+        hosts: set[str] = set()
+        for child_id in self.children:
+            for _link, app in repo.list_child_apps(self.session, child_id):
+                if app.kind != "web" or not app.url:
+                    continue
+                host = (urlsplit(app.url).hostname or "").removeprefix("www.")
+                if host:
+                    hosts.add(host)
+        return sorted(hosts)
 
     def reload(self) -> None:
         """Re-read children and policies. Called at start and on a `reload` op.
@@ -286,6 +310,7 @@ class Supervisor:
 
         self.children = fresh
         self.by_user = by_user
+        self._write_kiosk_policy()
         self.bus.publish(EventKind.POLICY_CHANGED, children=len(fresh))
 
     # ----------------------------------------------------------------- tick

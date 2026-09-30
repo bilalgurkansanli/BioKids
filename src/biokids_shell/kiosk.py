@@ -27,6 +27,7 @@ import asyncio
 import json
 import logging
 import shutil
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -54,16 +55,26 @@ child still sees a locked screen, because the session is the desktop and the
 desktop has nothing on it."""
 
 
-def kiosk_policy(origin: str) -> dict[str, object]:
-    """The managed policy for the kiosk profile.
+def kiosk_policy(origin: str, web_hosts: Sequence[str] = ()) -> dict[str, object]:
+    """The managed policy for the kiosk, and for the child's browsing window.
 
-    Everything here is a `SECURITY.md` §5 setting narrowed to one window. The
-    allowlist has exactly one entry, so "type another address" has nowhere to
-    go even before DNS is involved.
+    Everything here is a `SECURITY.md` §5 setting. Chromium on Linux reads
+    managed policy only from `/etc/chromium/policies/managed`, for every
+    profile on the machine at once - a profile directory adds no policy source
+    (D-149) - so this one file governs the launcher *and* the window a web tile
+    opens. With only the launcher's origin allowed, every web tile a parent
+    enabled opened on "This page is blocked" (D-156).
+
+    So the allowlist is the launcher's origin plus `web_hosts`: the hosts of
+    the web tiles enabled for any child, which the daemon collects. A host with
+    no scheme allows it over http and https and allows its subdomains, which
+    is what a site that sends you from `eba.gov.tr` to `giris.eba.gov.tr` needs.
+    "Type another address" still has nowhere to go.
     """
+    allowed = [origin, *sorted({host for host in web_hosts if host and host != origin})]
     return {
         "URLBlocklist": ["*"],
-        "URLAllowlist": [origin],
+        "URLAllowlist": allowed,
         "URLBlocklistExceptions": [],
         "DeveloperToolsAvailability": 2,
         "IncognitoModeAvailability": 1,
@@ -191,6 +202,7 @@ class KioskSupervisor:
             "--disable-pinch",
             "--overscroll-history-navigation=0",
             "--disable-session-crashed-bubble",
+            "--hide-crash-restore-bubble",
             "--noerrdialogs",
             "--disable-infobars",
             "--check-for-update-interval=31536000",

@@ -211,6 +211,16 @@ class AppLauncher:
             "--no-first-run",
             "--no-default-browser-check",
             "--disable-features=Translate",
+            # Or Chromium asks GNOME's keyring for somewhere to keep passwords,
+            # and the keyring asks a six-year-old to choose a password for a
+            # "Default Keyring" - on an account that deliberately has none (D-156).
+            "--password-store=basic",
+            # After a power cut or an end-of-day shutdown, Chromium greets the
+            # child with "Restore pages? Chromium didn't shut down correctly".
+            # Both spellings: the older one is what the kiosk already passes,
+            # and current Chromium reads the newer one.
+            "--hide-crash-restore-bubble",
+            "--disable-session-crashed-bubble",
             "--start-maximized",
             url,
         ]

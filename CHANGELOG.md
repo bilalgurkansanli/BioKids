@@ -146,6 +146,11 @@ Found on the first Debian 13 VM (`docs/VM-RUNBOOK.md`), none of it visible from 
   parsed nothing and locked nobody. "+10 dk" could not unlock a locked child either.
 - **The kiosk ran without its browser policy** (D-155): the directory the daemon writes
   it to did not exist on Debian.
+- **Every web tile opened on "This page is blocked"** (D-156): the kiosk policy is
+  machine-wide and allowed only the launcher. It now names the children's web tiles. The
+  tile's browser also asked the child to invent a keyring password, and offered to
+  "restore pages" after every shutdown. A child added from the children screen, or whose
+  parent skipped the app step, got no tiles at all.
 
 ### Known gaps
 

@@ -469,6 +469,30 @@ def test_the_kiosk_policy_allows_exactly_one_origin() -> None:
     assert policy["URLBlocklistExceptions"] == []
 
 
+def test_the_policy_lets_the_childs_web_tiles_through() -> None:
+    """The file is machine-wide, so it governs the tile's window as well (D-156).
+
+    With only the launcher allowed, every web tile opened on "This page is
+    blocked". Hosts arrive without `www.` so their subdomains are covered too.
+    """
+    policy = kiosk_policy("127.0.0.1:7879", ["trtcocuk.net.tr", "eba.gov.tr", "eba.gov.tr"])
+
+    assert policy["URLAllowlist"] == ["127.0.0.1:7879", "eba.gov.tr", "trtcocuk.net.tr"]
+    assert policy["URLBlocklist"] == ["*"], "everything else stays closed"
+
+
+def test_the_childs_browser_keeps_no_passwords_in_a_keyring(config: Config) -> None:
+    """Or GNOME's keyring asks the child to invent a password for it (D-156)."""
+    argv = AppLauncher(config).browser_argv("https://www.trtcocuk.net.tr")
+    assert "--password-store=basic" in argv
+
+
+def test_the_childs_browser_does_not_offer_to_restore_after_a_shutdown(config: Config) -> None:
+    """The end-of-day shutdown is not a crash, and a child cannot answer the question."""
+    argv = AppLauncher(config).browser_argv("https://www.trtcocuk.net.tr")
+    assert "--hide-crash-restore-bubble" in argv
+
+
 def test_the_kiosk_policy_closes_the_obvious_ways_out() -> None:
     policy = kiosk_policy("127.0.0.1:7879")
     assert policy["DeveloperToolsAvailability"] == 2

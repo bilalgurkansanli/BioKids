@@ -537,7 +537,37 @@ def test_a_second_child_can_be_added_outside_the_wizard(
         assert kerem.age_band == "8-10"
         policy = repo.get_or_create_policy(session, kerem.id)
         assert policy.weekday_quota_min == 120, "the 8-10 default, not the 4-7 one"
+        # On the VM a second child got no tiles at all - not even shutdown (D-156).
+        tiles = {app.slug for _link, app in repo.list_child_apps(session, kerem.id)}
+        assert {"browser", "volume", "shutdown"} <= tiles
     assert daemon.ran("reload")
+
+
+def test_skipping_the_app_step_still_leaves_tiles(
+    client: TestClient, db: Database, daemon: FakeDaemon
+) -> None:
+    """ "Şimdilik geç" on step 5 is a link to step 6, so the defaults come first (D-49)."""
+    client.post("/wizard/1", data={"lang": "tr"}, follow_redirects=False)
+    client.post(
+        "/wizard/2", data={"name": "Anne", "pin": PIN, "pin_again": PIN}, follow_redirects=False
+    )
+    client.post(
+        "/wizard/4",
+        data={
+            "display_name": "Elif",
+            "birth_year": dt.date.today().year - 6,
+            "unix_user": "elif",
+            "avatar": "fox",
+            "locale": "tr",
+        },
+        follow_redirects=False,
+    )
+
+    with db.session() as session:
+        elif_ = repo.get_child_by_user(session, "elif")
+        assert elif_ is not None
+        tiles = {app.slug for _link, app in repo.list_child_apps(session, elif_.id)}
+    assert {"browser", "volume", "shutdown"} <= tiles
 
 
 def test_adding_a_child_with_a_bad_username_is_refused(

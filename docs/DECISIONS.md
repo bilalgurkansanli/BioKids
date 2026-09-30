@@ -1234,3 +1234,31 @@ and all.
 it: `biokids-provision@.service` passed `%i`, the *escaped* instance, so adduser was asked
 for `elif\x2dnur`, refused it, and the second child had no account. `%I` is the unescaped
 one. The panel said so, as D-152 intended - which is the only reason it was seen at once.
+
+**D-156 [claude] The child's browser policy names their web tiles; every child starts with tiles.**
+Found by tapping the first web tile on the VM, once D-155 let a child log in at all.
+
+*"This page is blocked."* Chromium on Linux has one managed-policy source for the whole
+machine, `/etc/chromium/policies/managed` (D-149), so the kiosk policy of D-151 - block
+everything, allow the launcher's origin - also governed the window a web tile opens. TRT
+Çocuk, a tile the parent had enabled, opened on Chromium's "Your organization doesn't
+allow you to view this site". The allowlist is now the launcher's origin plus the host of
+every web tile enabled for any child, `www.` dropped so that subdomains are covered, and
+the daemon rewrites the file on every `reload` as well as at start. Everything else stays
+blocked. The same file governs a parent's own Chromium on that machine, which was already
+true and is written down here: on a family machine the parent uses the panel from their
+phone, or another browser.
+
+*A keyring for a six-year-old.* The tile's Chromium kept passwords in GNOME's keyring,
+which on an account with no password asked the child to choose one for a "Default
+Keyring". It now runs with `--password-store=basic`, as the kiosk already did. After
+the VM was powered off, the same window also opened with "Restore pages? Chromium didn't
+shut down correctly" - which every end-of-day shutdown would produce. Both it and the
+kiosk now pass `--hide-crash-restore-bubble`, the spelling current Chromium reads.
+
+*An empty launcher.* The wizard's "Şimdilik geç" on the app step is a link straight to
+step 6, and the children screen never chose apps at all, so both left a child with no
+tiles - not even volume or shutdown, which D-49's "every step is skippable with a sane
+default" had promised. A child with no tiles now gets the age-appropriate, installed ones
+when they are created. Apps installed afterwards still reach an existing child only
+through the wizard: the panel has no apps screen yet, a gap for Phase 1.

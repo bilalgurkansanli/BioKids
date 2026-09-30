@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 
 from biokids_core import repo, security
 from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
+from biokids_core.config import Config
 from biokids_core.db.models import Child, Parent, utcnow
 from biokids_core.i18n import Translator
 from biokids_core.ipc import Op
@@ -233,6 +234,9 @@ def register_wizard(app: FastAPI) -> None:
         if child is None:
             return _render_step(ctx, request, session, state, tr, 4, error=tr(error))
 
+        # Before step 5, so that "Şimdilik geç" there leaves a launcher with
+        # tiles on it rather than an empty screen (D-49, D-156).
+        assign_default_apps(session, child, ctx.config)
         provisioned = provision_child(session, child)
         repo.set_setting(session, SETTING_PENDING_CHILD, str(child.id))
         repo.audit(
@@ -432,6 +436,25 @@ def provision_child(session: Session, child: Child) -> ProvisionResult:
             "; ".join(result.problems),
         )
     return result
+
+
+def assign_default_apps(session: Session, child: Child, config: Config) -> None:
+    """The tiles a child starts with when nobody has chosen: right for their age,
+    and installed on this machine.
+
+    Only for a child with no tiles at all, so it never undoes a parent's choice.
+    Without it, "Şimdilik geç" on the wizard's app step - a link straight to
+    step 6 - and every child added from the children screen got a launcher
+    with nothing on it, not even the volume or the shutdown tile (D-156).
+    """
+    if repo.list_child_apps(session, child.id, only_enabled=False):
+        return
+    catalog = load_catalog(config=config)
+    sync_catalog(session, catalog)
+    age = child.age_on(dt.date.today())
+    enable_for_child(
+        session, child.id, [entry.slug for entry in catalog.for_age(age, installed_only=True)]
+    )
 
 
 def create_child(

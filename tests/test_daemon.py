@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import datetime as dt
+import json
 from collections.abc import Sequence
 from typing import Any
 
@@ -1647,3 +1648,28 @@ async def test_a_session_already_on_screen_is_not_activated_again(config: Config
     await Enforcer(config, runner).unlock_session("96")
 
     assert not runner.ran("loginctl", "activate", "96")
+
+
+async def test_the_browser_policy_follows_the_childrens_web_tiles(
+    supervisor: Supervisor, session: Session, config: Config
+) -> None:
+    """Machine-wide, so it must name every web tile a parent enabled (D-156)."""
+    from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
+    from biokids_shell.kiosk import POLICY_FILENAME
+
+    sync_catalog(session, load_catalog(config=config))
+    enable_for_child(session, 1, ["eba", "volume"])
+    session.commit()
+
+    await supervisor.start()
+    path = config.paths.chromium_policy_dir / POLICY_FILENAME
+    allowed = json.loads(path.read_text(encoding="utf-8"))["URLAllowlist"]
+    assert "eba.gov.tr" in allowed
+    assert "trtcocuk.net.tr" not in allowed
+
+    enable_for_child(session, 1, ["eba", "trtcocuk"])
+    session.commit()
+    supervisor.reload()
+
+    allowed = json.loads(path.read_text(encoding="utf-8"))["URLAllowlist"]
+    assert "trtcocuk.net.tr" in allowed, "enabling a tile in the panel must reach the browser"

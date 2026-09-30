@@ -513,7 +513,7 @@ def register_routes(app: FastAPI) -> None:
         if not auth.csrf_ok(state, csrf_token):
             return see_other("/children?error=csrf")
 
-        from biokids_panel.wizard import create_child, provision_child
+        from biokids_panel.wizard import assign_default_apps, create_child, provision_child
 
         child, error = create_child(
             session,
@@ -543,6 +543,7 @@ def register_routes(app: FastAPI) -> None:
             target=f"child:{child.id}",
             detail={"unix_user": child.unix_user},
         )
+        assign_default_apps(session, child, ctx.config)
         provisioned = provision_child(session, child)
         session.commit()
         _call_daemon(ctx, Op.RELOAD)
