@@ -604,15 +604,22 @@ Note the number. It has to survive the next two steps.
 
 ### 5.2 Upgrade
 
-To the `v2` packages built in §1.3. **Upgrade all six together:** every package
-pins `biokids-core` and `biokids` to `(= ${binary:Version})`, so upgrading a
-subset leaves the rest unsatisfiable:
+To the `v2` packages built in §1.3. **Upgrade all seven together** — the six and
+`biokids-desktop`, which §2.1 installed too. Every package pins `biokids-core`
+and `biokids` to `(= ${binary:Version})`, so upgrading a subset leaves the rest
+unsatisfiable, and apt resolves that by *removing* what was left out: with only
+the six named, the first run's `apt` quietly removed `biokids-desktop`. An
+upgrade from the archive brings all of them at once, so this is about the
+runbook, not the product:
 
 ```bash
 sudo apt install "$D"/v2/biokids_*.deb "$D"/v2/biokids-core_*.deb \
   "$D"/v2/biokids-daemon_*.deb "$D"/v2/biokids-panel_*.deb \
-  "$D"/v2/biokids-shell_*.deb "$D"/v2/biokids-voice_*.deb
+  "$D"/v2/biokids-shell_*.deb "$D"/v2/biokids-voice_*.deb \
+  "$D"/v2/biokids-desktop_*.deb
 ```
+
+Read apt's summary before answering: it must say nothing is to be removed.
 
 **Do the upgrade while the child is logged in with the launcher open.** That is
 the case D-140 was about: the launcher holds a subscription open, the daemon
@@ -649,6 +656,20 @@ the package to troubleshoot must not lose their child's history.
 ```bash
 sudo apt purge biokids-core
 ```
+
+The question comes only after apt has removed the files, and debconf ignores
+anything typed before it asks. Over ssh without a person at the keyboard,
+`dev/answer_debconf.py` waits for the question and then answers it:
+
+```bash
+sudo python3 /media/sf_BioKids/dev/answer_debconf.py hayır \
+  env DEBIAN_FRONTEND=readline LANG=tr_TR.UTF-8 apt-get purge -y biokids-core
+```
+
+On a Turkish machine the question is in Turkish — "Bu ailenin BioKids verileri
+silinsin mi? [evet/hayır]". English means the translation did not reach the
+package (D-159). A removal that prints `block: not found` is the other D-159
+bug.
 
 **Pass:** a debconf prompt appears — "Delete the stored BioKids data for this
 family?", defaulting to **no**. Answer **no**:

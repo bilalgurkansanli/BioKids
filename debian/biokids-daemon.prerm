@@ -1,8 +1,10 @@
 #!/bin/sh
 # biokids-daemon prerm: put the daemon down before its files go away.
 #
-# dh_installsystemd generates an equivalent stop into the #DEBHELPER# block
-# below. It is written out here as well, first, because the order is what
+# dh_installsystemd generates an equivalent stop into the debhelper block
+# below. (Never write that block's marker in a comment: debhelper substitutes
+# the first one it finds, so a comment mentioning it gets the generated code
+# spliced into its middle - D-159.) It is written out here as well, first, because the order is what
 # matters: the daemon has to be stopped before dpkg starts unlinking the Python
 # modules it is running out of. A second stop of an already stopped unit costs
 # nothing.

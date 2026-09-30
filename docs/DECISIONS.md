@@ -1311,3 +1311,36 @@ left Elif in her session, and `loginctl lock-session` still took the seat to the
 screen. Provisioning now copies every `.desktop` it ships, not only the launcher's. A
 file added this way reaches an existing child only when they are provisioned again,
 which nothing does on upgrade yet.
+
+**D-159 [claude] What T8.5 and T5.7 found on a clean machine.**
+Runbook sections 5 and 6, run on the `clean-debian-13` snapshot with the D-158 packages.
+Everything the runbook asks of them passed: an upgrade with the child logged in took 19
+seconds, locked nobody and kept both the ledger and an edited `config.toml`; remove kept
+the data; purge asked, and obeyed "hayır" and "evet"; a reinstall asked again; an
+unattended purge kept the data; and in the child's session Ctrl+Alt+F2 to F6 and
+Ctrl+Alt+Backspace did nothing, with no getty on tty2-6. Four things were wrong on the way.
+
+*The purge question was never Turkish.* `debian/biokids-core.templates` said
+`Description:`; po2debconf translates only fields written `_Description:`, so
+`debian/po/tr.po` never reached the package and a Turkish machine asked in English. Fixed,
+and checked on the VM: "Bu ailenin BioKids verileri silinsin mi? [evet/hayır]".
+
+*"block: not found" on every removal.* debhelper expands the first debhelper marker it
+finds, and both prerm scripts mentioned it in a comment above the real one. The generated
+code was spliced into the comment and the comment's tail ran as a command. Harmless only
+because it came before `set -e`. The comments no longer name the marker, and
+`dev/check_packaging.py` refuses a maintainer script where it is not exactly once, alone
+on its line.
+
+*The runbook's upgrade removed a package.* It upgraded the six core packages, but §2.1 had
+also installed `biokids-desktop`, which pins `biokids (= ${binary:Version})`; apt resolved
+that by removing it, silently under `-y`. The runbook now upgrades all seven. An upgrade
+from the archive brings all of them at once, so the product was not affected.
+
+*The greeter is not yet a set of pictures.* On a fresh machine lightdm-gtk-greeter opens on
+"Diğer..." with a user-name field, and a child has to find their name in a drop-down.
+D-155 made choosing it enough; D-99's large pictures need a child-friendly greeter, which
+is Phase 1 work.
+
+`dev/answer_debconf.py` answers the purge question once it appears, so section 5.4 can
+be run over ssh; debconf ignores anything typed before it asks.

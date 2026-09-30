@@ -59,6 +59,7 @@ def problems() -> list[str]:
     found += _units_referenced_are_shipped()
     found += _pybuild_installs_into_debian_tmp()
     found += _manual_pages_exist()
+    found += _debhelper_marker_once()
     return found
 
 
@@ -209,6 +210,34 @@ def _manual_pages_exist() -> list[str]:
                     f"{unit.name}: Documentation=man:{page}({section}), but no "
                     f".manpages file ships {page}.{section}"
                 )
+    return out
+
+
+MAINTAINER_SCRIPTS = ("preinst", "postinst", "prerm", "postrm")
+
+
+def _debhelper_marker_once() -> list[str]:
+    """The debhelper marker, exactly once, on a line of its own.
+
+    debhelper substitutes the *first* occurrence it finds. Two prerm scripts
+    mentioned it in a comment above the real one, so the generated code was
+    spliced into the middle of the comment and the comment's tail ran as a
+    command: `prerm: 20: block: not found`, on every removal (D-159).
+    """
+    marker = "#" + "DEBHELPER" + "#"
+    out: list[str] = []
+    for script in sorted(DEBIAN.iterdir()):
+        if script.suffix.lstrip(".") not in MAINTAINER_SCRIPTS:
+            continue
+        lines = script.read_text(encoding="utf-8").splitlines()
+        mentions = [n for n, line in enumerate(lines, 1) if marker in line]
+        own = [n for n in mentions if lines[n - 1].strip() == marker]
+        if len(mentions) != 1 or len(own) != 1:
+            out.append(
+                f"{script.name}: the debhelper marker must appear exactly once, alone on "
+                f"its line (found on lines {mentions or 'none'}); debhelper replaces the "
+                "first one, comment or not"
+            )
     return out
 
 

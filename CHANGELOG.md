@@ -157,6 +157,10 @@ Found on the first Debian 13 VM (`docs/VM-RUNBOOK.md`), none of it visible from 
 - **A child left idle for ten minutes was locked out until a parent came** (D-158):
   light-locker's idle lock met an account with no password. A child's session now
   locks only when BioKids locks it.
+- **The purge question was asked in English on a Turkish machine, and every removal
+  printed "block: not found"** (D-159): a template field without its translation mark,
+  and a comment debhelper expanded. Found running T8.5 on a clean VM, which otherwise
+  passed, as did the virtual-terminal guards of T5.7.
 
 ### Known gaps
 

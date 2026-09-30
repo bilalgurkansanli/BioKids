@@ -1,5 +1,5 @@
 Template: biokids-core/purge-data
 Type: boolean
 Default: false
-Description: Delete the stored BioKids data for this family?
+_Description: Delete the stored BioKids data for this family?
  /var/lib/biokids holds every child's time history, their settings and the audit log. If it is kept, a later reinstallation of BioKids finds it again. If it is deleted, this family's record of computer use is gone for good; that cannot be undone.

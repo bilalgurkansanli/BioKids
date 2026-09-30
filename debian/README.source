@@ -386,13 +386,14 @@ Everything below is unverified, in roughly the order it will bite:
     relies on systemd turning `$$` into a literal dollar before /bin/sh sees
     it. `systemd-analyze verify` on all five units is the cheapest first check.
 
- 6. **The purge question.** The flow - config script registers the template at
-    install, postrm asks at purge - is standard but has not been exercised. The
-    postinst now loads confmodule, without which a `dpkg -i` install never ran
-    the config script at all (D-153). Test
-    it as T8.5 says: install, use, remove (data must survive), purge (must ask,
-    and must keep the data if the answer is no). Also test a purge under
-    DEBIAN_FRONTEND=noninteractive, where the data must survive.
+ 6. **Closed: the purge question.** Exercised on the VM as T8.5 says (runbook
+    section 5): a remove keeps the data; a purge asks, keeps it on "hayır" and
+    deletes it on "evet"; a reinstall asks again; an unattended purge keeps it.
+    It took two fixes (D-159): the template said `Description:` where
+    po2debconf needs `_Description:`, so the Turkish translation never reached
+    the package and a Turkish machine was asked in English; and both prerm
+    scripts mentioned the debhelper marker in a comment, which debhelper
+    expanded there, printing "block: not found" on every removal.
 
  7. **biokids-admin has since landed.** The lockdown unit and the daemon's
     ExecStopPost both run `/usr/bin/biokids-admin lockdown`, which was

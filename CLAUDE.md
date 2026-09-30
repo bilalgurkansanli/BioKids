@@ -170,11 +170,13 @@ setup wizard, reaches the panel from their phone over Tailscale, sets a daily qu
 and the child session enforces it with spoken warnings.
 
 T0–T8 are written and tested; `tests/test_acceptance.py` runs the exit criterion end
-to end in one process. **T9 is not done**, and what is left is the VM. The packages
-now build, pass lintian and install on a Debian 13 VM, the wizard completes there and
-a child logs in to the launcher — which took D-153, D-154 and D-155 to get to.
-Still ahead in `docs/VM-RUNBOOK.md`: Tailscale and the phone (§3.3), the spoken
-warnings, and the upgrade, clean-install, reboot and clock runs (§5–§7).
+to end in one process. **T9 is not done**, and what is left is §7 of
+`docs/VM-RUNBOOK.md`. Sections 0–6 have passed on a Debian 13 VM: the packages build,
+pass lintian and install; the wizard completes; a child logs in by their picture;
+the parent reached the panel from a phone over Tailscale; upgrade, remove and purge
+behave (T8.5); the VT guards hold (T5.7). Getting there took D-153 to D-159.
+Still ahead: the spoken warnings, and §7's run on a fresh VM — the 20-minute quota
+set from the phone, reboot, clock, and the recording.
 
 The voice question is closed (D-137): there is no Turkish Piper voice anyone may
 redistribute and `piper-tts` is not in Debian 13, so espeak-ng speaks the warnings and

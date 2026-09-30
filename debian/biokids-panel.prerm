@@ -2,7 +2,7 @@
 # biokids-panel prerm: stop the panel before its files go away.
 #
 # As in biokids-daemon.prerm, this is explicit and comes before the generated
-# #DEBHELPER# block so that the order is guaranteed: the panel writes to the
+# debhelper block so that the order is guaranteed: the panel writes to the
 # database, and it should not still be doing that while dpkg removes the code
 # underneath it.
 
