@@ -197,6 +197,7 @@ ERROR_KEYS: dict[str, str] = {
     "pin": "auth.pin.wrong",
     "passphrase": "auth.passphrase.wrong",
     "remote": "remote.failed",
+    "remote_approval": "remote.needs_approval",
     "provision": "child.provision_failed",
 }
 

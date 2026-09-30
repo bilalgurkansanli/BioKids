@@ -816,6 +816,9 @@ def register_routes(app: FastAPI) -> None:
             tailscale=remote.detect(),
             panel_port=ctx.config.panel.port,
             daemon_up=ctx.client.available(),
+            approval_url=remote.approval_url_in(
+                repo.get_setting(session, remote.SETTING_APPROVAL_URL)
+            ),
         )
 
     @app.post("/settings/language")
@@ -958,8 +961,13 @@ def register_routes(app: FastAPI) -> None:
             },
             severity="info" if result.ok else "warning",
         )
+        repo.set_setting(session, remote.SETTING_APPROVAL_URL, result.approval_url)
         session.commit()
-        return see_other("/settings?saved=1" if result.ok else "/settings?error=remote")
+        if result.ok:
+            return see_other("/settings?saved=1")
+        if result.approval_url:
+            return see_other("/settings?error=remote_approval")
+        return see_other("/settings?error=remote")
 
     # ---------------------------------------------------------------- PWA
 

@@ -1415,3 +1415,55 @@ def test_a_suggested_name_reuses_a_childs_account_from_an_earlier_install(
         )
         assert child is not None
         assert child.unix_user == "elif"
+
+
+# ------------------------------------------- Tailscale's approval page (D-157)
+
+APPROVAL = "https://login.tailscale.com/f/serve?node=nH6HrHEzpo11CNTRL"
+
+
+def test_the_parent_is_shown_the_page_that_turns_serve_on(
+    client: TestClient, family_ready: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """On a new tailnet the panel said only "could not be changed" (D-157)."""
+    from biokids_core import remote
+
+    running = remote.RemoteStatus(state=remote.RemoteState.RUNNING)
+    monkeypatch.setattr(remote, "detect", lambda config=None: running)
+    monkeypatch.setattr(
+        remote,
+        "enable",
+        lambda port=None, config=None: remote.RemoteResult(
+            ok=False, error=remote.RemoteError.NEEDS_APPROVAL, approval_url=APPROVAL
+        ),
+    )
+    login(client)
+
+    response = client.post(
+        "/settings/remote",
+        data={"enable": "on", "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    assert response.headers["location"] == "/settings?error=remote_approval"
+
+    page = client.get(response.headers["location"]).text
+    assert f'href="{APPROVAL}"' in page.replace("&amp;", "&")
+    assert "onayınızı bekliyor" in page
+
+
+def test_a_stored_link_that_is_not_tailscales_is_never_shown(
+    client: TestClient, family_ready: None, db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from biokids_core import remote
+
+    running = remote.RemoteStatus(state=remote.RemoteState.RUNNING)
+    monkeypatch.setattr(remote, "detect", lambda config=None: running)
+    with db.session() as session:
+        repo.set_setting(
+            session, remote.SETTING_APPROVAL_URL, "https://evil.example/f/serve?node=abc"
+        )
+        session.commit()
+    login(client)
+
+    page = client.get("/settings").text
+    assert "evil.example" not in page

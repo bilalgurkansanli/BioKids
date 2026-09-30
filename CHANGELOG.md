@@ -151,6 +151,9 @@ Found on the first Debian 13 VM (`docs/VM-RUNBOOK.md`), none of it visible from 
   tile's browser also asked the child to invent a keyring password, and offered to
   "restore pages" after every shutdown. A child added from the children screen, or whose
   parent skipped the app step, got no tiles at all.
+- **Turning on phone access failed silently on every new tailnet** (D-157): Tailscale
+  waits for its owner to approve Serve, and the panel dropped the page it named. The
+  panel now shows it. Tailscale's client log upload is turned off in the runbook.
 
 ### Known gaps
 

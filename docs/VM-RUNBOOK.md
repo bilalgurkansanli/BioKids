@@ -418,6 +418,34 @@ sudo apt update && sudo apt install tailscale && sudo tailscale up
 ```
 
 `tailscale up` prints a link; open it and sign in with **your** Tailscale account.
+If the admin console lists the machine but `tailscale status` still says "Logged
+out", the approval was lost on the way back (it happened on the first run): run
+`sudo tailscale up` again and open the new link.
+
+Before anything else, stop the client sending its own diagnostic logs to
+`log.tailscale.com`, which it does by default and which principle #1 does not
+allow (D-157):
+
+```bash
+sudo sed -i 's/^FLAGS=""$/FLAGS="--no-logs-no-support"/' /etc/default/tailscaled
+sudo systemctl restart tailscaled
+ps -o args= -C tailscaled      # must end in --no-logs-no-support
+```
+
+**A new tailnet needs two switches turned on, once, by its owner**, and until
+both are on `tailscale serve` waits without saying so to anyone but a terminal:
+
+* **Serve.** Pressing "Telefondan erişimi aç" now shows the approval page
+  Tailscale asked for, as a button (D-157). Before D-157 the panel said only
+  "Telefondan erişim ayarı değiştirilemedi".
+* **HTTPS certificates**, at <https://login.tailscale.com/admin/dns> → *HTTPS
+  Certificates* → *Enable HTTPS*. On the first run approving Serve was not
+  enough; `tailscale status --json` showed `"CertDomains": null` until this was
+  on, and `serve` kept saying Serve was not enabled.
+
+Tailscale warns, correctly, that enabling HTTPS writes the machine's
+`*.ts.net` name into the public Certificate Transparency logs. The name is
+public; the panel, its traffic and access to it are not.
 
 Then complete step 8. The wizard now refuses to move on when `tailscale serve`
 fails (D-146), so if you land back on step 8 with an error, read

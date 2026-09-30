@@ -11,11 +11,13 @@ parent is most likely to be in.
 from __future__ import annotations
 
 import json
+import subprocess
 from collections.abc import Sequence
 from xml.etree import ElementTree
 
 import pytest
 
+from biokids_core import remote as remote_module
 from biokids_core.config import Config
 from biokids_core.i18n import load_catalog
 from biokids_core.remote import (
@@ -24,6 +26,7 @@ from biokids_core.remote import (
     RemoteError,
     RemoteState,
     TailscaleRemote,
+    approval_url_in,
     qr_svg,
     run_command,
 )
@@ -414,6 +417,60 @@ def test_enable_reports_failure_when_the_command_changes_nothing() -> None:
     assert not result.ok
     assert result.error == RemoteError.COMMAND_FAILED
     assert "exited 1" in result.detail
+
+
+#: What `tailscale serve --bg 7878` printed on the VM, on a tailnet one day old,
+#: before it sat waiting for somebody to open the page (D-157).
+SERVE_NOT_ENABLED = (
+    "Serve is not enabled on your tailnet.\n"
+    "To enable, visit:\n"
+    "\n"
+    "         https://login.tailscale.com/f/serve?node=nH6HrHEzpo11CNTRL\n"
+)
+
+
+def test_enable_hands_the_parent_tailscales_approval_page() -> None:
+    """Every new tailnet has Serve off. The panel said only "could not be changed"."""
+    fake = FakeTailscale(
+        served_port=None,
+        action=CommandResult(returncode=-1, stdout=SERVE_NOT_ENABLED, timed_out=True),
+        obeys_actions=False,
+    )
+    result = remote(fake).enable(PANEL_PORT)
+
+    assert not result.ok
+    assert result.error == RemoteError.NEEDS_APPROVAL
+    assert result.approval_url == "https://login.tailscale.com/f/serve?node=nH6HrHEzpo11CNTRL"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "https://evil.example/f/serve?node=abc",
+        "https://login.tailscale.com.evil.example/f/serve?node=abc",
+        "http://login.tailscale.com/f/serve?node=abc",
+        "https://login.tailscale.com/a/abc",
+        "",
+    ],
+)
+def test_only_a_tailscale_approval_page_is_ever_offered(text: str) -> None:
+    """The panel shows this as a button; it must not be anybody else's link."""
+    assert approval_url_in(text) == ""
+
+
+def test_the_real_runner_keeps_what_a_command_said_before_it_timed_out(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`serve` prints the page and then waits; the timeout used to throw both away."""
+
+    def slow(*_a: object, **_k: object) -> object:
+        raise subprocess.TimeoutExpired(["tailscale"], 15.0, output=SERVE_NOT_ENABLED.encode())
+
+    monkeypatch.setattr(remote_module.subprocess, "run", slow)
+    result = run_command(["tailscale", "serve", "--bg", "7878"], 15.0)
+
+    assert result.timed_out
+    assert approval_url_in(result.stdout)
 
 
 def test_enable_fails_when_the_mapping_takes_but_there_is_no_address() -> None:

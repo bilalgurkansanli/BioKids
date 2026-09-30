@@ -21,6 +21,16 @@
       </div>
     {% endif %}
 
+    {% if approval_url and not tailscale.serves(panel_port) %}
+      {# D-157: every new tailnet has Serve switched off, and turning it on is a
+         page only the tailnet's owner can visit. #}
+      <div class="notice" role="status">
+        <div class="notice__title">{{ _('remote.needs_approval') }}</div>
+        <p><a class="btn btn--primary" href="{{ approval_url }}" target="_blank" rel="noopener noreferrer">{{ _('remote.approval.open') }}</a></p>
+        <p class="muted small">{{ _('remote.approval.note') }}</p>
+      </div>
+    {% endif %}
+
     {% if panel_url %}
       <p><strong>{{ _('remote.url') }}:</strong> <code>{{ panel_url }}</code></p>
       {% if qr %}

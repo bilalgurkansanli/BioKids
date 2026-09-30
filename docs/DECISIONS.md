@@ -1262,3 +1262,32 @@ tiles - not even volume or shutdown, which D-49's "every step is skippable with 
 default" had promised. A child with no tiles now gets the age-appropriate, installed ones
 when they are created. Apps installed afterwards still reach an existing child only
 through the wizard: the panel has no apps screen yet, a gap for Phase 1.
+
+**D-157 [claude] The panel shows Tailscale's approval page; Tailscale's own logs stay home.**
+Found in runbook §3.3, the first time the product met a real, brand-new tailnet.
+
+*Serve starts switched off.* On a new tailnet `tailscale serve --bg 7878` prints "Serve
+is not enabled on your tailnet. To enable, visit: https://login.tailscale.com/f/serve?..."
+and then waits for somebody to open it. The panel gave it fifteen seconds, threw away what
+it had printed, and told the parent "Telefondan erişim ayarı değiştirilemedi" - a dead end
+for every family on day one. `run_command` now keeps a timed-out command's output,
+`TailscaleRemote.enable` recognises the approval page, and the settings screen and the
+wizard's step 8 show it as a button with one sentence of explanation. Only a link of
+exactly the form `https://login.tailscale.com/f/<word>?node=<id>` is ever shown, and it
+travels through the settings table rather than the redirect's query string, so the panel
+cannot be made to present somebody else's link as a setup step. On the VM approving that
+page was not enough: `serve` kept refusing until *HTTPS Certificates* was enabled on the
+tailnet's DNS page, which the runbook now says.
+
+*HTTPS has a public side.* Tailscale's certificates are ordinary publicly trusted ones, so
+enabling them writes the machine's `*.ts.net` name into the Certificate Transparency logs.
+D-33 chose real HTTPS for good reasons and that stands; the cost is now written down, in
+`SECURITY.md` and in the panel's sentence under the approval button. The name is public;
+the panel, its traffic and who may reach it are not.
+
+*Tailscale's client logs.* Out of the box `tailscaled` uploads its own diagnostic logs to
+`log.tailscale.com`, which principle #1 does not allow on a BioKids machine. The runbook
+starts it with `--no-logs-no-support` and `SECURITY.md` lists the destination as turned
+off. BioKids does not manage `/etc/default/tailscaled` itself: the parent installs
+Tailscale, and a package editing another package's configuration is its own problem. The
+cost of the flag is Tailscale's support, which a family that needs it can turn back on.

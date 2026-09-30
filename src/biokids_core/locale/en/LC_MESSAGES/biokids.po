@@ -839,6 +839,15 @@ msgstr "This form is no longer valid. Reload the page and try again."
 msgid "remote.failed"
 msgstr "The remote access setting could not be changed."
 
+msgid "remote.needs_approval"
+msgstr "Tailscale is waiting for you to switch this on for your network, once. Approve it with the button below, then press \"Turn on phone access\" again."
+
+msgid "remote.approval.open"
+msgstr "Approve in Tailscale"
+
+msgid "remote.approval.note"
+msgstr "This lets your phone reach the panel over a secure (HTTPS) connection. The computer's Tailscale name appears in public certificate logs; nothing in the panel does."
+
 msgid "child.provision_failed"
 msgstr "The child was added, but their account on this computer could not be created."
 

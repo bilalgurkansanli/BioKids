@@ -115,10 +115,17 @@ entry in `DECISIONS.md` and a note in the README.**
 | blocklist source URLs | weekly refresh | yes, opt-in |
 | the parent's own SMTP server | notifications | yes, opt-in |
 | Tailscale coordination | remote panel access | yes, opt-in |
+| `log.tailscale.com` | Tailscale's own client logs | **turned off**: the runbook starts `tailscaled` with `--no-logs-no-support` (D-157) |
 | Hugging Face | one-time model download | yes, only with the AI package |
 | ElevenLabs | cloud TTS | yes, opt-in, off by default, clearly labelled |
 
 Zero telemetry. No crash reporting. No version ping. No analytics.
+
+Remote access has two costs worth naming, both from Tailscale rather than BioKids
+(D-157). Its client uploads diagnostic logs by default, which is why the runbook
+turns that off. And `tailscale serve` needs HTTPS certificates enabled on the
+tailnet, which puts the machine's `*.ts.net` name in the public Certificate
+Transparency logs: the name becomes public, the panel does not.
 
 ---
 

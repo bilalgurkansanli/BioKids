@@ -839,6 +839,15 @@ msgstr "Bu form artık geçerli değil. Sayfayı yenileyip tekrar deneyin."
 msgid "remote.failed"
 msgstr "Telefondan erişim ayarı değiştirilemedi."
 
+msgid "remote.needs_approval"
+msgstr "Tailscale'in bu özelliği ağınızda bir kez açmanız için onayınızı bekliyor. Aşağıdaki düğmeyle açıp onaylayın, sonra \"Telefondan erişimi aç\"a tekrar basın."
+
+msgid "remote.approval.open"
+msgstr "Tailscale'de onayla"
+
+msgid "remote.approval.note"
+msgstr "Bu, telefonunuzun panele güvenli (HTTPS) bağlanmasını sağlar. Bilgisayarın Tailscale adı herkese açık sertifika kayıtlarında görünür; panelin içeriği görünmez."
+
 msgid "child.provision_failed"
 msgstr "Çocuk eklendi ama bilgisayarda hesabı açılamadı."
 

@@ -125,6 +125,32 @@ class RemoteError:
     """Refusing to publish through an open Funnel. "Do not put the panel on the
     internet" is the reason, and it is already the sentence we show a parent."""
 
+    NEEDS_APPROVAL: Final = "remote.needs_approval"
+    """Serve is off for this tailnet, and Tailscale printed the page that turns it
+    on. `RemoteResult.approval_url` carries the page."""
+
+
+APPROVAL_URL_RE: Final = re.compile(
+    r"https://login\.tailscale\.com/f/[a-z]+\?node=[A-Za-z0-9]+"
+)
+"""The only link this module will ever hand a parent to click. Anything that does
+not match exactly - another host, another path, anything after the node id - is
+not shown, so the panel cannot be made to present somebody else's link as a
+step in setting it up."""
+
+
+SETTING_APPROVAL_URL: Final = "remote.approval_url"
+"""Where the panel keeps the last approval page Tailscale asked for, between the
+button press that found it and the page that shows it. Stored rather than put
+in the redirect's query string, which anyone could fill with a link of their
+own; and read back through `approval_url_in`, never trusted as it stands."""
+
+
+def approval_url_in(text: str) -> str:
+    """The Tailscale approval page named in `text`, or ""."""
+    found = APPROVAL_URL_RE.search(text or "")
+    return found.group(0) if found else ""
+
 
 # ------------------------------------------------------------------ the shell out
 
@@ -178,8 +204,16 @@ def run_command(argv: Sequence[str], timeout: float, /) -> CommandResult:
         )
     except FileNotFoundError:
         return CommandResult(returncode=_EXIT_NOT_FOUND, missing=True)
-    except subprocess.TimeoutExpired:
-        return CommandResult(returncode=_EXIT_FAILED, timed_out=True)
+    except subprocess.TimeoutExpired as exc:
+        # Kept, not dropped: `tailscale serve` on a tailnet where Serve is off
+        # prints the page that turns it on and then waits for someone to visit
+        # it. What it printed is the only way to tell the parent where to go.
+        return CommandResult(
+            returncode=_EXIT_FAILED,
+            stdout=_output_text(exc.stdout),
+            stderr=_output_text(exc.stderr),
+            timed_out=True,
+        )
     except OSError as exc:
         # Exists but will not exec: a broken install, or no permission to run it.
         return CommandResult(returncode=_EXIT_FAILED, stderr=str(exc))
@@ -249,6 +283,8 @@ class RemoteResult:
     status: RemoteStatus | None = None
     """The state after the attempt, so the caller can re-render without asking again."""
     detail: str = ""
+    approval_url: str = ""
+    """Set with `RemoteError.NEEDS_APPROVAL`: the page the parent must open once."""
 
 
 # ------------------------------------------------------------------------ the client
@@ -369,6 +405,19 @@ class TailscaleRemote:
         after = self.detect()
         if after.serves(target) and after.url is not None and not after.public:
             return RemoteResult(ok=True, status=after)
+        approval = approval_url_in(outcome.stdout) or approval_url_in(outcome.stderr)
+        if approval:
+            # Every new tailnet starts here: Serve is off until its owner turns
+            # it on, and `serve` waits for them without saying so to anyone but
+            # a terminal. Found on the VM, where the panel said only "could not
+            # be changed" (D-157).
+            return RemoteResult(
+                ok=False,
+                error=RemoteError.NEEDS_APPROVAL,
+                status=after,
+                detail=f"serve is not enabled on this tailnet; approve at {approval}",
+                approval_url=approval,
+            )
         return RemoteResult(
             ok=False,
             error=RemoteError.WOULD_BE_PUBLIC if after.public else RemoteError.COMMAND_FAILED,
@@ -703,6 +752,15 @@ def _enable_detail(outcome: CommandResult, after: RemoteStatus, port: int) -> st
     if after.serves(port) and after.url is None:
         return "published, but the node has no MagicDNS name to reach it by"
     return _why_unreadable(outcome) or outcome.stderr.strip()
+
+
+def _output_text(value: str | bytes | None) -> str:
+    """`TimeoutExpired` output is bytes whatever `text=True` said, or None."""
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", "replace")
+    return value
 
 
 def _why_unreadable(result: CommandResult) -> str:
