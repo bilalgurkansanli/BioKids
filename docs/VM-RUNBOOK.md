@@ -496,7 +496,11 @@ greeter.
    the daemon's policy does not name it (D-156) — check
    `/etc/chromium/policies/managed/biokids-kiosk.json`. No window may ask the child
    for a keyring password or offer to restore pages.
-6. Install `biokids-desktop` **before** the wizard, as §2.1 does: the app step
+6. Leave the child's session alone for more than ten minutes — or, from ssh,
+   `sudo -u elif DISPLAY=:0 XAUTHORITY=/home/elif/.Xauthority xset s activate`.
+   The screen may blank, but a key must bring the launcher back with **no lock
+   screen**: an idle lock is one only a parent can lift (D-158).
+7. Install `biokids-desktop` **before** the wizard, as §2.1 does: the app step
    offers only what is installed then, and the panel has no apps screen yet to add
    the rest later (D-156).
 

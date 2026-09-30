@@ -1,0 +1,17 @@
+[Desktop Entry]
+# BioKids: in a child's session the screen locks when BioKids locks it - the
+# allowance ran out, or the daemon died - and never on its own (D-158).
+#
+# light-locker's default locks five seconds after the X screensaver starts,
+# which X starts after ten idle minutes. A child's account has no password and
+# the login-by-picture rule refuses a session that is already open (D-155), so
+# a child who walked away for ten minutes came back to a lock only a parent
+# could lift. The screen may still blank; any key brings it back.
+#
+# This file overrides /etc/xdg/autostart/light-locker.desktop for the child
+# only. The parent's own session keeps locking when idle.
+Type=Application
+Name=Screen Locker
+Exec=light-locker --lock-after-screensaver=0 --no-late-locking --no-lock-on-suspend --no-lock-on-lid
+NotShowIn=GNOME;Unity;
+X-XFCE-Autostart-Override=true

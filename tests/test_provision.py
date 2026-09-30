@@ -542,3 +542,45 @@ def test_an_administrative_account_is_never_made_a_childs(
     assert "administer" in " ".join(result.problems)
     assert result.files_written == []
     assert not (home / prov.AUTOSTART_DIR / prov.AUTOSTART_FILE).exists()
+
+
+# ------------------------------------------- a child's screen locks only on cue
+
+
+def test_every_autostart_entry_reaches_the_childs_home(
+    with_user: Any, share: Path, home: Path, config: Config
+) -> None:
+    """Not only the launcher: the light-locker override has to get there too (D-158)."""
+    (share / "light-locker.desktop").write_text("[Desktop Entry]\n", encoding="utf-8")
+
+    written, problems = prov.install_session_files("ayse", config)
+
+    assert not problems
+    assert (home / prov.AUTOSTART_DIR / "light-locker.desktop").is_file()
+    assert (home / prov.AUTOSTART_DIR / prov.AUTOSTART_FILE).is_file()
+    assert str(home / prov.AUTOSTART_DIR / "light-locker.desktop") in written
+
+
+def test_the_childs_screen_never_locks_just_for_being_idle() -> None:
+    """light-locker locks five seconds after the X screensaver by default.
+
+    A child's account has no password and the login-by-picture rule refuses an
+    open session (D-155), so an idle lock was a child locked out until a parent
+    came. The override keeps the name of the system entry it replaces.
+    """
+    shipped = (
+        pathlib.Path(__file__).resolve().parent.parent
+        / "src/biokids_shell/xfce/light-locker.desktop"
+    )
+    execs = [
+        line.split("=", 1)[1].split()
+        for line in shipped.read_text(encoding="utf-8").splitlines()
+        if line.startswith("Exec=")
+    ]
+
+    assert len(execs) == 1
+    argv = execs[0]
+    assert argv[0] == "light-locker"
+    assert "--lock-after-screensaver=0" in argv
+    assert "--no-lock-on-suspend" in argv
+    assert "--no-lock-on-lid" in argv

@@ -96,7 +96,7 @@ override_dh_auto_install:
 	install -d debian/tmp/usr/share/biokids/xfce
 	install -m 0644 src/biokids_shell/xfce/*.xml \
 		debian/tmp/usr/share/biokids/xfce/
-	install -m 0644 src/biokids_shell/xfce/biokids-shell.desktop \
+	install -m 0644 src/biokids_shell/xfce/*.desktop \
 		debian/tmp/usr/share/biokids/xfce/
 
 	# The greeter's "is this a child who may come in by their picture?"

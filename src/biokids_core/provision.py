@@ -275,9 +275,11 @@ def install_session_files(
     plan: list[tuple[Path, Path]] = []
     for xml in sorted(source.glob("*.xml")):
         plan.append((xml, home / XFCE_CHANNEL_DIR / xml.name))
-    autostart = source / AUTOSTART_FILE
-    if autostart.is_file():
-        plan.append((autostart, home / AUTOSTART_DIR / AUTOSTART_FILE))
+    # Every autostart entry, not only the launcher's: `light-locker.desktop`
+    # overrides the system one of the same name so that a child's screen locks
+    # only when BioKids locks it (D-158).
+    for entry in sorted(source.glob("*.desktop")):
+        plan.append((entry, home / AUTOSTART_DIR / entry.name))
 
     for src, dst in plan:
         if dst.exists() and not overwrite:

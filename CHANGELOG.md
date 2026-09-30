@@ -154,6 +154,9 @@ Found on the first Debian 13 VM (`docs/VM-RUNBOOK.md`), none of it visible from 
 - **Turning on phone access failed silently on every new tailnet** (D-157): Tailscale
   waits for its owner to approve Serve, and the panel dropped the page it named. The
   panel now shows it. Tailscale's client log upload is turned off in the runbook.
+- **A child left idle for ten minutes was locked out until a parent came** (D-158):
+  light-locker's idle lock met an account with no password. A child's session now
+  locks only when BioKids locks it.
 
 ### Known gaps
 

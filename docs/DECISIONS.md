@@ -1291,3 +1291,23 @@ starts it with `--no-logs-no-support` and `SECURITY.md` lists the destination as
 off. BioKids does not manage `/etc/default/tailscaled` itself: the parent installs
 Tailscale, and a package editing another package's configuration is its own problem. The
 cost of the flag is Tailscale's support, which a family that needs it can turn back on.
+
+**D-158 [claude] A child's screen locks when BioKids locks it, and never on its own.**
+Found from the phone, of all places: the Today card said Elif's session was not open,
+and on the VM she was at a lock screen nobody had asked for. light-locker's default is to
+lock five seconds after the X screensaver starts, and X starts it after ten idle minutes.
+With D-155 that is a trap: the account has no password, and the login-by-picture rule
+refuses a child whose session is already open, so a child who walked away for ten minutes
+came back to a lock only a parent could lift - by granting time they did not need.
+
+The child's session now starts light-locker with `--lock-after-screensaver=0
+--no-late-locking --no-lock-on-suspend --no-lock-on-lid`, through a
+`~/.config/autostart/light-locker.desktop` that provisioning puts beside the launcher's
+and that overrides the system entry of the same name for that account only. The parent's
+own session keeps locking when idle; the child's screen may still blank, and any key
+brings it back. What locks a child is logind's Lock, which is what BioKids sends when the
+allowance ends or the daemon dies. Checked on the VM both ways: forcing the screensaver
+left Elif in her session, and `loginctl lock-session` still took the seat to the lock
+screen. Provisioning now copies every `.desktop` it ships, not only the launcher's. A
+file added this way reaches an existing child only when they are provisioned again,
+which nothing does on upgrade yet.
