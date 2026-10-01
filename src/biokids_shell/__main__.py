@@ -23,8 +23,17 @@ from pathlib import Path
 import uvicorn
 
 from biokids_core.config import Config, set_config
-from biokids_shell.app import create_app
+from biokids_core.ipc import AsyncDaemonClient
+from biokids_shell.app import ShellState, create_app
+from biokids_shell.client import ShellClient
 from biokids_shell.kiosk import KioskSupervisor
+from biokids_shell.relay import SessionRelay, WindowRaiser, voice_socket_path
+
+SHUTDOWN_GRACE_SECONDS = 3
+"""How long the launcher's server waits for open connections when it stops. The
+page's event stream never closes on its own, and without a bound the server
+waited for it forever - so a logout, or a shutdown, waited for systemd to kill
+the unit (D-160)."""
 
 log = logging.getLogger("biokids.shell")
 
@@ -54,9 +63,10 @@ async def main_async(args: argparse.Namespace) -> int:
     set_config(config)
     port = args.port or config.shell.port
 
+    app = create_app(config)
     server = uvicorn.Server(
         uvicorn.Config(
-            create_app(config),
+            app,
             host=config.shell.host,
             port=port,
             log_level=args.log_level,
@@ -64,6 +74,7 @@ async def main_async(args: argparse.Namespace) -> int:
             # No access log: it would be a record of which tiles a child pressed
             # and when, kept somewhere nobody asked for it to be kept.
             server_header=False,
+            timeout_graceful_shutdown=SHUTDOWN_GRACE_SECONDS,
         )
     )
 
@@ -74,7 +85,17 @@ async def main_async(args: argparse.Namespace) -> int:
             loop.add_signal_handler(sig, stop_event.set)
 
     kiosk = KioskSupervisor(config)
-    tasks = [asyncio.create_task(server.serve(), name="launcher")]
+    shell: ShellState = app.state.shell
+    relay = SessionRelay(
+        ShellClient(config.paths.shell_socket),
+        voice=AsyncDaemonClient(voice_socket_path(config)),
+        raiser=None if args.no_kiosk else WindowRaiser(),
+        on_spoken=shell.remember_spoken,
+    )
+    tasks = [
+        asyncio.create_task(server.serve(), name="launcher"),
+        asyncio.create_task(relay.run(stop_event), name="relay"),
+    ]
     if not args.no_kiosk:
         # Give the launcher a moment to bind before pointing a browser at it;
         # Chromium's own error page is not something a four-year-old should see.

@@ -403,6 +403,124 @@ svg {
 
 .banner__icon { font-size: 1.5rem; }
 
+/* ------------------------------------------------------------ time warning */
+
+/* D-160. At ten, five and one minute the launcher comes in front of the child's
+ * app for a few seconds and shows this: whoever is speaking, the sentence being
+ * said, and the ring. The owner chose a short full-screen pause over a corner
+ * card, because a card drawn in the launcher was drawn behind the app. Warm and
+ * calm rather than alarming; the ring tells a child who cannot read the same
+ * thing the sentence tells one who can. */
+.notice {
+  --notice-accent: var(--bio-amber);
+  --notice-glow: #FFF1D6;
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-5);
+  background:
+    radial-gradient(circle at 50% 36%, var(--notice-glow) 0%, transparent 64%),
+    var(--bg);
+  opacity: 0;
+  transition: opacity .35s ease;
+}
+
+.notice[hidden] { display: none; }
+.notice.is-visible { opacity: 1; }
+.notice[data-level="warn"] { --notice-accent: var(--warn); --notice-glow: #FFE6C2; }
+.notice[data-level="danger"] { --notice-accent: var(--danger); --notice-glow: #FFDDD7; }
+
+.notice__stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+  max-width: 44rem;
+  text-align: center;
+  transform: translateY(18px) scale(.96);
+  transition: transform .5s cubic-bezier(.2, .8, .2, 1);
+}
+
+.notice.is-visible .notice__stage { transform: none; }
+
+.notice__character {
+  width: min(34vh, 250px);
+  height: min(34vh, 250px);
+}
+
+.notice__face { display: none; width: 100%; height: 100%; }
+.notice__face svg { width: 100%; height: 100%; }
+.notice[data-persona="zio"] .notice__face[data-face="zio"],
+.notice[data-persona="sio"] .notice__face[data-face="sio"] { display: block; }
+
+.notice__bubble {
+  position: relative;
+  padding: var(--sp-4) var(--sp-5);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 4px solid var(--notice-accent);
+  box-shadow: var(--shadow-2);
+}
+
+/* The bubble's tail, pointing up at whoever is speaking. */
+.notice__bubble::before {
+  content: "";
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  background: var(--surface);
+  border-top: 4px solid var(--notice-accent);
+  border-left: 4px solid var(--notice-accent);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.notice__line {
+  margin: 0;
+  font-family: var(--font-kid);
+  font-size: calc(clamp(1.9rem, 4.4vw, 2.8rem) * var(--font-scale));
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.notice__ring {
+  width: 104px;
+  height: 104px;
+  transform: rotate(-90deg);
+}
+
+.notice__ring-track { fill: none; stroke: var(--line); stroke-width: 12; }
+
+.notice__ring-value {
+  fill: none;
+  stroke: var(--notice-accent);
+  stroke-width: 12;
+  stroke-linecap: round;
+  transition: stroke-dashoffset .8s ease;
+}
+
+/* The last minute pulses, like the ring in the header. Its own keyframes,
+ * because `pulse` animates `transform` and would undo the rotation. */
+.notice[data-level="danger"] .notice__ring { animation: notice-pulse 1.2s ease-in-out infinite; }
+
+@keyframes notice-pulse {
+  0%, 100% { transform: rotate(-90deg) scale(1); }
+  50% { transform: rotate(-90deg) scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notice,
+  .notice__stage,
+  .notice__ring-value { transition: none; }
+  .notice__stage { transform: none; }
+  .notice[data-level="danger"] .notice__ring { animation: none; }
+  .notice svg * { animation: none !important; }
+}
+
 /* ------------------------------------------------------------- start page */
 
 .start-grid {

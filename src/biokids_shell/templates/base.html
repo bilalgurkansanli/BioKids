@@ -32,6 +32,28 @@
     <p class="speech-card__text" id="speech-text"></p>
   </div>
 
+  {# The time warning (D-160). At ten, five and one minute the relay brings this
+     window in front of whatever the child is using, for a few seconds, and this
+     is what they see: whoever is speaking, the sentence being said, and the
+     ring. Not a strip across the top of a window that an app has covered. #}
+  <div class="notice" id="notice" data-level="info" data-persona="zio"
+       role="alert" aria-live="assertive" hidden>
+    <div class="notice__stage">
+      <div class="notice__character">
+        <div class="notice__face" data-face="zio">{{ characters.zio|safe if characters.zio else '' }}</div>
+        <div class="notice__face" data-face="sio">{{ characters.sio|safe if characters.sio else '' }}</div>
+      </div>
+      <div class="notice__bubble">
+        <p class="notice__line" id="notice-line"></p>
+      </div>
+      <svg class="notice__ring" viewBox="0 0 100 100" aria-hidden="true">
+        <circle class="notice__ring-track" cx="50" cy="50" r="40"></circle>
+        <circle class="notice__ring-value" id="notice-ring" cx="50" cy="50" r="40"
+                stroke-dasharray="251.33" stroke-dashoffset="0"></circle>
+      </svg>
+    </div>
+  </div>
+
   {# Every sentence the page substitutes into a live event comes from the
      catalogs, not from JavaScript (ARCHITECTURE.md §8). #}
   <script id="strings" type="application/json">{{ strings|tojson }}</script>
@@ -39,6 +61,7 @@
   <script>
     window.BIOKIDS_STRINGS = JSON.parse(document.getElementById("strings").textContent);
     window.BIOKIDS_LINES = JSON.parse(document.getElementById("lines").textContent);
+    window.BIOKIDS_NOTICE_MS = {{ notice_ms|default(7000)|int }};
   </script>
   <script src="/static/shell.js" defer></script>
 </body>

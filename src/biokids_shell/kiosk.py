@@ -49,6 +49,11 @@ it is there."""
 
 POLICY_FILENAME = "biokids-kiosk.json"
 
+KIOSK_WINDOW_CLASS = "biokids-kiosk"
+"""The launcher window's WM_CLASS, set with Chromium's `--class`. It is how the
+relay finds the launcher among the app windows to bring a warning to the front
+(D-160)."""
+
 RESTART_BACKOFF_MAX = 30.0
 """If Chromium is crash-looping, back off rather than spinning the CPU. The
 child still sees a locked screen, because the session is the desktop and the
@@ -195,6 +200,7 @@ class KioskSupervisor:
             self.config.shell.kiosk_command,
             "--kiosk",
             f"--app={self.url}",
+            f"--class={KIOSK_WINDOW_CLASS}",
             f"--user-data-dir={self.profile()}",
             "--no-first-run",
             "--no-default-browser-check",

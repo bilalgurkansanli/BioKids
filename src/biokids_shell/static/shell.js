@@ -191,6 +191,85 @@
     }, CARD_MS);
   }
 
+  /* ---------------------------------------------------------- time warning */
+
+  /* D-160. The relay brings this window in front of the child's app for
+   * NOTICE_MS, so the warning is a full screen of its own: the character, the
+   * sentence, the ring. The same number decides both, server and page. */
+  var NOTICE_MS = window.BIOKIDS_NOTICE_MS || 7000;
+  var notice = document.getElementById("notice");
+  var noticeLine = document.getElementById("notice-line");
+  var noticeRing = document.getElementById("notice-ring");
+  var noticeTimer = null;
+
+  function speakingFaces(on) {
+    if (!notice) return;
+    var faces = notice.querySelectorAll(".notice__face svg");
+    for (var i = 0; i < faces.length; i += 1) {
+      faces[i].classList.toggle("is-speaking", on);
+    }
+  }
+
+  function showNotice(minutes, remainingSeconds) {
+    if (!notice || !noticeLine) return false;
+    var line = window.BIOKIDS_LINES && window.BIOKIDS_LINES["warn_" + minutes];
+    var fallback =
+      window.BIOKIDS_STRINGS && window.BIOKIDS_STRINGS.warning
+        ? window.BIOKIDS_STRINGS.warning
+        : "{minutes}";
+    noticeLine.textContent = (line || fallback).replace("{minutes}", minutes);
+    notice.setAttribute("data-level", minutes <= 1 ? "danger" : minutes <= 5 ? "warn" : "info");
+    notice.setAttribute("data-persona", "zio");
+    if (noticeRing) {
+      var wrap = document.getElementById("ring-wrap");
+      var quota = wrap ? Number(wrap.getAttribute("data-quota")) : 0;
+      var fraction = quota > 0 ? Math.max(0, Math.min(1, remainingSeconds / quota)) : 0;
+      noticeRing.setAttribute("stroke-dashoffset", String(RING_CIRCUMFERENCE * (1 - fraction)));
+    }
+    notice.hidden = false;
+    window.requestAnimationFrame(function () {
+      notice.classList.add("is-visible");
+    });
+    speakingFaces(true);
+    window.clearTimeout(noticeTimer);
+    noticeTimer = window.setTimeout(hideNotice, NOTICE_MS);
+    return true;
+  }
+
+  function hideNotice() {
+    if (!notice) return;
+    notice.classList.remove("is-visible");
+    speakingFaces(false);
+    window.setTimeout(function () {
+      notice.hidden = true;
+    }, 400);
+  }
+
+  /* The relay keeps what the voice service actually chose to say, and in which
+   * voice. Asked for a moment after the speak event, so the words on the
+   * screen are the words being heard and the character shown is the one
+   * speaking (VOICE.md §7, D-160). Unanswered, the catalog sentence stays. */
+  function whenSpoken(eventName, apply) {
+    var attempts = 0;
+    function ask() {
+      attempts += 1;
+      fetch("/spoken", { cache: "no-store" })
+        .then(function (response) {
+          return response.ok ? response.json() : null;
+        })
+        .then(function (spoken) {
+          var fresh = spoken && spoken.at && Math.abs(Date.now() / 1000 - spoken.at) < 20;
+          if (fresh && spoken.event === eventName && spoken.text) {
+            apply(spoken);
+          } else if (attempts < 3) {
+            window.setTimeout(ask, 500);
+          }
+        })
+        .catch(function () {});
+    }
+    window.setTimeout(ask, 300);
+  }
+
   /* -------------------------------------------------------------- events */
 
   function connect() {
@@ -209,24 +288,38 @@
       if (!data) return;
       updateRing(data.remaining_seconds || 0);
       var minutes = data.minutes || 0;
-      showBanner(
-        (window.BIOKIDS_STRINGS && window.BIOKIDS_STRINGS.warning
-          ? window.BIOKIDS_STRINGS.warning
-          : "{minutes}"
-        ).replace("{minutes}", minutes),
-        minutes <= 1 ? "danger" : minutes <= 5 ? "warn" : "info",
-      );
+      if (!showNotice(minutes, data.remaining_seconds || 0)) {
+        showBanner(
+          (window.BIOKIDS_STRINGS && window.BIOKIDS_STRINGS.warning
+            ? window.BIOKIDS_STRINGS.warning
+            : "{minutes}"
+          ).replace("{minutes}", minutes),
+          minutes <= 1 ? "danger" : minutes <= 5 ? "warn" : "info",
+        );
+      }
     });
 
     source.addEventListener("speak", function (event) {
       var data = parse(event);
       if (!data) return;
-      var line = window.BIOKIDS_LINES && window.BIOKIDS_LINES[data.event];
+      var name = data.event || "";
+      if (name.indexOf("warn_") === 0 && notice && !notice.hidden) {
+        /* The warning already fills the screen; it takes the spoken words. */
+        whenSpoken(name, function (spoken) {
+          noticeLine.textContent = spoken.text;
+          notice.setAttribute("data-persona", spoken.persona === "sio" ? "sio" : "zio");
+        });
+        return;
+      }
+      var line = window.BIOKIDS_LINES && window.BIOKIDS_LINES[name];
       showCard(
         (line || "").replace("{minutes}", data.vars ? data.vars.minutes : ""),
         data.persona === "sio" ? "sio" : "zio",
         data.expression,
       );
+      whenSpoken(name, function (spoken) {
+        if (cardText) cardText.textContent = spoken.text;
+      });
     });
 
     /* Anything that changes which screen the child should be on is settled by

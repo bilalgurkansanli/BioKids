@@ -1344,3 +1344,45 @@ is Phase 1 work.
 
 `dev/answer_debconf.py` answers the purge question once it appears, so section 5.4 can
 be run over ssh; debconf ignores anything typed before it asks.
+
+**D-160 [owner] Warnings are heard, and they are seen over the app.**
+The first run of the exit criterion on a fresh VM (runbook section 7): the 10-minute
+warning appeared as a thin strip and a card mostly hidden behind Tux Paint, nothing was
+said, and the owner's shutdown from the phone then hung for ninety seconds. Three faults,
+each invisible to a test suite that runs in one process as one user.
+
+*Nothing ever spoke.* The daemon publishes SPEAK and never makes a sound; the voice
+service runs in the child's session, and the child may not open the daemon's socket
+(D-123). Something in the session had to carry each line across, and nothing did - the
+page drew a card from the event and that was all. `biokids_shell/relay.py` now holds one
+subscription to the child's event stream for the life of the launcher and forwards SPEAK
+to the voice service. One subscription, not one per browser tab, which would have spoken
+once per tab and not at all with none open.
+
+*And the voice service could not have spoken anyway.* It runs as the child, and looked
+for cloned voices and stock models under `/var/lib/biokids`, which is 0700 root. Python
+3.13's `is_dir()` raises `PermissionError` there instead of answering, so every line
+crashed the worker before espeak-ng was tried. Unreadable is now answered as absent and
+logged once; espeak-ng speaks. Before voice cloning ships, those directories have to move
+somewhere a child's session may read.
+
+*The warning was behind the app.* It was drawn inside the launcher, and the launcher is
+behind whatever the child opens. The owner chose a short full-screen pause over a corner
+card: at ten, five and one minute the relay raises the launcher with xdotool (a new
+Depends of biokids-shell, BSD-licensed, run as a separate process) for seven seconds -
+the speaking character, the sentence, the ring - and then gives the screen back to the
+app that had it. The launcher is found by the WM_CLASS the kiosk now sets with `--class`.
+The voice service's reply carries the sentence it actually chose from the line files and
+the character it chose; the relay keeps it and the page asks for it at `/spoken`, so what
+a child reads is what they hear, in the face of whoever is saying it (VOICE.md section 7).
+Before, the card showed a catalog sentence while the voice said a different one.
+
+*The shutdown hang.* The Today screen holds an event stream open, typically from the
+parent's phone, and uvicorn's graceful shutdown waited for it without limit: "Job
+biokids-panel.service/stop running" until systemd killed it at ninety seconds. Both the
+panel and the launcher now bound it at three seconds. Checked on the VM: the panel stopped
+in one second and the machine was off seven seconds after the end action.
+
+The second run, on the same VM: warnings at 13:45 and 13:49 brought the launcher in front
+of Tux Paint and were spoken, the quota ran out at 13:50 and the machine powered off at
+13:52, all heard by the owner. The voice is espeak-ng, and it sounds like it.

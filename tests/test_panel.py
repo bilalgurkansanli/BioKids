@@ -1467,3 +1467,29 @@ def test_a_stored_link_that_is_not_tailscales_is_never_shown(
 
     page = client.get("/settings").text
     assert "evil.example" not in page
+
+
+def test_the_panel_does_not_hold_a_shutdown_for_an_open_phone(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """D-160: the Today screen's event stream never closes on its own.
+
+    Without a bound uvicorn waited for it on every stop, and a shutdown pressed
+    on the phone sat on "Job biokids-panel.service/stop running" for systemd's
+    full ninety seconds.
+    """
+    from biokids_panel import __main__ as panel_main
+
+    seen: dict[str, Any] = {}
+    monkeypatch.setattr(panel_main.uvicorn, "run", lambda *_a, **kw: seen.update(kw))
+    monkeypatch.setattr(panel_main, "set_config", lambda _config: None)
+
+    panel_main.main(["--config", str(tmp_path / "nonexistent.toml")])
+
+    assert 0 < seen["timeout_graceful_shutdown"] <= 5
+
+
+def test_the_launcher_does_not_hold_a_logout_either() -> None:
+    from biokids_shell.__main__ import SHUTDOWN_GRACE_SECONDS
+
+    assert 0 < SHUTDOWN_GRACE_SECONDS <= 5

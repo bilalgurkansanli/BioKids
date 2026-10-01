@@ -36,6 +36,7 @@ from biokids_core.types import AgeBand, Reason
 from biokids_shell import device
 from biokids_shell.client import ShellClient
 from biokids_shell.launcher import AppLauncher, LaunchRequest
+from biokids_shell.relay import NOTICE_SECONDS
 
 log = logging.getLogger(__name__)
 
@@ -115,6 +116,12 @@ class ShellState:
         self.env.filters["avatar"] = lambda slug: AVATARS.get(str(slug), AVATARS["fox"])
         self.env.filters["expression"] = set_expression
         self.characters = _load_characters(config)
+        self.spoken: dict[str, Any] = {}
+        """The last line the voice service accepted, as it resolved it: the
+        sentence actually being said and the character saying it (D-160)."""
+
+    def remember_spoken(self, card: dict[str, Any]) -> None:
+        self.spoken = dict(card)
 
 
 EXPRESSIONS = ("neutral", "happy", "concerned", "sleepy")
@@ -212,6 +219,7 @@ def register_routes(app: FastAPI) -> None:
             "characters": shell.characters,
             "strings": _browser_strings(tr),
             "lines": _spoken_lines(tr),
+            "notice_ms": int(NOTICE_SECONDS * 1000),
         }
         context.update(values)
         return HTMLResponse(shell.env.get_template(template).render(**context))
@@ -339,6 +347,16 @@ def register_routes(app: FastAPI) -> None:
         return await render(shell, request, "home.html", data)
 
     # ------------------------------------------------------------- events
+
+    @app.get("/spoken")
+    async def spoken(shell: Shell) -> Response:
+        """The sentence and character of the line being said, for the page to show.
+
+        The page draws the warning the moment the event arrives, with the
+        catalog's sentence; this lets it replace that with the words the voice
+        service actually chose, so what a child reads is what they hear.
+        """
+        return JSONResponse(shell.spoken, headers={"Cache-Control": "no-store"})
 
     @app.get("/events")
     async def events(request: Request, shell: Shell) -> Response:

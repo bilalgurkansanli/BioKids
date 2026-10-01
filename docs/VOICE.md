@@ -202,6 +202,16 @@ Voice always has a visual companion (D-93).
 }
 ```
 
+The service runs as the child. Nothing it reads may live under `/var/lib/biokids`,
+which is 0700 root: the cache is the child's own (`CacheDirectory=`), and the
+configured cloned-voice and model directories, which are under it, are treated as
+absent when they cannot be read (D-160). Before cloning ships they have to move
+somewhere a child's session may read.
+
+The daemon never calls this socket: the launcher's relay forwards each SPEAK
+(`biokids_shell/relay.py`), and keeps the reply, so the screen shows the sentence the
+service actually chose and the character actually speaking.
+
 Response is immediate (`queued`), with a follow-up event when playback finishes so the
 shell can dismiss the card.
 

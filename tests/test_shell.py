@@ -580,6 +580,33 @@ def test_the_kiosk_is_pointed_at_the_launcher_and_nothing_else(config: Config) -
     assert any(part.startswith("--user-data-dir=") for part in argv)
 
 
+def test_the_kiosk_window_can_be_found_to_bring_a_warning_forward(config: Config) -> None:
+    """D-160: the relay finds the launcher among the app windows by its class."""
+    from biokids_shell.kiosk import KIOSK_WINDOW_CLASS
+
+    assert f"--class={KIOSK_WINDOW_CLASS}" in KioskSupervisor(config).argv()
+
+
+def test_every_screen_carries_the_full_screen_warning(client: TestClient) -> None:
+    """D-160: not a strip an app can cover - the character, the sentence, the ring."""
+    page = client.get("/").text
+    assert 'id="notice"' in page
+    assert 'data-face="zio"' in page and 'data-face="sio"' in page
+    assert "window.BIOKIDS_NOTICE_MS = 7000" in page
+
+
+def test_the_page_can_ask_what_is_actually_being_said(client: TestClient) -> None:
+    """The card shows the sentence the voice service chose, not a different one."""
+    assert client.get("/spoken").json() == {}
+
+    client.app.state.shell.remember_spoken(  # type: ignore[attr-defined]
+        {"event": "warn_10", "text": "On dakikan kaldı.", "persona": "sio", "at": 1.0}
+    )
+    spoken = client.get("/spoken").json()
+    assert spoken["text"] == "On dakikan kaldı."
+    assert spoken["persona"] == "sio"
+
+
 # ---------------------------------------------------------------- launching
 
 

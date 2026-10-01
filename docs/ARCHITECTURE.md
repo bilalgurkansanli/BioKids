@@ -62,8 +62,10 @@ The only component allowed to change system state. Everything else asks it.
   kill a process outside the catalog.
 - **FilterManager** renders `dnsmasq` config and Chromium policy from the DB, reloads
   services, and applies per-child allow/blocklists.
-- **EventBus** fans out events to the panel (SSE), the voice service, the AI worker,
-  and the notifier.
+- **EventBus** fans out events to the panel (SSE), the AI worker, the notifier, and
+  each child's launcher over `/run/biokids/shell.sock`. The voice service hears them
+  through the launcher: it runs as the child, who may not open the daemon's own
+  socket (D-123), so `biokids_shell.relay` carries every SPEAK across (D-160).
 
 IPC: a line-delimited JSON protocol over a Unix socket. Not DBus — a Unix socket is
 easier to test, easier to secure, and has no session-bus lifetime problems.
@@ -197,9 +199,9 @@ with these guards:
 
 | Remaining | Action |
 |---|---|
-| 10 min | shell banner + Zio/Sio speaks (if enabled) |
-| 5 min | banner turns amber, ring turns amber, speaks |
-| 1 min | full-width banner, ring red, speaks |
+| 10 min | the launcher comes in front of the app for a few seconds: Zio/Sio, the sentence being said, the ring (D-160); speaks if enabled |
+| 5 min | the same, amber |
+| 1 min | the same, red, the ring pulsing |
 | 0 | lock screen with friendly message, 120 s countdown |
 | −120 s | graceful shutdown (`systemctl poweroff`) |
 

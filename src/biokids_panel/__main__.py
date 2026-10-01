@@ -42,6 +42,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+SHUTDOWN_GRACE_SECONDS = 3
+
+
 def check_loopback(host: str) -> str:
     """Refuse to bind anywhere a router could reach.
 
@@ -90,6 +93,11 @@ def main(argv: list[str] | None = None) -> int:
         # which is exactly the sort of thing BioKids promises not to keep.
         server_header=False,
         date_header=True,
+        # The Today screen holds an event stream open, often from a phone, and
+        # it never closes on its own. Unbounded, uvicorn waited for it on
+        # every stop: a shutdown from the phone sat for systemd's 90 seconds
+        # on "Job biokids-panel.service/stop running" (D-160).
+        timeout_graceful_shutdown=SHUTDOWN_GRACE_SECONDS,
     )
     return 0
 

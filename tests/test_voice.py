@@ -1156,3 +1156,42 @@ def test_a_cached_line_is_found_whichever_engine_made_it(
     assert first.spoken and second.spoken
     assert second.cached is True, "espeak's cache entry was not found on the second ask"
     assert second.path == first.path
+
+
+# ------------------------------------------- a child may not look in /var/lib (D-160)
+
+
+def test_a_voice_directory_the_child_may_not_read_is_skipped_not_fatal(
+    voice_config: Config, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The family's data directory is 0700 root and the service runs as the child.
+
+    Python 3.13's `is_dir()` raises PermissionError there rather than answering
+    no. On the first real machine that crashed every line before espeak-ng was
+    tried, so a warning drew its card and said nothing at all.
+    """
+    from pathlib import Path
+
+    real_is_dir = Path.is_dir
+    real_is_file = Path.is_file
+    guarded = voice_config.paths.voice_profile_dir
+    models = voice_config.paths.model_dir
+
+    def is_dir(self: Path, *args: object, **kwargs: object) -> bool:
+        if self == guarded or guarded in self.parents:
+            raise PermissionError(13, "Permission denied", str(self))
+        return real_is_dir(self)
+
+    def is_file(self: Path, *args: object, **kwargs: object) -> bool:
+        if models in self.parents:
+            raise PermissionError(13, "Permission denied", str(self))
+        return real_is_file(self)
+
+    monkeypatch.setattr(Path, "is_dir", is_dir)
+    monkeypatch.setattr(Path, "is_file", is_file)
+
+    voices = VoiceBank(voice_config).candidates("zio", "tr")
+
+    assert all(voice.kind != "cloned" for voice in voices)
+    assert all(voice.model_path is None for voice in voices)
+    assert "cannot be read by this user" in caplog.text

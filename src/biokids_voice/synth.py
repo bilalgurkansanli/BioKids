@@ -122,7 +122,7 @@ class VoiceBank:
     def candidates(self, persona: str, locale: str) -> tuple[VoiceSpec, ...]:
         found: list[VoiceSpec] = []
         cloned_dir = self._config.paths.voice_profile_dir / persona
-        if cloned_dir.is_dir():
+        if _present(cloned_dir, directory=True):
             cloned_model = cloned_dir / f"{locale}{MODEL_SUFFIX}"
             found.append(
                 VoiceSpec(
@@ -158,7 +158,35 @@ class VoiceBank:
             / STOCK_MODEL_SUBDIR
             / f"{locale}-{persona}{MODEL_SUFFIX}"
         )
-        return candidate if candidate.is_file() else None
+        return candidate if _present(candidate) else None
+
+
+_UNREADABLE: set[Path] = set()
+
+
+def _present(path: Path, *, directory: bool = False) -> bool:
+    """Is it there, as far as this process is allowed to know?
+
+    The voice service runs as the child, and the family's data directory -
+    where cloned voices and stock models are configured to live - is 0700 root.
+    Python 3.13's `is_dir()` raises `PermissionError` there instead of answering,
+    so on the first real machine every line crashed the worker before espeak-ng
+    was ever tried, and the child heard nothing at all (D-160). Not being
+    allowed to look is answered as "not here", and said once in the log.
+    """
+    try:
+        return path.is_dir() if directory else path.is_file()
+    except PermissionError:
+        if path not in _UNREADABLE:
+            _UNREADABLE.add(path)
+            LOG.warning(
+                "%s cannot be read by this user; any voice there is skipped and "
+                "the next one in the chain speaks instead",
+                path,
+            )
+        return False
+    except OSError:
+        return False
 
 
 def _fingerprint(path: Path | None) -> str:
@@ -208,7 +236,7 @@ class PiperSynth:
             raise SynthError(f"{self._binary} is not installed")
         if voice.model_path is None:
             raise SynthError(f"no voice model for {voice.persona}/{voice.locale}")
-        if not voice.model_path.is_file():
+        if not _present(voice.model_path):
             raise SynthError(f"voice model {voice.model_path} is missing")
 
         destination.parent.mkdir(parents=True, exist_ok=True)

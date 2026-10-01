@@ -118,6 +118,11 @@ understands a shrinking circle.
 4. **Break** — a calm full-screen timer, a suggestion ("gözlerini dinlendir"), no
    dismiss button.
 5. **Time up** — friendly, a countdown, a note that unsaved work should be saved.
+6. **Time warning** — at ten, five and one minute, a short full-screen pause in front
+   of whatever app is open (D-160): the speaking character large in the middle, the
+   sentence actually being said in a bubble, the ring underneath. Seven seconds,
+   then the app comes back. Chosen by the owner over a corner card, which an app
+   window simply covered.
 6. **First run** — the supervision explanation, age-appropriate, spoken for 4–7.
 7. **Earned** — a brief celebration when bonus minutes arrive. Keep it to 2 seconds.
 

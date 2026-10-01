@@ -161,6 +161,11 @@ Found on the first Debian 13 VM (`docs/VM-RUNBOOK.md`), none of it visible from 
   printed "block: not found"** (D-159): a template field without its translation mark,
   and a comment debhelper expanded. Found running T8.5 on a clean VM, which otherwise
   passed, as did the virtual-terminal guards of T5.7.
+- **No warning was ever spoken, and the warning was hidden behind the child's app**
+  (D-160). Nothing carried the daemon's speech to the voice service, which could not
+  read the directories it looked in anyway. The launcher now relays every line and comes
+  to the front for a few seconds at 10, 5 and 1 minute, showing the sentence actually
+  being said. A phone with the panel open no longer delays a shutdown by 90 seconds.
 
 ### Known gaps
 
