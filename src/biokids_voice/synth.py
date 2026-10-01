@@ -10,9 +10,12 @@ Nothing here touches the network. Piper is offline by design (VOICE.md §2) and
 `SECURITY.md` §4 lists no TTS destination except the opt-in ElevenLabs path,
 which Phase 0 does not implement.
 
-Two backends:
+Three backends:
 
-* `PiperSynth` is the real one, and it fails loudly when its model is missing.
+* `PiperSynth` is the best one, and it fails loudly when its model is missing.
+* `EspeakSynth` is the one a stock Debian machine actually has. It speaks
+  through the MBROLA Turkish voices when a family has installed them, and with
+  espeak-ng's own voice otherwise.
 * `StubSynth` writes silence of roughly the right length. It exists so that the
   service starts, the queue runs, and the whole test suite passes on a machine
   with no TTS installed and no sound card. It still honours a missing model
@@ -55,6 +58,12 @@ STOCK_MODEL_SUBDIR: Final = "piper"
 ESPEAK_CACHE_SUBDIR: Final = "espeak"
 """espeak-ng's audio is cached apart from Piper's, for the same reason the stub's
 is: the cache key names the sentence and the voice and never the engine."""
+ESPEAK_TUNING: Final = 2
+"""Bumped whenever espeak-ng is asked to sound different. Part of what its cache
+remembers, so a family hears the change instead of yesterday's audio."""
+MBROLA_DIR: Final = Path("/usr/share/mbrola")
+"""Where Debian's `mbrola-*` packages put their databases."""
+MADE_BY_FILE: Final = ".made-by"
 MODEL_SUFFIX: Final = ".onnx"
 
 STUB_CACHE_SUBDIR: Final = "silent"
@@ -265,6 +274,17 @@ class PiperSynth:
             raise SynthError(f"{self._binary} wrote nothing to {destination}")
 
 
+@dataclass(frozen=True, slots=True)
+class MbrolaVoice:
+    """One MBROLA database, as Debian's `mbrola-<name>` package installs it."""
+
+    database: str
+    """`tr2`: the directory under /usr/share/mbrola and the file inside it."""
+    volume: float
+    """mbrola's `-v`. The databases were recorded at very different levels, and
+    the Turkish woman is a third as loud as espeak-ng without it."""
+
+
 class EspeakSynth:
     """espeak-ng, which every Debian machine can have and none has to download.
 
@@ -274,26 +294,67 @@ class EspeakSynth:
     simply not there. espeak-ng is in main, speaks Turkish, and carries its
     voices inside the package - no model file, no network, nothing to license.
 
-    It sounds like a 1990s robot. That is the right trade against silence: a
-    child who hears "bes dakika kaldi" has been warned, and a child watching a
-    card they may not read yet has not.
+    On its own it sounds like a 1990s robot. That is the right trade against
+    silence: a child who hears "bes dakika kaldi" has been warned, and a child
+    watching a card they may not read yet has not. Two things make it gentler
+    (D-161). It speaks more slowly, with espeak-ng's female variant for Zio and
+    its male one for Sio. And where a family has installed the MBROLA Turkish
+    voices - `mbrola-tr2`, a woman, and `mbrola-tr1`, a man, from `contrib` and
+    `non-free` - espeak-ng only works out the phonemes and MBROLA speaks them
+    from recordings of real voices, which is a different thing to listen to.
     """
 
     name = "espeak-ng"
 
-    #: espeak-ng speaks a language, not a model, so the persona is carried in
-    #: pitch instead: Zio lower, Sio higher. Crude, and enough to tell them
-    #: apart, which is all the character card needs from the audio.
-    PITCH: Final[dict[str, int]] = {"zio": 35, "sio": 75}
+    #: espeak-ng's own variants: one voice, shaped female or male. Zio is the
+    #: mother and Sio the father (D-85). Before D-161 the pitches were the
+    #: other way round, so the mother spoke a full octave below the father.
+    VARIANT: Final[dict[str, str]] = {"zio": "f3", "sio": "m3"}
+    PITCH: Final[dict[str, int]] = {"zio": 55, "sio": 40}
     DEFAULT_PITCH: Final = 50
-    WORDS_PER_MINUTE: Final = 150
+    #: espeak-ng's default is 175. A four-year-old needs the sentence slower
+    #: than an adult reading along does; 150 was still a rush.
+    WORDS_PER_MINUTE: Final = 140
 
-    def __init__(self, binary: str = "espeak-ng", *, timeout: float = PIPER_TIMEOUT_S) -> None:
+    #: The MBROLA voices worth reaching for, by language and persona.
+    MBROLA: Final[dict[tuple[str, str], MbrolaVoice]] = {
+        ("tr", "zio"): MbrolaVoice("tr2", volume=2.6),
+        ("tr", "sio"): MbrolaVoice("tr1", volume=1.5),
+    }
+    #: Phonemes espeak-ng 1.52's Turkish produces that its own `tr1_phtrans`
+    #: table never learned, so MBROLA meets them as unknown diphones and
+    #: speaks silence instead: the "l" of every "kaldı" and the "e" of every
+    #: "gel". Upstream's table has the same gap. Mapped here to the nearest
+    #: sound the tr1/tr2 diphone sets do have, which is why BioKids runs the
+    #: two programs itself instead of letting espeak-ng call MBROLA.
+    MBROLA_PHONEMES: Final[dict[str, str]] = {"L/": "l", "l/": "l", "&": "e"}
+
+    def __init__(
+        self,
+        binary: str = "espeak-ng",
+        *,
+        mbrola_binary: str = "mbrola",
+        mbrola_dir: Path | None = None,
+        timeout: float = PIPER_TIMEOUT_S,
+    ) -> None:
         self._binary = binary
+        self._mbrola_binary = mbrola_binary
         self._timeout = timeout
+        # Decided once, so that `flavour` - which the cache keys itself on -
+        # and `render` cannot disagree about which voice is speaking. A family
+        # who installs MBROLA hears it from the next login.
+        self._mbrola = find_mbrola_voices(mbrola_binary, mbrola_dir or MBROLA_DIR, self.MBROLA)
 
     def available(self) -> bool:
         return which(self._binary) is not None
+
+    @property
+    def flavour(self) -> str:
+        """What this engine's audio sounds like, in one line, for the cache."""
+        found = ", ".join(
+            f"{persona}={path.name}" for (_, persona), path in sorted(self._mbrola.items())
+        )
+        return f"espeak-ng tuning {ESPEAK_TUNING}; mbrola: {found or 'none'}"
 
     def render(self, text: str, voice: VoiceSpec, destination: Path) -> None:
         if not self.available():
@@ -308,38 +369,143 @@ class EspeakSynth:
             raise SynthError(f"{self._binary} cannot speak a cloned voice")
 
         destination.parent.mkdir(parents=True, exist_ok=True)
-        argv = [
-            self._binary,
-            # `tr` rather than `tr_TR`: espeak-ng names languages, not locales,
-            # and an unknown name is a hard failure rather than a fallback.
-            "-v",
-            voice.locale.split("_")[0].split("-")[0] or "tr",
-            "-p",
-            str(self.PITCH.get(voice.persona, self.DEFAULT_PITCH)),
-            "-s",
-            str(self.WORDS_PER_MINUTE),
-            # Text on stdin, so a sentence starting with a dash is a sentence
-            # and not an option.
-            "--stdout",
-        ]
+        # `tr` rather than `tr_TR`: espeak-ng names languages, not locales,
+        # and an unknown name is a hard failure rather than a fallback.
+        language = voice.locale.split("_")[0].split("-")[0] or "tr"
+
+        database = self._mbrola.get((language, voice.persona))
+        if database is not None:
+            try:
+                self._render_mbrola(
+                    text, database, self.MBROLA[(language, voice.persona)], destination
+                )
+                return
+            except SynthError as exc:
+                # Not degraded: the same engine, its plainer voice. Logged,
+                # because a family who installed MBROLA should be able to
+                # find out why they are hearing the robot.
+                LOG.warning(
+                    "mbrola could not speak %s (%s); using espeak-ng's own voice",
+                    voice.persona,
+                    exc,
+                )
+                destination.unlink(missing_ok=True)
+
+        variant = self.VARIANT.get(voice.persona)
+        finished = self._run(
+            [
+                self._binary,
+                "-v",
+                f"{language}+{variant}" if variant else language,
+                "-p",
+                str(self.PITCH.get(voice.persona, self.DEFAULT_PITCH)),
+                "-s",
+                str(self.WORDS_PER_MINUTE),
+                # Text on stdin, so a sentence starting with a dash is a
+                # sentence and not an option.
+                "--stdout",
+            ],
+            text.encode("utf-8"),
+        )
+        if not finished.stdout:
+            raise SynthError(f"{self._binary} produced no audio")
+        destination.write_bytes(finished.stdout)
+
+    def _render_mbrola(
+        self, text: str, database: Path, voice: MbrolaVoice, destination: Path
+    ) -> None:
+        """espeak-ng for the phonemes, the fix-up, then MBROLA for the sound."""
+        phonemes = self._run(
+            [
+                self._binary,
+                "-v",
+                f"mb-{voice.database}",
+                "-s",
+                str(self.WORDS_PER_MINUTE),
+                "-q",
+                "--pho",
+            ],
+            text.encode("utf-8"),
+        ).stdout
+        if not phonemes.strip():
+            raise SynthError(f"{self._binary} produced no phonemes")
+
+        fixed = translate_phonemes(phonemes.decode("utf-8", "replace"), self.MBROLA_PHONEMES)
+        # MBROLA picks the format from the output's extension; the cache's
+        # partial files keep `.wav`. It writes the file itself, header and
+        # all, rather than a stream whose header never learns its length.
+        self._run(
+            [
+                self._mbrola_binary,
+                "-e",  # an unknown diphone is a short gap, not a failed line
+                "-v",
+                str(voice.volume),
+                str(database),
+                "-",
+                str(destination),
+            ],
+            fixed.encode("utf-8"),
+        )
+        if not _present(destination) or destination.stat().st_size <= WAV_HEADER_BYTES:
+            raise SynthError(f"{self._mbrola_binary} produced no audio")
+
+    def _run(self, argv: list[str], stdin: bytes) -> subprocess.CompletedProcess[bytes]:
         try:
             finished = subprocess.run(
                 argv,
-                input=text.encode("utf-8"),
+                input=stdin,
                 capture_output=True,
                 timeout=self._timeout,
                 check=False,
             )
         except (OSError, subprocess.SubprocessError) as exc:
-            raise SynthError(f"{self._binary} could not be run: {exc}") from exc
-
+            raise SynthError(f"{argv[0]} could not be run: {exc}") from exc
         if finished.returncode != 0:
             detail = finished.stderr.decode("utf-8", "replace").strip()[:200]
-            raise SynthError(f"{self._binary} exited {finished.returncode}: {detail}")
-        if not finished.stdout:
-            raise SynthError(f"{self._binary} produced no audio")
+            raise SynthError(f"{argv[0]} exited {finished.returncode}: {detail}")
+        return finished
 
-        destination.write_bytes(finished.stdout)
+
+WAV_HEADER_BYTES: Final = 44
+
+
+def find_mbrola_voices(
+    binary: str, directory: Path, wanted: dict[tuple[str, str], MbrolaVoice]
+) -> dict[tuple[str, str], Path]:
+    """The databases among `wanted` this machine can actually speak with.
+
+    Both halves are checked: espeak-ng ships a voice file naming every MBROLA
+    database there is, installed or not, so `espeak-ng --voices` is no guide.
+    Debian puts each database at `<dir>/<name>/<name>`; a hand-installed one is
+    often just `<dir>/<name>`.
+    """
+    if which(binary) is None:
+        return {}
+    found: dict[tuple[str, str], Path] = {}
+    for key, voice in wanted.items():
+        for candidate in (
+            directory / voice.database / voice.database,
+            directory / voice.database,
+        ):
+            if _present(candidate):
+                found[key] = candidate
+                break
+    return found
+
+
+def translate_phonemes(pho: str, fixes: dict[str, str]) -> str:
+    """Rename the phonemes MBROLA would not know, leaving timing and pitch alone.
+
+    A `.pho` line is the phoneme, its length in milliseconds, then pitch
+    points; comment lines start with `;`. Only the first field is touched.
+    """
+    lines: list[str] = []
+    for line in pho.splitlines():
+        phoneme, separator, rest = line.partition("\t")
+        if not separator:
+            phoneme, separator, rest = line.partition(" ")
+        lines.append(fixes.get(phoneme, phoneme) + separator + rest)
+    return "\n".join(lines) + "\n"
 
 
 class StubSynth:
@@ -484,6 +650,30 @@ class VoiceCache:
         for entry in self._entries():
             entry.path.unlink(missing_ok=True)
 
+    def made_by(self, maker: str) -> None:
+        """Empty the cache if what is in it was made some other way.
+
+        The key is the sentence and the voice, never how it was synthesised.
+        Without this a family who installs the MBROLA voices - or who upgrades
+        to a gentler espeak-ng tuning - goes on hearing the old audio for every
+        line already heard once, which is every line there is. A cache with no
+        record at all predates the record and is emptied too.
+        """
+        stamp = self.directory / MADE_BY_FILE
+        try:
+            previous = stamp.read_text(encoding="utf-8").strip()
+        except OSError:
+            previous = None
+        if previous == maker:
+            return
+        self.clear()
+        try:
+            self.directory.mkdir(parents=True, exist_ok=True)
+            stamp.write_text(maker + "\n", encoding="utf-8")
+        except OSError as exc:
+            # Harmless beyond a cache emptied again at the next start.
+            LOG.warning("voice cache: could not record what made it: %s", exc)
+
     def _entries(self) -> list[_CacheEntry]:
         try:
             found = list(self.directory.glob("*.wav"))
@@ -587,7 +777,9 @@ class Synthesizer:
         if piper.available():
             engines.append((piper, VoiceCache.from_config(config)))
 
-        espeak = EspeakSynth(config.voice.espeak_binary)
+        espeak = EspeakSynth(
+            config.voice.espeak_binary, mbrola_binary=config.voice.mbrola_binary
+        )
         if espeak.available():
             # Always appended when present, never instead of Piper. A Piper that
             # is installed but has no model raises on every line, and this is
@@ -597,7 +789,10 @@ class Synthesizer:
             # describes the sentence and the voice, never the engine, so a
             # family who installs Piper later would otherwise keep hearing the
             # robot for every line they have already heard.
-            engines.append((espeak, VoiceCache.from_config(config, subdir=ESPEAK_CACHE_SUBDIR)))
+            espeak_cache = VoiceCache.from_config(config, subdir=ESPEAK_CACHE_SUBDIR)
+            espeak_cache.made_by(espeak.flavour)
+            LOG.info("speaking with %s", espeak.flavour)
+            engines.append((espeak, espeak_cache))
 
         if engines:
             if piper.available() and not espeak.available():

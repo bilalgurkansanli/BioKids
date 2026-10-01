@@ -368,7 +368,8 @@ Everything below is unverified, in roughly the order it will bite:
     python3-dbus-next (0.2.3). Two did not survive as written. python3-multipart
     is a different library in trixie (defnull's `multipart`); FastAPI needs
     python3-python-multipart, which is what the panel now depends on (D-154).
-    mbrola-tr1 and mbrola-tr2 are in non-free, which a Suggests may name.
+    mbrola-tr1 and mbrola-tr2 are in non-free, which a Suggests may name; the
+    mbrola program they depend on is in contrib (D-161).
     piper-tts is not in trixie at all, as D-137 already records.
 
  4. **Closed: the dist-info glob.** biokids-core.install claims

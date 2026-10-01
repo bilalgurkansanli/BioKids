@@ -50,8 +50,9 @@ line text (i18n)
 - **espeak-ng** is the permanent fallback, and on most machines the only engine present.
   GPL-3+, in Debian main, speaks Turkish, carries its voices inside the package, needs
   no model file and no network. It sounds like a 1990s robot. That is the honest trade
-  against a four-year-old being shown a card they cannot read yet. `mbrola-tr1` and
-  `mbrola-tr2` improve it considerably and are a `Suggests`, because they are non-free.
+  against a four-year-old being shown a card they cannot read yet. Where a family
+  installs `mbrola-tr1` and `mbrola-tr2`, Zio and Sio speak with those instead (§3); they
+  are a `Suggests`, because the voices are non-free and `mbrola` is in contrib.
 - **OpenVoice V2** is **MIT** and performs timbre conversion on existing TTS audio, so
   it layers onto Piper cleanly and inherits Piper's Turkish.
 - **XTTS-v2 is deliberately not used.** It is the obvious choice for cloning and it
@@ -74,14 +75,24 @@ Two per language ship with the package:
 
 | Persona | Locale | Source |
 |---|---|---|
-| Zio | tr_TR | espeak-ng `-v tr` at a higher pitch; a Piper voice when one is installed |
-| Sio | tr_TR | espeak-ng `-v tr` at a lower pitch; a Piper voice when one is installed |
-| Zio | en_US | as above, `-v en` |
-| Sio | en_US | as above, `-v en` |
+| Zio | tr_TR | MBROLA `tr2` (a woman) when installed, else espeak-ng `-v tr+f3`, higher pitch; a Piper voice when one is installed |
+| Sio | tr_TR | MBROLA `tr1` (a man) when installed, else espeak-ng `-v tr+m3`, lower pitch; a Piper voice when one is installed |
+| Zio | en_US | espeak-ng `-v en+f3` |
+| Sio | en_US | espeak-ng `-v en+m3` |
 
-Pitch rather than two models, because espeak-ng has one Turkish voice and no
-per-character models. It is crude, and it is enough: the character card names who is
-speaking, and the audio only has to sound like a different person.
+espeak-ng has one Turkish voice and no per-character models, so without MBROLA its
+female and male variants and the pitch carry the two apart, at 140 words a minute
+(D-161). It is crude, and it is enough: the character card names who is speaking, and
+the audio only has to sound like a different person.
+
+**MBROLA** (D-161) is what makes it sound like people. `mbrola-tr1` and `mbrola-tr2` are
+diphone recordings of a Turkish man and woman; the voices are in `non-free` and the
+`mbrola` program in `contrib`, so a family installs them and BioKids only suggests them.
+When both the program and a database are present, espeak-ng is asked for the phonemes
+alone (`--pho`), three phonemes its Turkish table never mapped are renamed, and `mbrola`
+speaks the result. espeak-ng's own MBROLA path is not used because of those three: it
+turns the "l" of every "kaldı" into silence. Which voices are in use is decided when the
+service starts, and espeak-ng's cache is emptied when that changes.
 
 **Check each voice's license before bundling.** Piper's catalog aggregates datasets
 with different terms; some are not redistributable. Record the chosen voice, its

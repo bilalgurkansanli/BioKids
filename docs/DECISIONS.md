@@ -1386,3 +1386,40 @@ in one second and the machine was off seven seconds after the end action.
 The second run, on the same VM: warnings at 13:45 and 13:49 brought the launcher in front
 of Tux Paint and were spoken, the quota ran out at 13:50 and the machine powered off at
 13:52, all heard by the owner. The voice is espeak-ng, and it sounds like it.
+
+**D-161 [owner] Zio and Sio sound like people wherever the machine allows it.**
+After the second run of section 7 the owner heard the warnings and called the voice
+robotic. Of the four ways offered, they chose the two that need no new dependency: a
+gentler espeak-ng, and the MBROLA voices where a family installs them. A bug was found on
+the way.
+
+*espeak-ng, gentler.* 140 words a minute instead of 150 (espeak-ng's default is 175), and
+its female variant `f3` for Zio and male `m3` for Sio. The pitches had been the wrong way
+round: Zio, the mother (D-85), at 35 and Sio, the father, at 75 - the opposite of what
+VOICE.md section 3 said. Now 55 and 40.
+
+*MBROLA where a family installs it.* `espeak-ng --voices=tr` lists `mb-tr2` as female and
+`mb-tr1` as male, so Zio speaks with tr2 and Sio with tr1. The voices are in non-free and
+the `mbrola` program in contrib - not non-free, as D-137 and the package description had
+it - so a family enables both components and installs `mbrola-tr1 mbrola-tr2`. Nothing in
+BioKids depends on them; they stay a Suggests. mbrola is AGPL-3 and runs as a separate
+process, never linked (D-30). Without them, nothing changes but the tuning above.
+
+*BioKids drives MBROLA itself.* Letting espeak-ng do it (`-v mb-tr2`) loses sounds:
+espeak-ng 1.52's Turkish produces three phonemes - `L/`, the l after a back vowel, `l/`
+and `&` - that its own `tr1_phtrans` table does not translate, and MBROLA speaks each
+unknown diphone as silence. That is the l of every "kaldı", in every warning there is.
+Upstream's table has the same gap. So espeak-ng is asked only for the phonemes (`--pho`),
+the three are renamed to the `l` and `e` the tr1/tr2 diphone sets do have, and `mbrola` is
+run on the result, writing a WAV whose header knows its length. Checked on the VM: all
+nineteen Turkish lines, not one unknown diphone. The tr2 recording is a third as loud as
+espeak-ng; mbrola's `-v` evens the two out (2.6 and 1.5). If MBROLA fails, the same engine
+speaks with espeak-ng's own voice and the log says why.
+
+*The cache remembers what made it.* The key names the sentence and the voice, never how
+they were synthesised, so a family who installed MBROLA would have gone on hearing the
+robot for every line already heard once - which, a week in, is every line. espeak-ng's
+cache directory now holds a `.made-by` line - the tuning number and the MBROLA voices in
+use - and is emptied when that changes, including on the first start after this upgrade.
+Which voices are in use is decided once, when the service starts, so a family hears the
+change from the child's next login.

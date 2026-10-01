@@ -768,10 +768,19 @@ espeak-ng -v tr "Beş dakika kaldı."     # you must hear this
 If you hear nothing, fix the VM's audio before starting the run — VirtualBox
 audio is off by default in some configurations.
 
-`mbrola-tr1`/`tr2` are a `Suggests` and would improve the Turkish, but
-**installing them changes nothing today**: `EspeakSynth` always builds
-`-v tr`, and an mbrola voice is only reached as `-v mb-tr1`. Using them needs a
-code change, so leave them out of this run.
+**Optional, and what a family would do for a less robotic voice (D-161):** the
+MBROLA Turkish voices. The voices are in `non-free` and the `mbrola` program in
+`contrib`, so add both components to every `deb` line first:
+
+```bash
+sudo sed -i 's/ main non-free-firmware/ main contrib non-free non-free-firmware/' /etc/apt/sources.list
+sudo apt update && sudo apt install mbrola-tr1 mbrola-tr2
+```
+
+Zio then speaks with `tr2` (a woman) and Sio with `tr1` (a man) from the child's
+next login; `journalctl --user -u biokids-voice` in the child's session says
+`speaking with espeak-ng tuning 2; mbrola: sio=tr1, zio=tr2`. Without them,
+espeak-ng speaks with its own female and male variants. Either is a pass.
 
 ### 7.2 The run
 

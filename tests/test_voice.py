@@ -17,11 +17,13 @@ import datetime as dt
 import logging
 import os
 import random
+import subprocess
 import sys
 from collections.abc import AsyncIterator, Callable
 from dataclasses import replace
 from pathlib import Path
 from types import TracebackType
+from typing import Any
 
 import pytest
 
@@ -55,6 +57,8 @@ from biokids_voice.synth import (
     VoiceCache,
     VoiceSpec,
     cache_key,
+    find_mbrola_voices,
+    translate_phonemes,
     write_silence,
 )
 
@@ -68,6 +72,14 @@ def no_hold(_text: str) -> float:
 
 
 # ------------------------------------------------------------------ fixtures
+
+
+@pytest.fixture(autouse=True)
+def no_mbrola(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Whatever the machine running the suite has installed, espeak-ng speaks alone."""
+    monkeypatch.setattr(synth_module, "MBROLA_DIR", tmp_path_factory.mktemp("no-mbrola"))
 
 
 @pytest.fixture
@@ -963,15 +975,23 @@ def test_espeak_is_asked_for_a_language_not_a_locale(
     )
 
     argv = seen[0]
-    assert "-v" in argv and argv[argv.index("-v") + 1] == "tr"
+    assert "-v" in argv
+    language, _, variant = argv[argv.index("-v") + 1].partition("+")
+    assert language == "tr"
+    assert variant, "a voice variant is part of the name, not a replacement for it"
     assert "tr_TR" not in argv
 
 
-def test_the_two_personas_do_not_sound_the_same(
+def test_zio_speaks_as_a_woman_and_sio_as_a_man(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """espeak-ng has no model per character, so the pitch carries them apart."""
-    pitches: list[str] = []
+    """Zio is the mother and Sio the father (D-85).
+
+    espeak-ng has one Turkish voice, so its female and male variants and the
+    pitch carry them apart. Until D-161 the pitches were the wrong way round
+    and the mother spoke an octave below the father.
+    """
+    seen: dict[str, list[str]] = {}
 
     class Finished:
         returncode = 0
@@ -979,7 +999,7 @@ def test_the_two_personas_do_not_sound_the_same(
         stderr = b""
 
     def record(argv: list[str], **_kwargs: object) -> Finished:
-        pitches.append(argv[argv.index("-p") + 1])
+        seen[argv[argv.index("-v") + 1]] = list(argv)
         return Finished()
 
     monkeypatch.setattr(synth_module.subprocess, "run", record)
@@ -992,7 +1012,36 @@ def test_the_two_personas_do_not_sound_the_same(
             tmp_path / f"{persona}.wav",
         )
 
-    assert pitches[0] != pitches[1]
+    zio = next(argv for name, argv in seen.items() if name.startswith("tr+f"))
+    sio = next(argv for name, argv in seen.items() if name.startswith("tr+m"))
+    assert int(zio[zio.index("-p") + 1]) > int(sio[sio.index("-p") + 1])
+
+
+def test_espeak_speaks_more_slowly_than_its_default(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """espeak-ng's 175 words a minute is for adults reading along, not a four-year-old."""
+    rates: list[int] = []
+
+    class Finished:
+        returncode = 0
+        stdout = b"RIFF....WAVEfmt "
+        stderr = b""
+
+    def record(argv: list[str], **_kwargs: object) -> Finished:
+        rates.append(int(argv[argv.index("-s") + 1]))
+        return Finished()
+
+    monkeypatch.setattr(synth_module.subprocess, "run", record)
+    monkeypatch.setattr(EspeakSynth, "available", lambda _self: True)
+
+    EspeakSynth().render(
+        "Merhaba.",
+        VoiceSpec(persona="zio", locale="tr", profile_id="stock:zio:tr"),
+        tmp_path / "out.wav",
+    )
+
+    assert rates and rates[0] < 150
 
 
 def test_espeak_writing_nothing_is_a_synth_error_not_an_empty_file(
@@ -1046,6 +1095,213 @@ def test_espeak_refuses_a_cloned_voice_instead_of_faking_it(
             ),
             tmp_path / "out.wav",
         )
+
+
+# ------------------------------------------- MBROLA, when a family adds it (D-161)
+
+
+@pytest.fixture
+def mbrola_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Debian's layout for both Turkish databases, and an `mbrola` on the PATH."""
+    directory = tmp_path / "mbrola"
+    for name in ("tr1", "tr2"):
+        (directory / name).mkdir(parents=True)
+        (directory / name / name).write_bytes(b"diphones")
+    real_which = synth_module.which
+    monkeypatch.setattr(
+        synth_module,
+        "which",
+        lambda binary: "/usr/bin/mbrola" if binary == "mbrola" else real_which(binary),
+    )
+    monkeypatch.setattr(EspeakSynth, "available", lambda _self: True)
+    return directory
+
+
+class FakePrograms:
+    """espeak-ng working out the phonemes, then MBROLA writing its WAV."""
+
+    #: What `espeak-ng -v mb-tr2 --pho` prints for "kaldı ... gel": every
+    #: phoneme its tr1 table forgot is in here.
+    PHO = (
+        "; comment\nk\t111\na\t50\t 0 225 80 217\nL/\t78\nd\t78\n@\t60\n"
+        "_\t215\nJ\t60\n&\t73\nl/\t78\n"
+    )
+
+    def __init__(self, *, mbrola_fails: bool = False) -> None:
+        self.calls: list[tuple[list[str], bytes]] = []
+        self.mbrola_fails = mbrola_fails
+
+    def __call__(self, argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[bytes]:
+        self.calls.append((list(argv), kwargs["input"]))
+        if argv[0] == "mbrola":
+            if self.mbrola_fails:
+                return subprocess.CompletedProcess(argv, 1, b"", b"Fatal error")
+            Path(argv[-1]).write_bytes(b"RIFF" + b"\x00" * 200)
+            return subprocess.CompletedProcess(argv, 0, b"", b"")
+        if "--pho" in argv:
+            return subprocess.CompletedProcess(argv, 0, self.PHO.encode(), b"")
+        return subprocess.CompletedProcess(argv, 0, b"RIFF....WAVEfmt espeak", b"")
+
+
+@pytest.mark.parametrize(("persona", "database"), [("zio", "tr2"), ("sio", "tr1")])
+def test_mbrola_speaks_when_its_turkish_voices_are_installed(
+    mbrola_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    persona: str,
+    database: str,
+) -> None:
+    """tr2 is a woman and tr1 a man, so Zio is tr2 and Sio tr1 (D-85)."""
+    programs = FakePrograms()
+    monkeypatch.setattr(synth_module.subprocess, "run", programs)
+    out = tmp_path / f"{persona}.wav"
+
+    EspeakSynth(mbrola_dir=mbrola_dir).render(
+        "Beş dakikan kaldı.",
+        VoiceSpec(persona=persona, locale="tr_TR", profile_id=f"stock:{persona}:tr"),
+        out,
+    )
+
+    (espeak, text), (mbrola, _pho) = programs.calls
+    assert espeak[espeak.index("-v") + 1] == f"mb-{database}"
+    assert "--pho" in espeak and "-q" in espeak, "espeak-ng only works out the phonemes"
+    assert text == "Beş dakikan kaldı.".encode()
+    assert mbrola[0] == "mbrola"
+    assert str(mbrola_dir / database / database) in mbrola
+    assert out.read_bytes().startswith(b"RIFF")
+
+
+def test_the_phonemes_mbrola_does_not_know_are_renamed_not_dropped(
+    mbrola_dir: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """espeak-ng 1.52's Turkish uses three phonemes its own tr1 table lacks.
+
+    Let espeak-ng call MBROLA itself and each becomes a gap: "kaldı" is said
+    "ka-dı", in every warning there is. Found on the VM, by MBROLA's warnings.
+    """
+    programs = FakePrograms()
+    monkeypatch.setattr(synth_module.subprocess, "run", programs)
+
+    EspeakSynth(mbrola_dir=mbrola_dir).render(
+        "Kaldı, gel.",
+        VoiceSpec(persona="zio", locale="tr", profile_id="stock:zio:tr"),
+        tmp_path / "out.wav",
+    )
+
+    pho = programs.calls[1][1].decode()
+    phonemes = [line.split()[0] for line in pho.splitlines() if not line.startswith(";")]
+    assert not {"L/", "l/", "&"} & set(phonemes)
+    assert phonemes.count("l") == 2
+    assert "e" in phonemes
+    assert "a\t50\t 0 225 80 217" in pho, "timing and pitch are left alone"
+
+
+def test_only_the_phoneme_field_of_a_pho_line_is_renamed() -> None:
+    fixes = {"L/": "l"}
+    assert translate_phonemes("L/\t78\t 0 100\n", fixes) == "l\t78\t 0 100\n"
+    assert translate_phonemes("L/ 78\n", fixes) == "l 78\n"
+    assert translate_phonemes("a\t50\tL/\n", fixes) == "a\t50\tL/\n"
+    assert translate_phonemes("; L/\n", fixes) == "; L/\n"
+
+
+def test_a_failing_mbrola_falls_back_to_espeaks_own_voice(
+    mbrola_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A broken MBROLA is the robot, not silence, and the log says why."""
+    programs = FakePrograms(mbrola_fails=True)
+    monkeypatch.setattr(synth_module.subprocess, "run", programs)
+    out = tmp_path / "out.wav"
+
+    EspeakSynth(mbrola_dir=mbrola_dir).render(
+        "Merhaba.", VoiceSpec(persona="zio", locale="tr", profile_id="stock:zio:tr"), out
+    )
+
+    last, _ = programs.calls[-1]
+    assert last[last.index("-v") + 1] == "tr+f3"
+    assert out.read_bytes().endswith(b"espeak")
+    assert "using espeak-ng's own voice" in caplog.text
+
+
+def test_english_is_never_sent_to_a_turkish_mbrola_voice(
+    mbrola_dir: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    programs = FakePrograms()
+    monkeypatch.setattr(synth_module.subprocess, "run", programs)
+
+    EspeakSynth(mbrola_dir=mbrola_dir).render(
+        "Five minutes left.",
+        VoiceSpec(persona="zio", locale="en", profile_id="stock:zio:en"),
+        tmp_path / "out.wav",
+    )
+
+    ((argv, _),) = programs.calls
+    assert argv[argv.index("-v") + 1] == "en+f3"
+
+
+def test_mbrola_voices_without_the_mbrola_program_are_not_used(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """espeak-ng lists every MBROLA voice there is, installed or not: no guide."""
+    directory = tmp_path / "mbrola"
+    (directory / "tr2").mkdir(parents=True)
+    (directory / "tr2" / "tr2").write_bytes(b"diphones")
+    monkeypatch.setattr(synth_module, "which", lambda _binary: None)
+
+    assert find_mbrola_voices("mbrola", directory, EspeakSynth.MBROLA) == {}
+
+
+def test_a_database_installed_by_hand_is_found_too(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    directory = tmp_path / "mbrola"
+    directory.mkdir()
+    (directory / "tr2").write_bytes(b"diphones")
+    monkeypatch.setattr(synth_module, "which", lambda binary: f"/usr/bin/{binary}")
+
+    found = find_mbrola_voices("mbrola", directory, EspeakSynth.MBROLA)
+
+    assert found == {("tr", "zio"): directory / "tr2"}
+
+
+def test_a_cache_made_another_way_is_emptied(tmp_path: Path) -> None:
+    """The key is the sentence and the voice; how it was made has to live beside it."""
+    cache = VoiceCache(tmp_path / "espeak", max_bytes=10**6)
+    cache.directory.mkdir()
+    robot = cache.path_for("a")
+    robot.write_bytes(b"robot")
+
+    cache.made_by("espeak-ng tuning 2; mbrola: zio=tr2")
+    assert not robot.exists(), "a cache from before the record is emptied"
+
+    kept = cache.path_for("b")
+    kept.write_bytes(b"voice")
+    cache.made_by("espeak-ng tuning 2; mbrola: zio=tr2")
+    assert kept.exists(), "the same maker keeps its audio"
+
+    cache.made_by("espeak-ng tuning 2; mbrola: none")
+    assert not kept.exists()
+
+
+def test_installing_mbrola_means_the_robot_is_not_heard_again(
+    voice_config: Config, mbrola_dir: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Every line a child hears has been heard before. Without this, all of them."""
+    monkeypatch.setattr(PiperSynth, "available", lambda _self: False)
+    monkeypatch.setattr(synth_module, "MBROLA_DIR", tmp_path / "not-installed")
+
+    robot = Synthesizer.from_config(voice_config).cache.path_for("warn_5")
+    robot.write_bytes(b"robot")
+    Synthesizer.from_config(voice_config)
+    assert robot.exists(), "nothing changed, so nothing is thrown away"
+
+    monkeypatch.setattr(synth_module, "MBROLA_DIR", mbrola_dir)
+    chain = Synthesizer.from_config(voice_config)
+
+    assert not robot.exists()
+    assert chain.cache.directory == robot.parent
 
 
 def test_a_cloned_request_falls_through_to_stock_and_says_it_degraded(

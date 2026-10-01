@@ -99,6 +99,10 @@ piper_binary = "piper"
 # 13 machine it is: piper-tts is not in the archive and the one remaining
 # Turkish Piper voice is CC-BY-NC-SA. See assets/voices/LICENSES.md.
 espeak_binary = "espeak-ng"
+# Speaks for espeak-ng when the mbrola-tr1 and mbrola-tr2 voices are installed,
+# which sounds far less like a robot. They are in contrib and non-free, so a
+# family installs them; nothing changes when they are absent.
+mbrola_binary = "mbrola"
 quiet_hours = ""
 
 # --- ai ----------------------------------------------------------------------

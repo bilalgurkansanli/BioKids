@@ -33,16 +33,20 @@ fallback chain went straight from "no Piper" to silence.
 
 `biokids-voice` now recommends **espeak-ng**: in Debian main, GPL-3+, speaks
 Turkish, carries its voices inside the package, needs no model file and no
-network. Personas are distinguished by pitch, which is crude and enough.
+network. Personas are distinguished by espeak-ng's female and male variants and by
+pitch, which is crude and enough.
 
 It sounds like a 1990s robot. That is the honest trade: a four-year-old who
 hears "beş dakika kaldı" has been warned, and a four-year-old shown a card they
 cannot read yet has not. `PiperSynth` is still tried first and still wins
 whenever a family installs Piper themselves.
 
-`mbrola-tr1` and `mbrola-tr2` improve espeak-ng's Turkish considerably and are
-**Suggests** rather than Recommends, because they are in `non-free` and BioKids
-must install cleanly from `main` alone.
+`mbrola-tr1` and `mbrola-tr2` - a Turkish man and woman, recorded as diphones -
+are what Zio and Sio speak with wherever a family installs them (D-161). They are
+**Suggests** rather than Recommends, because the voices are in `non-free`, the
+`mbrola` program (AGPL-3, run as a separate process) is in `contrib`, and BioKids
+must install cleanly from `main` alone. Nothing of MBROLA is bundled; the voice
+licence allows non-commercial use, which a family's own machine is.
 
 When no engine is available at all the chain ends at the character card, which
 always carries the spoken line as text (VOICE.md §7). A machine with no TTS

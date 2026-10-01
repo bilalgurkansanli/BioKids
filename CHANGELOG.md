@@ -166,6 +166,12 @@ Found on the first Debian 13 VM (`docs/VM-RUNBOOK.md`), none of it visible from 
   read the directories it looked in anyway. The launcher now relays every line and comes
   to the front for a few seconds at 10, 5 and 1 minute, showing the sentence actually
   being said. A phone with the panel open no longer delays a shutdown by 90 seconds.
+- **The voice was a robot, and the mother spoke an octave below the father** (D-161).
+  espeak-ng now speaks more slowly, with its female variant for Zio and its male one for
+  Sio. Where a family installs the MBROLA Turkish voices, Zio and Sio speak with those
+  recordings of a real woman and man instead; espeak-ng's own route to them turned the
+  "l" of every "kaldı" into silence, so BioKids runs MBROLA itself. A change of voice now
+  empties the cache, which would otherwise have kept playing the old one.
 
 ### Known gaps
 
@@ -176,7 +182,8 @@ Stated here rather than discovered later:
   CC-BY-NC-SA, and `fahrettin` and `fettah` were withdrawn from the Piper catalogue at
   their contributors' request. `piper-tts` is not in Debian 13 either. The warnings are
   spoken by **espeak-ng** instead — Debian main, GPL-3+, Turkish, no model file and no
-  download — and Piper is used wherever a family installs it themselves. See D-137 and
+  download — through the MBROLA Turkish voices where a family installs them (D-161), and
+  Piper is used wherever a family installs it themselves. See D-137 and
   `assets/voices/LICENSES.md`.
 - **The exit criterion has not been run end to end.** The packages now build, install
   and pass lintian on a Debian 13 VM, the wizard completes there and a child logs in to

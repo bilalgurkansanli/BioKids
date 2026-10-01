@@ -101,6 +101,8 @@ class VoiceConfig:
     espeak_binary: str = "espeak-ng"
     """The fallback engine, tried when Piper is absent. It usually is: piper-tts
     is not in Debian 13 and the last Turkish Piper voice is CC-BY-NC-SA."""
+    mbrola_binary: str = "mbrola"
+    """Used only when a family has installed the MBROLA Turkish voices (D-161)."""
     quiet_hours: str = ""
     """Empty means never quiet. Otherwise a window like "21:00-08:00"."""
 
