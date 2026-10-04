@@ -49,6 +49,11 @@ class PathsConfig:
     chromium_policy_dir: Path = Path("/etc/chromium/policies/managed")
     dnsmasq_dir: Path = Path("/etc/dnsmasq.d")
     nftables_dir: Path = Path("/etc/nftables.d")
+    ai_run_dir: Path = Path("/run/biokids-ai")
+    """The assistant service's own runtime directory: its socket, and the socket
+    of the language model it runs (D-165)."""
+    ai_models_dir: Path = Path("/var/lib/biokids-ai/models")
+    """Model files a parent downloaded for the assistant, owned by `biokids-ai`."""
 
     @property
     def catalog_dir(self) -> Path:
@@ -115,6 +120,15 @@ class AiConfig:
     max_per_hour: int = 40
     max_per_day: int = 200
     evidence_retention_days: int = 7
+    assistant_per_10min: int = 20
+    """Questions a child may ask the assistant in ten minutes (D-165)."""
+    llama_server_binary: str = "llama-server"
+    whisper_server_binary: str = "whisper-server"
+    idle_unload_minutes: int = 10
+    """A model nobody has asked anything for this long is unloaded, giving its
+    memory back to the child's apps."""
+    threads: int = 0
+    """CPU threads for the models; 0 means half the logical CPUs, at most 8."""
 
 
 @dataclass(frozen=True, slots=True)

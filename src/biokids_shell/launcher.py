@@ -21,12 +21,14 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
 import shlex
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from biokids_core.catalog import resolve_program
 from biokids_core.config import Config, get_config
 
 log = logging.getLogger(__name__)
@@ -40,6 +42,8 @@ after this has become the application itself."""
 
 UNIT_PREFIX = "biokids-app"
 
+CHROMIUM_PREFERENCES = Path("Default") / "Preferences"
+
 
 @dataclass(frozen=True, slots=True)
 class LaunchRequest:
@@ -50,6 +54,8 @@ class LaunchRequest:
     exec_cmd: str = ""
     url: str = ""
     category: str = ""
+    locale: str = ""
+    """The family's language: the child's browser asks websites for it."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,6 +79,8 @@ class AppLauncher:
         argv = self.build_argv(request)
         if argv is None:
             return LaunchResult(ok=False, error="app.not_allowed")
+        if request.kind == "web" or (request.kind == "builtin" and request.slug == "browser"):
+            prepare_browser_profile(self.child_browser_profile(), request.locale)
 
         self.counter += 1
         unit = f"{UNIT_PREFIX}-{_safe_unit(request.slug)}-{self.counter}"
@@ -192,10 +200,11 @@ class AppLauncher:
                     str(Path(part).expanduser()) if part.startswith("~") else part
                     for part in argv
                 ]
-                if shutil.which(argv[0]) is None:
+                program = resolve_program(argv[0])
+                if program is None:
                     log.warning("%s is not installed", argv[0])
                     return None
-                return argv
+                return [program, *argv[1:]]
 
     def browser_argv(self, url: str) -> list[str]:
         """The child's Chromium: its own profile, so its managed policy applies.
@@ -239,6 +248,73 @@ class AppLauncher:
 
     def kiosk_profile(self) -> Path:
         return Path.home() / ".config" / "biokids" / "kiosk"
+
+
+ACCEPT_LANGUAGES = {"tr": "tr-TR,tr,en-US,en", "en": "en-US,en"}
+"""What a child's browser asks websites for, by the family's language. A profile
+made while Debian's chromium-l10n was missing asks for English for good, and
+YouTube Kids then sets itself up in English."""
+
+CHROMIUM_DEFAULT_LANGUAGES = ("", "en-US,en")
+
+
+def prepare_browser_profile(profile: Path, locale: str = "") -> bool:
+    """Set up the child's Chromium profile before it starts.
+
+    The window manager's title bar (D-163): Chromium draws its own frame by
+    default, with its own small close button in its own place.
+    `browser.custom_chrome_frame: false` hands the frame to xfwm4, so a web
+    tile has the same big close button in the same corner as every other app.
+
+    The family's language, unless someone chose other languages in that
+    browser: then theirs stay. Returns whether the settings are in place.
+
+    Written only while that profile's Chromium is not running - a running one
+    holds its preferences in memory and writes them back over ours - and never
+    over a preferences file that cannot be read, which may be the child's.
+    """
+    lock = profile / "SingletonLock"
+    if lock.is_symlink() or lock.exists():
+        return False
+    path = profile / CHROMIUM_PREFERENCES
+    prefs: dict[str, object] = {}
+    if path.exists():
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            log.warning("%s could not be read (%s); leaving it alone", path, exc)
+            return False
+        if not isinstance(loaded, dict):
+            return False
+        prefs = loaded
+    browser = prefs.setdefault("browser", {})
+    intl = prefs.setdefault("intl", {})
+    if not isinstance(browser, dict) or not isinstance(intl, dict):
+        return False
+    changed = False
+    if browser.get("custom_chrome_frame") is not False:
+        browser["custom_chrome_frame"] = False
+        changed = True
+    languages = ACCEPT_LANGUAGES.get(locale)
+    current = intl.get("selected_languages", "")
+    if languages and current != languages and current in CHROMIUM_DEFAULT_LANGUAGES:
+        intl["selected_languages"] = languages
+        changed = True
+    if not prefs["intl"]:
+        del prefs["intl"]
+    if not changed:
+        return True
+    partial = path.with_name(path.name + ".biokids")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        partial.write_text(json.dumps(prefs), encoding="utf-8")
+        partial.replace(path)
+    except OSError as exc:
+        log.warning("%s could not be written: %s", path, exc)
+        with contextlib.suppress(OSError):
+            partial.unlink()
+        return False
+    return True
 
 
 def _safe_unit(slug: str) -> str:

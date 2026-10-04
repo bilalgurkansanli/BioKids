@@ -6,19 +6,25 @@
   window is unbound. They are set to "empty" rather than removed because xfwm4
   restores a missing key from its defaults; an explicitly empty binding stays
   empty.
+
+  Every app window has one button, a big close button in the top right corner,
+  on a 64-pixel title bar that maximised windows keep (D-163). The launcher
+  sets the same keys live at every login (biokids_shell/windows.py), which is
+  what reaches a child whose home already has an older copy of this file.
 -->
 <channel name="xfwm4" version="1.0">
   <property name="general" type="empty">
     <property name="use_compositing" type="bool" value="false"/>
-    <property name="theme" type="string" value="Default"/>
-    <property name="title_font" type="string" value="Sans Bold 9"/>
-    <property name="button_layout" type="string" value="|"/>
+    <property name="theme" type="string" value="BioKids"/>
+    <property name="title_font" type="string" value="Sans Bold 16"/>
+    <property name="title_alignment" type="string" value="center"/>
+    <property name="button_layout" type="string" value="|C"/>
     <property name="workspace_count" type="int" value="1"/>
     <property name="wrap_workspaces" type="bool" value="false"/>
     <property name="cycle_workspaces" type="bool" value="false"/>
     <property name="snap_to_border" type="bool" value="true"/>
     <property name="borderless_maximize" type="bool" value="true"/>
-    <property name="titleless_maximize" type="bool" value="true"/>
+    <property name="titleless_maximize" type="bool" value="false"/>
     <property name="mousewheel_rollup" type="bool" value="false"/>
     <property name="show_app_icon_menu" type="bool" value="false"/>
     <property name="show_frame_shadow" type="bool" value="false"/>

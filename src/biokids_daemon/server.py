@@ -234,6 +234,8 @@ class DaemonServer:
             Op.SET_POLICY: self._set_policy,
             Op.REPORT_ACTIVITY: self._report_activity,
             Op.REQUEST_LAUNCH: self._request_launch,
+            Op.ASSISTANT_STATUS: self._assistant_status,
+            Op.ASSISTANT_SETUP: self._assistant_setup,
         }
 
     async def _ping(self, request: Request) -> Response:
@@ -296,6 +298,20 @@ class DaemonServer:
         self.supervisor.end_break(child_id, str(request.args.get("actor", "parent")))
         return Response(id=request.id, ok=True)
 
+    async def _assistant_status(self, request: Request) -> Response:
+        from biokids_daemon.assistant import AssistantGate
+
+        gate = AssistantGate(self.supervisor, self.bus, self.config)
+        return Response(id=request.id, ok=True, data=await gate.status())
+
+    async def _assistant_setup(self, request: Request) -> Response:
+        """Start the model download as its own unit, with the network the
+        assistant itself never has (D-165). `--no-block`: it takes minutes, and
+        the panel shows its progress from the assistant's status.
+        """
+        ok = await run_systemctl("start", "--no-block", AI_SETUP_UNIT)
+        return Response(id=request.id, ok=ok, error="" if ok else "assistant.setup.failed")
+
     async def _reload(self, request: Request) -> Response:
         self.supervisor.reload()
         return Response(
@@ -349,3 +365,27 @@ def _int_arg(request: Request, name: str, default: int | None = None) -> int:
 
 
 __all__ = ["DaemonServer", "decode_frame"]
+
+
+AI_SETUP_UNIT = "biokids-ai-setup.service"
+
+
+async def run_systemctl(*args: str) -> bool:
+    """`systemctl <args>`, True when it exits 0. Never raises."""
+    try:
+        process = await asyncio.create_subprocess_exec(
+            "systemctl",
+            *args,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, err = await asyncio.wait_for(process.communicate(), timeout=30)
+    except (OSError, TimeoutError) as exc:
+        log.warning("systemctl %s could not be run: %s", " ".join(args), exc)
+        return False
+    if process.returncode != 0:
+        log.warning(
+            "systemctl %s failed: %s", " ".join(args), err.decode("utf-8", "replace").strip()
+        )
+        return False
+    return True

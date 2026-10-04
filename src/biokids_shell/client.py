@@ -85,6 +85,46 @@ class ShellClient:
         except (IpcError, OSError):
             return False
 
+    async def ask_assistant(self, question: str) -> dict[str, Any]:
+        """The assistant's reply (D-165). A refusal when anything is unreachable.
+
+        Its own connection with a long timeout: the first question after a pause
+        waits for the model to load, which is seconds on a good machine and can
+        be minutes on an old one.
+        """
+        client = AsyncDaemonClient(self.socket_path, timeout=ASSISTANT_TIMEOUT_S)
+        try:
+            response = await client.call(ShellOp.ASK_ASSISTANT, question=question)
+        except (IpcError, OSError) as exc:
+            log.warning("could not ask the assistant: %s", exc)
+            return {"refused": True, "refusal_key": "assistant.refuse.unavailable"}
+        if not response.ok:
+            return {"refused": True, "refusal_key": "assistant.refuse.unavailable"}
+        return dict(response.data)
+
+    async def warm_assistant(self) -> None:
+        """Start loading the model while the child thinks of a question."""
+        client = AsyncDaemonClient(self.socket_path, timeout=ASSISTANT_TIMEOUT_S)
+        try:
+            await client.call(ShellOp.WARM_ASSISTANT)
+        except (IpcError, OSError) as exc:
+            log.info("the assistant could not warm up: %s", exc)
+
+    async def hear_assistant(self, audio_b64: str) -> str | None:
+        """The words in a press-and-speak recording (D-166), or None."""
+        client = AsyncDaemonClient(self.socket_path, timeout=ASSISTANT_TIMEOUT_S)
+        try:
+            response = await client.call(ShellOp.HEAR_ASSISTANT, audio=audio_b64)
+        except (IpcError, OSError) as exc:
+            log.warning("could not reach the assistant's ears: %s", exc)
+            return None
+        if not response.ok:
+            return None
+        return str(response.data.get("text", ""))
+
     async def events(self) -> AsyncIterator[Event]:
         async for event in self._client.stream_events():
             yield event
+
+
+ASSISTANT_TIMEOUT_S = 300.0

@@ -36,7 +36,8 @@ from typing import TYPE_CHECKING, Any, cast
 
 from biokids_core.config import Config, get_config
 from biokids_core.errors import IpcError
-from biokids_core.ipc import Event, Request, Response, ShellOp
+from biokids_core.ipc import MAX_LINE_BYTES, Event, Request, Response, ShellOp
+from biokids_daemon.assistant import AssistantGate
 from biokids_daemon.bus import EventBus
 from biokids_daemon.server import cancel_connections
 from biokids_daemon.supervisor import ChildRuntime, Supervisor
@@ -95,10 +96,12 @@ class ShellServer:
         supervisor: Supervisor,
         bus: EventBus,
         config: Config | None = None,
+        assistant: AssistantGate | None = None,
     ) -> None:
         self.supervisor = supervisor
         self.bus = bus
         self.config = config or get_config()
+        self.assistant = assistant or AssistantGate(supervisor, bus, self.config)
         self._server: AbstractServer | None = None
         self._connections: set[asyncio.Task[None]] = set()
         """Every live connection handler, so stop() can end them.
@@ -122,7 +125,11 @@ class ShellServer:
             "Callable[..., Awaitable[AbstractServer]]",
             asyncio.start_unix_server,  # type: ignore[attr-defined]
         )
-        self._server = await start_unix_server(self._serve, path=str(path))
+        # A press-and-speak recording arrives as one frame of base64 (D-166),
+        # far over the stream's default 64 KiB line.
+        self._server = await start_unix_server(
+            self._serve, path=str(path), limit=MAX_LINE_BYTES + 4096
+        )
         with contextlib.suppress(OSError):
             path.chmod(SHELL_SOCKET_MODE)
         log.info("child launcher socket at %s", path)
@@ -244,6 +251,9 @@ class ShellServer:
             ShellOp.FIRST_RUN_DONE: self._first_run_done,
             ShellOp.REQUEST_SHUTDOWN: self._request_shutdown,
             ShellOp.ASK_A_PARENT: self._ask_a_parent,
+            ShellOp.ASK_ASSISTANT: self._ask_assistant,
+            ShellOp.HEAR_ASSISTANT: self._hear_assistant,
+            ShellOp.WARM_ASSISTANT: self._warm_assistant,
         }
 
     async def _ping(self, _caller: ShellCaller, request: Request) -> Response:
@@ -296,6 +306,25 @@ class ShellServer:
         url = str(request.args.get("url", ""))[:1024]
         created = self.supervisor.file_access_request(caller.child_id, url)
         return Response(id=request.id, ok=True, data={"request_id": created})
+
+    async def _ask_assistant(self, caller: ShellCaller, request: Request) -> Response:
+        question = str(request.args.get("question", ""))[:1000]
+        reply = await self.assistant.ask(caller.child_id, question)
+        return Response(id=request.id, ok=True, data=reply)
+
+    async def _warm_assistant(self, caller: ShellCaller, request: Request) -> Response:
+        warm = await self.assistant.warmup(caller.child_id)
+        return Response(id=request.id, ok=True, data=warm)
+
+    async def _hear_assistant(self, caller: ShellCaller, request: Request) -> Response:
+        audio = str(request.args.get("audio", ""))
+        heard = await self.assistant.hear(caller.child_id, audio)
+        return Response(
+            id=request.id,
+            ok=bool(heard.get("ok")),
+            data=heard,
+            error=str(heard.get("error", "")),
+        )
 
 
 def username_for_uid(uid: int) -> str | None:

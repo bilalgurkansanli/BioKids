@@ -182,13 +182,19 @@ def test_the_grid_shows_nothing_a_parent_did_not_enable(
     assert "hiç uygulaman yok" in page
 
 
-def test_the_young_band_gets_no_clock_and_no_number_on_the_ring(
+def test_the_young_band_gets_no_clock_but_the_minutes_in_the_ring(
     client: TestClient, daemon: FakeShellDaemon
 ) -> None:
-    """4–7 sees a shrinking circle, not a number they cannot read (UX.md §2.2)."""
+    """4–7 has no clock (UX.md §2.2), but the ring carries the minutes (D-162).
+
+    The owner asked for the number inside the circle for every child: the one
+    who cannot read still has the shrinking circle, and the parent standing
+    behind them can see at a glance what is left.
+    """
     page = client.get("/").text
     assert 'id="clock"' not in page
-    assert 'id="ring-label"' not in page
+    assert 'id="ring-number">42</span>' in page
+    assert '<span class="ring__unit" aria-hidden="true">dk</span>' in page
 
 
 def test_the_older_band_gets_both(client: TestClient, daemon: FakeShellDaemon) -> None:
@@ -196,7 +202,29 @@ def test_the_older_band_gets_both(client: TestClient, daemon: FakeShellDaemon) -
     daemon.data["age_band"] = AgeBand.OLDER.value
     page = client.get("/").text
     assert 'id="clock"' in page
-    assert 'id="ring-label"' in page
+    assert 'id="ring-number">42</span>' in page
+
+
+def test_a_screen_reader_hears_the_minutes_left(client: TestClient) -> None:
+    page = client.get("/").text
+    assert 'aria-label="Kalan süre: 42 dk"' in page
+
+
+def test_the_ring_says_minutes_in_the_childs_language(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    assert daemon.data is not None
+    daemon.data["locale"] = "en"
+    page = client.get("/").text
+    assert '<span class="ring__unit" aria-hidden="true">min</span>' in page
+    assert 'aria-label="Time left: 42 min"' in page
+
+
+def test_the_time_warning_shows_the_same_minutes(client: TestClient) -> None:
+    """The full-screen pause has a ring too, and a number in it (D-160, D-162)."""
+    page = client.get("/").text
+    assert 'id="notice-ring-number"' in page
+    assert '<span class="notice__ring-unit">dk</span>' in page
 
 
 def test_the_ring_is_drawn_from_the_daemons_numbers(client: TestClient) -> None:
@@ -464,7 +492,7 @@ def test_the_page_carries_its_strings_as_data_not_as_javascript(client: TestClie
 
 def test_the_kiosk_policy_allows_exactly_one_origin() -> None:
     policy = kiosk_policy("127.0.0.1:7879")
-    assert policy["URLBlocklist"] == ["*"]
+    assert policy["URLBlocklist"][0] == "*"
     assert policy["URLAllowlist"] == ["127.0.0.1:7879"]
     assert policy["URLBlocklistExceptions"] == []
 
@@ -478,7 +506,7 @@ def test_the_policy_lets_the_childs_web_tiles_through() -> None:
     policy = kiosk_policy("127.0.0.1:7879", ["trtcocuk.net.tr", "eba.gov.tr", "eba.gov.tr"])
 
     assert policy["URLAllowlist"] == ["127.0.0.1:7879", "eba.gov.tr", "trtcocuk.net.tr"]
-    assert policy["URLBlocklist"] == ["*"], "everything else stays closed"
+    assert policy["URLBlocklist"][0] == "*", "everything else stays closed"
 
 
 def test_the_childs_browser_keeps_no_passwords_in_a_keyring(config: Config) -> None:
@@ -630,6 +658,34 @@ def test_a_tile_with_nothing_to_start_does_not_pretend_to(config: Config) -> Non
     )
 
 
+def test_a_game_in_usr_games_starts_by_its_full_path(
+    config: Config, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A user service's PATH has no /usr/games. GCompris, Frozen Bubble and
+    TuxMath were drawn but did not start: the launcher looked for them by name."""
+    import os
+
+    import biokids_core.catalog
+
+    games = tmp_path / "games"
+    games.mkdir()
+    # Windows finds a program only by an extension in PATHEXT.
+    program = games / ("gcompris-qt.exe" if os.name == "nt" else "gcompris-qt")
+    program.write_bytes(b"#!/bin/sh\n")
+    program.chmod(0o755)
+    monkeypatch.setattr(biokids_core.catalog, "GAMES_DIRS", (str(games),))
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+
+    argv = AppLauncher(config).build_argv(
+        LaunchRequest(
+            slug="gcompris", name="GCompris", kind="app", exec_cmd="gcompris-qt --window"
+        )
+    )
+    assert argv is not None
+    assert pathlib.Path(argv[0]).resolve() == program.resolve()
+    assert argv[1:] == ["--window"]
+
+
 def test_a_slug_cannot_escape_into_a_systemd_unit_name() -> None:
     from biokids_shell.launcher import _safe_unit
 
@@ -731,7 +787,7 @@ async def test_launching_returns_while_the_app_is_still_running(
     async def fake_exec(*_a: Any, **_k: Any) -> Any:
         return running
 
-    monkeypatch.setattr(shutil, "which", lambda _n: "/usr/bin/systemd-run")
+    monkeypatch.setattr(shutil, "which", lambda _n, **_kw: "/usr/bin/systemd-run")
     monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
     monkeypatch.setattr(launcher_module, "SCOPE_REFUSAL_TIMEOUT_S", 0.05)
 
@@ -753,7 +809,7 @@ async def test_a_refused_scope_is_still_reported_as_a_failure(
     async def fake_exec(*_a: Any, **_k: Any) -> Any:
         return refused
 
-    monkeypatch.setattr(shutil, "which", lambda _n: "/usr/bin/systemd-run")
+    monkeypatch.setattr(shutil, "which", lambda _n, **_kw: "/usr/bin/systemd-run")
     monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
     monkeypatch.setattr(launcher_module, "SCOPE_REFUSAL_TIMEOUT_S", 0.05)
 
@@ -786,3 +842,75 @@ def test_the_character_art_is_found_on_an_installed_machine(
     assert shell_app.character_dirs(config)[0] == installed, (
         "the installed copy must win over a source checkout"
     )
+
+
+# ------------------------------------------------- after an upgrade (D-165)
+
+
+def test_static_files_are_checked_before_every_use(client: TestClient) -> None:
+    """A packaged file's old timestamp made the browser keep yesterday's launcher."""
+    response = client.get("/static/shell.css")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-cache"
+
+
+def test_stylesheets_and_scripts_carry_a_version(client: TestClient) -> None:
+    from biokids_shell.app import asset_fingerprint
+
+    page = client.get("/").text
+    version = asset_fingerprint()
+    assert len(version) == 12
+    assert f"/static/shell.css?v={version}" in page
+    assert f"/static/shell.js?v={version}" in page
+
+
+def test_an_app_that_is_not_installed_is_not_drawn(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-164: on a machine without GCompris its tile was drawn and did nothing."""
+    import biokids_shell.app
+
+    monkeypatch.setattr(biokids_shell.app, "program_installed", lambda _program: False)
+    page = client.get("/").text
+    assert 'data-slug="tuxpaint"' not in page
+    assert 'data-slug="eba"' in page or "EBA" in page or "tile" in page
+
+
+def test_games_are_found_where_debian_puts_them(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A systemd service's PATH has no /usr/games; the panel thought every game missing."""
+    from biokids_core import catalog
+
+    seen: list[str] = []
+    monkeypatch.setattr(
+        catalog.shutil, "which", lambda _p, path=None: seen.append(path or "") or None
+    )
+    catalog.program_installed("tuxmath")
+    assert "/usr/games" in seen[0]
+
+
+# ------------------------------------------------ the open internet (D-167)
+
+
+def test_open_mode_has_no_wildcard_and_keeps_the_panel_closed() -> None:
+    """Harmful sites are the DNS filter's job; the browser keeps the panel shut."""
+    policy = kiosk_policy("127.0.0.1:7879", ["eba.gov.tr"], mode="blocklist")
+    blocked = policy["URLBlocklist"]
+    assert isinstance(blocked, list)
+    assert "*" not in blocked
+    assert "127.0.0.1:7878" in blocked and "ts.net" in blocked
+    assert "chrome://settings" in blocked and "chrome://flags" in blocked
+
+
+def test_safe_search_is_forced_in_every_mode() -> None:
+    for mode in ("allowlist", "blocklist"):
+        policy = kiosk_policy("127.0.0.1:7879", mode=mode)
+        assert policy["ForceGoogleSafeSearch"] is True
+        assert policy["ForceYouTubeRestrict"] == 2
+        assert policy["DnsOverHttpsMode"] == "off", "or DNS filtering is gone round"
+
+
+def test_chromes_own_pages_are_closed_even_with_the_wildcard() -> None:
+    """Since Chromium 147 a bare * no longer covers chrome:// pages."""
+    blocked = kiosk_policy("127.0.0.1:7879")["URLBlocklist"]
+    assert isinstance(blocked, list)
+    assert "chrome://settings" in blocked

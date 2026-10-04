@@ -20,9 +20,14 @@ entirely on your own machine.**
 - **Time limits** that a child cannot cheat by changing the clock. Daily quotas, time
   windows, separate weekday and weekend rules, spoken warnings before the machine
   shuts down.
-- **Content filtering** with an allowlist mode for younger children and a blocklist
-  mode for older ones, enforced at the DNS level and in the browser. Blocked pages
-  offer an "ask a parent" button that sends a request to the parent's phone.
+- **Content filtering.** The internet is open with adult, gambling and harmful sites
+  always closed, by a DNS filter on the machine that applies to the children's
+  accounts only; a parent can switch a child to "only the sites I choose" instead.
+  SafeSearch is forced on Google, YouTube, Bing and DuckDuckGo.
+- **"Sor Bana", a question box for the child**, answered by a language model running
+  on the machine, for the child's age. It refuses what a child should not be asking
+  and tells the parent; the child is told that on the screen. Off by default; the
+  child can also ask aloud, by holding a button, if the parent allows it.
 - **A child launcher** instead of a desktop. Big tiles, no file system, no settings, no
   terminal. The interface adapts to the child's age.
 - **Earned time.** Time spent in educational applications turns into extra playtime, at

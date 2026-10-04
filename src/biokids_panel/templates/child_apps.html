@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ _('apps.title') }} · {{ child.display_name }}{% endblock %}
+
+{#
+  D-164. Which tiles a child sees. Until this screen existed only the wizard
+  asked, so a site added to the catalog later could never reach a child who
+  was already set up. A ticked box is a tile; nothing unticked ever appears.
+#}
+{% block content %}
+  <h1>{{ child.display_name }} — {{ _('apps.title') }}</h1>
+  <p class="muted">{{ _('apps.help', name=child.display_name) }}</p>
+
+  <form method="post" action="/children/{{ child.id }}/apps">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+
+    {% for group, entries in [('apps.group.apps', apps), ('apps.group.sites', sites)] %}
+      <fieldset class="card">
+        <legend><strong>{{ _(group) }}</strong></legend>
+        <ul class="pick-list">
+          {% for app in entries %}
+            {% set available = app.slug in installed %}
+            <li>
+              <label class="pick-row{% if not available %} pick-row--off{% endif %}">
+                <input type="checkbox" name="apps" value="{{ app.slug }}"
+                       {% if app.slug in enabled and available %}checked{% endif %}
+                       {% if not available %}disabled{% endif %}>
+                <span class="pick-row__text">
+                  <strong>{{ app.name_tr if locale == 'tr' else app.name_en }}</strong>
+                  <span class="help">
+                    {{ app.description_tr if locale == 'tr' else app.description_en }}
+                  </span>
+                  <span class="help small">
+                    {% if not available %}
+                      {{ _('app.not_installed') }}
+                    {% elif app.slug in for_age %}
+                      {{ _('apps.for_age', min=app.min_age, max=app.max_age) }}
+                    {% else %}
+                      {{ _('apps.other_age', min=app.min_age, max=app.max_age) }}
+                    {% endif %}
+                    {% if app.url %}· <code>{{ app.url|replace('https://', '') }}</code>{% endif %}
+                  </span>
+                </span>
+              </label>
+            </li>
+          {% endfor %}
+        </ul>
+      </fieldset>
+    {% endfor %}
+
+    <p class="help">{{ _('apps.always_on') }}</p>
+
+    <div class="actions">
+      <button class="btn btn--primary" type="submit">{{ _('common.save') }}</button>
+      <a class="btn btn--quiet" href="/children">{{ _('common.back') }}</a>
+    </div>
+  </form>
+{% endblock %}

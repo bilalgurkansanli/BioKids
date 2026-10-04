@@ -172,6 +172,55 @@ Found on the first Debian 13 VM (`docs/VM-RUNBOOK.md`), none of it visible from 
   recordings of a real woman and man instead; espeak-ng's own route to them turned the
   "l" of every "kaldı" into silence, so BioKids runs MBROLA itself. A change of voice now
   empties the cache, which would otherwise have kept playing the old one.
+- **A child could get stuck in an app** (D-163). App windows had no buttons and a
+  maximised window no title bar, and Stellarium starts full screen. Every app window now
+  fills the screen and has one big close button, always in the top right corner; apps
+  that would start full screen start windowed; web tiles use the same title bar.
+- **Every BioKids machine answered DNS for its whole network** (D-167). The daemon
+  depended on `dnsmasq`, whose own service listens on port 53 on every interface. It
+  now depends on `dnsmasq-base`, which has no service. An upgrade cannot remove a
+  package another one pulled in: run `sudo apt remove dnsmasq` once.
+- **GCompris, TuxMath and Frozen Bubble did nothing when tapped** (D-164). Debian puts
+  games in `/usr/games`, which is on no service's PATH; the launcher now finds them
+  there and starts them by their full path. A tile whose program is not installed is
+  no longer drawn at all.
+- **Google Earth and YouTube Kids were blocked even when ticked** (D-164): each needs
+  more than the address its tile opens. A catalog entry can now list what it needs.
+- **The "opening" screen could stay up after the app had opened, or after it was
+  closed.** The launcher goes back home as soon as the app has started, and when it
+  comes to the front again.
+- **The child's browser and YouTube Kids were in English** (D-168): Debian's Chromium
+  needs `chromium-l10n` for Turkish, and the child's profile now asks websites for the
+  family's language.
+- **A page could be stale after an upgrade.** The launcher's and the panel's static
+  files are revalidated on every load, and the panel's offline cache is named after
+  their contents.
+
+### Changed
+
+- **Safe sites, and a screen to choose them** (D-164). KÜRE Çocuk, Bilim Çocuk, Meraklı
+  Minik, Code.org, YouTube Kids and PBS KIDS Games are in the catalog; the last two are
+  offered but never ticked by default. A web tile opens its own path, not its whole
+  site. **Çocuklar → Uygulamalar ve siteler** changes a child's tiles after setup.
+  Code.org opens its course for children who cannot read yet (4-7) and its Express
+  course (8-10), and Blockly Games joins them. **Dünya** (Google Earth) replaces
+  **Gökyüzü** (Stellarium).
+- **The internet is open by default, with harmful sites always closed** (D-167),
+  overriding D-61 and D-62. The children's DNS goes to a filter on the machine that
+  closes about 291,000 adult, gambling, malware and scam domains and forces
+  SafeSearch on Google, YouTube, Bing and DuckDuckGo; if the filter is down they have
+  no internet rather than unfiltered internet. **Çocuklar → İnternet** switches a
+  child to "only the sites I choose". The parent's own internet is not filtered.
+- **The child can ask questions: "Sor Bana"** (D-165), a local language model behind
+  a word list, a classifier and a checked answer, which refuses what a child should
+  not ask and tells the parent. Off by default, switched on per child under
+  **Çocuklar → Asistan**, where the models are downloaded once. With voice switched on
+  too (D-166), the child can hold a button and ask aloud; the recording is transcribed
+  on the machine and never saved. This reverses D-92's "no conversation" for this
+  one tile; Zio and Sio stay one-way. Database migration `7c1d9e2a4b5f` adds the
+  assistant's switches and the alert text.
+- **The ring shows the minutes left, at every age** (D-162), in the corner and in the
+  full-screen time warning.
 
 ### Known gaps
 
@@ -185,6 +234,14 @@ Stated here rather than discovered later:
   download — through the MBROLA Turkish voices where a family installs them (D-161), and
   Piper is used wherever a family installs it themselves. See D-137 and
   `assets/voices/LICENSES.md`.
+- **A blocked site shows Chromium's "This site can't be reached"**, not the block page
+  of D-64.
+- **The assistant gets an occasional fact wrong**, as a small local model does, and
+  is slow on the first question after it opens (up to three minutes on the
+  development VM, then 10 to 30 seconds an answer). It has not been measured on real
+  hardware. It needs `llama.cpp-tools`
+  and `whisper.cpp-tools` newer than Debian 13 has; until trixie-backports has them,
+  the BioKids repository has to carry rebuilds.
 - **The exit criterion has not been run end to end.** The packages now build, install
   and pass lintian on a Debian 13 VM, the wizard completes there and a child logs in to
   the launcher; the spoken warnings, the phone over Tailscale and the reboot and clock

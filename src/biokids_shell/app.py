@@ -18,9 +18,13 @@ computer is angry at them, which is not what any of this is for.
 from __future__ import annotations
 
 import asyncio
+import base64
 import contextlib
+import functools
+import hashlib
 import json
 import logging
+import shlex
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Annotated, Any
@@ -30,13 +34,16 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Stre
 from fastapi.staticfiles import StaticFiles
 from jinja2 import ChainableUndefined, Environment, FileSystemLoader, select_autoescape
 
+from biokids_core.catalog import program_installed
 from biokids_core.config import Config, get_config
+from biokids_core.errors import IpcError
 from biokids_core.i18n import Translator, normalise_locale, translator
+from biokids_core.ipc import AsyncDaemonClient
 from biokids_core.types import AgeBand, Reason
 from biokids_shell import device
 from biokids_shell.client import ShellClient
 from biokids_shell.launcher import AppLauncher, LaunchRequest
-from biokids_shell.relay import NOTICE_SECONDS
+from biokids_shell.relay import NOTICE_SECONDS, voice_socket_path
 
 log = logging.getLogger(__name__)
 
@@ -71,6 +78,13 @@ TILE_ICONS: dict[str, str] = {
     "tv": "📺",
     "cat": "🐱",
     "book": "📚",
+    "encyclopedia": "📖",
+    "science": "🔬",
+    "ladybug": "🐞",
+    "robot": "🤖",
+    "video": "🎬",
+    "game": "🎮",
+    "earth": "🌍",
     "globe": "🌐",
     "speaker": "🔊",
     "sun": "☀️",
@@ -116,12 +130,22 @@ class ShellState:
         self.env.filters["avatar"] = lambda slug: AVATARS.get(str(slug), AVATARS["fox"])
         self.env.filters["expression"] = set_expression
         self.characters = _load_characters(config)
+        self.voice = AsyncDaemonClient(voice_socket_path(config))
+        self.warming: asyncio.Task[None] | None = None
+        """The assistant's warm-up, held so it is not collected mid-flight."""
         self.spoken: dict[str, Any] = {}
         """The last line the voice service accepted, as it resolved it: the
         sentence actually being said and the character saying it (D-160)."""
 
     def remember_spoken(self, card: dict[str, Any]) -> None:
         self.spoken = dict(card)
+
+    async def say(self, text: str, locale: str) -> None:
+        """Zio reads the assistant's answer aloud (D-165). Silence is not an error."""
+        try:
+            await self.voice.call("say", text=text, locale=locale, persona="zio")
+        except (IpcError, OSError) as exc:
+            log.info("the answer was not read aloud: %s", exc)
 
 
 EXPRESSIONS = ("neutral", "happy", "concerned", "sleepy")
@@ -191,6 +215,23 @@ def create_app(config: Config | None = None) -> FastAPI:
     app.state.shell = ShellState(config)
     app.mount("/static/shared", StaticFiles(directory=str(SHARED_STATIC_DIR)), name="shared")
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+    @app.middleware("http")
+    async def revalidate_static(request: Request, call_next: Any) -> Response:
+        """Static files are checked with the launcher before every use.
+
+        A Debian package stamps every file with the same old modification time,
+        so a browser guessing freshness from Last-Modified decided an upgraded
+        stylesheet was the one it already had and kept the old one for days:
+        after an upgrade the child saw yesterday's launcher. `no-cache` still
+        lets the browser keep a copy; it only has to ask first, and the answer
+        from a server on the same machine is a 304 in a millisecond.
+        """
+        response: Response = await call_next(request)
+        if request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
     register_routes(app)
     return app
 
@@ -215,11 +256,14 @@ def register_routes(app: FastAPI) -> None:
             "band": band,
             "young": band == AgeBand.YOUNG.value,
             "state": data,
-            "tiles": data.get("tiles", []),
+            "tiles": [tile for tile in data.get("tiles", []) if tile_can_start(tile)],
             "characters": shell.characters,
             "strings": _browser_strings(tr),
             "lines": _spoken_lines(tr),
             "notice_ms": int(NOTICE_SECONDS * 1000),
+            # Appended to every stylesheet and script: a new file is a new URL,
+            # so no browser can show a child last version's launcher.
+            "asset_version": asset_fingerprint(),
         }
         context.update(values)
         return HTMLResponse(shell.env.get_template(template).render(**context))
@@ -302,6 +346,7 @@ def register_routes(app: FastAPI) -> None:
                 exec_cmd=str(tile.get("exec", "")),
                 url=str(tile.get("url", "")),
                 category=str(tile.get("category", "")),
+                locale=normalise_locale(str(data.get("locale", "tr"))),
             )
         )
         if result.ok:
@@ -345,6 +390,71 @@ def register_routes(app: FastAPI) -> None:
         if ok:
             return await render(shell, request, "goodbye.html", data)
         return await render(shell, request, "home.html", data)
+
+    # ---------------------------------------------------------- assistant
+
+    @app.get("/assistant", response_class=HTMLResponse)
+    async def assistant_page(request: Request, shell: Shell) -> Response:
+        """Ask Zio (D-165). Only when this child's parent turned it on."""
+        data = await shell.client.state()
+        if data is None:
+            return await render(shell, request, "offline.html", None)
+        if not (data.get("assistant") or {}).get("enabled"):
+            return RedirectResponse("/", status_code=303)
+        return await render(shell, request, "assistant.html", data)
+
+    @app.post("/assistant/ask")
+    async def assistant_ask(request: Request, shell: Shell) -> Response:
+        """A question in, the sentence to show out; Zio says it as well.
+
+        JSON only, and only from the launcher's own page: a site open in the
+        child's browser could otherwise post questions in the child's name and
+        send their parent alarming alerts about things the child never asked.
+        """
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        try:
+            body = json.loads(await request.body() or b"{}")
+        except ValueError:
+            return JSONResponse({"error": "bad request"}, status_code=400)
+        question = str(body.get("question", "") if isinstance(body, dict) else "")[:600]
+        data = await shell.client.state() or {}
+        locale = normalise_locale(str(data.get("locale", "tr")))
+        tr = translator(locale)
+        reply = await shell.client.ask_assistant(question)
+        refused = bool(reply.get("refused"))
+        if refused:
+            # Never generated: a refusal is a sentence people wrote (D-165).
+            text = tr(str(reply.get("refusal_key") or "assistant.refuse.default"))
+        else:
+            text = str(reply.get("text", ""))
+        if text:
+            await shell.say(text, locale)
+        return JSONResponse(
+            {"text": text, "refused": refused}, headers={"Cache-Control": "no-store"}
+        )
+
+    @app.post("/assistant/warmup")
+    async def assistant_warmup(request: Request, shell: Shell) -> Response:
+        """The page asks this as it opens; the answer does not wait for the model."""
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        shell.warming = asyncio.create_task(shell.client.warm_assistant())
+        return JSONResponse({"ok": True}, headers={"Cache-Control": "no-store"})
+
+    @app.post("/assistant/hear")
+    async def assistant_hear(request: Request, shell: Shell) -> Response:
+        """Press-and-speak (D-166): a short WAV in, its words out, nothing kept."""
+        if not _from_launcher(request, "audio/wav"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        audio = await request.body()
+        if not audio or len(audio) > MAX_RECORDING_BYTES:
+            return JSONResponse({"error": "too long"}, status_code=413)
+        text = await shell.client.hear_assistant(base64.b64encode(audio).decode("ascii"))
+        del audio
+        return JSONResponse(
+            {"text": text or "", "ok": text is not None}, headers={"Cache-Control": "no-store"}
+        )
 
     # ------------------------------------------------------------- events
 
@@ -390,6 +500,51 @@ def register_routes(app: FastAPI) -> None:
 # ------------------------------------------------------------------ helpers
 
 
+@functools.cache
+def asset_fingerprint() -> str:
+    """Twelve hex digits that change whenever a file the launcher serves does."""
+    digest = hashlib.sha256()
+    for directory in (STATIC_DIR, SHARED_STATIC_DIR):
+        for path in sorted(Path(directory).rglob("*")):
+            if path.is_file():
+                digest.update(path.name.encode())
+                digest.update(path.read_bytes())
+    return digest.hexdigest()[:12]
+
+
+def tile_can_start(tile: dict[str, Any]) -> bool:
+    """A packaged app whose program is missing is not drawn (D-20, D-164).
+
+    The catalog promised this from the start and the launcher never checked:
+    on a machine without GCompris the tile was there and did nothing at all.
+    """
+    if tile.get("kind") != "app":
+        return True
+    argv = shlex.split(str(tile.get("exec", "")))
+    return bool(argv) and program_installed(argv[0])
+
+
+MAX_RECORDING_BYTES = 16_000 * 2 * 16 + 1024
+"""Sixteen seconds of 16 kHz mono: the button stops at fifteen."""
+
+
+def _from_launcher(request: Request, content_type: str) -> bool:
+    """The launcher's own page, and nothing a web page can forge.
+
+    A content type other than a form's makes the browser ask before sending a
+    cross-site request, and the launcher never says yes; an Origin, when the
+    browser sends one, must be the launcher's.
+    """
+    sent = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    if sent != content_type:
+        return False
+    origin = request.headers.get("origin")
+    if origin is None:
+        return True
+    host = request.headers.get("host", "")
+    return origin in {f"http://{host}", f"https://{host}"}
+
+
 def _screen_for(data: dict[str, Any]) -> str | None:
     """Which full-screen state, if any, replaces the tile grid right now."""
     if data.get("allow"):
@@ -418,6 +573,10 @@ def _browser_strings(tr: Translator) -> dict[str, str]:
         "warning": tr("quota.warning", minutes="{minutes}"),
         "earned": tr("shell.earned.body", minutes="{minutes}"),
         "timeup": tr("shell.timeup.title"),
+        # What a screen reader says for the ring, kept in step with the number.
+        "remaining": tr("shell.remaining_label")
+        + ": "
+        + tr("shell.remaining_minutes", minutes="{minutes}"),
     }
 
 

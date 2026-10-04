@@ -75,7 +75,20 @@
   /* ------------------------------------------------------------ launching */
 
   var launchSlug = document.getElementById("launch-slug");
+  var launched = false;
   if (launchSlug) {
+    /* Whenever the launcher is back in front - the child closed the app with
+     * its big X - and the loading screen is still showing, it is stale. */
+    var backHome = function () {
+      if (document.visibilityState === "visible" && launched) {
+        window.location.replace("/");
+      }
+    };
+    window.addEventListener("focus", backHome);
+    document.addEventListener("visibilitychange", backHome);
+    window.setTimeout(function () {
+      launched = true;
+    }, 4000);
     var slug = launchSlug.getAttribute("data-slug");
     fetch("/launch/" + encodeURIComponent(slug), {
       method: "POST",
@@ -87,10 +100,12 @@
       .then(function (result) {
         if (result && result.ok) {
           /* The app is starting in its own window. Put the launcher back so the
-           * child is never left looking at a loading screen that has finished. */
-          window.setTimeout(function () {
-            window.location.href = "/";
-          }, 1200);
+           * child is never left looking at a loading screen that has finished.
+           * Straight away: the app's window covers this one at once, and
+           * Chromium may not run a covered page's timers - so a 1.2-second timer
+           * left "Boya açılıyor" on screen until the child closed Boya. */
+          launched = true;
+          window.location.replace("/");
         } else {
           window.location.href = "/blocked?reason=" + encodeURIComponent((result && result.reason) || "");
         }
@@ -127,6 +142,11 @@
   var ringWrap = document.getElementById("ring-wrap");
   var ringValue = document.getElementById("ring-value");
   var ringLabel = document.getElementById("ring-label");
+  var ringNumber = document.getElementById("ring-number");
+
+  function minutesLeft(remainingSeconds) {
+    return Math.ceil(Math.max(0, remainingSeconds) / 60);
+  }
 
   function updateRing(remainingSeconds) {
     if (!ringWrap || !ringValue) return;
@@ -137,8 +157,15 @@
       "data-tone",
       fraction <= 0.1 ? "danger" : fraction <= 0.25 ? "warn" : "ok",
     );
-    if (ringLabel) {
-      ringLabel.textContent = String(Math.ceil(Math.max(0, remainingSeconds) / 60));
+    var minutes = minutesLeft(remainingSeconds);
+    if (ringNumber) {
+      ringNumber.textContent = String(minutes);
+    }
+    if (ringLabel && window.BIOKIDS_STRINGS && window.BIOKIDS_STRINGS.remaining) {
+      ringLabel.setAttribute(
+        "aria-label",
+        window.BIOKIDS_STRINGS.remaining.replace("{minutes}", String(minutes)),
+      );
     }
   }
 
@@ -200,6 +227,7 @@
   var notice = document.getElementById("notice");
   var noticeLine = document.getElementById("notice-line");
   var noticeRing = document.getElementById("notice-ring");
+  var noticeRingNumber = document.getElementById("notice-ring-number");
   var noticeTimer = null;
 
   function speakingFaces(on) {
@@ -225,6 +253,11 @@
       var quota = wrap ? Number(wrap.getAttribute("data-quota")) : 0;
       var fraction = quota > 0 ? Math.max(0, Math.min(1, remainingSeconds / quota)) : 0;
       noticeRing.setAttribute("stroke-dashoffset", String(RING_CIRCUMFERENCE * (1 - fraction)));
+    }
+    if (noticeRingNumber) {
+      noticeRingNumber.textContent = String(
+        remainingSeconds > 0 ? minutesLeft(remainingSeconds) : minutes,
+      );
     }
     notice.hidden = false;
     window.requestAnimationFrame(function () {

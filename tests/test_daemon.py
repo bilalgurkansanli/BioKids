@@ -1673,3 +1673,54 @@ async def test_the_browser_policy_follows_the_childrens_web_tiles(
 
     allowed = json.loads(path.read_text(encoding="utf-8"))["URLAllowlist"]
     assert "trtcocuk.net.tr" in allowed, "enabling a tile in the panel must reach the browser"
+
+
+# ----------------------------------------------- site allowlist (D-164)
+
+
+def test_a_web_tile_opens_what_its_catalog_entry_allows() -> None:
+    """D-164: KÜRE only its children's section; Earth its whole host, because it
+    moves itself from /web to /static as soon as it loads; YouTube Kids the
+    Google sign-in check it makes on every visit."""
+    from biokids_core.catalog import load_catalog
+
+    catalog = {entry.slug: entry for entry in load_catalog()}
+    assert catalog["kure-cocuk"].allowed_patterns() == ("kureansiklopedi.com/tr/cocuk",)
+    assert catalog["google-earth"].allowed_patterns() == ("earth.google.com",)
+    assert "accounts.google.com" in catalog["youtube-kids"].allowed_patterns()
+    assert catalog["eba"].allowed_patterns() == ("eba.gov.tr",), "the host, by default"
+
+
+def test_a_tile_the_catalog_no_longer_knows_gets_its_host() -> None:
+    from biokids_daemon.supervisor import web_tile_pattern
+
+    assert web_tile_pattern("https://www.eba.gov.tr/a/b") == "eba.gov.tr"
+    assert web_tile_pattern("not a url") == ""
+
+
+# ----------------------------------------------------- the assistant (D-165)
+
+
+async def test_the_launcher_is_told_whether_to_show_the_assistant(
+    supervisor: Supervisor, session: Session
+) -> None:
+    """The flags have to reach the child's own state, not only the panel's.
+
+    They were first added to the panel's status by mistake, and the child's
+    launcher - which is what draws the tile - never heard about them: the
+    assistant was on and the child could not find it.
+    """
+    await supervisor.start()
+    assert supervisor.shell_state(1)["assistant"] == {"enabled": False, "voice": False}
+
+    set_quota(session, 1, 60, assistant_enabled=True, assistant_voice=True)
+    supervisor.reload()
+    assert supervisor.shell_state(1)["assistant"] == {"enabled": True, "voice": True}
+
+
+async def test_the_microphone_is_never_on_without_the_assistant(
+    supervisor: Supervisor, session: Session
+) -> None:
+    set_quota(session, 1, 60, assistant_enabled=False, assistant_voice=True)
+    await supervisor.start()
+    assert supervisor.shell_state(1)["assistant"] == {"enabled": False, "voice": False}

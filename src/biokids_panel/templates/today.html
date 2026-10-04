@@ -12,6 +12,12 @@
       {{ notice.text }}
     </div>
   {% endif %}
+  {% for item in assistant_alerts %}
+    <a class="notice notice--warn notice--link" href="/children/{{ item.child.id }}/assistant">
+      <span aria-hidden="true">💬</span>
+      {{ _('assistant.panel.banner', name=item.child.display_name, count=item.count) }}
+    </a>
+  {% endfor %}
   <div id="cards">
     {% include "partials/child_cards.html" %}
   </div>

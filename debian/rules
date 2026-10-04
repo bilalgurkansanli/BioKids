@@ -99,6 +99,15 @@ override_dh_auto_install:
 	install -m 0644 src/biokids_shell/xfce/*.desktop \
 		debian/tmp/usr/share/biokids/xfce/
 
+	# The big close button on every app window, and the rule that makes every
+	# app window fill the screen so the button is always in one corner (D-163).
+	install -d debian/tmp/usr/share/themes/BioKids/xfwm4
+	install -m 0644 src/biokids_shell/xfce/theme/BioKids/xfwm4/* \
+		debian/tmp/usr/share/themes/BioKids/xfwm4/
+	install -d debian/tmp/usr/share/biokids/devilspie2
+	install -m 0644 src/biokids_shell/devilspie2/*.lua \
+		debian/tmp/usr/share/biokids/devilspie2/
+
 	# The greeter's "is this a child who may come in by their picture?"
 	# (D-155). Installed here rather than straight from a .install line because
 	# it must be executable, and a checkout made on Windows cannot promise the
@@ -162,8 +171,11 @@ override_dh_python3:
 override_dh_installsystemd:
 	dh_installsystemd -pbiokids-daemon --name=biokids-lockdown --no-enable --no-start
 	dh_installsystemd -pbiokids-daemon biokids-daemon.service
+	dh_installsystemd -pbiokids-daemon --name=biokids-dns
 	dh_installsystemd -pbiokids-panel --name=biokids-provision@ --no-enable --no-start
 	dh_installsystemd -pbiokids-panel biokids-panel.service
+	dh_installsystemd -pbiokids-ai --name=biokids-ai-setup --no-enable --no-start
+	dh_installsystemd -pbiokids-ai biokids-ai.service
 	dh_installsystemd --remaining-packages
 
 # The shell and the voice service belong to a child's session and are enabled

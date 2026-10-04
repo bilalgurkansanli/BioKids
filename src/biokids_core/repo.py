@@ -20,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from biokids_core.db.models import (
+    AiAlert,
     App,
     AuditLog,
     CategoryLimit,
@@ -138,6 +139,8 @@ def load_policy(
         ai_enabled=row.ai_enabled,
         ai_block_enabled=row.ai_block_enabled,
         ai_timeout_min=row.ai_timeout_min,
+        assistant_enabled=bool(row.assistant_enabled),
+        assistant_voice=bool(row.assistant_voice),
         enabled=True,
     )
 
@@ -352,4 +355,41 @@ def default_quota_minutes(band: AgeBand) -> tuple[int, int]:
 
 
 def default_filter_mode(band: AgeBand) -> FilterMode:
-    return FilterMode.ALLOWLIST if band is AgeBand.YOUNG else FilterMode.BLOCKLIST
+    """Open internet, harmful sites closed, at every age (D-167, the owner's call
+    over D-61). "Selected sites only" is there for a parent who wants it."""
+    del band
+    return FilterMode.BLOCKLIST
+
+
+def assistant_alerts(session: Session, child_id: int, *, limit: int = 20) -> list[AiAlert]:
+    """The assistant's refusals a parent has not yet marked as seen (D-165)."""
+    return list(
+        session.scalars(
+            select(AiAlert)
+            .where(
+                AiAlert.child_id == child_id,
+                AiAlert.app == "assistant",
+                AiAlert.dismissed.is_(False),
+            )
+            .order_by(AiAlert.ts.desc())
+            .limit(limit)
+        ).all()
+    )
+
+
+def unseen_assistant_alerts(session: Session) -> dict[int, int]:
+    """child id -> how many of the assistant's alerts are waiting, for Today."""
+    counts: dict[int, int] = {}
+    for alert in session.scalars(
+        select(AiAlert).where(AiAlert.app == "assistant", AiAlert.dismissed.is_(False))
+    ).all():
+        counts[alert.child_id] = counts.get(alert.child_id, 0) + 1
+    return counts
+
+
+def dismiss_alert(session: Session, alert_id: int) -> bool:
+    alert = session.get(AiAlert, alert_id)
+    if alert is None:
+        return False
+    alert.dismissed = True
+    return True

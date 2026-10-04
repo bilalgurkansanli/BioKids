@@ -89,12 +89,13 @@ svg {
   font-variant-numeric: tabular-nums;
 }
 
-/* The ring: always visible, top right (D-43b). For 4-7 it carries no number —
- * a child who cannot read still understands a circle that is emptying. */
+/* The ring: always visible, top right (D-43b), with the minutes left inside it
+ * (D-162). A child who cannot read still understands a circle that is emptying;
+ * the number is for everyone who can. */
 .ring-wrap {
   position: relative;
-  width: 84px;
-  height: 84px;
+  width: 104px;
+  height: 104px;
   flex: none;
 }
 
@@ -132,11 +133,26 @@ svg {
 .ring__label {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: 1rem;
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
+}
+
+.ring__number {
+  font-family: var(--font-kid);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.ring__unit {
+  margin-top: 2px;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--ink-soft);
 }
 
 /* -------------------------------------------------------------------- tiles */
@@ -487,10 +503,41 @@ svg {
   color: var(--ink);
 }
 
+.notice__ring-wrap {
+  position: relative;
+  width: 132px;
+  height: 132px;
+}
+
 .notice__ring {
-  width: 104px;
-  height: 104px;
+  width: 100%;
+  height: 100%;
   transform: rotate(-90deg);
+}
+
+.notice__ring-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.notice__ring-number {
+  font-family: var(--font-kid);
+  font-size: 2.6rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.notice__ring-unit {
+  margin-top: 2px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-soft);
 }
 
 .notice__ring-track { fill: none; stroke: var(--line); stroke-width: 12; }
@@ -529,3 +576,159 @@ svg {
   gap: var(--sp-3);
   padding: var(--sp-5);
 }
+
+/* --------------------------------------------------------------- assistant */
+/* D-165. Zio on the left, the conversation beside it, the question at the
+ * bottom, and the note that a parent may see some of it - always visible. */
+
+.assistant__home {
+  min-height: 64px;
+  padding: 0 var(--sp-4);
+  font-size: 1.2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  text-decoration: none;
+}
+
+.assistant__title {
+  flex: 1;
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.assistant__main {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-4);
+  min-height: 0;
+}
+
+.assistant__character {
+  width: 200px;
+  height: 200px;
+  align-self: end;
+}
+
+.assistant__character svg {
+  width: 100%;
+  height: 100%;
+}
+
+.assistant__log {
+  list-style: none;
+  margin: 0;
+  padding: var(--sp-3) 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.bubble {
+  max-width: 70%;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-lg);
+  font-size: 1.45rem;
+  line-height: 1.4;
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.screen[data-band="8-10"] .bubble { font-size: 1.2rem; }
+
+.bubble--zio {
+  align-self: flex-start;
+  border: 3px solid var(--bio-coral);
+  border-bottom-left-radius: var(--r-sm);
+}
+
+.bubble--child {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--bio-indigo) 10%, var(--surface));
+  border-bottom-right-radius: var(--r-sm);
+}
+
+.bubble--thinking { color: var(--ink-soft); font-style: italic; }
+.bubble--refused { border-color: var(--bio-amber); }
+
+.assistant__foot {
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+}
+
+.assistant__form {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: center;
+}
+
+.assistant__input {
+  flex: 1;
+  min-height: 72px;
+  padding: 0 var(--sp-4);
+  border: 3px solid var(--line);
+  border-radius: var(--r-pill);
+  font: inherit;
+  font-size: 1.5rem;
+  background: var(--surface);
+  color: var(--ink);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.assistant__input:focus { border-color: var(--bio-indigo); outline: none; }
+
+.mic {
+  width: 84px;
+  height: 84px;
+  flex: none;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bio-teal);
+  color: #fff;
+  font-size: 2.2rem;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.mic.is-on { background: var(--danger); transform: scale(1.1); }
+.mic:disabled, .big-btn:disabled { opacity: .5; cursor: default; }
+
+.assistant__note {
+  margin: var(--sp-3) 0 0;
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+/* While the microphone is open, the whole screen says so (D-166). */
+.listening {
+  position: fixed;
+  top: var(--sp-4);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-5);
+  border-radius: var(--r-pill);
+  background: var(--danger);
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-2);
+}
+
+.listening[hidden] { display: none; }
+
+.listening__dot { animation: pulse 1s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .listening__dot { animation: none; }
+}
+
+/* The assistant's tile on the home grid: Zio's coral, so it reads as hers. */
+.tile--assistant { border-color: var(--bio-coral); }

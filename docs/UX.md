@@ -82,7 +82,7 @@ Fullscreen Chromium kiosk. No window chrome, no scrollbars, nothing behind it.
 | Labels | one word, `--font-kid`, 28 px | short phrases, 18 px |
 | Spoken labels | yes, on focus/hover | no |
 | Clock | none | yes, and a date |
-| Remaining time | coloured ring only, no numbers | ring plus minutes |
+| Remaining time | coloured ring with the minutes inside (D-162) | ring plus minutes |
 | File manager | no | yes, home only |
 | Own stats | no | yes, simple bar chart |
 | Reading required | none | assumed |
@@ -91,10 +91,13 @@ Band is derived from age, parent-overridable.
 
 ### 2.3 Time ring
 
-Top right, always visible. A circle that empties as time is used.
-`--ok` above 25%, `--warn` below 25%, `--danger` below 10%, with a slow pulse in the
-last minute. For 4–7 it is purely visual — a child who cannot read numbers still
-understands a shrinking circle.
+Top right, always visible. A circle that empties as time is used, with the minutes
+left written inside it and "dk" underneath (D-162). `--ok` above 25%, `--warn` below
+25%, `--danger` below 10%, with a slow pulse in the last minute. The number stays dark
+whatever the ring's colour, for contrast. A child who cannot read numbers still
+understands a shrinking circle; the owner asked for the number for every age, because
+the parent standing behind a four-year-old reads it too. The full-screen time warning
+(screen 6) shows the same ring and the same number.
 
 ### 2.4 Rules
 
@@ -105,6 +108,11 @@ understands a shrinking circle.
 - Launching an app shows a full-screen loading state with the app's icon, not a spinner.
 - No modal that a child cannot dismiss. The only unskippable screen is the first-run
   explanation.
+- **Every app has a way out a child can find** (D-163). Each app window fills the
+  screen and has one button: a 64-pixel close button in the top right corner of a
+  64-pixel title bar, always in that same place. No app starts full screen, because
+  full screen hides the title bar and the button with it. The launcher itself has no
+  title bar; it is never closed, only covered.
 - `prefers-reduced-motion` is respected everywhere.
 - High contrast mode and a font-scale slider live in the parent panel, not the child UI.
 
@@ -125,6 +133,13 @@ understands a shrinking circle.
    window simply covered.
 6. **First run** — the supervision explanation, age-appropriate, spoken for 4–7.
 7. **Earned** — a brief celebration when bonus minutes arrive. Keep it to 2 seconds.
+8. **Sor Bana** (D-165), when a parent has switched it on — a big text box and a
+   send button, and with voice on (D-166) a round microphone button the child holds
+   while speaking, which says "Dinliyorum…" while it listens. Under the box, always:
+   "Sorduğun bazı soruları ailen görebilir." The answer appears in a bubble and Zio
+   reads it aloud. A refusal is a kind fixed sentence in the same bubble, never an
+   error. While the model loads, "Biraz bekle, aklımı topluyorum…", then
+   "Düşünüyorum…", in words rather than a spinner.
 
 ---
 
@@ -134,7 +149,8 @@ understands a shrinking circle.
 
 ```
 Bugün / Today          ← default, the only screen most parents open
-Çocuklar / Children    → per child: time, apps, filter, AI, voice
+Çocuklar / Children    → per child: time, apps and sites (D-164), internet (D-167),
+                         assistant (D-165), voice
 İstekler / Requests    ← badge when pending; this must be reachable in one tap
 Geçmiş / History       → usage charts, sites, alerts
 Sesler / Voices        → Zio & Sio, recording
@@ -163,6 +179,10 @@ three seconds without reading a label twice.
 
 Pending access requests appear as a banner above the cards, because they are
 time-sensitive — a child is standing at the computer waiting.
+
+A question the assistant refused (D-165) appears the same way, as a banner that
+names the child and the count and opens **Çocuklar → Asistan**, where each one is
+listed with the child's words and the reason, and can be marked as seen.
 
 ### 3.3 Complexity rules
 

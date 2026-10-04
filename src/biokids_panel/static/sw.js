@@ -9,6 +9,8 @@
  * parent gets the login page from the cache, which is honest about the fact
  * that nothing could be loaded.
  */
+// Replaced when served (biokids_panel.app.service_worker) with a name that
+// changes whenever the cached files do, so an upgrade reaches the phone.
 const CACHE = "biokids-shell-v1";
 
 const SHELL = [

@@ -20,6 +20,13 @@ case "$1" in
         if [ -d /run/systemd/system ]; then
             deb-systemd-invoke stop biokids-daemon.service >/dev/null 2>&1 || true
         fi
+        # The children's DNS goes to the filter by an nftables rule (D-167).
+        # Left behind, it would send every child's DNS to a filter that is no
+        # longer there: a machine whose children have no internet at all after
+        # BioKids was removed. Principle 4 says never.
+        if command -v nft >/dev/null 2>&1; then
+            nft destroy table inet biokids >/dev/null 2>&1 || true
+        fi
         ;;
 
     upgrade|failed-upgrade)

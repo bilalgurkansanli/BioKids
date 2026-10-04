@@ -21,9 +21,12 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import datetime as dt
+import functools
+import hashlib
 import json
 import logging
 from collections.abc import AsyncIterator, Iterator, Sequence
+from pathlib import Path
 from typing import Annotated, Any
 from urllib.parse import quote
 
@@ -33,12 +36,13 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from biokids_core import repo, security
+from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
 from biokids_core.config import Config, get_config
 from biokids_core.db.models import Policy, utcnow
 from biokids_core.errors import IpcError
 from biokids_core.i18n import Translator
 from biokids_core.ipc import AsyncDaemonClient, Op
-from biokids_core.types import EndAction, TimeWindow
+from biokids_core.types import EndAction, FilterMode, TimeWindow
 from biokids_panel import auth
 from biokids_panel.context import (
     SHARED_STATIC_DIR,
@@ -54,6 +58,10 @@ log = logging.getLogger(__name__)
 MAX_GRANT_SECONDS = 4 * 3600
 """A sanity bound on "+10 dk". A typo in a form field should not hand a child
 the rest of the week."""
+
+ALWAYS_ON_TILES = ("volume", "brightness", "shutdown")
+"""Built-in tiles every child keeps whatever the apps screen says (D-164). The
+shutdown tile is how a child ends their own session properly."""
 
 
 # --------------------------------------------------------------- dependencies
@@ -227,6 +235,23 @@ def create_app(config: Config | None = None) -> FastAPI:
     app.state.ctx = PanelContext.build(config)
     app.mount("/static/shared", StaticFiles(directory=str(SHARED_STATIC_DIR)), name="shared")
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+    @app.middleware("http")
+    async def revalidate_static(request: Request, call_next: Any) -> Response:
+        """Static files are checked with the launcher before every use.
+
+        A Debian package stamps every file with the same old modification time,
+        so a browser guessing freshness from Last-Modified decided an upgraded
+        stylesheet was the one it already had and kept the old one for days:
+        after an upgrade the child saw yesterday's launcher. `no-cache` still
+        lets the browser keep a copy; it only has to ask first, and the answer
+        from a server on the same machine is a 304 in a millisecond.
+        """
+        response: Response = await call_next(request)
+        if request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
     register_routes(app)
 
     from biokids_panel.wizard import register_wizard
@@ -369,6 +394,14 @@ def register_routes(app: FastAPI) -> None:
             children=children,
             daemon_up=reachable,
             notice=_action_notice(request, tr, children),
+            # Questions the assistant refused and the parent has not seen (D-165):
+            # above the cards, like a pending request, because they are why a
+            # parent might want to talk to their child today.
+            assistant_alerts=[
+                {"child": child, "count": count}
+                for child_id, count in sorted(repo.unseen_assistant_alerts(session).items())
+                if (child := repo.get_child(session, child_id)) is not None
+            ],
         )
 
     @app.get("/today/cards", response_class=HTMLResponse)
@@ -747,6 +780,291 @@ def register_routes(app: FastAPI) -> None:
             return see_other(f"/children/{child_id}/time?error=daemon")
         return see_other(f"/children/{child_id}/time?saved=1")
 
+    # ---------------------------------------------------------- apps (D-164)
+
+    @app.get("/children/{child_id}/apps", response_class=HTMLResponse)
+    def apps_form(
+        request: Request, ctx: Ctx, session: Db, state: Auth, tr: Tr, child_id: int
+    ) -> Response:
+        """Which apps and sites a child sees. Until D-164 only the wizard asked."""
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        child = repo.get_child(session, child_id)
+        if child is None:
+            return render(
+                ctx,
+                request,
+                session,
+                state,
+                tr,
+                "error.html",
+                status_code=404,
+                message=tr("error.not_found"),
+            )
+        catalog = load_catalog(config=ctx.config)
+        age = child.age_on(dt.date.today())
+        enabled = {
+            link.app_slug
+            for link, _app in repo.list_child_apps(session, child_id, only_enabled=True)
+        }
+        entries = [e for e in catalog.entries if e.slug not in ALWAYS_ON_TILES]
+        return render(
+            ctx,
+            request,
+            session,
+            state,
+            tr,
+            "child_apps.html",
+            child=child,
+            apps=[e for e in entries if e.kind == "app"],
+            sites=[e for e in entries if e.kind != "app"],
+            enabled=enabled,
+            installed={e.slug for e in entries if e.available()},
+            for_age={e.slug for e in catalog.for_age(age)},
+        )
+
+    @app.post("/children/{child_id}/apps")
+    async def apps_save(
+        request: Request, ctx: Ctx, session: Db, state: Auth, child_id: int
+    ) -> Response:
+        """A repeated checkbox needs the raw multidict, so this one reads the form."""
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        form = await request.form()
+        if not auth.csrf_ok(state, str(form.get("csrf_token", ""))):
+            return see_other(f"/children/{child_id}/apps?error=csrf")
+        child = repo.get_child(session, child_id)
+        if child is None:
+            return see_other("/children?error=1")
+
+        catalog = load_catalog(config=ctx.config)
+        sync_catalog(session, catalog)
+        # Only what can start here: a ticked app that is not installed would be
+        # a tile that does nothing (D-164).
+        known = {e.slug for e in catalog.entries if e.available()}
+        chosen = [
+            slug
+            for slug in dict.fromkeys(str(value) for value in form.getlist("apps"))
+            if slug in known and slug not in ALWAYS_ON_TILES
+        ]
+        before = sorted(
+            link.app_slug
+            for link, _app in repo.list_child_apps(session, child_id, only_enabled=True)
+        )
+        # Volume, brightness and shutdown are not the parent's to take away:
+        # the shutdown tile is how a child ends their own session properly.
+        enable_for_child(
+            session,
+            child_id,
+            chosen + [slug for slug in ALWAYS_ON_TILES if slug in known],
+        )
+        after = sorted(
+            link.app_slug
+            for link, _app in repo.list_child_apps(session, child_id, only_enabled=True)
+        )
+        repo.audit(
+            session,
+            actor=_actor(state),
+            action="apps_changed",
+            target=f"child:{child_id}",
+            detail={
+                "added": sorted(set(after) - set(before)),
+                "removed": sorted(set(before) - set(after)),
+            },
+        )
+        session.commit()
+        # The daemon rewrites the browser policy from the enabled web tiles, so
+        # a site just ticked opens only once it has heard about it.
+        if not _call_daemon(ctx, Op.RELOAD):
+            return see_other(f"/children/{child_id}/apps?error=daemon")
+        return see_other(f"/children/{child_id}/apps?saved=1")
+
+    # -------------------------------------------------------- internet (D-167)
+
+    @app.get("/children/{child_id}/internet", response_class=HTMLResponse)
+    def internet_form(
+        request: Request, ctx: Ctx, session: Db, state: Auth, tr: Tr, child_id: int
+    ) -> Response:
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        child = repo.get_child(session, child_id)
+        if child is None:
+            return render(
+                ctx,
+                request,
+                session,
+                state,
+                tr,
+                "error.html",
+                status_code=404,
+                message=tr("error.not_found"),
+            )
+        status, _reachable = _daemon_status(ctx, session)
+        return render(
+            ctx,
+            request,
+            session,
+            state,
+            tr,
+            "child_internet.html",
+            child=child,
+            policy=repo.get_or_create_policy(session, child_id),
+            modes=[FilterMode.BLOCKLIST.value, FilterMode.ALLOWLIST.value],
+            filter=status.get("dns_filter") or {"running": False},
+        )
+
+    @app.post("/children/{child_id}/internet")
+    def internet_save(
+        request: Request,
+        ctx: Ctx,
+        session: Db,
+        state: Auth,
+        child_id: int,
+        mode: Annotated[str, Form()] = FilterMode.BLOCKLIST.value,
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        if not auth.csrf_ok(state, csrf_token):
+            return see_other(f"/children/{child_id}/internet?error=csrf")
+        if repo.get_child(session, child_id) is None:
+            return see_other("/children?error=1")
+        policy = repo.get_or_create_policy(session, child_id)
+        before = policy.filter_mode
+        policy.filter_mode = _one_of(mode, FilterMode, FilterMode.BLOCKLIST).value
+        repo.audit(
+            session,
+            actor=_actor(state),
+            action="filter_mode_changed",
+            target=f"child:{child_id}",
+            detail={"before": before, "after": policy.filter_mode},
+        )
+        session.commit()
+        # The daemon rewrites the browser policy for the new mode.
+        if not _call_daemon(ctx, Op.RELOAD):
+            return see_other(f"/children/{child_id}/internet?error=daemon")
+        return see_other(f"/children/{child_id}/internet?saved=1")
+
+    # ------------------------------------------------------ assistant (D-165)
+
+    @app.get("/children/{child_id}/assistant", response_class=HTMLResponse)
+    def assistant_form(
+        request: Request, ctx: Ctx, session: Db, state: Auth, tr: Tr, child_id: int
+    ) -> Response:
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        child = repo.get_child(session, child_id)
+        if child is None:
+            return render(
+                ctx,
+                request,
+                session,
+                state,
+                tr,
+                "error.html",
+                status_code=404,
+                message=tr("error.not_found"),
+            )
+        return render(
+            ctx,
+            request,
+            session,
+            state,
+            tr,
+            "child_assistant.html",
+            child=child,
+            policy=repo.get_or_create_policy(session, child_id),
+            status=_assistant_status(ctx),
+            alerts=repo.assistant_alerts(session, child_id),
+        )
+
+    @app.post("/children/{child_id}/assistant")
+    def assistant_save(
+        request: Request,
+        ctx: Ctx,
+        session: Db,
+        state: Auth,
+        child_id: int,
+        assistant_enabled: Annotated[str, Form()] = "",
+        assistant_voice: Annotated[str, Form()] = "",
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        if not auth.csrf_ok(state, csrf_token):
+            return see_other(f"/children/{child_id}/assistant?error=csrf")
+        if repo.get_child(session, child_id) is None:
+            return see_other("/children?error=1")
+        policy = repo.get_or_create_policy(session, child_id)
+        before = {"enabled": policy.assistant_enabled, "voice": policy.assistant_voice}
+        policy.assistant_enabled = assistant_enabled == "on"
+        # The microphone only ever with the assistant itself (D-166).
+        policy.assistant_voice = policy.assistant_enabled and assistant_voice == "on"
+        after = {"enabled": policy.assistant_enabled, "voice": policy.assistant_voice}
+        repo.audit(
+            session,
+            actor=_actor(state),
+            action="assistant_changed",
+            target=f"child:{child_id}",
+            detail={"before": before, "after": after},
+        )
+        session.commit()
+        if not _call_daemon(ctx, Op.RELOAD):
+            return see_other(f"/children/{child_id}/assistant?error=daemon")
+        return see_other(f"/children/{child_id}/assistant?saved=1")
+
+    @app.post("/children/{child_id}/assistant/download")
+    def assistant_download(
+        request: Request,
+        ctx: Ctx,
+        session: Db,
+        state: Auth,
+        child_id: int,
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        """The one-time model download (D-165), run by the daemon as its own unit."""
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        if not auth.csrf_ok(state, csrf_token):
+            return see_other(f"/children/{child_id}/assistant?error=csrf")
+        repo.audit(
+            session,
+            actor=_actor(state),
+            action="assistant_download",
+            target=f"child:{child_id}",
+        )
+        session.commit()
+        if not _call_daemon(ctx, Op.ASSISTANT_SETUP):
+            return see_other(f"/children/{child_id}/assistant?error=daemon")
+        return see_other(f"/children/{child_id}/assistant?saved=download")
+
+    @app.post("/alerts/{alert_id}/dismiss")
+    def alert_dismiss(
+        request: Request,
+        ctx: Ctx,
+        session: Db,
+        state: Auth,
+        alert_id: int,
+        next: Annotated[str, Form()] = "/today",
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        target = next if next.startswith("/") and not next.startswith("//") else "/today"
+        if not auth.csrf_ok(state, csrf_token):
+            return see_other(f"{target}?error=csrf")
+        repo.dismiss_alert(session, alert_id)
+        session.commit()
+        return see_other(target)
+
     # ---------------------------------------------------------------- audit
 
     @app.get("/audit", response_class=HTMLResponse)
@@ -978,8 +1296,13 @@ def register_routes(app: FastAPI) -> None:
         A service worker can only control paths at or below its own URL, so one
         at `/static/sw.js` would never see a navigation to `/today`.
         """
+        # The cache name carries a fingerprint of the files it caches. With a
+        # fixed name a phone kept the first stylesheet it ever saw, for good:
+        # new screens arrived with no styles after every upgrade.
+        script = (STATIC_DIR / "sw.js").read_text(encoding="utf-8")
+        script = script.replace(SW_CACHE_NAME, f'"biokids-shell-{static_fingerprint()}"')
         return Response(
-            (STATIC_DIR / "sw.js").read_text(encoding="utf-8"),
+            script,
             media_type="text/javascript",
             headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"},
         )
@@ -1099,6 +1422,32 @@ def _children_from_database(session: Session) -> list[dict[str, Any]]:
             }
         )
     return rows
+
+
+SW_CACHE_NAME = '"biokids-shell-v1"'
+"""The placeholder in sw.js that `service_worker` replaces."""
+
+
+@functools.cache
+def static_fingerprint() -> str:
+    """Twelve hex digits that change whenever any file the panel serves does."""
+    digest = hashlib.sha256()
+    for directory in (STATIC_DIR, SHARED_STATIC_DIR):
+        for path in sorted(Path(directory).rglob("*")):
+            if path.is_file():
+                digest.update(path.name.encode())
+                digest.update(path.read_bytes())
+    return digest.hexdigest()[:12]
+
+
+def _assistant_status(ctx: PanelContext) -> dict[str, Any]:
+    """Whether the assistant service runs and which models it has (D-165)."""
+    try:
+        response = ctx.client.call(Op.ASSISTANT_STATUS)
+    except (IpcError, OSError) as exc:
+        log.warning("the daemon did not answer assistant_status: %s", exc)
+        return {"running": False}
+    return dict(response.data) if response.ok else {"running": False}
 
 
 def _call_daemon(ctx: PanelContext, op: Op, **args: Any) -> bool:

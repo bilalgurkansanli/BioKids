@@ -10,10 +10,10 @@ Two text-to-speech personas that speak short, warm lines at moments the parent c
 Zio uses a female voice, Sio a male voice. A small illustrated character card appears
 on screen while a line plays.
 
-**One-way only.** The child never speaks to Zio or Sio. There is no microphone in the
-child session, no speech recognition, no conversation. A talking AI companion for a
-5-year-old is a much larger safety surface than this project should carry, and the
-feature is more charming without it.
+**One-way only.** The child never speaks to Zio or Sio. They do not listen and they
+do not chat. The assistant (D-165) is a separate tile that a parent switches on: Zio
+reads its answers aloud through the `say` operation below, and its push-to-talk
+button (D-166) is the only place in BioKids that uses the microphone.
 
 Optionally, a family records their own voices and Zio and Sio speak in them. That is
 the emotional core of the whole product: a 6-year-old hearing "on dakika kaldı yavrum"
@@ -228,6 +228,10 @@ shell can dismiss the card.
 
 `{"op": "preview", "text": "...", "persona": "zio"}` is used by the panel for the
 voice-recording preview and for the line editor.
+
+`{"op": "say", "text": "...", "locale": "tr", "persona": "zio"}` reads out the
+assistant's answer (D-165). An ordinary line in the queue, so a time warning still
+goes first; cut after a whole sentence at 1,500 characters.
 
 ---
 

@@ -18,6 +18,9 @@
       <p class="muted small">{{ _('child.unix_user') }}: <code>{{ child.unix_user }}</code></p>
       <div class="actions">
         <a class="btn" href="/children/{{ child.id }}/time">{{ _('time.title') }}</a>
+        <a class="btn" href="/children/{{ child.id }}/apps">{{ _('apps.title') }}</a>
+        <a class="btn" href="/children/{{ child.id }}/internet">{{ _('internet.title') }}</a>
+        <a class="btn" href="/children/{{ child.id }}/assistant">{{ _('assistant.panel.title') }}</a>
       </div>
     </article>
   {% endfor %}

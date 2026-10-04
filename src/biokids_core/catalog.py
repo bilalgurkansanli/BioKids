@@ -13,11 +13,13 @@ arrangement of tiles should survive an upgrade that drops a package.
 
 from __future__ import annotations
 
+import os
 import shutil
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -28,6 +30,24 @@ from biokids_core.errors import ConfigError
 from biokids_core.types import Category
 
 BUNDLED_CATALOG = Path(__file__).resolve().parent / "data" / "catalog" / "catalog.toml"
+
+
+GAMES_DIRS = ("/usr/games", "/usr/local/games")
+"""Where Debian puts games. On a user's PATH, and on no systemd service's: the
+panel asked `which tuxmath` with the service PATH and was told it was missing."""
+
+
+def resolve_program(program: str) -> str | None:
+    """The full path of `program`, looked for on PATH and in Debian's games
+    directories, or None. The launcher runs what this returns: a user service's
+    PATH has no /usr/games, so `gcompris-qt` by name would not start."""
+    search = os.pathsep.join([os.environ.get("PATH", os.defpath), *GAMES_DIRS])
+    return shutil.which(program, path=search)
+
+
+def program_installed(program: str) -> bool:
+    """Is `program` on PATH or in Debian's games directories?"""
+    return resolve_program(program) is not None
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,6 +65,18 @@ class CatalogEntry:
     max_age: int = 10
     description_tr: str = ""
     description_en: str = ""
+    suggest: bool = True
+    """False keeps the tile out of the age-based pre-selection: there for a
+    parent to tick, never ticked for them (YouTube Kids, an English-only site)."""
+    allow: tuple[str, ...] = ()
+    """What a web tile may open in "selected sites only" mode, as Chromium URL
+    filters. Empty means the host of `url`, which is right for most sites."""
+
+    def allowed_patterns(self) -> tuple[str, ...]:
+        if self.allow:
+            return self.allow
+        host = (urlsplit(self.url).hostname or "").removeprefix("www.")
+        return (host,) if host else ()
 
     @property
     def exec_cmd(self) -> str:
@@ -68,7 +100,7 @@ class CatalogEntry:
         """
         if self.is_builtin or self.is_web:
             return True
-        return bool(self.exec_argv) and shutil.which(self.exec_argv[0]) is not None
+        return bool(self.exec_argv) and program_installed(self.exec_argv[0])
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +119,12 @@ class Catalog:
     def for_age(self, age: int, *, installed_only: bool = False) -> list[CatalogEntry]:
         found = [e for e in self.entries if e.min_age <= age <= e.max_age]
         return [e for e in found if e.available()] if installed_only else found
+
+    def suggested_for_age(
+        self, age: int, *, installed_only: bool = False
+    ) -> list[CatalogEntry]:
+        """What a child of this age starts with unless a parent chooses otherwise."""
+        return [e for e in self.for_age(age, installed_only=installed_only) if e.suggest]
 
 
 def load_catalog(path: Path | None = None, config: Config | None = None) -> Catalog:
@@ -143,6 +181,8 @@ def _parse(path: Path) -> Catalog:
                 max_age=int(item.get("max_age", 10)),
                 description_tr=str(item.get("description_tr", "")),
                 description_en=str(item.get("description_en", "")),
+                suggest=bool(item.get("suggest", True)),
+                allow=tuple(str(x) for x in item.get("allow", []) or []),
             )
         )
     return Catalog(entries=tuple(entries))

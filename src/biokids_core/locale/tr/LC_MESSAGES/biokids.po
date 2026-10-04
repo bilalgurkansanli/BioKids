@@ -87,16 +87,16 @@ msgstr "Bilgisayar tamamen kapanır."
 # --- filtre modu ---
 
 msgid "filter_mode.allowlist"
-msgstr "Sadece izin verilen siteler"
+msgstr "Sadece seçtiğim siteler"
 
 msgid "filter_mode.blocklist"
-msgstr "Engellenenler dışında her yer"
+msgstr "Açık internet, zararlı siteler kapalı (önerilen)"
 
 msgid "filter_mode.allowlist.help"
-msgstr "Küçük çocuklar için önerilir. Sadece sizin eklediğiniz siteler açılır."
+msgstr "Yalnızca Uygulamalar ve siteler ekranında işaretlediğiniz siteler açılır. Çok küçük çocuklar için."
 
 msgid "filter_mode.blocklist.help"
-msgstr "Büyük çocuklar için önerilir. Zararlı kategoriler engellenir, gerisi serbesttir."
+msgstr "Çocuğunuz interneti gezebilir. Yetişkin içerikli, kumar ve zararlı siteler her zaman kapalıdır; Google ve YouTube'da güvenli arama açıktır."
 
 # --- yaş bandı ---
 
@@ -113,6 +113,9 @@ msgstr "Merhaba {name}"
 
 msgid "shell.remaining_minutes"
 msgstr "{minutes} dk"
+
+msgid "shell.minutes_unit"
+msgstr "dk"
 
 msgid "shell.remaining_label"
 msgstr "Kalan süre"
@@ -479,6 +482,27 @@ msgstr "Yaş grubu"
 msgid "child.age_band.help"
 msgstr "Arayüzün büyüklüğünü belirler. Yaşa göre otomatik seçilir."
 
+msgid "apps.title"
+msgstr "Uygulamalar ve siteler"
+
+msgid "apps.help"
+msgstr "İşaretlediğiniz uygulamalar ve siteler {name} için ekranda kutucuk olarak görünür. İşaretlemediğiniz hiçbir şey görünmez."
+
+msgid "apps.group.apps"
+msgstr "Uygulamalar"
+
+msgid "apps.group.sites"
+msgstr "Siteler"
+
+msgid "apps.for_age"
+msgstr "{min}–{max} yaş için önerilir"
+
+msgid "apps.other_age"
+msgstr "{min}–{max} yaş için"
+
+msgid "apps.always_on"
+msgstr "Ses, parlaklık ve Kapat düğmeleri her zaman görünür."
+
 msgid "time.title"
 msgstr "Süre kuralları"
 
@@ -564,6 +588,9 @@ msgstr "Ebeveyn"
 
 msgid "audit.actor.cli"
 msgstr "Komut satırı"
+
+msgid "audit.action.apps_changed"
+msgstr "Uygulamalar değiştirildi"
 
 msgid "audit.action.policy_changed"
 msgstr "Kural değiştirildi"
@@ -900,3 +927,186 @@ msgstr "Koruma açıldı"
 
 msgid "wizard.passphrase.required"
 msgstr "Devam etmek için bir parola belirlemeniz gerekiyor."
+
+msgid "assistant.tile"
+msgstr "Sor Bana"
+
+msgid "assistant.title"
+msgstr "Zio'ya sor"
+
+msgid "assistant.home"
+msgstr "Ana sayfa"
+
+msgid "assistant.hello"
+msgstr "Merhaba {name}! Ne merak ediyorsun? Bana yazabilirsin."
+
+msgid "assistant.placeholder"
+msgstr "Sorunu buraya yaz…"
+
+msgid "assistant.send"
+msgstr "Sor"
+
+msgid "assistant.mic"
+msgstr "Basılı tut ve konuş"
+
+msgid "assistant.listening"
+msgstr "Dinliyorum…"
+
+msgid "assistant.thinking"
+msgstr "Düşünüyorum…"
+
+msgid "assistant.loading"
+msgstr "Biraz bekle, aklımı topluyorum…"
+
+msgid "assistant.heard_nothing"
+msgstr "Seni duyamadım. Bir daha söyler misin?"
+
+msgid "assistant.mic_failed"
+msgstr "Şu an olmadı. Biraz sonra tekrar dener misin?"
+
+msgid "assistant.note"
+msgstr "Sorduğun bazı soruları ailen görebilir."
+
+msgid "assistant.refuse.default"
+msgstr "Buna cevap veremiyorum. Bunu ailenden bir büyüğe sorabilirsin."
+
+msgid "assistant.refuse.self_harm"
+msgstr "Bunu duyduğuma çok üzüldüm. Lütfen hemen ailenden birine ya da güvendiğin bir büyüğe anlat. Seni dinlemek ve sana yardım etmek isterler."
+
+msgid "assistant.refuse.personal_info"
+msgstr "Adresini, telefonunu ya da şifreni kimseye yazma, bana bile. Bunlar seni korumak için sır kalmalı."
+
+msgid "assistant.refuse.rude"
+msgstr "Bu kelimeleri kullanmayalım. Başka bir şey sormak ister misin?"
+
+msgid "assistant.refuse.family"
+msgstr "Bu çok güzel bir soru. Bunu ailenle konuşursan sana en güzel onlar anlatır."
+
+msgid "assistant.refuse.unavailable"
+msgstr "Şu an biraz dinleniyorum. Birazdan tekrar sorar mısın?"
+
+msgid "assistant.refuse.slow_down"
+msgstr "Çok soru sordun! Biraz dinlenelim, birazdan yine sorabilirsin."
+
+msgid "assistant.refuse.off"
+msgstr "Soru sorma şu an kapalı."
+
+msgid "assistant.category.sexual"
+msgstr "Cinsellik"
+
+msgid "assistant.category.self_harm"
+msgstr "Kendine zarar verme"
+
+msgid "assistant.category.violence"
+msgstr "Şiddet ya da silah"
+
+msgid "assistant.category.drugs"
+msgstr "Uyuşturucu, alkol ya da kumar"
+
+msgid "assistant.category.personal_info"
+msgstr "Kişisel bilgi paylaşma"
+
+msgid "assistant.category.rude"
+msgstr "Kaba söz"
+
+msgid "assistant.category.adult"
+msgstr "Yaşına uygun olmayan konu"
+
+msgid "assistant.category.trick"
+msgstr "Kuralları aşmaya çalışma"
+
+msgid "assistant.category.family"
+msgstr "Aileye yönlendirilen soru"
+
+msgid "assistant.category.unknown"
+msgstr "Diğer"
+
+msgid "audit.action.assistant_refused"
+msgstr "Asistan bir soruyu yanıtlamadı"
+
+msgid "assistant.panel.title"
+msgstr "Asistan"
+
+msgid "assistant.panel.help"
+msgstr "Asistan, {name} yazarak ya da konuşarak bir şey sorduğunda yaşına uygun, kısa bir cevap verir. Tamamen bu bilgisayarda çalışır: sorular ve cevaplar hiçbir yere gönderilmez."
+
+msgid "assistant.panel.enabled"
+msgstr "Asistan açık"
+
+msgid "assistant.panel.enabled.help"
+msgstr "Uygunsuz bir soruda {name} “Buna cevap veremiyorum” görür ve burada size bir uyarı çıkar. {name} ekranında her zaman “Sorduğun bazı soruları ailen görebilir” yazısını görür."
+
+msgid "assistant.panel.voice"
+msgstr "Bas-konuş açık"
+
+msgid "assistant.panel.voice.help"
+msgstr "Mikrofon yalnızca çocuk düğmeyi basılı tuttuğu sürece açılır, en fazla 15 saniye. Ses bu bilgisayarda yazıya çevrilir; hiçbir zaman kaydedilmez ve hiçbir yere gönderilmez."
+
+msgid "assistant.panel.alerts"
+msgstr "Cevaplanmayan sorular"
+
+msgid "assistant.panel.alerts.help"
+msgstr "{name} bunları sordu ve asistan cevaplamadı. Konuşmak için iyi bir fırsat olabilir."
+
+msgid "assistant.panel.seen"
+msgstr "Gördüm"
+
+msgid "assistant.panel.models"
+msgstr "Bu bilgisayardaki modeller"
+
+msgid "assistant.panel.not_installed"
+msgstr "Asistan paketi (biokids-ai) bu bilgisayarda kurulu değil ya da çalışmıyor."
+
+msgid "assistant.panel.ready"
+msgstr "Asistan hazır."
+
+msgid "assistant.panel.need_download"
+msgstr "Asistanın çalışması için modellerin bir kez indirilmesi gerekiyor."
+
+msgid "assistant.panel.download"
+msgstr "Modelleri indir"
+
+msgid "assistant.panel.download.help"
+msgstr "Bilgisayarın belleğine göre 1,5–4 GB indirilir ve birkaç dakika sürebilir. Sonrasında internet gerekmez."
+
+msgid "assistant.panel.download.started"
+msgstr "İndirme başladı. Birkaç dakika sonra bu sayfayı yenileyin."
+
+msgid "assistant.panel.banner"
+msgstr "{name} asistana {count} uygunsuz soru sordu."
+
+msgid "assistant.model.gemma-4-e2b"
+msgstr "Gemma 4 E2B (Google): az bellekli bilgisayarlar için, cevapları daha kısa ve bazen yanlış"
+
+msgid "assistant.model.gemma-4-e4b"
+msgstr "Gemma 4 E4B (Google): en doğru cevaplar, 12 GB bellekli bilgisayarlar için"
+
+msgid "assistant.model.whisper-turbo"
+msgstr "Whisper large-v3-turbo (OpenAI): konuşmayı yazıya çevirir"
+
+msgid "assistant.model.whisper-small"
+msgstr "Whisper small (OpenAI): konuşmayı yazıya çevirir"
+
+msgid "audit.action.assistant_changed"
+msgstr "Asistan ayarı değiştirildi"
+
+msgid "audit.action.assistant_download"
+msgstr "Asistan modellerinin indirilmesi başlatıldı"
+
+msgid "internet.title"
+msgstr "İnternet"
+
+msgid "internet.mode"
+msgstr "İnternet nasıl olsun?"
+
+msgid "internet.filter.on"
+msgstr "Zararlı site koruması çalışıyor: yetişkin içerikli, kumar ve zararlı siteler bu bilgisayardaki çocuk hesaplarında kapalı."
+
+msgid "internet.filter.off"
+msgstr "Zararlı site koruması şu an çalışmıyor. Çocuk hesapları güvenlik için internete hiç bağlanamaz; bilgisayarı yeniden başlatmayı deneyin."
+
+msgid "internet.shared_browser"
+msgstr "Bu bilgisayarın tarayıcı ayarı tektir: çocuklardan biri için “Sadece seçtiğim siteler” seçilirse tarayıcı tüm çocuklar için öyle çalışır."
+
+msgid "audit.action.filter_mode_changed"
+msgstr "İnternet ayarı değiştirildi"

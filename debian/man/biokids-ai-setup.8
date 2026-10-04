@@ -1,0 +1,55 @@
+.TH BIOKIDS\-AI\-SETUP 8 2026\-10\-03 "biokids 0.1.0" "BioKids"
+.SH NAME
+biokids\-ai\-setup \- download and check the BioKids assistant's models
+.SH SYNOPSIS
+.B biokids\-ai\-setup
+.RB [ \-\-models\-dir
+.IR dir ]
+.B status
+.br
+.B biokids\-ai\-setup
+.RB [ \-\-models\-dir
+.IR dir ]
+.B download
+.RB [ \-\-chat
+.IR key ]
+.RB [ \-\-stt
+.IR key ]
+.br
+.B biokids\-ai\-setup
+.RB [ \-\-models\-dir
+.IR dir ]
+.B remove
+.SH DESCRIPTION
+The assistant's models are not part of any package. When a parent presses
+\(lqDownload\(rq in the panel, the daemon starts
+.BR biokids\-ai\-setup.service ,
+which runs this command as the
+.B biokids\-ai
+user. It picks the best chat model and speech model this computer's memory
+allows, fetches each from Hugging Face pinned to a commit, and checks it
+against its SHA\-256 before using it; a file that does not match is deleted.
+An interrupted download resumes.
+.PP
+Every model it offers is under the Apache\-2.0 or MIT licence. A computer with
+less than 7 GB of memory is offered none.
+.SH COMMANDS
+.TP
+.B status
+What is installed, selected and recommended, as JSON.
+.TP
+.B download
+Fetch the recommended models, or the ones named with
+.B \-\-chat
+and
+.BR \-\-stt .
+.TP
+.B remove
+Delete every model file.
+.SH FILES
+.TP
+.I /var/lib/biokids\-ai/models
+The default
+.IR dir .
+.SH SEE ALSO
+.BR biokids\-ai (8)

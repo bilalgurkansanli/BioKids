@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ _('internet.title') }} · {{ child.display_name }}{% endblock %}
+
+{#
+  D-167. Two choices, each in one sentence, and whether the protection that
+  stands behind both of them - the children's DNS filter - is running.
+#}
+{% block content %}
+  <h1>{{ child.display_name }} — {{ _('internet.title') }}</h1>
+
+  <div class="notice notice--{{ 'ok' if filter.running else 'danger' }}" role="status">
+    {% if filter.running %}
+      {{ _('internet.filter.on') }}
+    {% else %}
+      {{ _('internet.filter.off') }}
+    {% endif %}
+  </div>
+
+  <form class="card" method="post" action="/children/{{ child.id }}/internet">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <fieldset>
+      <legend>{{ _('internet.mode') }}</legend>
+      {% for mode in modes %}
+        <div class="checkline">
+          <input type="radio" id="m-{{ mode }}" name="mode" value="{{ mode }}"
+                 {% if mode == policy.filter_mode %}checked{% endif %}>
+          <label for="m-{{ mode }}">
+            {{ _('filter_mode.' ~ mode) }}
+            <span class="help">{{ _('filter_mode.' ~ mode ~ '.help') }}</span>
+          </label>
+        </div>
+      {% endfor %}
+    </fieldset>
+    <p class="help">{{ _('internet.shared_browser') }}</p>
+
+    <div class="actions">
+      <button class="btn btn--primary" type="submit">{{ _('common.save') }}</button>
+      <a class="btn btn--quiet" href="/children/{{ child.id }}/apps">{{ _('apps.title') }}</a>
+    </div>
+  </form>
+{% endblock %}

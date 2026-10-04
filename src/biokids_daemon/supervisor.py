@@ -28,10 +28,12 @@ from urllib.parse import urlsplit
 from sqlalchemy.orm import Session
 
 from biokids_core import repo
+from biokids_core.catalog import load_catalog
 from biokids_core.clock import Clock, SystemClock
 from biokids_core.config import Config, get_config
 from biokids_core.db.models import AccessRequest
 from biokids_core.db.session import Database
+from biokids_core.errors import ConfigError
 from biokids_core.ipc import EventKind
 from biokids_core.ledger import TickInput, TimeLedger
 from biokids_core.policy import evaluate, general_allowance_seconds
@@ -42,10 +44,12 @@ from biokids_core.types import (
     ChildPolicy,
     Decision,
     EndAction,
+    FilterMode,
     Reason,
     SpeechRequest,
 )
 from biokids_daemon.bus import EventBus
+from biokids_daemon.dnsfilter import DnsFilter
 from biokids_daemon.enforcer import Enforcer
 from biokids_daemon.sessions import SessionWatcher, UserPresence
 
@@ -145,6 +149,14 @@ class Supervisor:
 
     _session: Session | None = None
     _ledger: TimeLedger | None = None
+    _dns_filter: DnsFilter | None = None
+
+    @property
+    def dns_filter(self) -> DnsFilter:
+        """The children's DNS filter (D-167), its files under the data directory."""
+        if self._dns_filter is None:
+            self._dns_filter = DnsFilter(self.config.paths.data_dir / "dns")
+        return self._dns_filter
 
     # ------------------------------------------------------------ lifecycle
 
@@ -221,7 +233,9 @@ class Supervisor:
             temp = path.with_suffix(".json.tmp")
             temp.write_text(
                 json.dumps(
-                    kiosk_policy(origin, self._web_tile_hosts()), indent=2, ensure_ascii=False
+                    kiosk_policy(origin, self._web_tile_hosts(), self._browser_mode()),
+                    indent=2,
+                    ensure_ascii=False,
                 ),
                 encoding="utf-8",
             )
@@ -240,23 +254,59 @@ class Supervisor:
             return
         log.info("Chromium managed policy written to %s for %s", path, origin)
 
+    def _browser_mode(self) -> str:
+        """`allowlist` if any managed child is on "selected sites only" (D-167).
+
+        Chromium reads one policy for the whole machine, so the strictest child
+        decides. Open internet is the default; a family that chose otherwise for
+        one child chose it for this computer's browser.
+        """
+        for runtime in self.children.values():
+            policy = runtime.policy
+            if policy is not None and policy.filter_mode == FilterMode.ALLOWLIST:
+                return "allowlist"
+        return "blocklist"
+
+    def _apply_dns_filter(self) -> None:
+        """Every managed child's DNS through the filter (D-167)."""
+        users = [r.unix_user for r in self.children.values() if r.policy is not None]
+        hosts = {pattern.split("/", 1)[0] for pattern in self._web_tile_hosts()}
+        hosts.discard(f"{self.config.shell.host}:{self.config.shell.port}")
+        self.dns_filter.apply(users, sorted(hosts))
+
     def _web_tile_hosts(self) -> list[str]:
-        """The hosts of the web tiles enabled for any child, `www.` dropped.
+        """What the web tiles enabled for any child may open, `www.` dropped.
 
         Dropped because a host without a scheme also allows its subdomains in
         Chromium's URL filter, so `trtcocuk.net.tr` covers `www.` and anything
         the site sends a child on to; `www.trtcocuk.net.tr` would not cover the
         bare domain.
+
+        A tile's catalog entry may name exactly what it needs instead (D-164):
+        KÜRE Çocuk only its children's section, YouTube Kids also the Google
+        sign-in check it makes on every visit. Deriving a path from every URL
+        was tried first and broke Google Earth, which moves itself from /web to
+        /static the moment it loads. The filter governs pages and frames, not
+        the images and scripts a page loads, so a site's CDN needs no entry.
         """
-        hosts: set[str] = set()
+        try:
+            catalog = {entry.slug: entry for entry in load_catalog(config=self.config)}
+        except ConfigError:
+            # No catalog file: every tile gets its own host, which is safe.
+            catalog = {}
+        patterns: set[str] = set()
         for child_id in self.children:
             for _link, app in repo.list_child_apps(self.session, child_id):
                 if app.kind != "web" or not app.url:
                     continue
-                host = (urlsplit(app.url).hostname or "").removeprefix("www.")
-                if host:
-                    hosts.add(host)
-        return sorted(hosts)
+                entry = catalog.get(app.slug)
+                if entry is not None:
+                    patterns.update(entry.allowed_patterns())
+                else:
+                    pattern = web_tile_pattern(app.url)
+                    if pattern:
+                        patterns.add(pattern)
+        return sorted(patterns)
 
     def reload(self) -> None:
         """Re-read children and policies. Called at start and on a `reload` op.
@@ -311,6 +361,7 @@ class Supervisor:
         self.children = fresh
         self.by_user = by_user
         self._write_kiosk_policy()
+        self._apply_dns_filter()
         self.bus.publish(EventKind.POLICY_CHANGED, children=len(fresh))
 
     # ----------------------------------------------------------------- tick
@@ -958,6 +1009,13 @@ class Supervisor:
             "ticks": self.ticks,
             "day": day.isoformat(),
             "children": children,
+            # D-167: so a parent can see that harmful sites are really being
+            # stopped, and why not when they are not.
+            "dns_filter": {
+                "running": self.dns_filter.running(),
+                "error": self.dns_filter.last_error,
+                "mode": self._browser_mode(),
+            },
         }
 
     def shell_state(self, child_id: int) -> dict[str, Any]:
@@ -1037,6 +1095,12 @@ class Supervisor:
             # this its time-up screen told every child the computer was about to
             # shut down, including the two cases where it was not.
             "end_action": policy.end_action.value if policy else "",
+            # Whether to show the assistant's tile and its microphone button
+            # (D-165, D-166). The daemon re-checks both on every question.
+            "assistant": {
+                "enabled": bool(policy and policy.assistant_enabled),
+                "voice": bool(policy and policy.assistant_enabled and policy.assistant_voice),
+            },
             "countdown_seconds": self._countdown_remaining(
                 runtime, day, reading.boot, reading.boot_id
             ),
@@ -1378,3 +1442,8 @@ async def _give_up(supervisor: Supervisor, failures: int, exc: BaseException) ->
             severity="alert",
         )
         supervisor.session.commit()
+
+
+def web_tile_pattern(url: str) -> str:
+    """The host of a web tile the catalog no longer describes, without `www.`."""
+    return (urlsplit(url).hostname or "").removeprefix("www.")

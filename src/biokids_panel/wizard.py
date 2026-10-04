@@ -458,7 +458,9 @@ def assign_default_apps(session: Session, child: Child, config: Config) -> None:
     sync_catalog(session, catalog)
     age = child.age_on(dt.date.today())
     enable_for_child(
-        session, child.id, [entry.slug for entry in catalog.for_age(age, installed_only=True)]
+        session,
+        child.id,
+        [entry.slug for entry in catalog.suggested_for_age(age, installed_only=True)],
     )
 
 
@@ -563,7 +565,7 @@ def _render_step(
         age = child.age_on(dt.date.today()) if child else 6
         catalog = load_catalog(config=ctx.config)
         values["catalog"] = catalog.entries
-        values["suggested"] = {e.slug for e in catalog.for_age(age)}
+        values["suggested"] = {e.slug for e in catalog.suggested_for_age(age)}
         values["installed"] = {e.slug for e in catalog.entries if e.available()}
 
     if step == 6:
@@ -580,7 +582,8 @@ def _render_step(
         child = values["child"]
         band = AgeBand(child.age_band) if child else AgeBand.YOUNG
         values["suggested_mode"] = repo.default_filter_mode(band).value
-        values["modes"] = [m.value for m in FilterMode]
+        # The open internet first: it is the default (D-167).
+        values["modes"] = [FilterMode.BLOCKLIST.value, FilterMode.ALLOWLIST.value]
 
     if step == 8:
         from biokids_core import remote

@@ -13,6 +13,7 @@ The daemon is faked at the client boundary, so none of this needs a socket.
 from __future__ import annotations
 
 import datetime as dt
+import re
 from typing import Any
 
 import pytest
@@ -1493,3 +1494,148 @@ def test_the_launcher_does_not_hold_a_logout_either() -> None:
     from biokids_shell.__main__ import SHUTDOWN_GRACE_SECONDS
 
     assert 0 < SHUTDOWN_GRACE_SECONDS <= 5
+
+
+# ------------------------------------------------------------ apps (D-164)
+
+
+def test_the_apps_screen_lists_apps_and_sites_and_what_is_ticked(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """Until D-164 only the wizard asked, so a new catalog site could never be added."""
+    from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
+
+    with db.session() as session:
+        sync_catalog(session, load_catalog())
+        enable_for_child(session, 1, ["eba"])
+    login(client)
+
+    page = client.get("/children/1/apps").text
+
+    assert "Uygulamalar ve siteler" in page
+    for name in ("KÜRE Çocuk", "Bilim Çocuk", "Meraklı Minik", "YouTube Kids", "Kodlama"):
+        assert name in page, name
+    assert re.search(r'value="eba"\s+checked', page), "a ticked site shows ticked"
+    assert not re.search(r'value="kure-cocuk"\s+checked', page)
+    assert 'value="volume"' not in page, "volume, brightness and shutdown are not optional"
+
+
+def test_saving_apps_sets_exactly_the_ticked_tiles(
+    client: TestClient, family_ready: None, db: Database, daemon: FakeDaemon
+) -> None:
+    login(client)
+    response = client.post(
+        "/children/1/apps",
+        data={
+            "apps": ["eba", "youtube-kids", "kure-cocuk", "no-such-app"],
+            "csrf_token": csrf_of(client),
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith("?saved=1")
+
+    with db.session() as session:
+        tiles = {app.slug for _link, app in repo.list_child_apps(session, 1)}
+        actions = [e.action for e in repo.recent_audit(session, limit=10)]
+    assert tiles == {"eba", "youtube-kids", "kure-cocuk", "volume", "brightness", "shutdown"}
+    assert "apps_changed" in actions
+    assert daemon.ran("reload"), "the browser policy is rewritten from the enabled sites"
+
+
+def test_unticking_everything_still_leaves_the_shutdown_tile(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    client.post(
+        "/children/1/apps",
+        data={"apps": ["eba"], "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    client.post(
+        "/children/1/apps", data={"csrf_token": csrf_of(client)}, follow_redirects=False
+    )
+
+    with db.session() as session:
+        tiles = {app.slug for _link, app in repo.list_child_apps(session, 1)}
+    assert tiles == {"volume", "brightness", "shutdown"}
+
+
+def test_the_apps_screen_needs_a_csrf_token(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    response = client.post("/children/1/apps", data={"apps": ["eba"]}, follow_redirects=False)
+    assert response.status_code == 303
+    assert "error=csrf" in response.headers["location"]
+    with db.session() as session:
+        assert not repo.list_child_apps(session, 1)
+
+
+def test_youtube_kids_is_offered_but_never_ticked_for_a_parent() -> None:
+    """Google's, with ads, and asks a parent to set it up: a parent chooses it."""
+    from biokids_core.catalog import load_catalog
+
+    catalog = load_catalog()
+    offered = {e.slug for e in catalog.for_age(6)}
+    ticked = {e.slug for e in catalog.suggested_for_age(6)}
+    assert {"youtube-kids", "pbs-kids"} <= offered
+    assert not {"youtube-kids", "pbs-kids"} & ticked
+    assert "merakli-minik" in ticked
+
+
+def test_the_phones_cache_is_renamed_when_the_files_change(client: TestClient) -> None:
+    """A fixed cache name kept a phone on the first stylesheet it ever saw."""
+    from biokids_panel.app import static_fingerprint
+
+    script = client.get("/sw.js").text
+    assert '"biokids-shell-v1"' not in script
+    assert f'"biokids-shell-{static_fingerprint()}"' in script
+
+
+def test_panel_static_files_are_checked_before_every_use(client: TestClient) -> None:
+    assert client.get("/static/panel.css").headers["cache-control"] == "no-cache"
+
+
+# --------------------------------------------------------- internet (D-167)
+
+
+def test_a_new_child_gets_the_open_internet_by_default() -> None:
+    """The owner's default: open, with harmful sites closed by DNS (D-167)."""
+    from biokids_core.types import AgeBand, FilterMode
+
+    assert repo.default_filter_mode(AgeBand.YOUNG) is FilterMode.BLOCKLIST
+    assert repo.default_filter_mode(AgeBand.OLDER) is FilterMode.BLOCKLIST
+
+
+def test_the_internet_screen_saves_the_mode_and_reloads(
+    client: TestClient, family_ready: None, db: Database, daemon: FakeDaemon
+) -> None:
+    login(client)
+    page = client.get("/children/1/internet").text
+    assert "Açık internet" in page and "Sadece seçtiğim siteler" in page
+
+    response = client.post(
+        "/children/1/internet",
+        data={"mode": "allowlist", "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    with db.session() as session:
+        assert repo.get_or_create_policy(session, 1).filter_mode == "allowlist"
+        actions = [e.action for e in repo.recent_audit(session, limit=5)]
+    assert "filter_mode_changed" in actions
+    assert daemon.ran("reload")
+
+
+def test_an_unknown_mode_falls_back_to_the_safe_default(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    client.post(
+        "/children/1/internet",
+        data={"mode": "everything", "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    with db.session() as session:
+        assert repo.get_or_create_policy(session, 1).filter_mode == "blocklist"

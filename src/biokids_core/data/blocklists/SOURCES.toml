@@ -1,0 +1,21 @@
+# The DNS filter's built-in lists (D-167). Written by dev/update_blocklists.py.
+source = "https://github.com/ShadowWhisperer/BlockLists"
+commit = "31c4da98f6737be3410414873919a6ab849d849c"
+fetched = "2026-10-04"
+licence = "Unlicense (public domain)"
+
+[adult]
+files = ["Adult"]
+domains = 228289
+
+[gambling]
+files = ["Gambling"]
+domains = 9648
+
+[malware]
+files = ["Malware", "Scam"]
+domains = 53540
+
+[doh]
+files = ["DNS"]
+domains = 144

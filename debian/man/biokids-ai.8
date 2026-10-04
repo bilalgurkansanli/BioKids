@@ -1,0 +1,52 @@
+.TH BIOKIDS\-AI 8 2026\-10\-03 "biokids 0.1.0" "BioKids"
+.SH NAME
+biokids\-ai \- the BioKids assistant service
+.SH SYNOPSIS
+.B biokids\-ai
+.RB [ \-\-config
+.IR file ]
+.RB [ \-\-log\-level
+.IR level ]
+.SH DESCRIPTION
+.B biokids\-ai
+answers the questions a child types or says to the assistant in the
+BioKids launcher, with a language model that runs on this computer.
+Every question passes a word list and the model's own classification before
+it is answered, and every answer passes the word list again; a question that
+is refused gets a fixed sentence, and the daemon records it for the parent.
+.PP
+It runs as the
+.B biokids\-ai
+system user with no network at all, as the system unit
+.BR biokids\-ai.service .
+It starts
+.BR llama\-server (1)
+and, for press\-and\-speak,
+.BR whisper\-server (1)
+only when a question arrives, and stops them after a few idle minutes.
+Its only client is
+.BR biokids\-daemon (8),
+which decides whether a child may ask at all.
+.SH OPTIONS
+.TP
+.BI \-\-config " file"
+Read the configuration from
+.I file
+instead of
+.IR /etc/biokids/config.toml .
+.TP
+.BI \-\-log\-level " level"
+One of DEBUG, INFO or WARNING.
+.SH FILES
+.TP
+.I /run/biokids\-ai/ai.sock
+The socket the daemon talks to.
+.TP
+.I /var/lib/biokids\-ai/models
+The model files and
+.IR selection.json ,
+written by
+.BR biokids\-ai\-setup (8).
+.SH SEE ALSO
+.BR biokids\-ai\-setup (8),
+.BR biokids\-daemon (8)

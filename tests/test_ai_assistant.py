@@ -1,0 +1,577 @@
+"""D-165, D-166: the assistant, from the model to the parent's alert.
+
+No model runs here. The pipeline is tested with a scripted model, the
+downloader with a scripted server, the process manager with scripted
+processes, and the daemon's gate with a scripted service - which is where the
+rules live that matter most: a question is only ever answered after it was
+checked, a refusal is never generated, a broken model refuses rather than
+answers, and a parent hears about what was refused.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import io
+import json
+from dataclasses import dataclass, replace
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from biokids_ai import models, setup
+from biokids_ai.assistant import Assistant, tidy
+from biokids_ai.llm import ChatModel, ModelError
+from biokids_ai.localhttp import Endpoint, HttpError, parse_response
+from biokids_ai.runtime import ManagedServer, ServerUnavailable
+from biokids_ai.stt import clean
+from biokids_core.config import Config
+from biokids_core.ipc import Response
+from biokids_daemon.assistant import AssistantGate
+
+# ------------------------------------------------------------------ pipeline
+
+
+class ScriptedModel:
+    def __init__(self, category: str = "ok", answer: str = "Çünkü ışık saçılır.") -> None:
+        self.category = category
+        self.answer_text = answer
+        self.classified: list[str] = []
+        self.answered: list[tuple[str, int, str]] = []
+        self.fail_on = ""
+
+    async def classify(self, question: str, age: int, wait_s: float | None = None) -> str:
+        if self.fail_on == "classify":
+            raise ModelError("down")
+        self.classified.append(question)
+        return self.category
+
+    async def answer(
+        self,
+        question: str,
+        age: int,
+        locale: str,
+        persona: str,
+        name: str = "",
+        wait_s: float | None = None,
+    ) -> str:
+        if self.fail_on == "answer":
+            raise ModelError("down")
+        self.answered.append((question, age, locale))
+        return self.answer_text
+
+
+async def test_an_ok_question_is_answered_after_it_was_checked() -> None:
+    model = ScriptedModel()
+    reply = await Assistant(model).ask("Gökyüzü neden mavi?", age=6, locale="tr")
+
+    assert not reply.refused
+    assert reply.text == "Çünkü ışık saçılır."
+    assert model.classified == ["Gökyüzü neden mavi?"], "never answered unchecked"
+    assert model.answered == [("Gökyüzü neden mavi?", 6, "tr")]
+    assert reply.alert is False
+
+
+async def test_the_word_list_stops_a_question_before_any_model_sees_it() -> None:
+    model = ScriptedModel()
+    reply = await Assistant(model).ask("porno nedir", age=6, locale="tr")
+
+    assert reply.refused and reply.category == "sexual" and reply.stage == "lexicon"
+    assert model.classified == [] and model.answered == []
+    assert reply.alert, "the parent hears about it"
+    assert reply.text == "", "a refusal is never generated text"
+    assert reply.refusal_key == "assistant.refuse.default"
+
+
+async def test_the_classifier_refuses_what_the_word_list_cannot_see() -> None:
+    model = ScriptedModel(category="violence")
+    reply = await Assistant(model).ask("Birini nasıl incitirim?", age=8, locale="tr")
+
+    assert reply.refused and reply.category == "violence" and reply.stage == "classifier"
+    assert model.answered == []
+    assert reply.alert
+
+
+async def test_a_family_question_is_sent_home_without_an_alert() -> None:
+    reply = await Assistant(ScriptedModel(category="family")).ask(
+        "Allah nerede?", age=6, locale="tr"
+    )
+    assert reply.refused and reply.refusal_key == "assistant.refuse.family"
+    assert reply.alert is False, "nothing harmful was asked"
+
+
+async def test_self_harm_gets_its_own_kind_answer() -> None:
+    reply = await Assistant(ScriptedModel()).ask("ölmek istiyorum", age=9, locale="tr")
+    assert reply.category == "self_harm"
+    assert reply.refusal_key == "assistant.refuse.self_harm"
+    assert reply.alert
+
+
+async def test_an_answer_that_fails_the_word_list_is_not_shown() -> None:
+    model = ScriptedModel(answer="Bazı insanlar porno izler.")
+    reply = await Assistant(model).ask("İnsanlar internette ne izler?", age=9, locale="tr")
+
+    assert reply.refused and reply.stage == "answer"
+    assert reply.text == ""
+    assert reply.alert
+
+
+@pytest.mark.parametrize("stage", ["classify", "answer"])
+async def test_a_broken_model_refuses_rather_than_answers(stage: str) -> None:
+    """Principle 3: no unchecked answer because a check could not run."""
+    model = ScriptedModel()
+    model.fail_on = stage
+    reply = await Assistant(model).ask("Kediler neden miyavlar?", age=6, locale="tr")
+
+    assert reply.refused and reply.category == "unavailable"
+    assert reply.alert is False, "a tired model is not the child's fault"
+
+
+async def test_an_empty_question_is_neither_answered_nor_refused() -> None:
+    model = ScriptedModel()
+    reply = await Assistant(model).ask("   \n\t ", age=6, locale="tr")
+    assert not reply.refused and reply.text == ""
+    assert model.classified == []
+
+
+def test_a_question_is_tidied_and_capped() -> None:
+    assert tidy("  Gökyüzü\x00 neden\n mavi? ") == "Gökyüzü neden mavi?"
+    assert len(tidy("a" * 5000)) == 300
+
+
+# --------------------------------------------------------------- the model
+
+
+async def test_the_classifier_may_only_answer_from_the_fixed_list() -> None:
+    async def post(_endpoint: Endpoint, _path: str, payload: dict[str, Any], **_k: Any) -> dict:
+        assert payload["response_format"]["type"] == "json_schema", "enforced, not asked for"
+        assert payload["temperature"] == 0
+        assert payload["chat_template_kwargs"] == {"enable_thinking": False}
+        return {"choices": [{"message": {"content": '{"category": "sexual"}'}}]}
+
+    assert await ChatModel(Endpoint("unix:/x"), post=post).classify("q", 6) == "sexual"
+
+
+async def test_the_warm_up_may_take_longer_than_a_question() -> None:
+    """Cut short at the classifier's minute, the warm-up on the development VM
+    left every first question to start the work again and time out in turn."""
+    from biokids_ai.llm import CLASSIFY_TIMEOUT_S, WARMUP_TIMEOUT_S
+
+    waits: list[float] = []
+
+    async def post(*_a: Any, wait_s: float, **_k: Any) -> dict:
+        waits.append(wait_s)
+        return {"choices": [{"message": {"content": '{"category": "ok"}'}}]}
+
+    model = ChatModel(Endpoint("unix:/x"), post=post)
+    await model.classify("q", 6)
+    await model.classify("merhaba", 6, wait_s=WARMUP_TIMEOUT_S)
+    await model.answer("merhaba", 6, "tr", "zio", wait_s=WARMUP_TIMEOUT_S)
+    assert waits == [CLASSIFY_TIMEOUT_S, WARMUP_TIMEOUT_S, WARMUP_TIMEOUT_S]
+    assert WARMUP_TIMEOUT_S >= 5 * CLASSIFY_TIMEOUT_S
+
+
+async def test_a_category_outside_the_list_is_an_error_not_an_answer() -> None:
+    async def post(*_a: Any, **_k: Any) -> dict:
+        return {"choices": [{"message": {"content": '{"category": "probably fine"}'}}]}
+
+    with pytest.raises(ModelError):
+        await ChatModel(Endpoint("unix:/x"), post=post).classify("q", 6)
+
+
+async def test_an_unreachable_server_is_a_model_error() -> None:
+    async def post(*_a: Any, **_k: Any) -> dict:
+        raise HttpError("connection refused")
+
+    with pytest.raises(ModelError):
+        await ChatModel(Endpoint("unix:/x"), post=post).answer("q", 6, "tr", "zio")
+
+
+def test_a_chunked_answer_is_put_back_together() -> None:
+    raw = (
+        b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n"
+        b"5\r\nhello\r\n1\r\n!\r\n0\r\n\r\n"
+    )
+    assert parse_response(raw) == (200, b"hello!")
+
+
+def test_whispers_noise_markers_are_dropped() -> None:
+    assert clean(" [MÜZİK] Gökyüzü neden (gürültü) mavi? ") == "Gökyüzü neden mavi?"
+
+
+# ------------------------------------------------------------- the models
+
+
+def test_every_model_is_permissively_licensed_and_pinned() -> None:
+    for model in models.CATALOG:
+        assert model.licence in {"Apache-2.0", "MIT"}, model.key
+        assert len(model.revision) == 40, f"{model.key} is not pinned to a commit"
+        assert len(model.sha256) == 64
+        assert model.url.startswith("https://huggingface.co/")
+
+
+def test_a_small_computer_is_offered_no_assistant() -> None:
+    """A wrong answer is worse than none; Qwen 3.5 2B proved it (D-165)."""
+    assert "chat" not in models.recommend(4.0)
+    assert models.recommend(8.0)["chat"].key == "gemma-4-e2b"
+    assert models.recommend(16.0)["chat"].key == "gemma-4-e4b"
+    assert models.recommend(16.0)["stt"].key == "whisper-turbo"
+
+
+class FakeResponse(io.BytesIO):
+    def __init__(self, data: bytes, status: int = 200) -> None:
+        super().__init__(data)
+        self.status = status
+
+    def __enter__(self) -> FakeResponse:
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        self.close()
+
+
+def _model(data: bytes) -> models.ModelFile:
+    return replace(
+        models.CATALOG[0],
+        key="test",
+        filename="test.gguf",
+        size=len(data),
+        sha256=hashlib.sha256(data).hexdigest(),
+    )
+
+
+def test_a_download_is_checked_before_it_is_used(tmp_path: Path) -> None:
+    data = b"weights" * 100
+    model = _model(data)
+    seen: list[Any] = []
+
+    def opener(request: Any) -> FakeResponse:
+        seen.append(request)
+        return FakeResponse(data)
+
+    path = setup.download(model, tmp_path, opener=opener)
+
+    assert path.read_bytes() == data
+    assert not (tmp_path / "test.gguf.part").exists()
+    assert seen[0].full_url == model.url
+
+
+def test_a_file_that_does_not_match_its_checksum_is_deleted(tmp_path: Path) -> None:
+    model = _model(b"the real weights")
+    with pytest.raises(ValueError, match="checksum"):
+        setup.download(model, tmp_path, opener=lambda _r: FakeResponse(b"something else!!"))
+    assert list(tmp_path.iterdir()) == [], "nothing unverified is left to be loaded"
+
+
+def test_an_interrupted_download_resumes(tmp_path: Path) -> None:
+    data = b"0123456789" * 10
+    model = _model(data)
+    (tmp_path / "test.gguf.part").write_bytes(data[:40])
+    asked: list[str] = []
+
+    def opener(request: Any) -> FakeResponse:
+        asked.append(request.get_header("Range"))
+        return FakeResponse(data[40:], status=206)
+
+    setup.download(model, tmp_path, opener=opener)
+    assert asked == ["bytes=40-"]
+    assert (tmp_path / "test.gguf").read_bytes() == data
+
+
+def test_the_selection_names_what_the_service_loads(tmp_path: Path) -> None:
+    setup.write_selection(tmp_path, {"chat": "gemma-4-e2b"})
+    assert setup.read_selection(tmp_path) == {"chat": "gemma-4-e2b"}
+    assert setup.read_selection(tmp_path / "missing") == {}
+
+
+# ---------------------------------------------------------- the processes
+
+
+class FakeProcess:
+    def __init__(self) -> None:
+        self.returncode: int | None = None
+        self.terminated = False
+
+    def terminate(self) -> None:
+        self.terminated = True
+        self.returncode = -15
+
+    def kill(self) -> None:
+        self.returncode = -9
+
+    async def wait(self) -> int:
+        return self.returncode or 0
+
+
+async def test_a_server_starts_on_the_first_question_and_is_reused() -> None:
+    spawned: list[tuple[Any, ...]] = []
+
+    async def spawn(*argv: Any, **_kwargs: Any) -> FakeProcess:
+        spawned.append(argv)
+        return FakeProcess()
+
+    async def healthy(_endpoint: Endpoint) -> bool:
+        return True
+
+    server = ManagedServer(
+        "llama-server",
+        ["llama-server", "--x"],
+        Endpoint("http://127.0.0.1:1"),
+        idle_seconds=600,
+        spawn=spawn,
+        healthy=healthy,
+    )
+    await server.ensure()
+    await server.ensure()
+    assert len(spawned) == 1
+    await server.stop()
+
+
+async def test_a_server_that_dies_while_loading_is_unavailable() -> None:
+    async def spawn(*_argv: Any, **_kwargs: Any) -> FakeProcess:
+        process = FakeProcess()
+        process.returncode = 1
+        return process
+
+    async def healthy(_endpoint: Endpoint) -> bool:
+        return False
+
+    server = ManagedServer(
+        "llama-server",
+        ["llama-server"],
+        Endpoint("http://127.0.0.1:1"),
+        idle_seconds=600,
+        spawn=spawn,
+        healthy=healthy,
+    )
+    with pytest.raises(ServerUnavailable):
+        await server.ensure()
+
+
+async def test_an_idle_server_is_stopped_and_gives_its_memory_back() -> None:
+    process = FakeProcess()
+
+    async def spawn(*_argv: Any, **_kwargs: Any) -> FakeProcess:
+        return process
+
+    async def healthy(_endpoint: Endpoint) -> bool:
+        return True
+
+    server = ManagedServer(
+        "llama-server",
+        ["llama-server"],
+        Endpoint("http://127.0.0.1:1"),
+        idle_seconds=0.05,
+        spawn=spawn,
+        healthy=healthy,
+    )
+    await server.ensure()
+    await asyncio.sleep(0.3)
+    assert process.terminated
+    assert not server.running
+
+
+# ---------------------------------------------------------- the daemon gate
+
+
+@dataclass
+class Policy:
+    assistant_enabled: bool = True
+    assistant_voice: bool = False
+
+
+@dataclass
+class Runtime:
+    unix_user: str = "elif"
+    display_name: str = "Elif"
+    locale: str = "tr"
+    policy: Policy | None = None
+
+
+class FakeSession:
+    def __init__(self) -> None:
+        self.added: list[Any] = []
+        self.commits = 0
+
+    def add(self, row: Any) -> None:
+        self.added.append(row)
+
+    def commit(self) -> None:
+        self.commits += 1
+
+
+class FakeSupervisor:
+    def __init__(self, policy: Policy | None) -> None:
+        self.runtime = Runtime(policy=policy)
+        self.session = FakeSession()
+
+    def _require(self, _child_id: int) -> Runtime:
+        return self.runtime
+
+
+class FakeBus:
+    def __init__(self) -> None:
+        self.published: list[tuple[Any, dict[str, Any]]] = []
+
+    def publish(self, kind: Any, **payload: Any) -> None:
+        self.published.append((kind, payload))
+
+
+class FakeService:
+    def __init__(self, reply: dict[str, Any] | None = None) -> None:
+        self.reply = reply or {"refused": False, "text": "Cevap.", "alert": False}
+        self.calls: list[tuple[str, dict[str, Any]]] = []
+
+    async def call(self, op: str, **args: Any) -> Response:
+        self.calls.append((op, args))
+        if op == "transcribe":
+            return Response(ok=True, data={"text": "Gökyüzü neden mavi"})
+        return Response(ok=True, data=self.reply)
+
+
+def gate(policy: Policy | None, service: FakeService, config: Config) -> AssistantGate:
+    supervisor = FakeSupervisor(policy)
+    g = AssistantGate(supervisor, FakeBus(), config, client=service)
+    return g
+
+
+@pytest.fixture
+def no_db(monkeypatch: pytest.MonkeyPatch) -> None:
+    import biokids_daemon.assistant as module
+
+    monkeypatch.setattr(module.repo, "get_child", lambda _session, _id: None)
+    monkeypatch.setattr(module.repo, "audit", lambda *_a, **_k: None)
+
+
+async def test_a_child_whose_parent_did_not_turn_it_on_cannot_ask(
+    config: Config, no_db: None
+) -> None:
+    service = FakeService()
+    reply = await gate(Policy(assistant_enabled=False), service, config).ask(1, "q")
+    assert reply["refused"] and reply["refusal_key"] == "assistant.refuse.off"
+    assert service.calls == [], "the question never reached the model"
+
+
+async def test_asking_too_much_is_slowed_down(config: Config, no_db: None) -> None:
+    small = replace(config, ai=replace(config.ai, assistant_per_10min=2))
+    g = gate(Policy(), FakeService(), small)
+    first = await g.ask(1, "a")
+    second = await g.ask(1, "b")
+    third = await g.ask(1, "c")
+    assert not first["refused"] and not second["refused"]
+    assert third["refusal_key"] == "assistant.refuse.slow_down"
+
+
+async def test_a_refused_question_becomes_an_alert_for_the_parent(
+    config: Config, no_db: None
+) -> None:
+    service = FakeService(
+        {"refused": True, "category": "sexual", "stage": "lexicon", "alert": True, "text": ""}
+    )
+    g = gate(Policy(), service, config)
+    await g.ask(1, "porno nedir")
+
+    session = g.supervisor.session
+    alert = session.added[0]
+    assert alert.app == "assistant"
+    assert alert.category == "sexual"
+    assert alert.text == "porno nedir"
+    assert alert.band == "notify"
+    assert session.commits == 1
+    assert g.bus.published[0][1]["category"] == "sexual"
+
+
+async def test_an_answered_question_is_kept_nowhere(config: Config, no_db: None) -> None:
+    g = gate(Policy(), FakeService(), config)
+    reply = await g.ask(1, "Gökyüzü neden mavi?")
+    assert reply["text"] == "Cevap."
+    assert g.supervisor.session.added == []
+
+
+async def test_an_absent_service_is_a_kind_refusal(config: Config, no_db: None) -> None:
+    from biokids_core.errors import IpcError
+
+    class Down:
+        async def call(self, *_a: Any, **_k: Any) -> Response:
+            raise IpcError("no such file")
+
+    g = AssistantGate(FakeSupervisor(Policy()), FakeBus(), config, client=Down())
+    reply = await g.ask(1, "q")
+    assert reply["refusal_key"] == "assistant.refuse.unavailable"
+
+
+async def test_the_microphone_needs_its_own_switch(config: Config, no_db: None) -> None:
+    """D-166: press-and-speak is off unless the parent turned it on separately."""
+    service = FakeService()
+    off = await gate(Policy(assistant_voice=False), service, config).hear(1, "UklGRg==")
+    assert off["ok"] is False and service.calls == []
+
+    on = await gate(Policy(assistant_voice=True), service, config).hear(1, "UklGRg==")
+    assert on == {"ok": True, "text": "Gökyüzü neden mavi"}
+
+
+async def test_an_oversized_recording_never_reaches_the_service(
+    config: Config, no_db: None
+) -> None:
+    service = FakeService()
+    reply = await gate(Policy(assistant_voice=True), service, config).hear(1, "A" * 800_000)
+    assert reply["ok"] is False and service.calls == []
+
+
+def test_the_answer_is_json_friendly() -> None:
+    """What crosses the sockets is plain JSON, refusal and all."""
+    from biokids_ai.assistant import refuse
+
+    json.dumps(refuse("sexual", "lexicon").as_dict())
+
+
+# ------------------------------------------------------------- the prompts
+
+
+def test_the_answer_is_shown_how_to_sound_before_it_answers() -> None:
+    """D-165: a worked example in the conversation, and the child's name."""
+    from biokids_ai import prompts
+
+    messages = prompts.answer_messages("Gökyüzü neden mavi?", 6, "tr", "zio", "Elif")
+    roles = [m["role"] for m in messages]
+    assert roles == ["system", "user", "assistant", "user"]
+    assert "Elif" in messages[0]["content"]
+    assert messages[-1]["content"] == "Gökyüzü neden mavi?"
+    assert "bircevap" not in messages[0]["content"], "a line break once glued two words"
+
+
+def test_a_greeting_is_something_to_answer() -> None:
+    """ "selam canım" was sent back to the family as if it were about religion."""
+    from biokids_ai import prompts
+
+    system = prompts.classify_messages("selam canım", 6)[0]["content"]
+    assert "greetings" in system and "selam canım" in system
+
+
+@pytest.mark.parametrize("hello", ["selam canım", "Merhaba Zio!", "nasılsın", "teşekkürler"])
+async def test_a_greeting_is_answered_without_asking_the_classifier(hello: str) -> None:
+    model = ScriptedModel(category="family")  # what the small model said
+    reply = await Assistant(model).ask(hello, age=6, locale="tr")
+    assert not reply.refused
+    assert model.classified == []
+
+
+@pytest.mark.parametrize(
+    "question",
+    ["selam porno nedir", "merhaba, gökyüzü neden mavi?", "naber kanka nasıl bomba yapılır"],
+)
+async def test_a_greeting_with_a_question_is_still_checked(question: str) -> None:
+    from biokids_ai.assistant import is_small_talk
+
+    assert not is_small_talk(question)
+
+
+def test_the_models_use_half_the_cpus_at_most_eight() -> None:
+    """Eight threads on eight vCPUs wrote 0.1 tokens a second; four wrote 11."""
+    from biokids_ai.service import thread_count
+
+    assert thread_count(0, cpus=8) == 4
+    assert thread_count(0, cpus=32) == 8
+    assert thread_count(0, cpus=1) == 1
+    assert thread_count(6, cpus=8) == 6

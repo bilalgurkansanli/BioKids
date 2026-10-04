@@ -40,7 +40,7 @@ time and policy engines actually work.
         │  managed policy + BioKids ext ───┼──→ reports navigations to daemon
         └──────────────────────────────────┘
 
-   system level:  dnsmasq (127.0.0.1:53)   nftables   lightdm   systemd-logind
+   system level:  dnsmasq (127.0.0.1:5354, children only)   nftables   lightdm   systemd-logind
    storage:       /var/lib/biokids/biokids.db  (SQLite WAL, 0600 root)
 ```
 
@@ -287,26 +287,27 @@ Retention: `usage_tick` rolled up to daily aggregates after 14 days and kept for
 child types a URL
       │
       ├─ Chromium managed policy: URLAllowlist / URLBlocklist  ← instant, no network
-      │      (allowlist mode for 4–7: URLBlocklist ["*"] + explicit allows)
+      │      ("only the sites I choose": URLBlocklist ["*"] + explicit allows;
+      │       open, the default since D-167: no wildcard)
       │
       ├─ BioKids extension reports the navigation to the daemon
       │
-      ├─ DNS resolution → local dnsmasq
-      │      ├─ blocklist hit → 127.0.0.1 → local block page
+      ├─ DNS resolution → nftables sends a child's :53 to dnsmasq on :5354
+      │      ├─ blocklist hit → NXDOMAIN (Chromium's "can't be reached"; D-64 not built)
       │      ├─ safesearch CNAME rewrites applied
-      │      └─ otherwise → upstream (1.1.1.3 default)
+      │      ├─ a site a parent enabled → upstream, never blocked
+      │      └─ otherwise → the system's own resolvers
       │
-      └─ nftables: all :53 and :853 redirected to local resolver,
-                   known DoH bootstrap hosts dropped
+      └─ nftables: a child's :853 and HTTPS to known DoH resolvers rejected
 ```
 
-Generated files, all rendered from the DB by `FilterManager` and never hand-edited:
+Generated files, rendered by the daemon (`biokids_daemon/dnsfilter.py`, D-167) and
+never hand-edited:
 
-- `/etc/dnsmasq.d/10-biokids-upstream.conf`
-- `/etc/dnsmasq.d/20-biokids-safesearch.conf`
-- `/etc/dnsmasq.d/30-biokids-block.conf`
-- `/etc/chromium/policies/managed/biokids-<child>.json`
-- `/etc/nftables.d/biokids.nft`
+- `/var/lib/biokids/dns/dnsmasq.conf` and `blocklist.conf`, read by `biokids-dns.service`
+- `/var/lib/biokids/dns/biokids.nft`, loaded with `nft -f`
+- `/etc/chromium/policies/managed/biokids-kiosk.json`, one for the machine (the
+  strictest child's mode)
 
 Regeneration is atomic: write to a temp file, `fsync`, rename, reload the service, and
 verify. A failed verification triggers the lockdown path rather than leaving a partial

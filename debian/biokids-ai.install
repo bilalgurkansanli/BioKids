@@ -1,4 +1,5 @@
-# No unit and no /usr/bin entry point yet: the worker is started by the daemon
-# once a parent turns the feature on, and the model fetcher arrives with the
-# rest of the AI layer.
+# The assistant's service and its one-time model fetcher (D-165); their units
+# are debian/biokids-ai.service and debian/biokids-ai.biokids-ai-setup.service.
+usr/bin/biokids-ai
+usr/bin/biokids-ai-setup
 usr/lib/python3*/dist-packages/biokids_ai

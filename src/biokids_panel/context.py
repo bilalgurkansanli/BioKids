@@ -217,7 +217,11 @@ def flash_for(request: Request, tr: Translator) -> dict[str, str] | None:
         key = ERROR_KEYS.get(failure, failure if "." in failure else "error.unknown")
         return {"tone": "danger", "text": tr(key, remaining="", minutes="")}
 
-    if query.get("saved"):
+    saved = query.get("saved", "")
+    if saved == "download":
+        # Started, not finished: it takes minutes, and the status card says when.
+        return {"tone": "ok", "text": tr("assistant.panel.download.started")}
+    if saved:
         return {"tone": "ok", "text": tr("common.saved")}
     return None
 

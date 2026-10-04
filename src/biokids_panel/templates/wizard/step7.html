@@ -2,15 +2,10 @@
 {% block step_title %}{{ _('wizard.filter.title') }}{% endblock %}
 
 {#
-  Phase 0 records the choice and does not yet enforce it. The step is present
-  rather than absent so the shape of the flow is right from the start, and it
-  says so plainly instead of implying a protection that is not there.
+  D-167: enforced. The open internet with harmful sites closed by the
+  children's DNS filter, or only the sites the parent ticks.
 #}
 {% block step %}
-  <div class="notice notice--warn">
-    <div class="notice__title">{{ _('common.coming_soon') }}</div>
-    <p class="small">{{ _('common.coming_soon.help') }}</p>
-  </div>
 
   <form class="card" method="post" action="/wizard/7">
     <fieldset>

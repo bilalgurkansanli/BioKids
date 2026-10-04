@@ -81,7 +81,7 @@ Description: parental controls for Debian - shared library and data
 Package: biokids-daemon
 Architecture: all
 Depends: biokids-core (= ${binary:Version}),
-         dnsmasq,
+         dnsmasq-base,
          nftables,
          python3-dbus-next,
          systemd,
@@ -144,8 +144,12 @@ Architecture: all
 Section: x11
 Depends: biokids-core (= ${binary:Version}),
          chromium,
+         chromium-l10n,
+         devilspie2,
+         fonts-noto-color-emoji,
          light-locker,
          xdotool,
+         xfconf,
          ${misc:Depends},
          ${python3:Depends}
 Recommends: biokids-voice
@@ -213,7 +217,6 @@ Recommends: frozen-bubble,
             gnome-mahjongg,
             klavaro,
             kolourpaint,
-            stellarium,
             supertux,
             tuxmath,
             tuxpaint
@@ -222,7 +225,7 @@ Description: parental controls for Debian - full child desktop (metapackage)
  This metapackage turns a plain Debian installation into the machine a child
  is handed: BioKids itself, the Xfce session it is built on, the LightDM
  greeter with its large avatars, and the applications in the BioKids
- catalogue - GCompris, TuxPaint, TuxMath, Klavaro, Stellarium, KolourPaint,
+ catalogue - GCompris, TuxPaint, TuxMath, Klavaro, KolourPaint,
  SuperTux, Frozen Bubble and gnome-mahjongg.
  .
  The applications arrive as recommendations, so a parent who wants a smaller
@@ -237,27 +240,33 @@ Description: parental controls for Debian - full child desktop (metapackage)
 Package: biokids-ai
 Architecture: all
 Depends: biokids-core (= ${binary:Version}),
+         llama.cpp-tools (>= 0.5.0),
          ${misc:Depends},
          ${python3:Depends}
-Enhances: biokids-daemon
-Description: parental controls for Debian - optional screen supervision
- An optional worker that looks at the child's screen when something new
- appears, asks a local vision model how appropriate it is for a child of that
- age, and tells the parent when the answer is bad. It exists so that a parent
- hears about a problem the filter did not catch.
+Recommends: whisper.cpp-tools
+Enhances: biokids-daemon, biokids-shell
+Description: parental controls for Debian - optional local assistant
+ An optional assistant in the child's launcher: the child types or says a
+ question - why is the sky blue? - and gets a short answer pitched at their
+ age, on screen and read aloud. It is off until a parent turns it on for a
+ child.
  .
- Everything happens on this computer. The screenshot is held in memory, scored
- on the local GPU and discarded; only a flagged frame is kept, in
- /var/lib/biokids/evidence, and it is pruned automatically. No image is ever
- uploaded, and the worker runs as its own unprivileged system user with no
- access to the network once its model has been fetched.
+ Everything happens on this computer. The language model runs locally with no
+ network at all; nothing the child asks or says is sent anywhere. Every
+ question passes a word list and the model's own check before it is answered,
+ and every answer is checked again. A question that is not suitable gets a
+ fixed, kind refusal, and the parent sees it in the panel. The child is told,
+ on the same screen, that their family can see some of what they ask:
+ BioKids does not do covert monitoring.
  .
- The feature is off until a parent turns it on, and the child is told it is
- running: BioKids does not do covert monitoring, and a supervision feature a
- child does not know about is one this project will not ship.
+ Press-and-speak is a separate switch. The microphone is open only while the
+ child holds the button, and the recording is turned into text in memory and
+ discarded.
  .
- The model itself is not in this package; biokids-ai-setup downloads it after
- installation, and the whole feature needs a GPU to be worth having.
+ The models are not in this package. biokids-ai-setup downloads them once,
+ when a parent asks, from Hugging Face, checked against pinned checksums; all
+ are under the Apache-2.0 or MIT licence. llama.cpp and whisper.cpp are run as
+ separate programs.
 
 Package: biokids-archive-keyring
 Architecture: all

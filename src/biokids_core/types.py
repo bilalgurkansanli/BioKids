@@ -221,6 +221,8 @@ class ChildPolicy:
     ai_enabled: bool = False
     ai_block_enabled: bool = False
     ai_timeout_min: int = 30
+    assistant_enabled: bool = False
+    assistant_voice: bool = False
 
     enabled: bool = True
     """A disabled policy means BioKids does not manage this child at all."""

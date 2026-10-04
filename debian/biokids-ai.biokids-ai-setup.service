@@ -1,0 +1,35 @@
+[Unit]
+Description=BioKids assistant: one-time model download
+Documentation=https://github.com/bilalgurkansanli/BioKids
+# Started by the daemon when a parent presses "Download" in the panel (D-165),
+# never at boot and never by itself. It is the only part of the assistant with
+# a network: it fetches the model files from Hugging Face, pinned to a commit
+# and checked against their SHA-256 (docs/SECURITY.md section 4), and exits.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/biokids-ai-setup --models-dir /var/lib/biokids-ai/models download
+User=biokids-ai
+Group=biokids-ai
+StateDirectory=biokids-ai
+StateDirectoryMode=0750
+# Gigabytes over a family's connection: give it all evening.
+TimeoutStartSec=6h
+Nice=10
+IOWeight=50
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
+CapabilityBoundingSet=

@@ -2,6 +2,8 @@ usr/bin/biokids-shell
 usr/lib/python3*/dist-packages/biokids_shell
 usr/share/biokids/characters
 usr/share/biokids/xfce
+usr/share/biokids/devilspie2
+usr/share/themes/BioKids/xfwm4
 debian/etc/systemd/logind.conf.d/biokids.conf etc/systemd/logind.conf.d/
 debian/etc/X11/xorg.conf.d/50-biokids-no-vt-switch.conf etc/X11/xorg.conf.d/
 

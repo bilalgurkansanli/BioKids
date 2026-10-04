@@ -40,6 +40,10 @@ ext_token = "/etc/biokids/ext.token"
 chromium_policy_dir = "/etc/chromium/policies/managed"
 dnsmasq_dir = "/etc/dnsmasq.d"
 nftables_dir = "/etc/nftables.d"
+# The assistant (biokids-ai, D-165): its runtime directory and the models a
+# parent downloaded for it.
+ai_run_dir = "/run/biokids-ai"
+ai_models_dir = "/var/lib/biokids-ai/models"
 
 # --- panel -------------------------------------------------------------------
 # The parent panel. It listens on the loopback address and is meant to stay
@@ -117,6 +121,15 @@ max_per_20s = 1
 max_per_hour = 40
 max_per_day = 200
 evidence_retention_days = 7
+# The question-answering assistant (D-165), off until a parent turns it on for
+# a child. Models load when a question comes and unload after idle minutes.
+assistant_per_10min = 20
+llama_server_binary = "llama-server"
+whisper_server_binary = "whisper-server"
+idle_unload_minutes = 10
+# CPU threads for the models: 0 is half the logical CPUs, at most 8. More is
+# slower, not faster: the threads wait for each other (AI-LAYER.md section 12).
+threads = 0
 
 # --- i18n --------------------------------------------------------------------
 # Interface language. Turkish is the product's first language and English is

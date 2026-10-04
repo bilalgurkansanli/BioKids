@@ -39,11 +39,25 @@ def no_real_system_commands(monkeypatch: pytest.MonkeyPatch) -> None:
     test_provision.py and test_remote.py do.
     """
     monkeypatch.setattr(provision, "_find", lambda _program: None)
+    # The DNS filter loads nftables rules and restarts dnsmasq (D-167): on a
+    # developer's machine, as root, that would filter their own DNS.
+    from biokids_daemon import dnsfilter
+
+    monkeypatch.setattr(dnsfilter, "_run", lambda _argv: True)
     monkeypatch.setattr(
         remote,
         "run_command",
         lambda _argv, _timeout: remote.CommandResult(returncode=127, missing=True),
     )
+
+
+@pytest.fixture(autouse=True)
+def every_app_is_installed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The launcher draws only apps whose program exists (D-164); the machine
+    running the suite has none of them. A test about a missing app says so."""
+    import biokids_shell.app
+
+    monkeypatch.setattr(biokids_shell.app, "program_installed", lambda _program: True)
 
 
 @pytest.fixture

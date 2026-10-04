@@ -60,7 +60,26 @@ child still sees a locked screen, because the session is the desktop and the
 desktop has nothing on it."""
 
 
-def kiosk_policy(origin: str, web_hosts: Sequence[str] = ()) -> dict[str, object]:
+PANEL_ADDRESSES = ("127.0.0.1:7878", "localhost:7878", "[::1]:7878", "ts.net")
+"""The parent's panel, which a child must not reach even to look at its PIN
+page: by address, and over Tailscale, where the machine's own name ends in
+ts.net (SECURITY.md section 1)."""
+
+INTERNAL_PAGES = (
+    "chrome://settings",
+    "chrome://flags",
+    "chrome://extensions",
+    "chrome://net-internals",
+    "chrome://inspect",
+    "chrome://downloads",
+    "chrome://password-manager",
+    "chrome://about",
+)
+
+
+def kiosk_policy(
+    origin: str, web_hosts: Sequence[str] = (), mode: str = "allowlist"
+) -> dict[str, object]:
     """The managed policy for the kiosk, and for the child's browsing window.
 
     Everything here is a `SECURITY.md` §5 setting. Chromium on Linux reads
@@ -77,9 +96,18 @@ def kiosk_policy(origin: str, web_hosts: Sequence[str] = ()) -> dict[str, object
     "Type another address" still has nowhere to go.
     """
     allowed = [origin, *sorted({host for host in web_hosts if host and host != origin})]
+    # In "open internet" mode (D-167) there is no wildcard: harmful sites are
+    # stopped by the children's DNS filter, and the browser keeps only what
+    # must never open for a child - the parent's panel, by address and over
+    # Tailscale, and Chromium's own settings pages, which `*` stopped covering
+    # in Chromium 147.
+    closed = [*PANEL_ADDRESSES, *INTERNAL_PAGES]
     return {
-        "URLBlocklist": ["*"],
+        "URLBlocklist": ["*", *closed] if mode == "allowlist" else closed,
         "URLAllowlist": allowed,
+        "ForceGoogleSafeSearch": True,
+        "ForceYouTubeRestrict": 2,
+        "ForceBingSafeSearch": 2,
         "URLBlocklistExceptions": [],
         "DeveloperToolsAvailability": 2,
         "IncognitoModeAvailability": 1,
@@ -99,6 +127,12 @@ def kiosk_policy(origin: str, web_hosts: Sequence[str] = ()) -> dict[str, object
         "AutofillAddressEnabled": False,
         "AutofillCreditCardEnabled": False,
         "DnsOverHttpsMode": "off",
+        # The microphone: the launcher's own page may use it - for press-and-
+        # speak, and only while the child holds the button (D-166) - and no
+        # site, app page or extension may. No prompt either way.
+        "AudioCaptureAllowed": False,
+        "AudioCaptureAllowedUrls": [f"http://{origin}"],
+        "VideoCaptureAllowed": False,
     }
 
 

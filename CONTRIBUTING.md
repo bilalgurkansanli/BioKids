@@ -227,7 +227,10 @@ specification; here is what each item costs and why it stays out.
 - **Microphone or camera capture.** Recording a child's room is a different product with
   a different threat model, and it creates a file that is catastrophic if it ever leaks.
   Nothing in the supervision BioKids offers gets meaningfully better for having audio or
-  video of the child in front of the screen.
+  video of the child in front of the screen. The one exception is D-166: the child may
+  hold a button on the assistant screen and ask a question aloud, transcribed on the
+  machine and thrown away. Background listening, wake words and keeping audio are not
+  part of that exception.
 
 - **Live screen mirroring of a child's session.** Continuous remote shoulder-surfing
   changes the relationship between parent and child into monitoring, which is the thing

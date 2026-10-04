@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ _('assistant.panel.title') }} · {{ child.display_name }}{% endblock %}
+
+{#
+  D-165, D-166. Two switches, what they mean in plain words, whether the models
+  are on this computer, and the questions the assistant refused. Under seven
+  controls (UX.md section 3.3).
+#}
+{% block content %}
+  <h1>{{ child.display_name }} — {{ _('assistant.panel.title') }}</h1>
+  <p class="muted">{{ _('assistant.panel.help', name=child.display_name) }}</p>
+
+  {% if alerts %}
+    <section class="card">
+      <h2>{{ _('assistant.panel.alerts') }}</h2>
+      <p class="help">{{ _('assistant.panel.alerts.help', name=child.display_name) }}</p>
+      <ul class="pick-list">
+        {% for alert in alerts %}
+          <li class="pick-row">
+            <span class="pick-row__text">
+              <strong>“{{ alert.text }}”</strong>
+              <span class="help">
+                {{ _('assistant.category.' ~ alert.category) }} · {{ alert.ts|when }}
+              </span>
+            </span>
+            <form method="post" action="/alerts/{{ alert.id }}/dismiss">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}">
+              <input type="hidden" name="next" value="/children/{{ child.id }}/assistant">
+              <button class="btn btn--quiet" type="submit">{{ _('assistant.panel.seen') }}</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  <form class="card" method="post" action="/children/{{ child.id }}/assistant">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+
+    <div class="checkline">
+      <input type="checkbox" id="assistant_enabled" name="assistant_enabled"
+             {% if policy.assistant_enabled %}checked{% endif %}>
+      <label for="assistant_enabled">
+        {{ _('assistant.panel.enabled') }}
+        <span class="help">{{ _('assistant.panel.enabled.help', name=child.display_name) }}</span>
+      </label>
+    </div>
+
+    <div class="checkline">
+      <input type="checkbox" id="assistant_voice" name="assistant_voice"
+             {% if policy.assistant_voice %}checked{% endif %}
+             {% if not status.voice %}disabled{% endif %}>
+      <label for="assistant_voice">
+        {{ _('assistant.panel.voice') }}
+        <span class="help">{{ _('assistant.panel.voice.help') }}</span>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn--primary" type="submit">{{ _('common.save') }}</button>
+      <a class="btn btn--quiet" href="/children">{{ _('common.back') }}</a>
+    </div>
+  </form>
+
+  <section class="card">
+    <h2>{{ _('assistant.panel.models') }}</h2>
+    {% if not status.running %}
+      <p>{{ _('assistant.panel.not_installed') }}</p>
+    {% elif status.ready %}
+      <p>{{ _('assistant.panel.ready') }}</p>
+      <p class="help">{{ _('assistant.model.' ~ status.chat) }}{% if status.stt %} · {{ _('assistant.model.' ~ status.stt) }}{% endif %}</p>
+    {% else %}
+      <p>{{ _('assistant.panel.need_download') }}</p>
+    {% endif %}
+    {% if status.running and (not status.ready or not status.voice) %}
+      <form method="post" action="/children/{{ child.id }}/assistant/download">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button class="btn" type="submit">{{ _('assistant.panel.download') }}</button>
+        <span class="help">{{ _('assistant.panel.download.help') }}</span>
+      </form>
+    {% endif %}
+  </section>
+{% endblock %}

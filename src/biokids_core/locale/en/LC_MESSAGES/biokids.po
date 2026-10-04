@@ -87,16 +87,16 @@ msgstr "The computer shuts down completely."
 # --- filter mode ---
 
 msgid "filter_mode.allowlist"
-msgstr "Only sites you allow"
+msgstr "Only the sites I choose"
 
 msgid "filter_mode.blocklist"
-msgstr "Everywhere except blocked sites"
+msgstr "Open internet, harmful sites closed (recommended)"
 
 msgid "filter_mode.allowlist.help"
-msgstr "Recommended for younger children. Only sites you add will open."
+msgstr "Only the sites you tick on the Apps and sites screen open. For very young children."
 
 msgid "filter_mode.blocklist.help"
-msgstr "Recommended for older children. Harmful categories are blocked, the rest is open."
+msgstr "Your child can browse. Adult, gambling and harmful sites are always closed; Google and YouTube are kept to SafeSearch."
 
 # --- age band ---
 
@@ -113,6 +113,9 @@ msgstr "Hello {name}"
 
 msgid "shell.remaining_minutes"
 msgstr "{minutes} min"
+
+msgid "shell.minutes_unit"
+msgstr "min"
 
 msgid "shell.remaining_label"
 msgstr "Time left"
@@ -479,6 +482,27 @@ msgstr "Age group"
 msgid "child.age_band.help"
 msgstr "Sets how large the interface is. Chosen automatically from the age."
 
+msgid "apps.title"
+msgstr "Apps and sites"
+
+msgid "apps.help"
+msgstr "Whatever you tick appears as a tile on {name}'s screen. Nothing you leave unticked ever appears."
+
+msgid "apps.group.apps"
+msgstr "Apps"
+
+msgid "apps.group.sites"
+msgstr "Sites"
+
+msgid "apps.for_age"
+msgstr "Suggested for ages {min}–{max}"
+
+msgid "apps.other_age"
+msgstr "For ages {min}–{max}"
+
+msgid "apps.always_on"
+msgstr "Volume, brightness and the Shut down button are always there."
+
 msgid "time.title"
 msgstr "Time rules"
 
@@ -564,6 +588,9 @@ msgstr "Parent"
 
 msgid "audit.actor.cli"
 msgstr "Command line"
+
+msgid "audit.action.apps_changed"
+msgstr "Apps changed"
 
 msgid "audit.action.policy_changed"
 msgstr "Rules changed"
@@ -900,3 +927,186 @@ msgstr "Protection turned on"
 
 msgid "wizard.passphrase.required"
 msgstr "You need to set a passphrase before continuing."
+
+msgid "assistant.tile"
+msgstr "Ask Me"
+
+msgid "assistant.title"
+msgstr "Ask Zio"
+
+msgid "assistant.home"
+msgstr "Home"
+
+msgid "assistant.hello"
+msgstr "Hi {name}! What are you wondering about? Type it here."
+
+msgid "assistant.placeholder"
+msgstr "Type your question…"
+
+msgid "assistant.send"
+msgstr "Ask"
+
+msgid "assistant.mic"
+msgstr "Hold and speak"
+
+msgid "assistant.listening"
+msgstr "Listening…"
+
+msgid "assistant.thinking"
+msgstr "Thinking…"
+
+msgid "assistant.loading"
+msgstr "Just a moment, I'm getting ready…"
+
+msgid "assistant.heard_nothing"
+msgstr "I didn't catch that. Can you say it again?"
+
+msgid "assistant.mic_failed"
+msgstr "That didn't work. Can you try again in a moment?"
+
+msgid "assistant.note"
+msgstr "Your family can see some of the questions you ask."
+
+msgid "assistant.refuse.default"
+msgstr "I can't answer that. You could ask a grown-up in your family."
+
+msgid "assistant.refuse.self_harm"
+msgstr "I'm so sorry you feel this way. Please tell someone in your family or a grown-up you trust right now. They want to listen and help you."
+
+msgid "assistant.refuse.personal_info"
+msgstr "Don't type your address, phone number or password to anyone, not even me. Keeping them secret keeps you safe."
+
+msgid "assistant.refuse.rude"
+msgstr "Let's not use those words. Would you like to ask something else?"
+
+msgid "assistant.refuse.family"
+msgstr "That's a lovely question. Your family can explain it best, so ask them."
+
+msgid "assistant.refuse.unavailable"
+msgstr "I'm resting right now. Can you ask me again in a little while?"
+
+msgid "assistant.refuse.slow_down"
+msgstr "That's a lot of questions! Let's rest a little, then you can ask again."
+
+msgid "assistant.refuse.off"
+msgstr "Asking questions is turned off right now."
+
+msgid "assistant.category.sexual"
+msgstr "Sexual content"
+
+msgid "assistant.category.self_harm"
+msgstr "Self-harm"
+
+msgid "assistant.category.violence"
+msgstr "Violence or weapons"
+
+msgid "assistant.category.drugs"
+msgstr "Drugs, alcohol or gambling"
+
+msgid "assistant.category.personal_info"
+msgstr "Sharing personal details"
+
+msgid "assistant.category.rude"
+msgstr "Rude words"
+
+msgid "assistant.category.adult"
+msgstr "Not suitable for their age"
+
+msgid "assistant.category.trick"
+msgstr "Trying to get round the rules"
+
+msgid "assistant.category.family"
+msgstr "Sent back to the family"
+
+msgid "assistant.category.unknown"
+msgstr "Other"
+
+msgid "audit.action.assistant_refused"
+msgstr "The assistant refused a question"
+
+msgid "assistant.panel.title"
+msgstr "Assistant"
+
+msgid "assistant.panel.help"
+msgstr "The assistant gives {name} a short answer, pitched at their age, to whatever they type or say. It runs entirely on this computer: nothing asked or answered is sent anywhere."
+
+msgid "assistant.panel.enabled"
+msgstr "Assistant on"
+
+msgid "assistant.panel.enabled.help"
+msgstr "When a question is not suitable, {name} sees “I can't answer that” and an alert appears here for you. {name} always sees “Your family can see some of the questions you ask” on the screen."
+
+msgid "assistant.panel.voice"
+msgstr "Press-and-speak on"
+
+msgid "assistant.panel.voice.help"
+msgstr "The microphone is on only while your child holds the button down, for at most 15 seconds. The sound is turned into text on this computer; it is never saved and never sent anywhere."
+
+msgid "assistant.panel.alerts"
+msgstr "Questions it would not answer"
+
+msgid "assistant.panel.alerts.help"
+msgstr "{name} asked these and the assistant did not answer. They may be worth talking about."
+
+msgid "assistant.panel.seen"
+msgstr "Seen"
+
+msgid "assistant.panel.models"
+msgstr "Models on this computer"
+
+msgid "assistant.panel.not_installed"
+msgstr "The assistant package (biokids-ai) is not installed or not running on this computer."
+
+msgid "assistant.panel.ready"
+msgstr "The assistant is ready."
+
+msgid "assistant.panel.need_download"
+msgstr "The assistant needs its models downloaded once."
+
+msgid "assistant.panel.download"
+msgstr "Download the models"
+
+msgid "assistant.panel.download.help"
+msgstr "1.5–4 GB depending on this computer's memory; it can take a few minutes. No internet is needed after that."
+
+msgid "assistant.panel.download.started"
+msgstr "The download has started. Reload this page in a few minutes."
+
+msgid "assistant.panel.banner"
+msgstr "{name} asked the assistant {count} question(s) it would not answer."
+
+msgid "assistant.model.gemma-4-e2b"
+msgstr "Gemma 4 E2B (Google): for computers with less memory; shorter answers, sometimes wrong"
+
+msgid "assistant.model.gemma-4-e4b"
+msgstr "Gemma 4 E4B (Google): the most accurate answers, for computers with 12 GB of memory"
+
+msgid "assistant.model.whisper-turbo"
+msgstr "Whisper large-v3-turbo (OpenAI): turns speech into text"
+
+msgid "assistant.model.whisper-small"
+msgstr "Whisper small (OpenAI): turns speech into text"
+
+msgid "audit.action.assistant_changed"
+msgstr "Assistant settings changed"
+
+msgid "audit.action.assistant_download"
+msgstr "Assistant model download started"
+
+msgid "internet.title"
+msgstr "Internet"
+
+msgid "internet.mode"
+msgstr "How should the internet be?"
+
+msgid "internet.filter.on"
+msgstr "Harmful-site protection is on: adult, gambling and harmful sites are closed for the children's accounts on this computer."
+
+msgid "internet.filter.off"
+msgstr "Harmful-site protection is not running. For safety the children's accounts cannot reach the internet at all; try restarting the computer."
+
+msgid "internet.shared_browser"
+msgstr "This computer has one browser setting: if “Only the sites I choose” is set for any child, the browser works that way for every child."
+
+msgid "audit.action.filter_mode_changed"
+msgstr "Internet setting changed"

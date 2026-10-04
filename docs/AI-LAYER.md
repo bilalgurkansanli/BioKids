@@ -1,6 +1,7 @@
 # AI-LAYER.md
 
-Spec for `biokids-ai`, the optional on-device supervision worker.
+Spec for `biokids-ai`, the optional on-device supervision worker, and since D-165
+the home of the child's assistant (section 12).
 
 **Status: optional package, default off, `Suggests:` never `Depends:`.**
 Everything in BioKids works without it. If this component is absent, broken, or
@@ -112,8 +113,9 @@ VirtualBox has no GPU passthrough, so the AI worker cannot be meaningfully teste
 development VM. Run it on the Windows host or on the spare desktop.
 
 Models are **not** bundled in the `.deb` or the ISO. `biokids-ai-setup` downloads them
-once, verifies checksums, and stores them in `/var/lib/biokids/models/`. After that,
-the service runs with `PrivateNetwork=yes`.
+once, verifies checksums, and stores them in `/var/lib/biokids-ai/models/`. The
+service always runs with `PrivateNetwork=yes`; the download is its own unit,
+`biokids-ai-setup.service`, started from the panel.
 
 ---
 
@@ -255,3 +257,87 @@ broken.
   the model update fails CI.
 - The scorer itself (`final = max(...)`, band mapping, rate limiting) is pure and
   unit-tested without a model.
+
+---
+
+## 12. The assistant, "Sor Bana" (D-165, D-166)
+
+A tile on the launcher where a child types a question, or holds a button and says it,
+and gets an answer written for their age. Off by default; the parent switches it on
+per child under **Çocuklar → Asistan**, and the voice input separately. Why it exists
+and what was decided is in DECISIONS.md D-165 and D-166; this is how it works.
+
+```
+launcher (child)  --shell.sock-->  daemon  --ai.sock-->  biokids-ai  --llm.sock-->  llama-server
+  /assistant/ask     ASK_ASSISTANT   policy, rate limit,   lexicon, classifier,      (llama.cpp)
+  /assistant/hear    HEAR_ASSISTANT  alerts, audit         answer, lexicon      --:8178-->     whisper-server
+```
+
+* **Gate (daemon, `biokids_daemon/assistant.py`).** Refuses unless the child's policy
+  has the assistant on (and voice on, for audio); 20 questions per 10 minutes; a
+  refused question becomes an `AiAlert` with the child's words, an audit row
+  (`assistant_refused`) and an `ASSISTANT_ALERT` event for the panel.
+* **Pipeline (`biokids_ai/assistant.py`).** Lexicon (`data/lexicon.toml`: exact words,
+  prefixes, Turkish-only words, phrases, squashed spellings, phone numbers and e-mail
+  addresses) → small talk skips the classifier → classifier, temperature 0, output
+  constrained to a JSON enum → answer → lexicon on the answer. Any refusal is a fixed
+  catalog sentence (`assistant.refuse.*`); the model never writes one.
+* **Prompts (`biokids_ai/prompts.py`).** One system prompt per language, filled with
+  the persona, the child's name and age, and the band's length: five sentences and
+  260 tokens for 4-7, seven and 380 for 8-10. One worked example per language and
+  band is sent as an earlier turn: a small model copies what it is shown. The rules
+  that mattered in testing: the real reason first, never an invented fact, no
+  decorative comparisons (a 4B model makes up ones that explain nothing), a question
+  at the end.
+* **Runtime (`biokids_ai/runtime.py`).** `llama-server --jinja --no-webui --parallel 2`
+  on a Unix socket in `/run/biokids-ai/` (two slots, so the classifier's prompt and
+  the answer's each stay cached), and `whisper-server` on `127.0.0.1:8178` inside
+  the service's own empty network namespace. Both are started on the
+  first request (the assistant screen sends a warm-up as it opens) and stopped after
+  `idle_unload_minutes` (10) without one. `[ai] threads` in `config.toml` sets the
+  CPU threads; 0 lets llama.cpp choose.
+* **Models (`biokids_ai/models.py`).** Chosen by physical memory, recorded in
+  `selection.json` next to them:
+
+  | Role | Model | From | Licence |
+  |---|---|---|---|
+  | chat | Gemma 4 E4B, Q4_0 | 12 GB | Apache-2.0 |
+  | chat | Gemma 4 E2B, Q4_0 | 7 GB | Apache-2.0 |
+  | speech | Whisper large-v3-turbo, Q5_0 | 12 GB | MIT |
+  | speech | Whisper small, Q5_1 | 3 GB | MIT |
+
+* **Voice (`biokids_shell/static/assistant.js`).** Press and hold, at most 15 seconds;
+  the page records with Web Audio, encodes a 16 kHz mono WAV in memory and posts it
+  as `audio/wav`. Chromium lets only the launcher's origin open the microphone.
+  Nothing is written to disk anywhere on the way. Zio reads the answer aloud through
+  the voice service's `say` operation, after any time warning.
+
+**Threads.** llama.cpp's threads spin while they wait for each other, so a thread
+that loses its CPU stalls the rest. `llama-bench` on the development VM (eight vCPUs
+on a 6P+4E laptop, Gemma 4 E4B Q4_0), tokens per second:
+
+| threads | prompt | generation |
+|---|---|---|
+| 8 | 2.3 | 0.1 |
+| 6 | 29.7 | 11.1 |
+| 4 | 28.8 | 10.8 |
+| 2 | 2.7 | 1.3 |
+
+All the vCPUs is the pathological case. Two being slow as well is not understood;
+it was the VM's setting for a day, chosen after eight had failed, and made every
+answer a minute long. The default is now half the logical CPUs, at most eight
+(four on that VM). With it, an answer takes 10 to 30 seconds there; the first
+question after the assistant opens waits for the model to load and read its two
+prompts, up to three minutes on the VM. Real hardware has not been measured.
+
+The VM's own speed is not stable either. The same four threads measured 3.4 and 1.1
+an hour later, with the VirtualBox window behind other windows on a Windows laptop
+on its Balanced power plan; Windows slows background processes. Benchmark with the
+VM in front, and do not read a slow afternoon as a slow model.
+
+**Testing.** `tests/test_ai_safety.py` covers the lexicon (Turkish case folding,
+leetspeak, phrases, false friends that must pass); `tests/test_ai_assistant.py` the
+pipeline with a fake model, the gate, the downloader and the runtime. Answer quality
+is checked by hand on the VM with the prompts from the shared folder; it is not a CI
+test, because a model's wording is not a contract.
+

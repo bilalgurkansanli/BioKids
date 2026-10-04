@@ -1,0 +1,57 @@
+[Unit]
+Description=BioKids assistant (local language model)
+Documentation=https://github.com/bilalgurkansanli/BioKids
+# The daemon is the only client: it decides whether a child may ask, and it
+# writes the parent's alerts. Starting without it is harmless.
+After=biokids-daemon.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/biokids-ai
+Restart=on-failure
+RestartSec=5s
+Environment=PYTHONUNBUFFERED=1
+User=biokids-ai
+Group=biokids-ai
+
+# D-165. The assistant has no network at all: not the internet, not the LAN,
+# not even another process's loopback. llama-server and whisper-server run as
+# its children inside this empty namespace. The models were fetched once by
+# biokids-ai-setup.service, which is a separate unit for exactly this reason.
+PrivateNetwork=yes
+
+# /run/biokids-ai: its socket (the daemon connects as root) and the language
+# model's. /var/lib/biokids-ai/models: the files a parent downloaded.
+RuntimeDirectory=biokids-ai
+RuntimeDirectoryMode=0750
+StateDirectory=biokids-ai
+StateDirectoryMode=0750
+
+# A child's apps come first. The model runs only while a question is being
+# answered, and at lower priority than everything the child is doing.
+Nice=10
+CPUWeight=50
+IOWeight=50
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

@@ -12,12 +12,12 @@ How BioKids is built, signed, published and installed.
 | Binary package | Contents | Depends |
 |---|---|---|
 | `biokids-core` | shared Python lib, DB schema, i18n, app catalog | python3, python3-sqlalchemy, alembic |
-| `biokids-daemon` | the enforcement daemon + systemd units | biokids-core, systemd, dnsmasq, nftables |
+| `biokids-daemon` | the enforcement daemon + systemd units, the children's DNS filter | biokids-core, systemd, dnsmasq-base (never `dnsmasq`, D-167), nftables |
 | `biokids-panel` | FastAPI panel, templates, static, PWA | biokids-core, python3-fastapi, uvicorn |
-| `biokids-shell` | child launcher + kiosk supervisor | biokids-core, chromium |
+| `biokids-shell` | child launcher + kiosk supervisor | biokids-core, chromium, chromium-l10n |
 | `biokids-voice` | Zio & Sio, Piper, stock voices | biokids-core, piper-tts, pipewire |
 | `biokids-desktop` | metapackage: XFCE config, theme, LightDM, app set | the above + xfce4 + the catalog apps |
-| `biokids-ai` | VLM worker, llama.cpp wrapper, setup tool | biokids-core. **Suggests**, never Depends |
+| `biokids-ai` | the assistant (D-165), later the VLM worker; setup tool | biokids-core, llama.cpp-tools; Recommends whisper.cpp-tools. **Suggests**, never Depends |
 | `biokids-archive-keyring` | our APT signing public key | — |
 | `biokids` | metapackage pulling core, daemon, panel, shell, voice | — |
 
@@ -34,7 +34,7 @@ Keep them minimal; every line is a chance to break someone's system.
 - `postrm purge`: remove `/var/lib/biokids` **only on purge**, and ask first via
   debconf. A `remove` must never destroy a family's history.
 - Never modify a config file the admin may have touched without `ucf`.
-- Generated files (`/etc/dnsmasq.d/*biokids*`, chromium policies, nftables) are
+- Generated files (`/var/lib/biokids/dns/*`, chromium policies, nftables) are
   **not** conffiles. They are regenerated from the DB and are documented as
   hand-edit-hostile with a header comment.
 

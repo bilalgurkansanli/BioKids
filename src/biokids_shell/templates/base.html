@@ -13,8 +13,8 @@
   <meta name="color-scheme" content="light">
   <meta name="referrer" content="no-referrer">
   <title>{% block title %}BioKids{% endblock %}</title>
-  <link rel="stylesheet" href="/static/shared/tokens.css">
-  <link rel="stylesheet" href="/static/shell.css">
+  <link rel="stylesheet" href="/static/shared/tokens.css?v={{ asset_version }}">
+  <link rel="stylesheet" href="/static/shell.css?v={{ asset_version }}">
   <link rel="icon" href="/static/icons/icon-192.png" sizes="192x192">
 </head>
 <body>
@@ -46,11 +46,18 @@
       <div class="notice__bubble">
         <p class="notice__line" id="notice-line"></p>
       </div>
-      <svg class="notice__ring" viewBox="0 0 100 100" aria-hidden="true">
-        <circle class="notice__ring-track" cx="50" cy="50" r="40"></circle>
-        <circle class="notice__ring-value" id="notice-ring" cx="50" cy="50" r="40"
-                stroke-dasharray="251.33" stroke-dashoffset="0"></circle>
-      </svg>
+      <div class="notice__ring-wrap" aria-hidden="true">
+        <svg class="notice__ring" viewBox="0 0 100 100">
+          <circle class="notice__ring-track" cx="50" cy="50" r="40"></circle>
+          <circle class="notice__ring-value" id="notice-ring" cx="50" cy="50" r="40"
+                  stroke-dasharray="251.33" stroke-dashoffset="0"></circle>
+        </svg>
+        {# The same minutes as the corner ring (D-162). #}
+        <span class="notice__ring-label">
+          <span class="notice__ring-number" id="notice-ring-number"></span>
+          <span class="notice__ring-unit">{{ _('shell.minutes_unit') }}</span>
+        </span>
+      </div>
     </div>
   </div>
 
@@ -63,6 +70,6 @@
     window.BIOKIDS_LINES = JSON.parse(document.getElementById("lines").textContent);
     window.BIOKIDS_NOTICE_MS = {{ notice_ms|default(7000)|int }};
   </script>
-  <script src="/static/shell.js" defer></script>
+  <script src="/static/shell.js?v={{ asset_version }}" defer></script>
 </body>
 </html>

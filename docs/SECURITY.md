@@ -19,9 +19,11 @@ parental-control tool that implies more protection than it provides is worse tha
 | Changing the system clock to get more time | `CLOCK_BOOTTIME` accounting (D-41) |
 | Closing or minimising the launcher | Chromium kiosk, no WM decorations, hotkeys suppressed |
 | Opening a terminal | no terminal emulator installed, TTY switching disabled |
-| Typing a blocked URL | Chromium policy + local DNS + block page |
-| Changing the DNS server in settings | settings app hidden; nftables forces port 53 to local |
-| Using a DoH-capable site or app | `DnsOverHttpsMode: off`, bootstrap hosts dropped |
+| Typing a blocked URL | Chromium policy + the children's DNS filter (D-167); the block page of D-64 is not built yet |
+| Changing the DNS server in settings | settings app hidden; nftables sends the children's port 53 to the filter whatever server is set |
+| Using a DoH-capable site or app | `DnsOverHttpsMode: off`; DoH hosts in the blocklist; the children's DoT and HTTPS to known DoH resolvers rejected |
+| Asking the assistant something harmful | word list, classifier and a checked answer; a fixed refusal, and the parent is told (D-165) |
+| A website opening the microphone or camera | `AudioCaptureAllowedUrls` names the launcher only; `VideoCaptureAllowed: false` (D-166) |
 | Installing another browser | no sudo, no polkit, no Flatpak |
 | Killing the daemon | no permission; crash triggers lockdown |
 | Unplugging the network to escape the filter | fails closed: no DNS means no browsing |
@@ -59,7 +61,8 @@ Never add a claim to marketing copy that contradicts this list.
 | `biokids-panel` | root | writes config that only root may write |
 | `biokids-shell` | child | runs in the child session; no privilege. Reaches the daemon only over `/run/biokids/shell.sock`, where every operation is scoped to the calling uid's own child (D-123) |
 | `biokids-voice` | child | audio only |
-| `biokids-ai` | `biokids-ai` system user | needs X11 access for capture, nothing else |
+| `biokids-ai` | `biokids-ai` system user | runs the local models for the assistant (D-165); no network, no home, no devices |
+| `biokids-dns` | started as root, `dnsmasq` drops to its own user | the children's DNS filter, on loopback port 5354 only (D-167) |
 
 Root services run with systemd hardening:
 
@@ -79,8 +82,11 @@ ReadWritePaths=/var/lib/biokids /var/log/biokids /run/biokids /etc/dnsmasq.d \
                /etc/chromium/policies/managed /etc/nftables.d
 ```
 
-`biokids-ai` additionally gets `PrivateNetwork=yes` once the model is downloaded. It
-has no reason to speak to the internet and must not be able to.
+`biokids-ai` always runs with `PrivateNetwork=yes`: it has no reason to speak to the
+internet and cannot. The one-time model download is a separate unit,
+`biokids-ai-setup.service`, which only the parent's button starts, which has the
+network and writes nothing but the models directory, and which checks every file
+against its pinned SHA-256 (D-165).
 
 ---
 
@@ -112,11 +118,11 @@ entry in `DECISIONS.md` and a note in the README.**
 | `deb.debian.org`, `security.debian.org` | OS updates | no |
 | our APT repo | BioKids updates | no |
 | the configured DNS upstream | resolution | no (can be a LAN resolver) |
-| blocklist source URLs | weekly refresh | yes, opt-in |
+| blocklist source URLs | weekly refresh | **not built**: the lists ship inside biokids-core and update with it (D-167) |
 | the parent's own SMTP server | notifications | yes, opt-in |
 | Tailscale coordination | remote panel access | yes, opt-in |
 | `log.tailscale.com` | Tailscale's own client logs | **turned off**: the runbook starts `tailscaled` with `--no-logs-no-support` (D-157) |
-| Hugging Face | one-time model download | yes, only with the AI package |
+| Hugging Face | one-time download of the assistant's models | yes: only with the AI package, only when the parent presses the button (D-165) |
 | ElevenLabs | cloud TTS | yes, opt-in, off by default, clearly labelled |
 
 Zero telemetry. No crash reporting. No version ping. No analytics.
@@ -133,32 +139,57 @@ Transparency logs: the name becomes public, the panel does not.
 
 ### Forcing DNS
 
+Only the children are filtered (D-167). The daemon renders this from the children's
+uids on every reload and loads it with `nft -f`, which applies it as one transaction:
+
 ```
-# /etc/nftables.d/biokids.nft  (rendered, do not hand-edit)
+# /var/lib/biokids/dns/biokids.nft  (rendered, do not hand-edit)
+destroy table inet biokids
 table inet biokids {
-  chain output {
-    type nat hook output priority -100;
-    # allow the local resolver itself
-    meta skuid dnsmasq accept
-    # everything else: port 53 and 853 go to the local resolver
-    udp dport 53  redirect to :53
-    tcp dport 53  redirect to :53
-    tcp dport 853 drop
+  set children { type uid; elements = { 1001, 1002 } }
+
+  chain dns_redirect {
+    type nat hook output priority -100; policy accept;
+    meta skuid @children udp dport 53 redirect to :5354
+    meta skuid @children tcp dport 53 redirect to :5354
+  }
+
+  chain no_bypass {
+    type filter hook output priority 0; policy accept;
+    meta skuid @children tcp dport 853 reject
+    meta skuid @children udp dport 853 reject
+    meta skuid @children ip daddr { 1.1.1.1, 8.8.8.8, 9.9.9.9, ... } tcp dport 443 reject
+    # ... and the same for UDP and for the resolvers' IPv6 addresses
   }
 }
 ```
 
-DoH bootstrap endpoints (`mozilla.cloudflare-dns.com`, `dns.google`,
-`chrome.cloudflare-dns.com`, and the rest of the current list) are resolved to
-`0.0.0.0` in dnsmasq. Keep the list in `/usr/share/biokids/doh-hosts.txt` and refresh
-it with the blocklists.
+Port 5354 is `dnsmasq`, run by `biokids-dns.service` from `dnsmasq-base` with a
+configuration the daemon writes to `/var/lib/biokids/dns/`: loopback only, the
+blocklists as `local=/domain/` (NXDOMAIN for the domain and every subdomain),
+SafeSearch as `cname` and `host-record` lines, and each site a parent enabled as
+`server=/host/#` so a list can never close it. DoH hosts are one of the lists, and
+`use-application-dns.net` answers NXDOMAIN so Firefox would not switch DoH on.
+
+The redirect is written and loaded before anything else, and on its own. If the
+lists cannot be read, the filter is stopped; if it crashes, systemd restarts it. In
+both cases the children's DNS goes to a port where nothing answers, so they have no
+internet rather than unfiltered internet. On removal, `biokids-daemon.prerm` deletes
+the table.
 
 ### Allowlist mode
 
+"Only the sites I choose". The open mode is the same policy without the `*`: the
+panel's addresses and Chromium's own settings pages stay blocked in both. Chromium
+reads one managed policy per machine, so the strictest child's mode applies.
+
 ```json
 {
-  "URLBlocklist": ["*"],
-  "URLAllowlist": ["eba.gov.tr", "trtcocuk.net.tr", "127.0.0.1:7879"],
+  "URLBlocklist": ["*", "127.0.0.1:7878", "ts.net", "chrome://settings", "..."],
+  "URLAllowlist": ["127.0.0.1:7879", "eba.gov.tr", "trtcocuk.net.tr"],
+  "AudioCaptureAllowed": false,
+  "AudioCaptureAllowedUrls": ["http://127.0.0.1:7879"],
+  "VideoCaptureAllowed": false,
   "DnsOverHttpsMode": "off",
   "ForceGoogleSafeSearch": true,
   "ForceYouTubeRestrict": 2,
@@ -224,7 +255,11 @@ We do not build, and will not accept contributions for:
 
 - covert monitoring, hidden modes, or a "stealth" install
 - keystroke logging
-- microphone or camera capture
+- microphone or camera capture, with one exception (D-166): push-to-talk in the
+  assistant, off by default, only while the child holds the button and for at most
+  15 seconds, usable by the launcher alone, transcribed on the machine and never
+  saved or sent. Background listening, wake words and keeping audio stay out
+  of scope.
 - live screen mirroring of a child's session
 - location tracking
 - reading the contents of private messages

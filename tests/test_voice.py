@@ -1451,3 +1451,12 @@ def test_a_voice_directory_the_child_may_not_read_is_skipped_not_fatal(
     assert all(voice.kind != "cloned" for voice in voices)
     assert all(voice.model_path is None for voice in voices)
     assert "cannot be read by this user" in caplog.text
+
+
+def test_a_long_answer_is_cut_after_a_whole_sentence() -> None:
+    from biokids_voice.service import whole_sentences
+
+    text = "Birinci cümle. İkinci cümle uzun! Üçüncü cümle burada bitmiyor"
+    assert whole_sentences(text, 200) == text
+    assert whole_sentences(text, 40) == "Birinci cümle. İkinci cümle uzun!"
+    assert whole_sentences("kelimekelimekelime", 5) == "kelim"

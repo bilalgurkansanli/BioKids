@@ -24,25 +24,38 @@
     {% set remaining = state.remaining_seconds|int %}
     {% set quota = state.quota_seconds|int %}
     {% set fraction = (remaining / quota) if quota > 0 else 0 %}
+    {% set minutes_left = (remaining / 60)|round(0, 'ceil')|int %}
     <div class="ring-wrap" id="ring-wrap"
          data-tone="{{ 'danger' if fraction <= 0.10 else ('warn' if fraction <= 0.25 else 'ok') }}"
          data-quota="{{ quota }}">
-      <svg class="ring" viewBox="0 0 100 100" role="img"
-           aria-label="{{ _('shell.remaining_label') }}">
+      <svg class="ring" viewBox="0 0 100 100" aria-hidden="true">
         <circle class="ring__track" cx="50" cy="50" r="40"></circle>
         <circle class="ring__value" id="ring-value" cx="50" cy="50" r="40"
                 stroke-dasharray="251.33"
                 stroke-dashoffset="{{ (251.33 * (1 - fraction))|round(2) }}"></circle>
       </svg>
-      {# The number is for readers only. The shrinking circle is for everyone. #}
-      {% if not young %}
-        <span class="ring__label" id="ring-label">{{ (remaining / 60)|round(0, 'ceil')|int }}</span>
-      {% endif %}
+      {# Minutes inside the circle, for every age (D-162). A child who cannot
+         read the number still has the shrinking circle around it; the parent
+         standing behind them, and the child who can, get the number. #}
+      <span class="ring__label" id="ring-label" role="img"
+            aria-label="{{ _('shell.remaining_label') }}: {{ _('shell.remaining_minutes', minutes=minutes_left) }}">
+        <span class="ring__number" id="ring-number">{{ minutes_left }}</span>
+        <span class="ring__unit" aria-hidden="true">{{ _('shell.minutes_unit') }}</span>
+      </span>
     </div>
   </header>
 
   <main class="tiles">
-    {% if not tiles %}
+    {# The assistant (D-165): not a catalog app, a part of the launcher, shown
+       only when this child's parent turned it on. #}
+    {% if state.assistant and state.assistant.enabled %}
+      <a class="tile tile--assistant" href="/assistant"
+         {% if young %}data-speak="{{ _('assistant.tile') }}"{% endif %}>
+        <span class="tile__icon" aria-hidden="true">💬</span>
+        <span class="tile__label">{{ _('assistant.tile') }}</span>
+      </a>
+    {% endif %}
+    {% if not tiles and not (state.assistant and state.assistant.enabled) %}
       <p class="full__inner">{{ _('shell.no_apps') }}</p>
     {% endif %}
     {% for tile in tiles %}

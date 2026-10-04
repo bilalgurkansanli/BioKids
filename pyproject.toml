@@ -57,6 +57,8 @@ biokids-panel = "biokids_panel.__main__:main"
 biokids-shell = "biokids_shell.__main__:main"
 biokids-voice = "biokids_voice.__main__:main"
 biokids-admin = "biokids_core.admin:main"
+biokids-ai = "biokids_ai.__main__:main"
+biokids-ai-setup = "biokids_ai.setup:main"
 
 [project.urls]
 Homepage = "https://biokids.bilalgurkansanli.com"
@@ -73,6 +75,7 @@ include = ["biokids_*"]
 biokids_core = ["locale/*/LC_MESSAGES/*.po", "locale/*/LC_MESSAGES/*.mo", "data/**/*"]
 biokids_panel = ["templates/**/*", "static/**/*"]
 biokids_shell = ["templates/**/*", "static/**/*"]
+biokids_ai = ["data/**/*"]
 
 # ---------------------------------------------------------------- ruff
 

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ _('assistant.title') }}{% endblock %}
+
+{#
+  The assistant (D-165): a child asks, Zio answers, on the screen and aloud.
+
+  The note under the conversation is not optional and has no switch: a parent
+  may see some of what is asked here, and the child is told so, in words they
+  can read, every time they open it (principle 2). Press-and-speak is shown only
+  when the parent turned it on (D-166); the microphone is open only while the
+  button is held, and the page shows that it is.
+#}
+{% block body %}
+<div class="screen assistant" data-band="{{ band }}"
+     data-voice="{{ 'on' if state.assistant and state.assistant.voice else 'off' }}">
+  <header class="head">
+    <a class="big-btn big-btn--quiet assistant__home" href="/">
+      <span aria-hidden="true">🏠</span> {{ _('assistant.home') }}
+    </a>
+    <h1 class="assistant__title">{{ _('assistant.title') }}</h1>
+  </header>
+
+  <main class="assistant__main">
+    <div class="assistant__character" aria-hidden="true">
+      {{ characters.zio|safe if characters.zio else '' }}
+    </div>
+
+    <ol class="assistant__log" id="assistant-log" aria-live="polite">
+      <li class="bubble bubble--zio">{{ _('assistant.hello', name=state.display_name) }}</li>
+    </ol>
+  </main>
+
+  <footer class="assistant__foot">
+    <form class="assistant__form" id="assistant-form" autocomplete="off">
+      {% if state.assistant and state.assistant.voice %}
+        <button class="mic" id="assistant-mic" type="button"
+                aria-label="{{ _('assistant.mic') }}">
+          <span aria-hidden="true">🎤</span>
+        </button>
+      {% endif %}
+      <label class="visually-hidden" for="assistant-question">{{ _('assistant.placeholder') }}</label>
+      <input class="assistant__input" id="assistant-question" name="question" type="text"
+             maxlength="300" placeholder="{{ _('assistant.placeholder') }}" autocomplete="off">
+      <button class="big-btn" id="assistant-send" type="submit">{{ _('assistant.send') }}</button>
+    </form>
+    <p class="assistant__note">
+      <span aria-hidden="true">👀</span> {{ _('assistant.note') }}
+    </p>
+  </footer>
+
+  <div class="listening" id="assistant-listening" hidden>
+    <span class="listening__dot" aria-hidden="true">🎤</span>
+    <span>{{ _('assistant.listening') }}</span>
+  </div>
+</div>
+
+<script id="assistant-strings" type="application/json">{{ {
+  'thinking': _('assistant.thinking'),
+  'loading': _('assistant.loading'),
+  'heard_nothing': _('assistant.heard_nothing'),
+  'mic_failed': _('assistant.mic_failed'),
+}|tojson }}</script>
+<script src="/static/assistant.js?v={{ asset_version }}" defer></script>
+{% endblock %}

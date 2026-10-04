@@ -61,6 +61,10 @@ class Op(StrEnum):
     """The shell asks whether a child may start an application."""
     REPORT_NAVIGATION = "report_navigation"
     """The Chromium extension reports a committed navigation (Phase 1)."""
+    ASSISTANT_STATUS = "assistant_status"
+    """Is the assistant service running, and which models has it (D-165)."""
+    ASSISTANT_SETUP = "assistant_setup"
+    """Start the one-time model download a parent asked for (D-165)."""
 
 
 class ShellOp(StrEnum):
@@ -82,6 +86,12 @@ class ShellOp(StrEnum):
     """The child pressed the shutdown tile (D-100). The daemon decides."""
     ASK_A_PARENT = "ask_a_parent"
     """The block page's "Anneme sor" button files an access request (D-65)."""
+    ASK_ASSISTANT = "ask_assistant"
+    """A question for the assistant, if this child's parent turned it on (D-165)."""
+    HEAR_ASSISTANT = "hear_assistant"
+    WARM_ASSISTANT = "warm_assistant"
+    """The child opened the assistant: load the model now, not at the question."""
+    """A short recording to turn into a question, if press-and-speak is on (D-166)."""
     SUBSCRIBE_EVENTS = "subscribe_events"
 
 
@@ -107,6 +117,8 @@ class EventKind(StrEnum):
     DAEMON_STATE = "daemon_state"
     BLOCKED = "blocked"
     ACCESS_REQUEST = "access_request"
+    ASSISTANT_ALERT = "assistant_alert"
+    """The assistant refused a question a parent should know about (D-165)."""
 
 
 # ------------------------------------------------------------------- frames

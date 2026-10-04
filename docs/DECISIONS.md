@@ -1423,3 +1423,247 @@ cache directory now holds a `.made-by` line - the tuning number and the MBROLA v
 use - and is emptied when that changes, including on the first start after this upgrade.
 Which voices are in use is decided once, when the service starts, so a family hears the
 change from the child's next login.
+
+**D-162 [owner] The ring carries the minutes, for every age.**
+After using the launcher as a child, the owner asked for the minutes left to be written
+inside the ring in the top right corner. UX.md section 2.2 had kept the 4-7 band to the
+circle alone, on the grounds that a number a child cannot read is noise. The owner's
+view: the circle still says everything to the child who cannot read, and the number
+says it at a glance to the parent standing behind them and to the child who can. So the
+number is shown at every age, with "dk" under it, and the clock stays 8-10 only. The
+number stays dark whatever colour the ring turns: amber on the launcher's off-white
+would fail the AAA contrast the launcher keeps. The full-screen time warning (D-160)
+shows the same number in its ring, and a screen reader hears "Kalan süre: 42 dk".
+
+**D-163 [owner] Every app has a big close button, always in the same corner.**
+The owner, using the launcher as a child, opened "Gökyüzü" (Stellarium) and could
+barely get out. The window manager was configured with no window buttons at all
+(`button_layout = "|"`) and with maximised windows losing their title bar, and
+Stellarium starts full screen with its menus hidden. Nothing on the screen said how
+to leave. The owner chose, over a floating home button that would cover part of every
+app, a child-sized title bar:
+
+* A BioKids xfwm4 theme with a 64-pixel title bar and one button on it: a 56-pixel
+  coral square with a white cross, 64 by 64 to click (UX.md section 2.4's minimum for
+  4-7). White on `--danger` is 4:1, which a control needs; `--bio-coral` would be 2.9:1.
+  `dev/make_xfwm4_theme.py` draws it; the PNGs are committed.
+* Every ordinary app window is maximised by devilspie2 with a one-line rule, so the
+  button is always in the top right corner of the screen. Dialogs, menus and the
+  launcher are left alone. devilspie2 is a new Depends of biokids-shell: Debian main,
+  GPL-3, run by the launcher as a separate process (D-30). xdotool could not do it:
+  Debian 13 has the 2016 release, which has no `windowstate`.
+* Apps that start full screen are started windowed through their catalog `exec`
+  (Stellarium `--full-screen no`, Tux Paint and TuxMath `--windowed`, GCompris and
+  SuperTux `--window`, Frozen Bubble `--no-fullscreen`). Catalog sync updates `exec`
+  of existing rows, so this reaches installed machines.
+* The child's Chromium is told to use the window manager's title bar
+  (`browser.custom_chrome_frame: false`), so a web tile has the same button in the
+  same place. Written only while that browser is not running.
+* The launcher applies the window manager keys live through `xfconf-query` at the
+  start of every session (new Depends: `xfconf`). Provisioning never overwrites a file
+  already in a child's home, so changing `xfwm4.xml` alone would have reached new
+  children only, and an open session would have written its old settings back at
+  logout. The same keys stay in `xfwm4.xml` for a child's first login; a test keeps the
+  two in step.
+
+A game that switches itself to full screen from its own menu still hides the bar; the
+time warning still brings the launcher forward over it. The launcher's kiosk window has
+no title bar and is not affected.
+
+**D-164 [owner] Safe sites a parent can add, on a screen a parent can find.**
+The owner asked for a children's encyclopaedia, a safe games site and YouTube Kids.
+Each candidate was checked from Turkey on 2026-10-03 for ads, accounts and what it
+actually offers:
+
+* **KÜRE Çocuk** (`kureansiklopedi.com/tr/cocuk`), the children's section of the
+  T3 Foundation's encyclopaedia: Turkish, no ads seen, no login. There is no Turkish
+  children's Wikipedia: Vikidia has no Turkish edition and Turkish Wikijunior has 120
+  pages. The `vikipedi-cocuk` tile stays what it always was, general Wikipedia at 8+.
+* **Bilim Çocuk** and **Meraklı Minik**, TÜBİTAK's two children's magazines: no ads,
+  issues older than four months free.
+* **Kodlama** (`studio.code.org`): Turkish interface, no advertising by policy, most
+  courses need no account.
+* **YouTube Kids** (`www.youtubekids.com`): works signed out with a content level a
+  parent picks, but shows short ads without Premium. In the catalog with
+  `suggest = false`: offered, never ticked for a parent.
+* **PBS KIDS Games** (`pbskids.org/games`): ad-free, every host under `pbskids.org`,
+  English only; also `suggest = false`.
+
+No Turkish site offers ad-free games that play in a browser. TRT Çocuk's game pages
+only link to app stores, so its tile no longer promises games, and Minika carries ad
+networks. GCompris remains the best Turkish games tile, and it works offline.
+
+A web tile is allowed its URL's host *and path*, not the whole host: KÜRE Çocuk opens
+the children's section, not the encyclopaedia written for adults. Chromium's URL filter
+matches the path as a prefix and governs pages and frames only, so a site's images and
+scripts need no entries. Hosts without a path are unchanged.
+
+And the screen: **Çocuklar → Uygulamalar ve siteler**, one checkbox per app and site
+with what it is, the ages it suits and the address it opens. Until now only the wizard
+asked, so a site added to the catalog later could never reach a child already set up.
+Volume, brightness and the shutdown tile cannot be unticked. Saving is audited as
+`apps_changed` and reloads the daemon, which rewrites the browser policy.
+
+*Amended 2026-10-04 (owner).* Two tiles did not open in allowlist mode and the owner
+saw both: Google Earth draws its globe in a frame under `earth.google.com/static/`,
+which a tile allowed only `earth.google.com/web` could not load, and YouTube Kids
+checks a silent sign-in through `accounts.google.com` before it shows anything. A
+catalog entry may now carry an `allow` list, the exact patterns its tile needs; an
+entry without one is allowed its host as before. KÜRE Çocuk keeps its path
+(`kureansiklopedi.com/tr/cocuk`); Earth, YouTube Kids, Code.org and PBS KIDS are
+allowed their hosts. The same list is what the DNS filter never blocks (D-167).
+
+Also at the owner's request:
+
+* **Dünya** (Google Earth in the browser) replaces **Gökyüzü** (Stellarium), which
+  the owner found hard to use and hard to leave. Earth needs WebGL: on a VirtualBox
+  machine without 3D acceleration it says "WebGL is not supported"; on real hardware
+  it runs. Stellarium is no longer recommended by biokids-desktop.
+* **Simpler coding.** The Kodlama tile now opens Code.org's *Pre-reader Express*
+  (ages 4-7, no reading needed) in Turkish, and a second tile its *Express* course
+  (8-10). **Blok Oyunları** (Blockly Games, 6-10) is Google's open-source set of
+  coding puzzles: Turkish, no ads, no account.
+* A tile whose program is not installed is not drawn, and the panel does not offer
+  it. Debian puts games in `/usr/games`, which no service's PATH contains, so the
+  launcher looks there and starts a game by its full path. GCompris, TuxMath and
+  Frozen Bubble were drawn on the owner's machine and did nothing when tapped,
+  because the launcher had looked for them by name on that PATH.
+
+**D-165 [owner] The child can ask: a local assistant, "Sor Bana".**
+The owner asked for a local language model a child can ask questions of, by typing
+or by speaking, that answers for the child's age, refuses what a child should not
+be asking ("porno nedir" gets "Buna cevap veremiyorum") and tells the parent when it
+refuses. This reverses D-92's "no LLM conversation" and ROADMAP's deferral of a
+chat interface, by the owner's decision: children ask "why" all day, and a model on
+the machine with a strict gate in front of it is a learning tool, not a companion.
+Zio and Sio stay one-way; the assistant is a tile of its own.
+
+What the child and the parent get:
+
+* **Off by default**, switched on per child in **Çocuklar → Asistan**. The models
+  download only when the parent presses the button there (D-165 adds that one-time
+  download to SECURITY.md section 4 under the AI package row it already had).
+* **The child knows** (principle 2). The assistant screen says, under the box:
+  "Sorduğun bazı soruları ailen görebilir." The owner chose this over a silent log
+  and over showing the parent everything: an ordinary question is answered and
+  forgotten; only a refused one is kept, as an alert with the child's words and a
+  category, on the Today screen and in the audit log.
+* **Answers for the age band**: five short sentences for 4-7, seven for 8-10, with
+  the real reason first and no invented facts; "Bunu bilmiyorum, bir büyüğüne
+  sorabilirsin" when the model is not sure. Refusals are fixed sentences from the
+  catalog, never model text: a kind one for self-harm that sends the child to a
+  grown-up, one for personal information, one for questions a family answers
+  (religion, death, politics), one for everything else.
+
+How it is built:
+
+* The launcher (child) asks the daemon over the shell socket. The daemon checks the
+  child's policy, keeps a rate limit (20 questions in 10 minutes), records alerts,
+  and passes the question to `biokids-ai`: its own system user, `PrivateNetwork=yes`,
+  no home, no devices. That service runs `llama-server` from llama.cpp on a Unix
+  socket, starts it on the first question of a session (the assistant screen asks
+  for it as it opens) and stops it after 10 idle minutes, so the memory is back for
+  the child's games.
+* **Five steps, each able to refuse.** (1) A lexicon of Turkish and English words and
+  phrases, matched after Turkish-aware lowercasing, leetspeak and repeated-letter
+  folding, refuses before any model sees the question. (2) Greetings and small talk
+  skip the classifier, which had filed "selam canım" under family matters. (3) A
+  classifier call at temperature 0 whose output is a JSON enum of categories. (4)
+  The answer, written with a system prompt for the age band, the child's name and
+  one worked example per language and band. (5) The lexicon again, on the answer.
+* **Fail safe** (principle 3): no model, a crash or a timeout gives the child "Şu an
+  biraz dinleniyorum" and answers nothing unchecked.
+* **Models**, pinned by revision and SHA-256, fetched from Hugging Face once:
+  Gemma 4 E4B (Apache-2.0) where the machine has 12 GB of memory, Gemma 4 E2B
+  (Apache-2.0) from 7 GB. Qwen 3.5 2B was tried and dropped: it stated wrong facts.
+  E2B still does so more often than E4B, which the owner noticed against a cloud
+  model's answer; the panel says which is in use and what that means.
+* **Packages.** llama.cpp and whisper.cpp are separate processes (MIT). Debian 13
+  does not have the versions with Gemma 4 support; until trixie-backports does, the
+  BioKids repository is to carry rebuilds of sid's `llama.cpp-tools` and
+  `whisper.cpp-tools` against trixie-backports' `libggml0`. `biokids-ai` stays a
+  Suggests (D-82): nothing else needs it.
+
+On the development VM (VirtualBox, no GPU, four threads; AI-LAYER.md section 12 on
+threads) an answer takes 10 to 30 seconds with E4B once it has warmed up. In the
+owner's comparison with a cloud model the remaining gap is facts, not style: E4B
+still slips now and then (the Moon "going round the Sun"), which no prompt removes
+from a 4-billion-parameter model. Real hardware has not been measured yet; that
+measurement decides whether E4B stays the default on 12 GB machines.
+
+**D-166 [owner] The microphone, for push-to-talk in the assistant only.**
+The owner asked for the assistant to be usable by speaking, because the children it
+is for cannot all type. SECURITY.md section 7 and CONTRIBUTING.md listed microphone
+capture as out of scope, so the owner was asked, and agreed to these conditions,
+which are the whole of the exception:
+
+* Off by default; switched on per child, separately from the assistant itself.
+* Only while the child holds the button on the assistant screen, which says
+  "Dinliyorum" while it listens, and for at most 15 seconds.
+* Only the launcher can use it. Chromium's managed policy sets
+  `AudioCaptureAllowed: false` with `AudioCaptureAllowedUrls` naming the launcher's
+  origin alone, and `VideoCaptureAllowed: false`: no website can open the
+  microphone, and nothing can open a camera. A page in the child's browser cannot
+  post audio in the child's name either: the launcher's assistant routes accept
+  only `audio/wav` or `application/json` from its own origin.
+* The recording exists in memory only: a 16 kHz WAV built in the page, sent to the
+  daemon, passed to `biokids-ai` and transcribed by `whisper-server` (Whisper small
+  from 3 GB, large-v3-turbo from 12 GB, MIT) on the machine. It is never written to
+  disk, never logged and never sent anywhere. The text then goes through exactly
+  the same steps as a typed question.
+
+Recording a room, listening in the background, wake words and saving audio stay
+out of scope; SECURITY.md and CONTRIBUTING.md say so next to this exception.
+
+**D-167 [owner] Open internet by default; the worst of it closed by DNS.**
+The owner wants a child's internet open unless a parent chooses otherwise, with
+pornography and the like closed whatever the parent chooses, and "only the sites I
+choose" there for a parent who wants it. That overrides D-61, which defaulted 4-7 to
+the allowlist. Every new child now starts on **Açık internet, zararlı siteler
+kapalı**, and **Çocuklar → İnternet** switches between the two.
+
+* **A DNS filter for the children only.** `dnsmasq` from `dnsmasq-base` (GPL-2,
+  a separate process, D-30) runs as `biokids-dns.service` and listens on
+  `127.0.0.1` and `::1`, port 5354, nowhere else. An nftables table, `inet biokids`,
+  redirects DNS from the children's uids to it and rejects their DNS-over-TLS and
+  their HTTPS to the known DNS-over-HTTPS resolvers; Chromium's own DoH is off by
+  policy. The parent, the system and every other user resolve as before.
+* **The lists**: ShadowWhisperer's BlockLists (Unlicense), adult, gambling,
+  malware and scam, and known DoH hosts, about 291,000 domains, shipped gzipped in
+  biokids-core and refreshed at release time by `dev/update_blocklists.py`. They
+  arrive by APT with BioKids, so there is no new outbound call. This replaces
+  D-62's opt-in, downloaded StevenBlack list for these categories: the owner wants
+  them closed whatever a parent chooses, and offline (principle 5). D-62's weekly
+  refresh is not built.
+* **SafeSearch by DNS** as well as by policy: Google answers as
+  `forcesafesearch.google.com`, YouTube as `restrict.youtube.com` (strict), Bing as
+  `strict.bing.com`, DuckDuckGo as `safe.duckduckgo.com`.
+* **A site a parent enabled is never blocked**: its `allow` patterns (D-164) are
+  sent upstream unfiltered.
+* **Fail safe** (principle 3): the redirect is loaded first and on its own. If the
+  lists cannot be read the filter is stopped, and a stopped or crashed filter
+  answers nothing: the children's accounts then have no internet, never unfiltered
+  internet. The Internet screen says whether the protection is running.
+* **The browser.** "Only the sites I choose" is the allowlist policy as before.
+  "Open" drops the `*` wildcard and keeps the panel's addresses and Chromium's own
+  settings pages blocked. Chromium reads one managed policy per machine, so with
+  two children on different settings the stricter one applies to both; the screen
+  says so.
+* **Removing BioKids** deletes the nftables table, so no child is left sending DNS
+  to a filter that is gone (principle 4).
+
+A security finding on the way: `biokids-daemon` depended on the `dnsmasq` package,
+whose own service answers DNS on port 53 on every interface, so every BioKids
+machine was an open resolver on its network. The dependency is now `dnsmasq-base`,
+which ships no service. An upgrade cannot remove a package another one pulled in;
+the release notes tell families to run `sudo apt remove dnsmasq`.
+
+Not done: a blocked site shows Chromium's own "this site can't be reached" rather
+than the block page of D-64.
+
+**D-168 [owner] The child's browser speaks the family's language.**
+YouTube Kids set itself up in English on the owner's machine. Debian's Chromium is
+English without `chromium-l10n`, and a profile made then asks websites for English
+for good. `chromium-l10n` is a new Depends of biokids-shell, and the launcher sets
+the child's profile to ask for the family's language (`tr-TR,tr,en-US,en`) before
+the browser starts, unless someone chose other languages in it.

@@ -162,7 +162,7 @@ Do not start these. They are recorded so they stop being distractions.
 | Wayland support | rewrites screenshot, focus tracking and kiosk. v2 |
 | Android companion app | the PWA covers it |
 | Cloud sync / family accounts | directly contradicts the privacy promise |
-| A chat interface for the child | huge safety surface; Zio/Sio stay one-way |
+| ~~A chat interface for the child~~ | built as the assistant at the owner's request (D-165); Zio and Sio stay one-way |
 | Flatpak / Steam support | sandbox escape routes |
 | School or multi-device management | different product |
 | Ages 11–13 | different threat model; would require honesty about what we can't do |

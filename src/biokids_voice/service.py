@@ -105,12 +105,27 @@ class VoiceOp(StrEnum):
     PING = "ping"
     STATUS = "status"
     """Why the machine is quiet, in a form the panel can show a parent."""
+    SAY = "say"
+    """Read out the assistant's answer (D-165): any short text, normal priority."""
 
 
 PREVIEW_EVENT: Final = "preview"
+ASSISTANT_EVENT: Final = "assistant"
 SUBSCRIBER_BACKLOG: Final = 64
 MAX_TEXT_CHARS: Final = 400
 """A preview is a sentence, not an essay. Anything longer is a mistake or an abuse."""
+MAX_ANSWER_CHARS: Final = 1500
+"""An answer for an 8-10 year old is up to seven sentences, around 900 characters;
+the assistant's token limit keeps it under this."""
+
+
+def whole_sentences(text: str, limit: int) -> str:
+    """`text` cut to at most `limit` characters, at the end of a sentence if any."""
+    if len(text) <= limit:
+        return text
+    cut = text[:limit]
+    end = max(cut.rfind(mark) for mark in ".!?")
+    return cut[: end + 1] if end > 0 else cut
 
 
 # ---------------------------------------------------------------- utterance
@@ -229,6 +244,8 @@ class VoiceService:
                 return self._speak_request(request)
             case VoiceOp.PREVIEW:
                 return self._preview_request(request)
+            case VoiceOp.SAY:
+                return self._say_request(request)
             case VoiceOp.PING:
                 return Response(id=request.id, ok=True, data={"service": "biokids-voice"})
             case VoiceOp.STATUS:
@@ -296,6 +313,26 @@ class VoiceService:
             expression=_expression(_as_str(request.args.get("expression")), PREVIEW_EVENT),
             # A parent pressed a button and is waiting: it goes to the front.
             priority=PRIORITY_HIGH,
+        )
+
+    def _say_request(self, request: Request) -> Response:
+        """The assistant's answer, read out for a child who cannot read it yet (D-165).
+
+        Like a preview, any short text; unlike one, an ordinary line in the
+        queue, so a time warning still goes first. Cut, if it must be, after a
+        whole sentence: the child hears the end of a thought, not half a word.
+        """
+        text = whole_sentences(_as_str(request.args.get("text")).strip(), MAX_ANSWER_CHARS)
+        if not text:
+            return Response.failure(request.id, "say needs text")
+        return self._enqueue(
+            request.id,
+            event=ASSISTANT_EVENT,
+            text=text,
+            locale=normalise_locale(_as_str(request.args.get("locale"))),
+            persona=self._pick_persona(_as_str(request.args.get("persona"))),
+            expression=_expression(_as_str(request.args.get("expression")), ASSISTANT_EVENT),
+            priority=PRIORITY_NORMAL,
         )
 
     def _enqueue(self, request_id: str, **fields: Any) -> Response:

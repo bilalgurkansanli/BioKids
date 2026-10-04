@@ -13,6 +13,13 @@
 #   kind              app | web | builtin
 #   default_category  games | learning | web | free   (the parent may reassign)
 #   min_age/max_age   what the wizard pre-selects for a child of that age
+#   suggest           false keeps a tile out of that pre-selection (default true)
+#   allow             for a web tile, what the browser may open in "selected sites
+#                     only" mode, as Chromium URL filters; default: the URL's host
+#
+# Apps that would start full screen are started windowed instead (D-163): full
+# screen hides the title bar and its close button, and a child with no way out
+# of an app is stuck. The launcher then fills the screen with the window.
 #
 # An app whose package is not installed is simply not shown. The metapackage
 # `biokids-desktop` pulls in the ones marked as part of the default set.
@@ -21,7 +28,7 @@
 slug = "gcompris"
 name_tr = "GCompris"
 name_en = "GCompris"
-exec = ["gcompris-qt"]
+exec = ["gcompris-qt", "--window"]
 package = "gcompris-qt"
 kind = "app"
 icon = "blocks"
@@ -35,7 +42,7 @@ description_en = "Numbers, letters, colours and hundreds of small activities."
 slug = "tuxpaint"
 name_tr = "Boya"
 name_en = "Paint"
-exec = ["tuxpaint"]
+exec = ["tuxpaint", "--windowed"]
 package = "tuxpaint"
 kind = "app"
 icon = "brush"
@@ -49,7 +56,7 @@ description_en = "A drawing program with stamps and noisy brushes."
 slug = "tuxmath"
 name_tr = "Sayılar"
 name_en = "Numbers"
-exec = ["tuxmath"]
+exec = ["tuxmath", "--windowed"]
 package = "tuxmath"
 kind = "app"
 icon = "numbers"
@@ -74,20 +81,6 @@ description_tr = "On parmak klavye kullanmayı öğretir."
 description_en = "Touch-typing practice."
 
 [[app]]
-slug = "stellarium"
-name_tr = "Gökyüzü"
-name_en = "Sky"
-exec = ["stellarium"]
-package = "stellarium"
-kind = "app"
-icon = "star"
-default_category = "learning"
-min_age = 6
-max_age = 10
-description_tr = "Gerçek yıldız haritası. Bu gece hangi gezegen görünüyor?"
-description_en = "A real star map. Which planet is out tonight?"
-
-[[app]]
 slug = "kolourpaint"
 name_tr = "Çizim"
 name_en = "Draw"
@@ -105,7 +98,7 @@ description_en = "A simple drawing and image editing program."
 slug = "supertux"
 name_tr = "SuperTux"
 name_en = "SuperTux"
-exec = ["supertux2"]
+exec = ["supertux2", "--window"]
 package = "supertux"
 kind = "app"
 icon = "penguin"
@@ -119,7 +112,7 @@ description_en = "A classic jump-and-run platformer."
 slug = "frozen-bubble"
 name_tr = "Balonlar"
 name_en = "Bubbles"
-exec = ["frozen-bubble"]
+exec = ["frozen-bubble", "--no-fullscreen"]
 package = "frozen-bubble"
 kind = "app"
 icon = "bubble"
@@ -217,7 +210,7 @@ icon = "tv"
 default_category = "web"
 min_age = 4
 max_age = 8
-description_tr = "TRT'nin çocuk sitesi: çizgi film ve oyunlar."
+description_tr = "TRT'nin çocuk sitesi: çizgi filmler ve videolar."
 description_en = "Turkey's public broadcaster's children's site."
 
 [[app]]
@@ -249,6 +242,170 @@ min_age = 8
 max_age = 10
 description_tr = "Ansiklopedi. Ödev için."
 description_en = "The encyclopaedia, for homework."
+
+# --- safe sites (D-164) ----------------------------------------------------
+# Checked from Turkey on 2026-10-03: what each one is, whether it shows ads,
+# whether it needs an account. In "selected sites only" mode a tile may open its
+# URL's host, or exactly what its `allow` lists: KÜRE Çocuk its children's
+# section and not the encyclopaedia written for adults, YouTube Kids the Google
+# sign-in check it makes on every visit. Found on the VM, each of them, by the
+# page that Chromium blocks.
+
+[[app]]
+slug = "kure-cocuk"
+name_tr = "KÜRE Çocuk"
+name_en = "KÜRE Kids"
+exec = []
+url = "https://kureansiklopedi.com/tr/cocuk"
+allow = ["kureansiklopedi.com/tr/cocuk"]
+package = ""
+kind = "web"
+icon = "encyclopedia"
+default_category = "learning"
+min_age = 7
+max_age = 10
+description_tr = "Çocuklar için yazılmış Türkçe ansiklopedi. Reklamsız, hesap gerekmez."
+description_en = "A Turkish encyclopaedia written for children. No ads, no account."
+
+[[app]]
+slug = "bilim-cocuk"
+name_tr = "Bilim Çocuk"
+name_en = "Bilim Çocuk"
+exec = []
+url = "https://bilimcocuk.tubitak.gov.tr"
+package = ""
+kind = "web"
+icon = "science"
+default_category = "learning"
+min_age = 7
+max_age = 10
+description_tr = "TÜBİTAK'ın çocuk bilim dergisi: deneyler, yazılar, bulmacalar. Reklamsız."
+description_en = "TÜBİTAK's science magazine for children: experiments and articles. No ads."
+
+[[app]]
+slug = "merakli-minik"
+name_tr = "Meraklı Minik"
+name_en = "Meraklı Minik"
+exec = []
+url = "https://merakliminik.tubitak.gov.tr"
+package = ""
+kind = "web"
+icon = "ladybug"
+default_category = "learning"
+min_age = 4
+max_age = 7
+description_tr = "TÜBİTAK'ın küçükler için dergisi: hikâyeler ve etkinlikler. Reklamsız."
+description_en = "TÜBİTAK's magazine for little ones: stories and activities. No ads."
+
+[[app]]
+slug = "code-org"
+name_tr = "Kodlama"
+name_en = "Coding"
+exec = []
+url = "https://studio.code.org/s/pre-express-2025?lang=tr-TR"
+allow = ["studio.code.org", "code.org"]
+package = ""
+kind = "web"
+icon = "robot"
+default_category = "learning"
+min_age = 4
+max_age = 7
+# The course for children who cannot read yet: blocks with pictures, a voice
+# that reads the instructions. Code.org's front page asks a five-year-old to
+# sign in and choose among dozens of courses.
+description_tr = "Code.org'un okumayı bilmeyenler için kodlama kursu: resimli bloklarla. Türkçe, reklamsız, hesap gerekmez."
+description_en = "Code.org's coding course for children who cannot read yet, with picture blocks. No ads, no account."
+
+[[app]]
+slug = "code-org-express"
+name_tr = "Kodlama Kursu"
+name_en = "Coding Course"
+exec = []
+url = "https://studio.code.org/s/express-2025?lang=tr-TR"
+allow = ["studio.code.org", "code.org"]
+package = ""
+kind = "web"
+icon = "robot"
+default_category = "learning"
+min_age = 8
+max_age = 10
+description_tr = "Code.org'un okuyabilen çocuklar için hızlandırılmış kodlama kursu. Türkçe, reklamsız, hesap gerekmez."
+description_en = "Code.org's express coding course for children who can read. No ads, no account."
+
+[[app]]
+slug = "blockly-games"
+name_tr = "Blok Oyunları"
+name_en = "Blockly Games"
+exec = []
+url = "https://blockly.games/?lang=tr"
+package = ""
+kind = "web"
+icon = "blocks"
+default_category = "learning"
+min_age = 6
+max_age = 10
+description_tr = "Google'ın açık kaynak kodlama oyunları: bulmaca, labirent, kuş. Türkçe, reklamsız, hesap gerekmez."
+description_en = "Google's open-source coding games: puzzle, maze, bird. No ads, no account."
+
+[[app]]
+slug = "google-earth"
+name_tr = "Dünya"
+name_en = "Earth"
+exec = []
+url = "https://earth.google.com/web"
+# The whole host: the app moves itself to /static/multi-threaded/... at once.
+allow = ["earth.google.com"]
+package = ""
+kind = "web"
+icon = "earth"
+default_category = "learning"
+min_age = 6
+max_age = 10
+# Replaces Stellarium (D-165). The web version, which runs in the child's
+# browser: Google Earth Pro for Linux is a proprietary package from Google's
+# own repository, which BioKids does not add to a family's machine.
+description_tr = "Google Earth: dünyayı uzaydan gez, şehirlere ve dağlara yaklaş. Hesap gerekmez."
+description_en = "Google Earth: fly around the planet and zoom into cities and mountains. No account."
+
+[[app]]
+slug = "youtube-kids"
+name_tr = "YouTube Kids"
+name_en = "YouTube Kids"
+exec = []
+url = "https://www.youtubekids.com"
+# Every visit starts with a sign-in check at accounts.google.com, signed in or
+# not; without it the tile opened on "This page is blocked".
+allow = ["youtubekids.com", "accounts.google.com"]
+package = ""
+kind = "web"
+icon = "video"
+default_category = "web"
+min_age = 4
+max_age = 10
+# Not ticked by default: it is Google's, it shows short ads unless the family
+# pays for YouTube Premium, and the first visit asks a parent to choose a
+# content level. A parent who wants it ticks it.
+suggest = false
+description_tr = "Çocuklar için seçilmiş videolar. İlk açılışta bir ebeveynin ayar yapması gerekir; kısa reklamlar içerir."
+description_en = "Videos chosen for children. A parent sets it up on the first visit; shows short ads."
+
+[[app]]
+slug = "pbs-kids"
+name_tr = "PBS KIDS Oyunlar"
+name_en = "PBS KIDS Games"
+exec = []
+url = "https://pbskids.org/games"
+allow = ["pbskids.org"]
+package = ""
+kind = "web"
+icon = "game"
+default_category = "games"
+min_age = 4
+max_age = 8
+# English only, so a Turkish-speaking family chooses it on purpose.
+suggest = false
+description_tr = "Reklamsız eğitici oyunlar. İngilizce."
+description_en = "Ad-free learning games from the US public broadcaster."
 
 # --- built-in tiles --------------------------------------------------------
 # Served by the launcher itself. They have no process and consume no category

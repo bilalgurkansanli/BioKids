@@ -1,0 +1,67 @@
+# The assistant's first line of defence (D-165): words and phrases that end a
+# question before any model sees it, and that end an answer before a child
+# reads it. Deliberately short and unambiguous. Nuance - "çıplak gözle görülür
+# mü", "Osmanlı'nın silahları", "yavru kedi meme emer mi" - is the model
+# classifier's job, not a word list's.
+#
+# Every term is normalised the way the text is: Turkish-aware lower case,
+# look-alike digits read as letters ("p0rn0"), repeated letters squeezed
+# ("poooorno"), and then - except for `tr_exact` - folded to ASCII:
+# ç->c, ğ->g, ı->i, ö->o, ş->s, ü->u.
+#
+#   exact     whole word only            "seks" must not catch "seksen" (80)
+#   prefix    the start of a word        "porno" catches "pornoda", "pornolar"
+#   tr_exact  whole word, Turkish spelling only
+#             "sik" folded would also be "şık", "göt" would be English "got"
+#   phrase    these words in this order, anything but letters between them
+#   squash    inside the text with every space and dot removed, for
+#             "p o r n o" and "p.o.r.n.o": long, unambiguous terms only,
+#             because squashing joins words ("sık ışık" holds "sikis")
+#
+# Kept out on purpose, because children ask innocent questions with them:
+# "esrar" as a prefix (esrarengiz), "meme" (a kitten feeding), "weed" and
+# "joint" (gardens and knees), "dick" (Moby Dick), "numaram" (okul numaram),
+# "ananı" (an ordinary possessive), and "xxx", which squeezes to "x" (x ekseni).
+#
+# A category's name is what the parent's alert says, through the
+# `assistant.category.<name>` catalog entry.
+
+[sexual]
+exact = ["seks", "seksi", "sex", "sexy", "vajina", "penis", "boobs", "nudes", "nude", "porn"]
+prefix = ["porno", "pornograf", "sikiş", "erotik", "orgazm", "mastürbasyon", "masturbasyon", "cinsel", "sevişme", "sevisme", "çiftleşme", "ciftlesme", "fuhuş", "fuhus", "genital", "hentai", "onlyfans", "pornhub"]
+phrase = ["çıplak resim", "çıplak fotoğraf", "çıplak kız", "çıplak kadın", "çıplak erkek", "naked girl", "naked woman", "naked pictures", "make love", "have sex"]
+squash = ["porno", "pornografi", "onlyfans", "hentai", "pornhub"]
+
+[self_harm]
+prefix = ["intihar", "suicide", "suicidal"]
+phrase = [
+  "kendimi öldür", "kendimi asmak", "kendime zarar", "kendimi kes",
+  "ölmek istiyorum", "yaşamak istemiyorum", "bilek kes", "bileğimi kes",
+  "kill myself", "want to die", "hurt myself", "cut myself", "end my life",
+]
+
+[violence]
+phrase = [
+  "bomba yap", "bomba nasıl", "silah yap", "silah nasıl yapılır",
+  "nasıl öldürülür", "birini öldür", "öldürmek istiyorum",
+  "make a bomb", "build a bomb", "make a gun", "how to kill", "kill someone",
+]
+
+[drugs]
+exact = ["esrar", "esrarkeş", "heroin"]
+prefix = ["uyuşturucu", "kokain", "eroin", "bonzai", "metamfetamin", "cocaine", "marihuana", "marijuana"]
+phrase = ["hap içmek", "ot içmek"]
+squash = ["uyusturucu", "kokain", "metamfetamin"]
+
+[personal_info]
+phrase = [
+  "adresim", "ev adresim", "evimin adresi", "telefon numaram", "şifrem", "parolam",
+  "kredi kartı", "tc kimlik", "kimlik numaram",
+  "my address", "my phone number", "my password", "credit card",
+]
+
+[rude]
+exact = ["amk", "aq", "yarrak", "orospu", "fuck", "fucking", "shit", "bitch"]
+prefix = ["siktir", "orospu", "amcık", "yavşak", "pezevenk", "kahpe", "fuck"]
+tr_exact = ["sik", "piç", "göt", "götü", "götün"]
+squash = ["siktir", "orospu", "pezevenk"]

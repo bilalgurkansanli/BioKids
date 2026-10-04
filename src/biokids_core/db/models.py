@@ -172,6 +172,11 @@ class Policy(Base):
     ai_block_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     ai_timeout_min: Mapped[int] = mapped_column(Integer, default=30)
 
+    assistant_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    """The question-answering assistant (D-165). Off until a parent turns it on."""
+    assistant_voice: Mapped[bool] = mapped_column(Boolean, default=False)
+    """Press-and-speak for the assistant (D-166): the only use of a microphone."""
+
     voice_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     voice_events_json: Mapped[str] = mapped_column(Text, default="{}")
     """Per-event overrides; missing keys fall back to the defaults in VOICE.md §5."""
@@ -438,6 +443,10 @@ class AiAlert(Base):
     notified: Mapped[bool] = mapped_column(Boolean, default=False)
     dismissed: Mapped[bool] = mapped_column(Boolean, default=False)
     """Set when a parent marks an alert "this was fine" (AI-LAYER.md §7)."""
+    text: Mapped[str] = mapped_column(Text, default="")
+    """For an assistant alert (app "assistant"), the question the child asked.
+    Kept so the parent can talk about it; the child was told a parent may see
+    it (D-165). Pruned with the rest of the alert."""
 
 
 class AuditLog(Base):
