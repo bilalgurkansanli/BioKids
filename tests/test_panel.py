@@ -483,7 +483,7 @@ def test_a_malformed_window_is_rejected_with_a_readable_message(
         },
     )
     assert response.status_code == 400
-    assert "16:00-20:00" in response.text
+    assert "hem başlangıcı hem bitişi" in response.text
     with db.session() as session:
         assert repo.get_or_create_policy(session, 1).weekday_quota_min == 60
 
