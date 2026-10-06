@@ -1639,3 +1639,22 @@ def test_an_unknown_mode_falls_back_to_the_safe_default(
     )
     with db.session() as session:
         assert repo.get_or_create_policy(session, 1).filter_mode == "blocklist"
+
+
+def test_every_quota_field_accepts_twenty_minutes() -> None:
+    """The exit criterion's quota is 20 minutes. The wizard's fields had
+    `step="15"`, so the browser refused 20 and the parent could not go on;
+    the time screen had 5. Every quota field takes any multiple of 5."""
+    from pathlib import Path
+
+    import biokids_panel
+
+    templates = Path(biokids_panel.__file__).parent / "templates"
+    fields = []
+    for path in templates.rglob("*.html"):
+        for tag in re.findall(r"<input[^>]*_quota_min[^>]*>", path.read_text(encoding="utf-8")):
+            step = re.search(r'step="([0-9.]+)"', tag)
+            fields.append((path.name, float(step.group(1)) if step else 1.0))
+    assert len(fields) >= 4, fields
+    for name, step in fields:
+        assert 20 % step == 0 and 5 % step == 0, f"{name}: step {step} refuses 20 or 5"

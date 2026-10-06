@@ -1651,6 +1651,11 @@ kapalı**, and **Çocuklar → İnternet** switches between the two.
   says so.
 * **Removing BioKids** deletes the nftables table, so no child is left sending DNS
   to a filter that is gone (principle 4).
+* **From the first second of a boot.** nftables rules do not survive a reboot,
+  and the daemon loads them again only once it is up: on the third section 7 VM
+  that was sixteen seconds after LightDM had started, and a child's DNS was
+  unfiltered in between. `biokids-dns.service` now loads the rules the daemon
+  last wrote (`ExecStartPre=+nft -f`) and is ordered before the display manager.
 
 A security finding on the way: `biokids-daemon` depended on the `dnsmasq` package,
 whose own service answers DNS on port 53 on every interface, so every BioKids

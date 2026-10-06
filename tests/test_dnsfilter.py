@@ -139,3 +139,21 @@ def test_without_its_lists_the_filter_stays_closed(
     assert ["systemctl", "stop", "--no-block", dnsfilter.SERVICE] in calls
     assert not any(c[:2] == ["systemctl", "restart"] for c in calls)
     assert not (tmp_path / "dns" / "dnsmasq.conf").exists()
+
+
+def test_the_redirect_is_back_before_the_login_screen() -> None:
+    """nftables rules do not survive a reboot. On the first VM the daemon
+    loaded them sixteen seconds after LightDM had started, and a child's DNS
+    was unfiltered until then. The filter's unit loads the last rendered rules
+    itself, before the display manager."""
+    import configparser
+
+    unit = (
+        Path(__file__).resolve().parent.parent / "debian" / "biokids-daemon.biokids-dns.service"
+    )
+    parser = configparser.ConfigParser(strict=False, interpolation=None)
+    parser.read_string(unit.read_text(encoding="utf-8"))
+    assert "display-manager.service" in parser["Unit"]["Before"]
+    files = FilterFiles(Path("/var/lib/biokids/dns"))
+    assert parser["Service"]["ExecStartPre"] == f"+/usr/sbin/nft -f {files.nft.as_posix()}"
+    assert parser["Unit"]["ConditionPathExists"] == files.conf.as_posix()

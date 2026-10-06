@@ -7,14 +7,14 @@
   <form class="card" method="post" action="/wizard/6">
     <div class="field">
       <label for="weekday">{{ _('time.weekday_quota') }}</label>
-      <input id="weekday" name="weekday_quota_min" type="number" min="0" max="1440" step="15"
+      <input id="weekday" name="weekday_quota_min" type="number" min="0" max="1440" step="5"
              value="{{ default_weekday }}" inputmode="numeric" autofocus>
       <span class="help">{{ _('time.quota.help') }}</span>
     </div>
 
     <div class="field">
       <label for="weekend">{{ _('time.weekend_quota') }}</label>
-      <input id="weekend" name="weekend_quota_min" type="number" min="0" max="1440" step="15"
+      <input id="weekend" name="weekend_quota_min" type="number" min="0" max="1440" step="5"
              value="{{ default_weekend }}" inputmode="numeric">
     </div>
 

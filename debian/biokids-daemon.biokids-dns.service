@@ -7,10 +7,18 @@ Documentation=https://github.com/bilalgurkansanli/BioKids
 # biokids-daemon writes the configuration at every start and reload; until it
 # has, there is nothing to run.
 After=network.target
+# Before the login screen, with the redirect the daemon last wrote: nftables
+# rules do not survive a reboot, and the daemon loads them again only once it
+# is up, which on the first VM was sixteen seconds after LightDM. A child's
+# DNS went unfiltered in between.
+Before=display-manager.service
 ConditionPathExists=/var/lib/biokids/dns/dnsmasq.conf
 
 [Service]
 Type=simple
+# "+": nftables needs CAP_NET_ADMIN, which the sandbox below takes away from
+# dnsmasq itself. If the rules cannot load, dnsmasq does not start either.
+ExecStartPre=+/usr/sbin/nft -f /var/lib/biokids/dns/biokids.nft
 ExecStart=/usr/sbin/dnsmasq --keep-in-foreground --pid-file= --conf-file=/var/lib/biokids/dns/dnsmasq.conf
 Restart=always
 RestartSec=2s

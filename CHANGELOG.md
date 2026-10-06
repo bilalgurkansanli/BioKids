@@ -192,6 +192,11 @@ Found on the first Debian 13 VM (`docs/VM-RUNBOOK.md`), none of it visible from 
 - **The child's browser and YouTube Kids were in English** (D-168): Debian's Chromium
   needs `chromium-l10n` for Turkish, and the child's profile now asks websites for the
   family's language.
+- **The setup wizard refused a 20-minute quota**, the exit criterion's own number:
+  its fields only took multiples of 15. They take multiples of 5, like the time
+  screen.
+- **For the first seconds after a boot, a child's DNS was not filtered** (D-167).
+  The filter's rules are now loaded before the login screen appears.
 - **A page could be stale after an upgrade.** The launcher's and the panel's static
   files are revalidated on every load, and the panel's offline cache is named after
   their contents.
