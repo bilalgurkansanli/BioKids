@@ -405,8 +405,26 @@ second child silently gets no account.
 
 ### 3.3 Step 8: Tailscale
 
-Tailscale is not in Debian's archive; it comes from Tailscale's own repository,
-which has a `trixie` suite:
+**Since D-169 this is one button.** On step 8 press "Telefondan erişimi aç". On a
+machine without Tailscale the page says "Telefondan erişim hazırlanıyor…" while
+`biokids-remote-setup.service` adds Tailscale's repository (signed by the key
+BioKids ships) and installs it with `--no-logs-no-support` already in place; then
+it shows Tailscale's sign-in page as a button and a QR code. Sign in with **your**
+account, on the VM or by scanning the code with your phone, and the page moves on
+to the panel's address. Follow it with:
+
+```bash
+journalctl -u biokids-remote-setup -f
+ps -o args= -C tailscaled      # must end in --no-logs-no-support
+```
+
+**Pass:** no terminal was needed; the client never ran without
+`--no-logs-no-support` (`journalctl -u tailscaled -b | grep -i logtail` shows no
+upload); step 8 ends on the address and its QR code.
+
+The manual way, which the button replaces and which still works. Tailscale is not
+in Debian's archive; it comes from Tailscale's own repository, which has a `trixie`
+suite:
 
 ```bash
 sudo apt install curl

@@ -1121,7 +1121,7 @@ def register_routes(app: FastAPI) -> None:
         blocked = _guard(request, session, state)
         if blocked:
             return blocked
-        from biokids_core import remote
+        from biokids_panel import phone
 
         return render(
             ctx,
@@ -1131,12 +1131,23 @@ def register_routes(app: FastAPI) -> None:
             tr,
             "settings.html",
             family=repo.get_family(session),
-            tailscale=remote.detect(),
-            panel_port=ctx.config.panel.port,
             daemon_up=ctx.client.available(),
-            approval_url=remote.approval_url_in(
-                repo.get_setting(session, remote.SETTING_APPROVAL_URL)
-            ),
+            **phone.view(ctx, session),
+        )
+
+    @app.get("/settings/phone", response_class=HTMLResponse)
+    def settings_phone(
+        request: Request, ctx: Ctx, session: Db, state: Auth, tr: Tr
+    ) -> Response:
+        """Phone access on a page of its own, which refreshes itself while
+        Tailscale is installed and signed in (D-169)."""
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        from biokids_panel import phone
+
+        return render(
+            ctx, request, session, state, tr, "phone.html", **phone.view(ctx, session)
         )
 
     @app.post("/settings/language")
@@ -1254,25 +1265,33 @@ def register_routes(app: FastAPI) -> None:
         if not auth.csrf_ok(state, csrf_token):
             return see_other("/settings?error=csrf")
         from biokids_core import remote
+        from biokids_panel import phone
+
+        if enable == "on":
+            outcome = phone.turn_on(ctx, session, actor=_actor(state))
+            if outcome == "approval":
+                return see_other("/settings/phone?error=remote_approval")
+            if outcome == "error":
+                return see_other("/settings/phone?error=remote")
+            return see_other(
+                "/settings/phone?saved=1" if outcome == "on" else "/settings/phone"
+            )
 
         port = ctx.config.panel.port
-        result = remote.enable(port) if enable == "on" else remote.disable(port)
+        result = remote.disable(port)
         if not result.ok:
             # `RemoteResult.detail` is the only thing that says *why* tailscale
             # refused, and it was being dropped on the floor: the parent saw an
             # unrendered error slug in a URL and the journal said nothing.
             log.warning(
-                "remote access could not be %s: %s (%s)",
-                "enabled" if enable == "on" else "disabled",
-                result.error,
-                result.detail,
+                "remote access could not be disabled: %s (%s)", result.error, result.detail
             )
         repo.audit(
             session,
             actor=_actor(state),
             action="remote_access_changed",
             detail={
-                "enabled": enable == "on",
+                "enabled": False,
                 "ok": result.ok,
                 "error": result.error,
                 "detail": result.detail[:300],

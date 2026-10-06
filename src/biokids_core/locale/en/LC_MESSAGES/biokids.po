@@ -829,7 +829,7 @@ msgid "remote.qr.help"
 msgstr "Scan this square with your phone's camera."
 
 msgid "remote.install.help"
-msgstr "You need to install Tailscale and sign in first."
+msgstr "Press the button and BioKids installs Tailscale and asks you to sign in once. No port is opened to the outside."
 
 msgid "remote.localhost_only"
 msgstr "The panel currently opens only on this computer."
@@ -1110,3 +1110,30 @@ msgstr "This computer has one browser setting: if “Only the sites I choose” 
 
 msgid "audit.action.filter_mode_changed"
 msgstr "Internet setting changed"
+
+msgid "remote.setup.installing.title"
+msgstr "Getting phone access ready…"
+
+msgid "remote.setup.installing"
+msgstr "Installing Tailscale. This can take a few minutes; this page refreshes itself."
+
+msgid "remote.setup.login.title"
+msgstr "Sign in to Tailscale once"
+
+msgid "remote.setup.login.open"
+msgstr "Open the sign-in page"
+
+msgid "remote.setup.login.help"
+msgstr "On the page that opens, sign in with your Tailscale account or create a free one. You can also scan this code and sign in on your phone. Then install the Tailscale app on your phone and sign in with the same account; the panel's address will appear here."
+
+msgid "remote.setup.failed"
+msgstr "Phone access could not be set up. Check the internet connection and try again."
+
+msgid "remote.setup.retry"
+msgstr "Try again"
+
+msgid "audit.action.remote_setup"
+msgstr "Phone access set up"
+
+msgid "audit.action.remote_setup_started"
+msgstr "Phone access setup started"

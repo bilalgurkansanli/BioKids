@@ -1672,3 +1672,71 @@ English without `chromium-l10n`, and a profile made then asks websites for Engli
 for good. `chromium-l10n` is a new Depends of biokids-shell, and the launcher sets
 the child's profile to ask for the family's language (`tr-TR,tr,en-US,en`) before
 the browser starts, unless someone chose other languages in it.
+
+**D-169 [owner] Phone access is one button: BioKids installs Tailscale itself.**
+The owner, setting up the third section 7 VM, asked whether a family has to install
+Tailscale and type 127.0.0.1 to use BioKids, and to make it easier. Tailscale is
+not required: everything works on the machine itself, and Tailscale is only how the
+panel reaches a phone (D-33). But reaching it meant a terminal: adding Tailscale's
+apt repository, editing `/etc/default/tailscaled` so the client does not upload its
+logs (D-157), `tailscale up`. Asked to choose, the owner kept Tailscale and took
+the one-button version over opening the panel to the home network over plain HTTP,
+which `remote.py` refuses to ship for the reasons it gives.
+
+"Telefondan erişimi aç", in the wizard's step 8 and in the settings, now works from
+any state. When Tailscale is up it publishes the panel as before. When it is not
+installed, signed out or stopped, the daemon starts `biokids-remote-setup.service`,
+which runs `biokids-admin remote-setup` (`biokids_core/tailscale_setup.py`):
+
+* Writes `--no-logs-no-support` into `/etc/default/tailscaled` before the package
+  is installed, so the client never uploads a log, not even at its first start.
+* Adds `https://pkgs.tailscale.com/stable/<debian|ubuntu> <codename> main`, signed
+  by Tailscale's repository key **shipped in biokids-core**, never downloaded, and
+  pinned: a test computes the key's fingerprint from the file
+  (`2596A99EAAB33821893C0A79458CA832957F5868`, Tailscale Inc.'s package signing
+  key, fetched from pkgs.tailscale.com on 2026-10-06). Then `apt-get install
+  tailscale`, with the parent's defaults file kept.
+* `tailscale up`, waiting up to thirty minutes. Meanwhile the panel reads the
+  sign-in page from `tailscale status --json` (only a `login.tailscale.com/a/`
+  address is ever shown) and offers it as a button and as a QR code, so a parent
+  can sign in on their phone.
+* Publishes the panel with the same `remote.enable()` as before: Funnel is still
+  refused, and the Serve approval page still shown (D-157).
+
+The settings send the parent to a page of its own, `/settings/phone`, which
+refreshes itself every five seconds while the setup runs; the settings screen,
+with a PIN form on it, never does. The wizard's step 8 follows it the same way.
+
+This adds an outbound connection: `pkgs.tailscale.com`, the package and its updates
+through apt, only on a machine whose parent pressed the button. SECURITY.md section
+4 lists it. If Tailscale ever rotates that key, the setup fails with apt's error
+and BioKids needs an update; the runbook's manual steps still work.
+
+**D-170 [owner] The login screen is BioKids', and the panel is in the menu.**
+The owner saw a child's login screen with Debian's background and logo, the child
+listed as `ahmet` in lower case, and Debian's grey silhouette for a picture. A child
+of four does not read "ahmet". Three things were wrong, and one more was hard for a
+parent:
+
+* **The look.** `biokids-shell` ships
+  `/usr/share/lightdm/lightdm-gtk-greeter.conf.d/50-biokids.conf` over Debian's
+  `01_debian.conf`: a background with the BioKids mark and Zio and Sio, happy, on the
+  launcher's warm off-white (`assets/greeter/background.png`, drawn by
+  `dev/make_greeter_art.py`), no user backgrounds, and no host name in the top bar.
+* **The picture.** Provisioning never set one, and the `.face` a new account gets
+  from /etc/skel is Debian's silhouette, in a 0700 home the greeter cannot read
+  anyway. It now gives AccountsService the child's panel avatar, drawn as a
+  256-pixel picture with Noto Color Emoji on a pastel disc
+  (`biokids_core/data/avatars/`); AccountsService copies it where LightDM can read it.
+* **The name.** The unit that provisions a child knew only the user name, so the
+  account's real name was the user name. It now reads the child's row, and the
+  display name goes into GECOS (commas and colons removed). Children provisioned
+  before this get both from `biokids-admin refresh-greeter`, run by biokids-core's
+  postinst; without AccountsService a child keeps the silhouette and logs in all the
+  same.
+* **The parent's way in.** `biokids-panel` puts "BioKids Ebeveyn Paneli" in the
+  applications menu, with the BioKids icon, so nobody needs to know the panel lives
+  at 127.0.0.1:7878. And until setup is complete, an autostart entry opens the
+  wizard in the browser of whoever logs in: the parent who just installed BioKids
+  is taken to it rather than told about it. It does nothing in a child's session,
+  and nothing once `/` stops leading to the wizard.

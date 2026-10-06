@@ -210,6 +210,14 @@ Found on the first Debian 13 VM (`docs/VM-RUNBOOK.md`), none of it visible from 
   Code.org opens its course for children who cannot read yet (4-7) and its Express
   course (8-10), and Blockly Games joins them. **Dünya** (Google Earth) replaces
   **Gökyüzü** (Stellarium).
+- **Phone access is one button** (D-169). "Telefondan erişimi aç" installs Tailscale
+  from its own signed repository if it is missing, with log upload off from the
+  first start, shows its sign-in page as a button and a QR code, and then the
+  panel's address. No terminal.
+- **The login screen is BioKids'** (D-170): Zio and Sio instead of Debian's logo, and
+  each child as their own picture and name instead of their user name beside a grey
+  silhouette. The parent panel is in the applications menu, and the setup wizard
+  opens by itself at the first login after installing.
 - **The internet is open by default, with harmful sites always closed** (D-167),
   overriding D-61 and D-62. The children's DNS goes to a filter on the machine that
   closes about 291,000 adult, gambling, malware and scam domains and forces

@@ -12,4 +12,7 @@ debian/etc/X11/xorg.conf.d/50-biokids-no-vt-switch.conf etc/X11/xorg.conf.d/
 # setting that selects the service and shows the user list.
 debian/pam/biokids-lightdm etc/pam.d/
 debian/pam/50-biokids.conf usr/share/lightdm/lightdm.conf.d/
+# The login screen's look (D-170).
+debian/greeter/50-biokids.conf usr/share/lightdm/lightdm-gtk-greeter.conf.d/
+usr/share/biokids/greeter
 usr/lib/biokids/biokids-child-login

@@ -1,0 +1,3 @@
+# xdg-open is xdg-utils', which biokids-panel recommends: it opens the panel in
+# the parent's own browser, whichever that is (D-170).
+biokids-panel: desktop-command-not-in-package xdg-open [usr/share/applications/biokids-panel.desktop]

@@ -332,34 +332,23 @@ def register_wizard(app: FastAPI) -> None:
     def step_remote(
         ctx: Ctx, session: Db, state: Auth, enable: Annotated[str, Form()] = ""
     ) -> Response:
-        from biokids_core import remote
+        from biokids_panel import phone
 
         if enable == "on":
-            result = remote.enable(ctx.config.panel.port)
-            repo.audit(
-                session,
-                actor="system",
-                action="remote_access_changed",
-                detail={
-                    "enabled": True,
-                    "ok": result.ok,
-                    "error": result.error,
-                    "detail": result.detail[:300],
-                },
-                severity="info" if result.ok else "warning",
-            )
-            repo.set_setting(session, remote.SETTING_APPROVAL_URL, result.approval_url)
-            session.commit()
-            if result.approval_url:
+            outcome = phone.turn_on(ctx, session, actor="system")
+            if outcome == "setup":
+                # Installing Tailscale and signing in take minutes; this page
+                # follows them (D-169).
+                return see_other("/wizard/8")
+            if outcome == "approval":
                 # Not a failure to report but a step to show: the page Tailscale
                 # needs the parent to open once, on this same screen (D-157).
                 return see_other("/wizard/8?error=remote_approval")
-            if not result.ok:
+            if outcome == "error":
                 # The whole point of this step is "you can reach the panel from
                 # your phone". Walking the parent on to step 9 after it failed
                 # means they finish setup believing something that is not true,
                 # and find out when they are not at the machine.
-                log.warning("wizard: remote access could not be enabled: %s", result.detail)
                 return see_other("/wizard/8?error=remote")
         _ = state
         return see_other("/wizard/9")
@@ -425,7 +414,7 @@ def provision_child(session: Session, child: Child) -> ProvisionResult:
     # the work happens here, unsandboxed, exactly as it always did.
     result = provision_via_systemd(child.unix_user)
     if result is None:
-        result = provision(child.unix_user, child.display_name)
+        result = provision(child.unix_user, child.display_name, avatar=child.avatar)
     repo.audit(
         session,
         actor="system",
@@ -586,16 +575,9 @@ def _render_step(
         values["modes"] = [FilterMode.BLOCKLIST.value, FilterMode.ALLOWLIST.value]
 
     if step == 8:
-        from biokids_core import remote
+        from biokids_panel import phone
 
-        state_now = remote.detect()
-        values["tailscale"] = state_now
-        values["panel_port"] = ctx.config.panel.port
-        values["panel_url"] = state_now.url
-        values["qr"] = remote.qr_svg(state_now.url) if state_now.url else ""
-        values["approval_url"] = remote.approval_url_in(
-            repo.get_setting(session, remote.SETTING_APPROVAL_URL)
-        )
+        values.update(phone.view(ctx, session))
 
     values.update(extra)
     return render(ctx, request, session, state, tr, f"wizard/step{step}.html", **values)

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ _('wizard.remote.title') }} · {{ _('panel.title') }}{% endblock %}
+
+{#
+  D-169. Where the parent lands after pressing "Telefondan erişimi aç" in the
+  settings: Tailscale being installed, the sign-in page, then the address and
+  its QR code. It refreshes itself while the setup runs, which the settings
+  screen, with a PIN form on it, must not.
+#}
+{% block head %}
+  {% if setup_state == 'running' %}<meta http-equiv="refresh" content="5">{% endif %}
+{% endblock %}
+
+{% block content %}
+  <h1>{{ _('wizard.remote.title') }}</h1>
+  <p class="muted">{{ _('wizard.remote.help') }}</p>
+
+  <section class="card">
+    {% include "partials/phone_access.html" %}
+    {% include "partials/phone_button.html" %}
+  </section>
+
+  <p><a class="btn btn--quiet" href="/settings">{{ _('nav.settings') }}</a></p>
+{% endblock %}

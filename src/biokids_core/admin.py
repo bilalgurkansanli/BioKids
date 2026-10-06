@@ -38,7 +38,7 @@ from biokids_core.db.session import Database
 from biokids_core.errors import ConfigError
 from biokids_core.i18n import translator
 from biokids_core.ipc import DaemonClient, Op
-from biokids_core.provision import provision
+from biokids_core.provision import account_exists, provision, set_greeter_identity
 
 log = logging.getLogger("biokids.admin")
 
@@ -59,6 +59,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         "reset-pin": cmd_reset_pin,
         "sync-catalog": cmd_sync_catalog,
         "provision-child": cmd_provision_child,
+        "refresh-greeter": cmd_refresh_greeter,
+        "remote-setup": cmd_remote_setup,
         "version": cmd_version,
     }
     handler = handlers.get(args.command)
@@ -113,6 +115,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub.add_parser("status", help="show what the daemon thinks is happening")
     sub.add_parser("sync-catalog", help="load the application catalog into the database")
+    sub.add_parser(
+        "remote-setup",
+        help="install Tailscale if needed, sign in, and publish the panel (D-169)",
+    )
+    sub.add_parser(
+        "refresh-greeter",
+        help="show every child's name and picture on the login screen (D-170)",
+    )
     sub.add_parser("version", help="print the version")
 
     reset = sub.add_parser("reset-pin", help="set a new parent PIN (D-50)")
@@ -383,6 +393,80 @@ def cmd_reset_pin(args: argparse.Namespace, config: Config) -> int:
 # ---------------------------------------------------------- provision-child
 
 
+def cmd_remote_setup(args: argparse.Namespace, config: Config) -> int:
+    """What `biokids-remote-setup.service` runs when a parent asks for phone access.
+
+    Prints each step for the journal, records the outcome in the audit log, and
+    keeps the Serve approval page (D-157) where the panel looks for it.
+    """
+    from biokids_core import remote, tailscale_setup
+
+    _ = args
+    result = tailscale_setup.setup(config.panel.port)
+    for step in result.steps:
+        print(f"ran {step}")
+    published = result.published
+    approval = published.approval_url if published else ""
+    if result.ok:
+        print("the panel is published to the family's tailnet")
+    elif approval:
+        print(f"Tailscale asks its owner to allow Serve once: {approval}")
+    else:
+        print(f"problem: {result.error}", file=sys.stderr)
+
+    database = Database(config)
+    try:
+        with database.session() as session:
+            repo.set_setting(session, remote.SETTING_APPROVAL_URL, approval)
+            repo.audit(
+                session,
+                actor="system",
+                action="remote_setup",
+                detail={
+                    "installed": result.installed,
+                    "logged_in": result.logged_in,
+                    "ok": result.ok,
+                    "approval": bool(approval),
+                    "error": result.error[:300],
+                },
+                severity="info" if result.ok or approval else "warning",
+            )
+            session.commit()
+    except Exception as exc:  # pragma: no cover - the outcome is in the journal anyway
+        log.warning("could not record the outcome: %s", exc)
+    finally:
+        database.dispose()
+    return 0 if result.ok or approval else 1
+
+
+def cmd_refresh_greeter(args: argparse.Namespace, config: Config) -> int:
+    """Give every child's account their name and picture on the login screen.
+
+    Provisioning does this for a child added from now on (D-170); this is for
+    the children added before, and runs from biokids-core's postinst. Never
+    fails the upgrade: a machine without AccountsService keeps the user names.
+    """
+    _ = args
+    database = Database(config)
+    try:
+        with database.session() as session:
+            children = [
+                (child.unix_user, child.display_name, child.avatar)
+                for child in repo.list_children(session)
+            ]
+    except Exception as exc:  # pragma: no cover - no database yet is nothing to refresh
+        log.warning("could not read the children: %s", exc)
+        return 0
+    finally:
+        database.dispose()
+    for unix_user, display_name, avatar in children:
+        if not account_exists(unix_user):
+            continue
+        shown, why = set_greeter_identity(unix_user, display_name, avatar)
+        print(f"{unix_user}: {'name and picture set' if shown else why}")
+    return 0
+
+
 def cmd_provision_child(args: argparse.Namespace, config: Config) -> int:
     """Give a child row an account and a session to log in to.
 
@@ -391,10 +475,26 @@ def cmd_provision_child(args: argparse.Namespace, config: Config) -> int:
     installed, a home directory restored from a backup without its dotfiles, or
     a child added by editing the database. Running it again is harmless.
     """
+    # The unit the panel starts knows only the user name (`%I`); the name and
+    # the picture for the login screen are in the child's row (D-170).
+    name, avatar = args.name, ""
+    database = Database(config)
+    try:
+        with database.session() as session:
+            child = repo.get_child_by_user(session, args.unix_user)
+            if child is not None:
+                name = name or child.display_name
+                avatar = child.avatar
+    except Exception as exc:  # pragma: no cover - no database is no reason not to provision
+        log.warning("could not read %s's row: %s", args.unix_user, exc)
+    finally:
+        database.dispose()
+
     result = provision(
         args.unix_user,
-        args.name,
+        name,
         config,
+        avatar=avatar,
         create=not args.no_create,
         overwrite=args.overwrite,
     )

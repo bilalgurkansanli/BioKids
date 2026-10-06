@@ -1445,7 +1445,8 @@ def test_the_parent_is_shown_the_page_that_turns_serve_on(
         data={"enable": "on", "csrf_token": csrf_of(client)},
         follow_redirects=False,
     )
-    assert response.headers["location"] == "/settings?error=remote_approval"
+    # D-169: phone access has a page of its own, which shows the approval.
+    assert response.headers["location"] == "/settings/phone?error=remote_approval"
 
     page = client.get(response.headers["location"]).text
     assert f'href="{APPROVAL}"' in page.replace("&amp;", "&")
@@ -1658,3 +1659,98 @@ def test_every_quota_field_accepts_twenty_minutes() -> None:
     assert len(fields) >= 4, fields
     for name, step in fields:
         assert 20 % step == 0 and 5 % step == 0, f"{name}: step {step} refuses 20 or 5"
+
+
+# ------------------------------------------------ phone access, one button (D-169)
+
+
+def test_with_no_tailscale_the_button_starts_the_setup(
+    client: TestClient, family_ready: None, daemon: FakeDaemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """It used to say "install Tailscale first" and offer no button at all."""
+    from biokids_core import remote
+
+    absent = remote.RemoteStatus(state=remote.RemoteState.ABSENT)
+    monkeypatch.setattr(remote, "detect", lambda config=None: absent)
+    login(client)
+    assert 'action="/settings/remote"' in client.get("/settings").text
+
+    response = client.post(
+        "/settings/remote",
+        data={"enable": "on", "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    assert response.headers["location"] == "/settings/phone"
+    assert daemon.ran("remote_setup")
+
+
+def test_the_phone_page_follows_the_setup_to_the_sign_in(
+    client: TestClient, family_ready: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from biokids_core import remote
+
+    url = "https://login.tailscale.com/a/9edb3e9016be4"
+    waiting = remote.RemoteStatus(state=remote.RemoteState.LOGGED_OUT, auth_url=url)
+    monkeypatch.setattr(remote, "detect", lambda config=None: waiting)
+    monkeypatch.setattr(remote, "setup_state", lambda runner=None: "running")
+    login(client)
+
+    page = client.get("/settings/phone").text
+    assert 'http-equiv="refresh"' in page, "it refreshes itself while the setup runs"
+    assert f'href="{url}"' in page
+    assert "<svg" in page, "and the sign-in page as a QR code, for the phone"
+    assert 'action="/settings/remote"' not in page, "no second press while it runs"
+
+
+def test_the_settings_screen_itself_never_refreshes(
+    client: TestClient, family_ready: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """It has a PIN form on it."""
+    from biokids_core import remote
+
+    monkeypatch.setattr(remote, "setup_state", lambda runner=None: "running")
+    login(client)
+    assert 'http-equiv="refresh"' not in client.get("/settings").text
+
+
+def test_a_failed_setup_is_said_and_can_be_tried_again(
+    client: TestClient, family_ready: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from biokids_core import remote
+
+    monkeypatch.setattr(remote, "setup_state", lambda runner=None: "failed")
+    login(client)
+    page = client.get("/settings/phone").text
+    assert "kurulamadı" in page
+    assert "Tekrar dene" in page
+
+
+# ------------------------------------------- the parent's way in (D-170)
+
+
+def test_the_parent_panel_is_in_the_applications_menu(config: Config) -> None:
+    """Nobody should have to know that the panel lives at 127.0.0.1:7878."""
+    import configparser
+    from pathlib import Path
+
+    entry = (
+        Path(__file__).resolve().parent.parent / "debian" / "parent" / "biokids-panel.desktop"
+    )
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.optionxform = str  # type: ignore[assignment,method-assign]
+    parser.read_string(entry.read_text(encoding="utf-8"))
+    desktop = parser["Desktop Entry"]
+    assert desktop["Name[tr]"] == "BioKids Ebeveyn Paneli"
+    assert desktop["Exec"] == f"xdg-open http://127.0.0.1:{config.panel.port}/"
+    assert desktop["Icon"] == "biokids"
+
+
+def test_the_wizard_opens_by_itself_only_for_a_parent_and_only_until_setup_is_done() -> None:
+    from pathlib import Path
+
+    script = (
+        Path(__file__).resolve().parent.parent / "debian" / "parent" / "biokids-open-setup"
+    ).read_text(encoding="utf-8")
+    assert '*" biokids-child "*) exit 0' in script, "never in a child's session"
+    assert '"/wizard" in location' in script, "only while / still leads to the wizard"
+    assert script.rstrip().endswith('exec xdg-open "http://127.0.0.1:7878/wizard/1"')

@@ -53,6 +53,13 @@ log = logging.getLogger(__name__)
 
 COMMAND_TIMEOUT = 30
 
+AVATAR_DIR = Path(__file__).resolve().parent / "data" / "avatars"
+"""The panel's avatars as pictures, for the login screen (D-170).
+`dev/make_greeter_art.py avatars` draws them."""
+DEFAULT_AVATAR = "fox"
+ACCOUNTS_BUS = "org.freedesktop.Accounts"
+_ACCOUNTS_USER_RE = re.compile(r'"(/org/freedesktop/Accounts/User[0-9]+)"')
+
 XFCE_CHANNEL_DIR = Path(".config/xfce4/xfconf/xfce-perchannel-xml")
 AUTOSTART_DIR = Path(".config/autostart")
 AUTOSTART_FILE = "biokids-shell.desktop"
@@ -76,6 +83,9 @@ class ProvisionResult:
     account_existed: bool = False
     account_created: bool = False
     passwordless_login: bool = False
+    greeter_identity: bool = False
+    """The login screen shows the child's name and picture (D-170). Not a
+    problem when it fails: the child can still log in, under their user name."""
     files_written: list[str] = field(default_factory=list)
     problems: list[str] = field(default_factory=list)
 
@@ -88,6 +98,7 @@ class ProvisionResult:
             "unix_user": self.unix_user,
             "account_created": self.account_created,
             "passwordless_login": self.passwordless_login,
+            "greeter_identity": self.greeter_identity,
             "files": self.files_written,
             "problems": self.problems,
         }
@@ -243,6 +254,74 @@ def create_account(unix_user: str, display_name: str = "") -> tuple[bool, str]:
     if ok:
         log.info("created the account %s", unix_user)
     return ok, problem
+
+
+def avatar_picture(avatar: str) -> Path:
+    """The picture for a panel avatar slug, or the default one."""
+    if avatar.isalnum():
+        picture = AVATAR_DIR / f"{avatar}.png"
+        if picture.is_file():
+            return picture
+    return AVATAR_DIR / f"{DEFAULT_AVATAR}.png"
+
+
+def real_name(display_name: str) -> str:
+    """The child's name as a GECOS field: commas separate its subfields and
+    colons the fields of /etc/passwd, so neither may appear in it."""
+    return " ".join(display_name.replace(",", " ").replace(":", " ").split())[:64]
+
+
+def set_greeter_identity(unix_user: str, display_name: str, avatar: str) -> tuple[bool, str]:
+    """Put the child's name and picture on the login screen (D-170).
+
+    The greeter showed every child as their Unix user name, in lower case, next
+    to Debian's grey silhouette: provisioning set neither, and the `.face` a new
+    account gets from /etc/skel sits in a 0700 home the greeter cannot read. A
+    four-year-old does not log in by reading "ahmet".
+
+    The name goes into GECOS, where every greeter looks. The picture goes to
+    AccountsService, which copies it to /var/lib/AccountsService/icons/ where
+    LightDM's greeter can read it; without AccountsService there is nowhere a
+    greeter will look that a child's home does not hide, and the child keeps
+    the silhouette.
+    """
+    problems: list[str] = []
+    name = real_name(display_name)
+    if name:
+        ok, problem = _run(["usermod", "--comment", name, unix_user])
+        if not ok:
+            problems.append(f"name: {problem}")
+    found = _output(
+        [
+            "busctl",
+            "call",
+            ACCOUNTS_BUS,
+            "/org/freedesktop/Accounts",
+            ACCOUNTS_BUS,
+            "FindUserByName",
+            "s",
+            unix_user,
+        ]
+    )
+    match = _ACCOUNTS_USER_RE.search(found or "")
+    if match is None:
+        problems.append("picture: AccountsService did not answer")
+    else:
+        ok, problem = _run(
+            [
+                "busctl",
+                "call",
+                ACCOUNTS_BUS,
+                match.group(1),
+                f"{ACCOUNTS_BUS}.User",
+                "SetIconFile",
+                "s",
+                str(avatar_picture(avatar)),
+            ]
+        )
+        if not ok:
+            problems.append(f"picture: {problem}")
+    return not problems, "; ".join(problems)
 
 
 def install_session_files(
@@ -407,6 +486,7 @@ def provision(
     display_name: str = "",
     config: Config | None = None,
     *,
+    avatar: str = "",
     create: bool = True,
     overwrite: bool = False,
 ) -> ProvisionResult:
@@ -447,6 +527,12 @@ def provision(
             result.problems.append(f"{unix_user} cannot log in by their picture: {reason}")
         else:
             log.info("%s keeps logging in with its own password: %s", unix_user, reason)
+
+    if display_name or avatar:
+        shown, why = set_greeter_identity(unix_user, display_name, avatar)
+        result.greeter_identity = shown
+        if not shown:
+            log.warning("%s keeps their user name on the login screen: %s", unix_user, why)
 
     written, problems = install_session_files(unix_user, config, overwrite=overwrite)
     result.files_written = written

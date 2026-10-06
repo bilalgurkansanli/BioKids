@@ -1,0 +1,17 @@
+[Desktop Entry]
+# The parent panel in the parent's own applications menu (D-170), so that
+# nobody has to know that it lives at 127.0.0.1:7878. A child's session is the
+# launcher and has no menu, and the child's browser blocks that address.
+Type=Application
+Name=BioKids Parent Panel
+Name[tr]=BioKids Ebeveyn Paneli
+GenericName=Parental controls
+GenericName[tr]=Ebeveyn denetimi
+Comment=Time, apps and sites, phone access
+Comment[tr]=Süre, uygulamalar ve siteler, telefondan erişim
+Exec=xdg-open http://127.0.0.1:7878/
+Icon=biokids
+Terminal=false
+Categories=Settings;System;
+Keywords=BioKids;parental;children;time;
+Keywords[tr]=BioKids;ebeveyn;çocuk;süre;

@@ -20,54 +20,10 @@
   </form>
 
   {# ------------------------------------------------------ phone access #}
-  <section class="card">
+  <section class="card" id="phone">
     <h2>{{ _('wizard.remote.title') }}</h2>
-    <p class="status {% if tailscale.ready %}status--online{% endif %}">
-      {{ _(tailscale.status_key) }}
-    </p>
-
-    {% if tailscale.public %}
-      <div class="notice notice--danger" role="alert">
-        <div class="notice__title">{{ _('remote.funnel_warning') }}</div>
-        {# The alarm is about Funnel, so the advice has to be about Funnel. It
-           used to say "do not forward ports on your modem", which the parent
-           has not done - they go and look at their router, find nothing, and
-           conclude the warning is spurious. #}
-        <p class="small">{{ _('remote.funnel_warning.help') }}</p>
-        <p class="small"><code>sudo tailscale funnel off</code></p>
-      </div>
-    {% endif %}
-
-    {% if approval_url and not tailscale.serves(panel_port) %}
-      {# D-157: every new tailnet has Serve switched off, and turning it on is a
-         page only the tailnet's owner can visit. #}
-      <div class="notice" role="status">
-        <div class="notice__title">{{ _('remote.needs_approval') }}</div>
-        <p><a class="btn btn--primary" href="{{ approval_url }}" target="_blank" rel="noopener noreferrer">{{ _('remote.approval.open') }}</a></p>
-        <p class="muted small">{{ _('remote.approval.note') }}</p>
-      </div>
-    {% endif %}
-
-    {% if tailscale.url %}
-      <p><strong>{{ _('remote.url') }}:</strong> <code>{{ tailscale.url }}</code></p>
-      <p class="muted small">{{ _('remote.only_tailnet') }}</p>
-    {% else %}
-      <p class="muted">{{ _('remote.localhost_only') }}</p>
-    {% endif %}
-
-    {% if tailscale.state == 'absent' %}
-      <p class="muted small">{{ _('remote.install.help') }}</p>
-    {% else %}
-      <form method="post" action="/settings/remote">
-        <input type="hidden" name="csrf_token" value="{{ csrf }}">
-        <input type="hidden" name="enable" value="{% if tailscale.serves(panel_port) %}off{% else %}on{% endif %}">
-        <button class="btn {% if not tailscale.serves(panel_port) %}btn--primary{% endif %}" type="submit">
-          {% if tailscale.serves(panel_port) %}{{ _('remote.disable') }}{% else %}{{ _('remote.enable') }}{% endif %}
-        </button>
-      </form>
-    {% endif %}
-
-    <p class="muted small">{{ _('remote.no_port_forward') }}</p>
+    {% include "partials/phone_access.html" %}
+    {% include "partials/phone_button.html" %}
   </section>
 
   {# --------------------------------------------------------------- PIN #}

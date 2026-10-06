@@ -1,0 +1,18 @@
+[Unit]
+Description=BioKids: phone access to the parent panel through Tailscale
+Documentation=man:biokids-admin(8)
+# Started by the daemon when a parent presses "Telefondan erişimi aç" and
+# Tailscale is not ready (D-169), never at boot and never by itself. It may add
+# Tailscale's apt repository (signed by the key BioKids ships) and install the
+# package, writes --no-logs-no-support before the client first starts, waits
+# up to half an hour for the parent to sign in, and publishes the panel with
+# `tailscale serve`. Nothing else: the panel itself still binds 127.0.0.1.
+After=network-online.target biokids-daemon.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/biokids-admin remote-setup
+# apt, then a person signing in on their phone.
+TimeoutStartSec=45min
+Environment=PYTHONUNBUFFERED=1

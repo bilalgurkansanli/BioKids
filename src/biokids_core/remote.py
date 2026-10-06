@@ -130,6 +130,9 @@ class RemoteError:
     on. `RemoteResult.approval_url` carries the page."""
 
 
+AUTH_URL_RE: Final = re.compile(r"^https://login\.tailscale\.com/a/[A-Za-z0-9]+$")
+"""What `tailscale up` asks a person to open. Anything else is not shown."""
+
 APPROVAL_URL_RE: Final = re.compile(
     r"https://login\.tailscale\.com/f/[a-z]+\?node=[A-Za-z0-9]+"
 )
@@ -242,6 +245,9 @@ class RemoteStatus:
     """Tailnet ports this node has opened to the public internet with Funnel."""
     detail: str = ""
     """A short technical note for the audit log. Untranslated, never shown."""
+    auth_url: str = ""
+    """While signed out after `tailscale up`: the page that signs this machine in
+    to the parent's tailnet (D-169). Only ever a login.tailscale.com address."""
 
     @property
     def status_key(self) -> str:
@@ -344,7 +350,13 @@ class TailscaleRemote:
         if state is not RemoteState.RUNNING:
             # A URL is only printed for a node that can answer on it, so a
             # stopped machine never shows a parent an address that times out.
-            return RemoteStatus(state, hostname=hostname, tailnet=tailnet)
+            auth_url = _text(payload.get("AuthURL"))
+            return RemoteStatus(
+                state,
+                hostname=hostname,
+                tailnet=tailnet,
+                auth_url=auth_url if AUTH_URL_RE.match(auth_url) else "",
+            )
 
         serve = self._serve_config()
         url = _panel_url(dns_name)
@@ -487,6 +499,24 @@ class TailscaleRemote:
 
 
 # ---------------------------------------------------------------- default instance
+
+
+SETUP_UNIT: Final = "biokids-remote-setup.service"
+"""Installs Tailscale and waits for the parent to sign in (D-169)."""
+
+
+def setup_state(runner: CommandRunner | None = None) -> str:
+    """ "running" while that unit works, "failed" after it failed, otherwise "".
+
+    A oneshot unit is "activating" for as long as it runs and "inactive" once it
+    has succeeded; systemd keeps "failed" until the next start, which is what
+    lets the screen say so and offer the button again.
+    """
+    word = (runner or run_command)(("systemctl", "is-active", SETUP_UNIT), DETECT_TIMEOUT)
+    state = word.stdout.strip()
+    if state in {"activating", "active", "reloading", "deactivating"}:
+        return "running"
+    return "failed" if state == "failed" else ""
 
 
 def detect(config: Config | None = None) -> RemoteStatus:

@@ -1,62 +1,38 @@
 {% extends "wizard/_base.html" %}
 {% block step_title %}{{ _('wizard.remote.title') }}{% endblock %}
 
+{#
+  D-169: one button, whatever state Tailscale is in. Not installed or signed
+  out, it starts the setup and this page follows it, refreshing itself, through
+  the sign-in to the address and its QR code.
+#}
+{% block head %}
+  {% if setup_state == 'running' %}<meta http-equiv="refresh" content="5">{% endif %}
+{% endblock %}
+
 {% block step %}
   <p class="muted">{{ _('wizard.remote.help') }}</p>
 
   <div class="card">
-    <p class="status {% if tailscale.ready %}status--online{% endif %}">
-      {{ _(tailscale.status_key) }}
-    </p>
-
-    {% if tailscale.public %}
-      <div class="notice notice--danger" role="alert">
-        <div class="notice__title">{{ _('remote.funnel_warning') }}</div>
-        {# The alarm is about Funnel, so the advice has to be about Funnel. It
-           used to say "do not forward ports on your modem", which the parent
-           has not done - they go and look at their router, find nothing, and
-           conclude the warning is spurious. #}
-        <p class="small">{{ _('remote.funnel_warning.help') }}</p>
-        <p class="small"><code>sudo tailscale funnel off</code></p>
-      </div>
-    {% endif %}
-
-    {% if approval_url and not tailscale.serves(panel_port) %}
-      {# D-157: every new tailnet has Serve switched off, and turning it on is a
-         page only the tailnet's owner can visit. #}
-      <div class="notice" role="status">
-        <div class="notice__title">{{ _('remote.needs_approval') }}</div>
-        <p><a class="btn btn--primary" href="{{ approval_url }}" target="_blank" rel="noopener noreferrer">{{ _('remote.approval.open') }}</a></p>
-        <p class="muted small">{{ _('remote.approval.note') }}</p>
-      </div>
-    {% endif %}
-
-    {% if panel_url %}
-      <p><strong>{{ _('remote.url') }}:</strong> <code>{{ panel_url }}</code></p>
-      {% if qr %}
-        <div class="qr">{{ qr|safe }}</div>
-        <p class="muted small">{{ _('remote.qr.help') }}</p>
-      {% endif %}
-      <p class="muted small">{{ _('remote.only_tailnet') }}</p>
-    {% elif tailscale.state == 'absent' %}
-      <p class="muted">{{ _('remote.install.help') }}</p>
-    {% else %}
-      <p class="muted">{{ _('remote.localhost_only') }}</p>
-    {% endif %}
-
-    <p class="muted small">{{ _('remote.no_port_forward') }}</p>
+    {% include "partials/phone_access.html" %}
   </div>
 
   <form method="post" action="/wizard/8">
     <div class="wizard-actions">
-      {% if tailscale.state != 'absent' and not tailscale.serves(panel_port) %}
-        <button class="btn btn--primary" type="submit" name="enable" value="on">
-          {{ _('remote.enable') }}
+      {% if tailscale.serves(panel_port) %}
+        <button class="btn btn--primary" type="submit" name="enable" value="">
+          {{ _('common.next') }}
+        </button>
+      {% else %}
+        {% if setup_state != 'running' %}
+          <button class="btn btn--primary" type="submit" name="enable" value="on">
+            {% if setup_state == 'failed' %}{{ _('remote.setup.retry') }}{% else %}{{ _('remote.enable') }}{% endif %}
+          </button>
+        {% endif %}
+        <button class="btn btn--quiet" type="submit" name="enable" value="">
+          {{ _('common.skip') }}
         </button>
       {% endif %}
-      <button class="btn btn--quiet" type="submit" name="enable" value="">
-        {{ _('common.skip') }}
-      </button>
     </div>
   </form>
 {% endblock %}

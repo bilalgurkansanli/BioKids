@@ -1,2 +1,9 @@
 usr/bin/biokids-panel
 usr/lib/python3*/dist-packages/biokids_panel
+# The parent's way in without typing an address (D-170): a menu entry, its
+# icon, and the wizard opened at the first login until setup is complete.
+debian/parent/biokids-panel.desktop usr/share/applications/
+debian/parent/biokids-setup-autostart.desktop etc/xdg/autostart/
+usr/lib/biokids/biokids-open-setup
+usr/share/icons/hicolor/192x192/apps/biokids.png
+usr/share/icons/hicolor/512x512/apps/biokids.png

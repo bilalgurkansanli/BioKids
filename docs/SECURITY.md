@@ -63,6 +63,7 @@ Never add a claim to marketing copy that contradicts this list.
 | `biokids-voice` | child | audio only |
 | `biokids-ai` | `biokids-ai` system user | runs the local models for the assistant (D-165); no network, no home, no devices |
 | `biokids-dns` | started as root, `dnsmasq` drops to its own user | the children's DNS filter, on loopback port 5354 only (D-167) |
+| `biokids-remote-setup` | root, oneshot, only when the parent asks | installs Tailscale and signs it in for phone access (D-169); apt needs root |
 
 Root services run with systemd hardening:
 
@@ -121,6 +122,7 @@ entry in `DECISIONS.md` and a note in the README.**
 | blocklist source URLs | weekly refresh | **not built**: the lists ship inside biokids-core and update with it (D-167) |
 | the parent's own SMTP server | notifications | yes, opt-in |
 | Tailscale coordination | remote panel access | yes, opt-in |
+| `pkgs.tailscale.com` | the Tailscale package and its updates, through apt, signed by the key BioKids ships | yes: only after the parent presses "Telefondan erişimi aç" on a machine without Tailscale (D-169) |
 | `log.tailscale.com` | Tailscale's own client logs | **turned off**: the runbook starts `tailscaled` with `--no-logs-no-support` (D-157) |
 | Hugging Face | one-time download of the assistant's models | yes: only with the AI package, only when the parent presses the button (D-165) |
 | ElevenLabs | cloud TTS | yes, opt-in, off by default, clearly labelled |

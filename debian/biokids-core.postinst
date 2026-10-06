@@ -119,6 +119,12 @@ load_or_create_key(Path(sys.argv[1]))' "$CONF_DIR/secret.key"
         # is here on disk by the time this line runs, and a parent can repeat it
         # by hand after editing the catalogue.
         biokids-admin sync-catalog
+
+        # Each child's name and picture on the login screen (D-170), for the
+        # children added before provisioning set them. Best effort: without
+        # AccountsService, or during an image build with no system bus, a
+        # child keeps their user name, and that must not fail an upgrade.
+        biokids-admin refresh-greeter || true
         ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

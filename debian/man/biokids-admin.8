@@ -54,7 +54,8 @@ Make sure the child account
 exists and logs in to the BioKids launcher.
 The panel does this when a parent adds a child; this command repairs it
 when that could not happen.
-An existing account is left alone, and nothing is ever deleted.
+An existing account is left alone, and nothing is ever deleted, except that
+its name and picture on the login screen are set to the child's.
 .RS
 .TP
 .BI \-\-name " display\-name"
@@ -66,6 +67,12 @@ Only repair the session files; fail if the account does not exist.
 .B \-\-overwrite
 Replace session files that have been edited since they were installed.
 .RE
+.TP
+.B refresh\-greeter
+Give every child's account their name and picture on the login screen,
+through AccountsService.
+The package runs this on every installation and upgrade; a child added in the
+panel gets them when the account is made.
 .TP
 .B sync\-catalog
 Load the application catalogue into the database.

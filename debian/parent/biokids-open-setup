@@ -1,0 +1,39 @@
+#!/bin/sh
+# Open the BioKids setup wizard at login, until setup is complete (D-170).
+#
+# Run from /etc/xdg/autostart in every desktop session. It does nothing for a
+# child (their session is the launcher), and nothing once the panel stops
+# sending "/" to the wizard, which it does for as long as setup is incomplete.
+set -u
+
+case " $(id -nG 2>/dev/null) " in
+    *" biokids-child "*) exit 0 ;;
+esac
+
+# The panel starts at boot; give it a moment if this login was quicker.
+python3 - <<'PY' || exit 0
+import sys
+import time
+import urllib.error
+import urllib.request
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+opener = urllib.request.build_opener(NoRedirect)
+for _ in range(30):
+    try:
+        opener.open("http://127.0.0.1:7878/", timeout=3)
+        sys.exit(1)  # answered without a redirect: nothing to set up
+    except urllib.error.HTTPError as answer:
+        location = answer.headers.get("Location", "")
+        sys.exit(0 if "/wizard" in location else 1)
+    except OSError:
+        time.sleep(2)
+sys.exit(1)
+PY
+
+exec xdg-open "http://127.0.0.1:7878/wizard/1"

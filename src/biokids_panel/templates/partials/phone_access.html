@@ -1,0 +1,66 @@
+{#
+  Phone access: what the settings screen and wizard step 8 both show (D-169).
+  Each page adds its own buttons under it. Needs the values of
+  biokids_panel.phone.view().
+#}
+<p class="status {% if tailscale.ready %}status--online{% endif %}">
+  {{ _(tailscale.status_key) }}
+</p>
+
+{% if setup_state == 'running' %}
+  {# The setup unit installs Tailscale, then waits for the parent to sign in.
+     The page refreshes itself (see the head block) until it is done. #}
+  <div class="notice" role="status">
+    {% if tailscale.auth_url %}
+      <div class="notice__title">{{ _('remote.setup.login.title') }}</div>
+      <p><a class="btn btn--primary" href="{{ tailscale.auth_url }}" target="_blank" rel="noopener noreferrer">{{ _('remote.setup.login.open') }}</a></p>
+      {% if auth_qr %}<div class="qr">{{ auth_qr|safe }}</div>{% endif %}
+      <p class="muted small">{{ _('remote.setup.login.help') }}</p>
+    {% else %}
+      <div class="notice__title">{{ _('remote.setup.installing.title') }}</div>
+      <p class="muted small">{{ _('remote.setup.installing') }}</p>
+    {% endif %}
+  </div>
+{% elif setup_state == 'failed' and not tailscale.serves(panel_port) %}
+  <div class="notice notice--danger" role="alert">
+    <div class="notice__title">{{ _('remote.setup.failed') }}</div>
+  </div>
+{% endif %}
+
+{% if tailscale.public %}
+  <div class="notice notice--danger" role="alert">
+    <div class="notice__title">{{ _('remote.funnel_warning') }}</div>
+    {# The alarm is about Funnel, so the advice has to be about Funnel. It
+       used to say "do not forward ports on your modem", which the parent
+       has not done - they go and look at their router, find nothing, and
+       conclude the warning is spurious. #}
+    <p class="small">{{ _('remote.funnel_warning.help') }}</p>
+    <p class="small"><code>sudo tailscale funnel off</code></p>
+  </div>
+{% endif %}
+
+{% if approval_url and not tailscale.serves(panel_port) %}
+  {# D-157: every new tailnet has Serve switched off, and turning it on is a
+     page only the tailnet's owner can visit. #}
+  <div class="notice" role="status">
+    <div class="notice__title">{{ _('remote.needs_approval') }}</div>
+    <p><a class="btn btn--primary" href="{{ approval_url }}" target="_blank" rel="noopener noreferrer">{{ _('remote.approval.open') }}</a></p>
+    <p class="muted small">{{ _('remote.approval.note') }}</p>
+  </div>
+{% endif %}
+
+{% if panel_url and tailscale.serves(panel_port) %}
+  <p><strong>{{ _('remote.url') }}:</strong> <code>{{ panel_url }}</code></p>
+  {% if qr %}
+    <div class="qr">{{ qr|safe }}</div>
+    <p class="muted small">{{ _('remote.qr.help') }}</p>
+  {% endif %}
+  <p class="muted small">{{ _('remote.only_tailnet') }}</p>
+{% elif setup_state != 'running' %}
+  <p class="muted">{{ _('remote.localhost_only') }}</p>
+  {% if tailscale.state != 'running' %}
+    <p class="muted small">{{ _('remote.install.help') }}</p>
+  {% endif %}
+{% endif %}
+
+<p class="muted small">{{ _('remote.no_port_forward') }}</p>

@@ -829,7 +829,7 @@ msgid "remote.qr.help"
 msgstr "Telefonunuzun kamerasıyla bu kareyi okutun."
 
 msgid "remote.install.help"
-msgstr "Önce Tailscale kurup giriş yapmanız gerekiyor."
+msgstr "Butona basınca BioKids, Tailscale'i kurar ve bir kez giriş yapmanızı ister. Dışarıya hiçbir port açılmaz."
 
 msgid "remote.localhost_only"
 msgstr "Panel şu an sadece bu bilgisayardan açılıyor."
@@ -1110,3 +1110,30 @@ msgstr "Bu bilgisayarın tarayıcı ayarı tektir: çocuklardan biri için “Sa
 
 msgid "audit.action.filter_mode_changed"
 msgstr "İnternet ayarı değiştirildi"
+
+msgid "remote.setup.installing.title"
+msgstr "Telefondan erişim hazırlanıyor…"
+
+msgid "remote.setup.installing"
+msgstr "Tailscale kuruluyor. Birkaç dakika sürebilir; bu sayfa kendini yeniler."
+
+msgid "remote.setup.login.title"
+msgstr "Tailscale hesabınızla bir kez giriş yapın"
+
+msgid "remote.setup.login.open"
+msgstr "Giriş sayfasını aç"
+
+msgid "remote.setup.login.help"
+msgstr "Açılan sayfada Tailscale hesabınızla giriş yapın ya da ücretsiz bir hesap açın. İsterseniz bu kodu telefonunuzla okutup girişi orada yapın. Sonra telefonunuza Tailscale uygulamasını kurup aynı hesapla giriş yapın; panel adresi burada görünecek."
+
+msgid "remote.setup.failed"
+msgstr "Telefondan erişim kurulamadı. İnternet bağlantısını kontrol edip tekrar deneyin."
+
+msgid "remote.setup.retry"
+msgstr "Tekrar dene"
+
+msgid "audit.action.remote_setup"
+msgstr "Telefondan erişim kuruldu"
+
+msgid "audit.action.remote_setup_started"
+msgstr "Telefondan erişim kurulumu başlatıldı"

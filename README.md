@@ -37,8 +37,9 @@ entirely on your own machine.**
 - **Optional AI supervision** that looks at the screen when something new happens,
   scores how appropriate it is for the child's age, and tells the parent. The model
   runs on your GPU; no screenshot ever leaves the machine.
-- **A parent panel** you reach from your phone over your own private network. No
-  account, no cloud, no port forwarding.
+- **A parent panel** in the computer's applications menu, and on your phone over your
+  own private network: one button installs and signs in Tailscale for you. No
+  BioKids account, no cloud, no port forwarding.
 
 ### The parent panel
 

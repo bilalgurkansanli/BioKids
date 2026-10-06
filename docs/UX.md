@@ -208,12 +208,19 @@ Ten steps, each skippable with a sane default, under five minutes total.
 6. Daily quota and time window (pre-filled by age: 1 h for 4–7, 2 h for 8–10)
 7. Filter mode (pre-selected by age: allowlist for 4–7, blocklist for 8–10) and the
    optional recommended blocklist
-8. Phone access — Tailscale, with a QR code
+8. Phone access — one button: BioKids installs Tailscale if needed, shows its
+   sign-in page as a button and a QR code, then the panel's address and its QR
+   code (D-169)
 9. Email notifications — SMTP, with a Gmail app-password walkthrough
 10. Optional extras: voices, AI supervision. Both explained honestly, both default off
     for AI and on for stock voices.
 
 Ends with a summary card and a "test it now" button that starts a 2-minute demo session.
+
+The parent rarely has to find the panel: until setup is complete, the wizard opens
+by itself in the browser of whoever logs in, and afterwards "BioKids Ebeveyn
+Paneli" is in the applications menu (D-170). On the login screen each child is
+their own picture and name, over Zio and Sio, never the operating system's logo.
 
 ### 3.5 PWA
 

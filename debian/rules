@@ -90,6 +90,9 @@ override_dh_auto_install:
 			debian/tmp/usr/share/biokids/voice/$$locale/; \
 	done
 
+	install -d debian/tmp/usr/share/biokids/greeter
+	install -m 0644 assets/greeter/background.png \
+		debian/tmp/usr/share/biokids/greeter/
 	install -d debian/tmp/usr/share/biokids/characters
 	install -m 0644 assets/characters/*.svg 		debian/tmp/usr/share/biokids/characters/
 
@@ -115,6 +118,13 @@ override_dh_auto_install:
 	install -d debian/tmp/usr/lib/biokids
 	install -m 0755 debian/pam/biokids-child-login \
 		debian/tmp/usr/lib/biokids/biokids-child-login
+	install -m 0755 debian/parent/biokids-open-setup \
+		debian/tmp/usr/lib/biokids/biokids-open-setup
+	for size in 192 512; do \
+		install -d debian/tmp/usr/share/icons/hicolor/$${size}x$${size}/apps; \
+		install -m 0644 src/biokids_panel/static/icons/icon-$$size.png \
+			debian/tmp/usr/share/icons/hicolor/$${size}x$${size}/apps/biokids.png; \
+	done
 
 	sed -e 's,^script_location = .*,script_location = /usr/lib/python3/dist-packages/biokids_core/migrations,' \
 	    -e '/^prepend_sys_path[[:space:]]*=/d' \
@@ -173,6 +183,7 @@ override_dh_installsystemd:
 	dh_installsystemd -pbiokids-daemon biokids-daemon.service
 	dh_installsystemd -pbiokids-daemon --name=biokids-dns
 	dh_installsystemd -pbiokids-panel --name=biokids-provision@ --no-enable --no-start
+	dh_installsystemd -pbiokids-panel --name=biokids-remote-setup --no-enable --no-start
 	dh_installsystemd -pbiokids-panel biokids-panel.service
 	dh_installsystemd -pbiokids-ai --name=biokids-ai-setup --no-enable --no-start
 	dh_installsystemd -pbiokids-ai biokids-ai.service

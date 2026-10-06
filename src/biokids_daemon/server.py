@@ -236,6 +236,7 @@ class DaemonServer:
             Op.REQUEST_LAUNCH: self._request_launch,
             Op.ASSISTANT_STATUS: self._assistant_status,
             Op.ASSISTANT_SETUP: self._assistant_setup,
+            Op.REMOTE_SETUP: self._remote_setup,
         }
 
     async def _ping(self, request: Request) -> Response:
@@ -312,6 +313,13 @@ class DaemonServer:
         ok = await run_systemctl("start", "--no-block", AI_SETUP_UNIT)
         return Response(id=request.id, ok=ok, error="" if ok else "assistant.setup.failed")
 
+    async def _remote_setup(self, request: Request) -> Response:
+        """Phone access in one button (D-169): its own unit, because installing a
+        package and waiting half an hour for a parent to sign in to Tailscale is
+        no job for the panel's sandbox or the daemon's event loop."""
+        ok = await run_systemctl("start", "--no-block", REMOTE_SETUP_UNIT)
+        return Response(id=request.id, ok=ok, error="" if ok else "remote.setup.failed")
+
     async def _reload(self, request: Request) -> Response:
         self.supervisor.reload()
         return Response(
@@ -368,6 +376,7 @@ __all__ = ["DaemonServer", "decode_frame"]
 
 
 AI_SETUP_UNIT = "biokids-ai-setup.service"
+REMOTE_SETUP_UNIT = "biokids-remote-setup.service"
 
 
 async def run_systemctl(*args: str) -> bool:

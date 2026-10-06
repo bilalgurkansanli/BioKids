@@ -121,6 +121,9 @@ Depends: biokids-core (= ${binary:Version}),
          python3-uvicorn,
          ${misc:Depends},
          ${python3:Depends}
+# The menu entry and the first-login wizard open the panel with xdg-open
+# (D-170). Every desktop has it; a server install without one has no menu.
+Recommends: xdg-utils
 Suggests: biokids-ai
 Description: parental controls for Debian - parent panel
  The panel is how a parent sets everything up and sees what happened today:

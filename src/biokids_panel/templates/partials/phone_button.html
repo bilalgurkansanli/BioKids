@@ -1,0 +1,15 @@
+{#
+  The settings' phone-access button (D-169): on, off, or try again. Nothing
+  while the setup runs; the page says what is happening instead.
+#}
+{% if setup_state != 'running' %}
+  <form method="post" action="/settings/remote">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <input type="hidden" name="enable" value="{% if tailscale.serves(panel_port) %}off{% else %}on{% endif %}">
+    <button class="btn {% if not tailscale.serves(panel_port) %}btn--primary{% endif %}" type="submit">
+      {% if tailscale.serves(panel_port) %}{{ _('remote.disable') }}
+      {% elif setup_state == 'failed' %}{{ _('remote.setup.retry') }}
+      {% else %}{{ _('remote.enable') }}{% endif %}
+    </button>
+  </form>
+{% endif %}

@@ -584,3 +584,64 @@ def test_the_childs_screen_never_locks_just_for_being_idle() -> None:
     assert "--lock-after-screensaver=0" in argv
     assert "--no-lock-on-suspend" in argv
     assert "--no-lock-on-lid" in argv
+
+
+# ------------------------------------------------- the login screen (D-170)
+
+
+def test_every_panel_avatar_has_a_picture_for_the_login_screen() -> None:
+    from biokids_panel.context import AVATARS
+
+    for slug, _emoji in AVATARS:
+        picture = prov.avatar_picture(slug)
+        assert picture.name == f"{slug}.png", f"{slug} would fall back to the fox"
+        assert picture.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_an_unknown_avatar_gets_the_default_picture_not_a_path() -> None:
+    assert prov.avatar_picture("../../etc/shadow").name == "fox.png"
+    assert prov.avatar_picture("unicorn").name == "fox.png"
+
+
+def test_a_name_cannot_break_the_passwd_file() -> None:
+    assert prov.real_name("Elif Nur") == "Elif Nur"
+    assert prov.real_name("Ali, Veli:root") == "Ali Veli root"
+    assert prov.real_name("  Ayşe  ") == "Ayşe"
+
+
+def test_the_login_screen_gets_the_childs_name_and_picture(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The greeter showed "ahmet" in lower case beside Debian's silhouette."""
+    ran: list[list[str]] = []
+
+    def output(argv: list[str]) -> str | None:
+        ran.append(list(argv))
+        return 'o "/org/freedesktop/Accounts/User1001"'
+
+    def run(argv: list[str]) -> tuple[bool, str]:
+        ran.append(list(argv))
+        return True, ""
+
+    monkeypatch.setattr(prov, "_output", output)
+    monkeypatch.setattr(prov, "_run", run)
+
+    assert prov.set_greeter_identity("ahmet", "Ahmet", "turtle") == (True, "")
+    assert ran[0] == ["usermod", "--comment", "Ahmet", "ahmet"]
+    assert ran[1][-3:] == ["FindUserByName", "s", "ahmet"]
+    assert ran[2][3:6] == [
+        "/org/freedesktop/Accounts/User1001",
+        "org.freedesktop.Accounts.User",
+        "SetIconFile",
+    ]
+    assert ran[2][-1].endswith("turtle.png")
+
+
+def test_without_accountsservice_the_child_keeps_a_name_and_can_still_log_in(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(prov, "_output", lambda _argv: None)
+    monkeypatch.setattr(prov, "_run", lambda _argv: (True, ""))
+    shown, why = prov.set_greeter_identity("ahmet", "Ahmet", "turtle")
+    assert not shown
+    assert "AccountsService" in why

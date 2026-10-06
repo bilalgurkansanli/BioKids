@@ -64,6 +64,8 @@ class Op(StrEnum):
     ASSISTANT_STATUS = "assistant_status"
     """Is the assistant service running, and which models has it (D-165)."""
     ASSISTANT_SETUP = "assistant_setup"
+    REMOTE_SETUP = "remote_setup"
+    """Install Tailscale if needed, wait for sign-in, publish the panel (D-169)."""
     """Start the one-time model download a parent asked for (D-165)."""
 
 
