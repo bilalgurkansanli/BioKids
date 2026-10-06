@@ -224,3 +224,32 @@ def test_lockdown_ends_a_session_whose_screen_did_not_lock(
 
     admin.cmd_lockdown(None, config)  # type: ignore[arg-type]
     assert ended == ["3"]
+
+
+def test_lockdown_waits_for_a_slow_screen_locker(
+    config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """light-locker takes eight to ten seconds; the first version ended the
+    session after three (found on the VM)."""
+    ended: list[str] = []
+    polls = {"n": 0}
+
+    def active_until_third_look(_session: str, name: str) -> str:
+        if name == "Active":
+            polls["n"] += 1
+            return "yes" if polls["n"] < 3 else "no"
+        return "no"
+
+    monkeypatch.setattr(admin, "LOCK_SETTLE_SECONDS", 30.0)
+    monkeypatch.setattr(admin, "LOCK_POLL_SECONDS", 0.0)
+    monkeypatch.setattr(admin, "_child_users", lambda _c: {"elif"})
+    monkeypatch.setattr(
+        admin, "list_sessions", lambda: [{"session": "3", "user": "elif", "class": "user"}]
+    )
+    monkeypatch.setattr(admin, "lock_session", lambda _sid: True)
+    monkeypatch.setattr(admin, "session_property", active_until_third_look)
+    monkeypatch.setattr(admin, "terminate_session", lambda sid: ended.append(sid) or True)
+    monkeypatch.setattr(admin, "_audit_lockdown", lambda *_a: None)
+
+    admin.cmd_lockdown(None, config)  # type: ignore[arg-type]
+    assert ended == []

@@ -40,6 +40,9 @@ STOPWORDS: Final = {
     "tr": frozenset(
         [
             "ne",
+            "neyin",
+            "neyi",
+            "neye",
             "neden",
             "niçin",
             "niye",
@@ -137,6 +140,8 @@ STOPWORDS: Final = {
 }
 
 _TAG: Final = re.compile(r"<[^>]+>")
+_PARAGRAPH: Final = re.compile(r"<p[^>]*>(.*?)</p>", re.S | re.I)
+MIN_PARAGRAPH: Final = 40
 _ITEM: Final = re.compile(r"<item>(.*?)</item>", re.S)
 _LINK: Final = re.compile(r"<link>(.*?)</link>", re.S)
 _WORD: Final = re.compile(r"[\w'-]+", re.U)
@@ -157,13 +162,93 @@ def search_terms(question: str, locale: str) -> str:
 
 
 def plain_text(page: str) -> str:
-    """Readable text from an article page: no markup, no reference marks."""
-    opened = re.search(r"<body[^>]*>", page, flags=re.I)
-    body = page[opened.end() :] if opened else page
-    body = re.sub(r"<(script|style|table)[^>]*>.*?</\1>", " ", body, flags=re.S | re.I)
-    text = html.unescape(_TAG.sub(" ", body))
-    text = re.sub(r"\[\d+\]", "", text)
-    return " ".join(text.split())
+    """The article's opening paragraphs as plain text.
+
+    Only `<p>` elements: an infobox or a taxobox is a table of names and
+    numbers - "Alt gruplar † Amygdalodon †..." on the VM - that tells a model
+    nothing and crowds out the sentences that do.
+    """
+    paragraphs: list[str] = []
+    for raw in _PARAGRAPH.findall(page):
+        text = html.unescape(_TAG.sub("", raw))
+        text = " ".join(re.sub(r"\[\d+\]", "", text).split())
+        if len(text) >= MIN_PARAGRAPH:
+            paragraphs.append(text)
+        if len(paragraphs) == 2:
+            break
+    return " ".join(paragraphs)
+
+
+SUFFIXES: Final = {
+    "tr": (
+        "lerin",
+        "ların",
+        "leri",
+        "ları",
+        "nın",
+        "nin",
+        "nun",
+        "nün",
+        "dan",
+        "den",
+        "tan",
+        "ten",
+        "lar",
+        "ler",
+        "ın",
+        "in",
+        "un",
+        "ün",
+        "da",
+        "de",
+        "ta",
+        "te",
+        "ya",
+        "ye",
+        "yı",
+        "yi",
+        "yu",
+        "yü",
+        "ı",
+        "i",
+        "u",
+        "ü",
+        "a",
+        "e",
+    ),
+    "en": ("es", "s"),
+}
+
+
+def title_case(word: str, locale: str) -> str:
+    """A word as an article title starts: Turkish dotted and dotless i kept apart."""
+    if not word:
+        return word
+    turkish = {"i": "İ", "ı": "I"} if locale == "tr" else {}
+    return turkish.get(word[0], word[0].upper()) + word[1:]
+
+
+def title_guesses(question: str, locale: str) -> list[str]:
+    """Article titles the question is probably about, best first.
+
+    The subject of a child's question is nearly always its first content word
+    ("Ay neyin etrafında döner?", "Dinozorlar ne zaman yaşadı?"). It is tried as
+    written and then without the endings Turkish adds, so "dinozorlar" finds
+    "Dinozor" and "Dünya'nın" finds "Dünya".
+    """
+    language = locale if locale in SUFFIXES else "en"
+    guesses: list[str] = []
+    for word in search_terms(question, language).split()[:3]:
+        word = word.split("'", 1)[0]
+        forms = [word]
+        for suffix in SUFFIXES[language]:
+            if word.endswith(suffix) and len(word) - len(suffix) >= 2:
+                forms.append(word[: -len(suffix)])
+        for form in forms:
+            title = title_case(form, language)
+            if title not in guesses:
+                guesses.append(title)
+    return guesses
 
 
 class Knowledge:
@@ -183,6 +268,13 @@ class Knowledge:
             return ""
         try:
             await self.server.ensure()
+            # The article the question is about, by its title; a full-text
+            # search only when no title fits.
+            for title in title_guesses(question, book.locale):
+                path = f"/content/{book.name}/{urllib.parse.quote(title.replace(' ', '_'))}"
+                text = await self._article(path)
+                if text:
+                    return text[:MAX_CHARS]
             links = await self._search(book, terms)
             texts = [await self._article(link) for link in links[:MAX_ARTICLES]]
         except (ServerUnavailable, HttpError) as exc:
@@ -216,4 +308,4 @@ class Knowledge:
         status, body = await request(self.endpoint, "GET", path, wait_s=LOOKUP_TIMEOUT_S)
         if status != 200:
             return ""
-        return plain_text(body.decode("utf-8", "replace"))[: MAX_CHARS // MAX_ARTICLES]
+        return plain_text(body.decode("utf-8", "replace"))

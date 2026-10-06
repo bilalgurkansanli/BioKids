@@ -78,6 +78,10 @@ yesterday is not a question about today."""
 
 FILTER_CHECK_SECONDS = 60
 """How often the children's DNS filter is checked from the outside (D-172)."""
+FILTER_SETTLE_SECONDS = 30
+"""The first check waits this long after the daemon starts."""
+FILTER_SETTLE_TRIES = 5
+FILTER_SETTLE_PAUSE = 2.0
 
 END_ACTION_GIVE_UP_AFTER = 3
 """After this many consecutive failures, escalate to the lockdown path (D-106)
@@ -1067,9 +1071,14 @@ class Supervisor:
         machine is locked, and unlocked again when it closes. Not answering is
         already closed (no DNS, no internet) and is reported, not locked.
         """
-        if self._filter_checked_at is not None and (
-            now_boot - self._filter_checked_at < FILTER_CHECK_SECONDS
-        ):
+        if self._filter_checked_at is None:
+            # Not in the first half-minute: dnsmasq is (re)started by the same
+            # reload that started the daemon, and reading 300,000 names takes it
+            # a few seconds. A check then reported "not answering" on every
+            # start - and, with mail on, told the parent so.
+            self._filter_checked_at = now_boot - FILTER_CHECK_SECONDS + FILTER_SETTLE_SECONDS
+            return
+        if now_boot - self._filter_checked_at < FILTER_CHECK_SECONDS:
             return
         self._filter_checked_at = now_boot
         users = [r.unix_user for r in self.children.values() if r.policy is not None]
@@ -1080,7 +1089,12 @@ class Supervisor:
         if health.open or not health.answering:
             log.warning("the DNS filter is not right (%s); applying it again", health)
             await asyncio.to_thread(self._apply_dns_filter)
-            health = await asyncio.to_thread(self.dns_filter.verify, users)
+            # The repair restarts dnsmasq; give it the seconds it needs to load.
+            for _ in range(FILTER_SETTLE_TRIES):
+                health = await asyncio.to_thread(self.dns_filter.verify, users)
+                if health.answering and not health.open:
+                    break
+                await asyncio.sleep(FILTER_SETTLE_PAUSE)
 
         previous = self.filter_health
         self.filter_health = health

@@ -658,29 +658,42 @@ def test_the_search_drops_the_words_every_question_has() -> None:
     assert search_terms("Why is the sky blue?", "en") == "sky blue"
 
 
-def test_an_article_page_becomes_plain_text() -> None:
+def test_an_article_page_becomes_its_opening_paragraphs() -> None:
+    """Not the infobox: a taxobox is names and numbers, not sentences."""
     from biokids_ai.knowledge import plain_text
 
     page = (
-        "<html><head><style>x{}</style></head><body><h1>Ay</h1><p>Ay bir uydudur.[1]</p></body>"
+        "<html><body><table><tr><td>Alt gruplar † Amygdalodon</td></tr></table>"
+        "<p>Ay, Dünya'nın tek doğal uydusu ve Güneş Sistemi'nin beşinci büyük uydusudur.[1]</p>"
+        "<p>Kısa.</p></body></html>"
     )
-    assert plain_text(page) == "Ay Ay bir uydudur."
+    assert plain_text(page) == (
+        "Ay, Dünya'nın tek doğal uydusu ve Güneş Sistemi'nin beşinci büyük uydusudur."
+    )
 
 
-async def test_the_lookup_reads_the_search_and_the_articles(
+def test_the_subject_is_found_under_its_turkish_endings() -> None:
+    from biokids_ai.knowledge import title_guesses
+
+    assert title_guesses("Dinozorlar ne zaman yaşadı?", "tr")[:2] == ["Dinozorlar", "Dinozor"]
+    assert title_guesses("Ay neyin etrafında döner?", "tr")[0] == "Ay"
+    assert "Dünya" in title_guesses("Dünya'nın çevresi ne kadar?", "tr")
+    assert title_guesses("ışık neden hızlı?", "tr")[0] == "Işık"
+
+
+async def test_the_lookup_goes_to_the_article_by_its_title(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from biokids_ai import knowledge
 
-    pages = {
-        "/search": b"<rss><item><title>Ay</title><link>/content/b/A/Ay</link></item></rss>",
-        "/content/b/A/Ay": b"<body><p>Ay, D\xc3\xbcnya'n\xc4\xb1n tek uydusudur.</p></body>",
-    }
+    sentence = "Ay, Dünya'nın tek doğal uydusu ve en yakın gök cismidir, bilim insanları der."
+    pages = {"/content/b/Ay": f"<body><p>{sentence}</p></body>".encode()}
 
     async def fake_request(
         _endpoint: object, _method: str, path: str, **_: object
     ) -> tuple[int, bytes]:
-        return 200, pages[path.split("?")[0]]
+        found = pages.get(path.split("?")[0])
+        return (200, found) if found else (404, b"")
 
     class Server:
         endpoint = knowledge.Endpoint("http://127.0.0.1:8179")
@@ -690,4 +703,4 @@ async def test_the_lookup_reads_the_search_and_the_articles(
 
     monkeypatch.setattr(knowledge, "request", fake_request)
     shelf = knowledge.Knowledge(Server(), [knowledge.Book("tr", "b")])  # type: ignore[arg-type]
-    assert await shelf.lookup("Ay nedir?", "tr") == "Ay, Dünya'nın tek uydusudur."
+    assert await shelf.lookup("Ay neyin etrafında döner?", "tr") == sentence

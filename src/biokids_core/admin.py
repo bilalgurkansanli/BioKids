@@ -54,8 +54,12 @@ log = logging.getLogger("biokids.admin")
 
 LOGINCTL_TIMEOUT = 10
 
-LOCK_SETTLE_SECONDS = 3.0
-"""How long a screen locker gets to take the screen before the lockdown checks."""
+LOCK_SETTLE_SECONDS = 20.0
+"""How long a screen locker gets to take the screen before the lockdown ends the
+session. light-locker fades and hands the seat to the greeter in eight to ten
+seconds on the development VM; three, the first value, ended a session that
+was about to lock."""
+LOCK_POLL_SECONDS = 1.0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -275,6 +279,14 @@ def terminate_session(session_id: str) -> bool:
     return _loginctl_output(("loginctl", "terminate-session", session_id)) is not None
 
 
+def _still_on_screen(session_id: str) -> bool:
+    """On screen and not locked. light-locker never sets LockedHint (D-155); it
+    locks by handing the seat to the greeter, which makes the session inactive."""
+    if session_property(session_id, "Active") != "yes":
+        return False
+    return session_property(session_id, "LockedHint") != "yes"
+
+
 def group_members(group: str) -> set[str]:
     """The members of a Unix group, or nothing on a host without `grp`."""
     try:
@@ -326,14 +338,17 @@ def cmd_lockdown(_args: argparse.Namespace, config: Config) -> int:
     if locked:
         # `loginctl lock-session` only asks the child's screen locker. One that
         # is not running leaves the child on screen; end that session instead.
-        time.sleep(LOCK_SETTLE_SECONDS)
-        for session_id in list(locked):
-            on_screen = session_property(session_id, "Active") == "yes"
-            hinted = session_property(session_id, "LockedHint") == "yes"
-            if on_screen and not hinted:
-                log.error("session %s did not lock; ending it", session_id)
-                if not terminate_session(session_id):
-                    locked.remove(session_id)
+        waiting = set(locked)
+        deadline = time.monotonic() + LOCK_SETTLE_SECONDS
+        while waiting:
+            waiting = {sid for sid in waiting if _still_on_screen(sid)}
+            if not waiting or time.monotonic() >= deadline:
+                break
+            time.sleep(LOCK_POLL_SECONDS)
+        for session_id in sorted(waiting):
+            log.error("session %s did not lock; ending it", session_id)
+            if not terminate_session(session_id):
+                locked.remove(session_id)
 
     log.warning(
         "lockdown: locked %s session(s) for %s", len(locked), ", ".join(sorted(child_users))

@@ -1802,6 +1802,9 @@ async def test_an_open_filter_locks_the_children_until_it_closes(
 
     clock.advance(TICK)
     await supervisor.tick()
+    await supervisor.check_filter(clock.read().boot)  # arms: not in the first 30 s
+    assert not runner.ran("loginctl", "lock-session")
+    clock.advance(30)
     await supervisor.check_filter(clock.read().boot)
 
     assert runner.ran("loginctl", "lock-session", logged_in.session_id)
@@ -1832,6 +1835,8 @@ async def test_a_filter_that_does_not_answer_is_reported_not_locked(
     monkeypatch.setattr(dnsfilter, "dns_query_blocked", lambda *_a, **_k: None)
     await supervisor.start()
     source.log_in("elif")
+    await supervisor.check_filter(clock.read().boot)
+    clock.advance(30)
     await supervisor.check_filter(clock.read().boot)
     assert not runner.ran("loginctl", "lock-session")
     actions = [row.action for row in session.query(AuditLog).all()]

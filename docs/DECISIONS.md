@@ -1853,3 +1853,10 @@ Two smaller fixes from the review: the classifier's input is quoted with
 quotation and append a verdict of its own; and the self-harm answer gives a child
 with no grown-up nearby a number to call (183, and 112 for an emergency).
 
+
+**D-179 [claude] What the live run on the VM found.**
+The D-171 to D-178 packages were installed on the `s7c-ahmet` VM and driven with a real child session. The watchdog fired 84 seconds after the daemon was frozen, the lockdown locked Ahmet and the daemon came back; the guarded clock kept the day and the minutes when the date was moved to tomorrow; a request filed from the launcher was approved and the minutes moved from 17 to 32; a cross-site post to the launcher got 403; the child could not reach the panel by address or by `nip.io`. Three things were wrong, and are fixed:
+
+* **The lockdown ended a session that was about to lock.** It checked three seconds after asking; light-locker fades and hands the seat to the greeter in eight to ten. It now polls once a second for up to twenty, and only a session still on screen after that is ended.
+* **Every daemon start reported the filter as down.** The first check ran while dnsmasq, restarted by the same reload, was still reading its 300,000 names. The first check now waits thirty seconds, and a repair waits for dnsmasq to answer before judging it.
+* **The encyclopedia found the wrong articles, or none.** A full-text search for "Ay neyin etrafında döner?" found nothing, and "Gökkuşağı" found the flag. The subject is now looked up as an article title first, with Turkish endings removed ("dinozorlar" → "Dinozor", "Dünya'nın" → "Dünya") and the Turkish capital İ; only the opening paragraphs are taken, never the infobox. The Moon now comes back as "Dünya'nın tek doğal uydusu".
