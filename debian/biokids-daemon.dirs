@@ -1,8 +1,3 @@
-# The daemon renders its nftables ruleset into this directory. Shipping the
-# directory (empty) means the unit's ReadWritePaths= has something to bind and
-# the daemon has somewhere to write the first time filtering is turned on.
-etc/nftables.d
-
 # The daemon writes the kiosk's Chromium managed policy here (D-151). Debian's
 # chromium package does not create this directory - the unit's comment used to
 # assume it did - so without it the "-" ReadWritePaths= entry was skipped, /etc

@@ -320,8 +320,38 @@ def test_an_idle_session_expires(
 
 def test_signing_out_invalidates_the_session(client: TestClient, family_ready: None) -> None:
     login(client)
-    client.post("/logout", follow_redirects=False)
+    client.post("/logout", data={"csrf_token": csrf_of(client)}, follow_redirects=False)
     assert client.get("/today", follow_redirects=False).status_code == 303
+
+
+def test_another_site_cannot_sign_a_parent_out(client: TestClient, family_ready: None) -> None:
+    login(client)
+    client.post("/logout", follow_redirects=False)
+    assert client.get("/today", follow_redirects=False).status_code == 200
+
+
+def test_an_empty_recovery_code_never_resets_the_pin(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """The wizard once hashed whatever its hidden field sent, "" included."""
+    with db.session() as session:
+        parent = repo.get_parent(session)
+        assert parent is not None
+        parent.recovery_hash = security.hash_secret("")
+    response = client.post("/recovery", data={"code": "", "pin": "135790"})
+    assert response.status_code == 400
+
+
+def test_the_passphrase_gate_stops_after_five_wrong_guesses(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    from biokids_panel import auth
+
+    with db.session() as session:
+        for _ in range(auth.PASSPHRASE_ATTEMPTS):
+            repo.audit(session, actor="parent:1", action="passphrase_failed")
+        session.flush()
+        assert auth.passphrase_locked(session)
 
 
 def test_the_recovery_code_resets_the_pin(
@@ -1485,6 +1515,10 @@ def test_the_panel_does_not_hold_a_shutdown_for_an_open_phone(
     seen: dict[str, Any] = {}
     monkeypatch.setattr(panel_main.uvicorn, "run", lambda *_a, **kw: seen.update(kw))
     monkeypatch.setattr(panel_main, "set_config", lambda _config: None)
+    # Not the real app: built from the default paths it opens the machine's own
+    # /var/lib/biokids/biokids.db, which fails on a machine with BioKids
+    # installed and creates one on a machine without.
+    monkeypatch.setattr(panel_main, "create_app", lambda _config: object())
 
     panel_main.main(["--config", str(tmp_path / "nonexistent.toml")])
 

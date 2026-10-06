@@ -155,7 +155,9 @@ class Supervisor:
     def dns_filter(self) -> DnsFilter:
         """The children's DNS filter (D-167), its files under the data directory."""
         if self._dns_filter is None:
-            self._dns_filter = DnsFilter(self.config.paths.data_dir / "dns")
+            self._dns_filter = DnsFilter(
+                self.config.paths.data_dir / "dns", panel_port=self.config.panel.port
+            )
         return self._dns_filter
 
     # ------------------------------------------------------------ lifecycle
@@ -223,7 +225,7 @@ class Supervisor:
         `chrome://policy` was empty on every machine and the kiosk was an
         ordinary browser with an ordinary Ctrl+Shift+I.
         """
-        from biokids_shell.kiosk import POLICY_FILENAME, kiosk_policy
+        from biokids_core.browser_policy import POLICY_FILENAME, kiosk_policy
 
         directory = self.config.paths.chromium_policy_dir
         origin = f"{self.config.shell.host}:{self.config.shell.port}"

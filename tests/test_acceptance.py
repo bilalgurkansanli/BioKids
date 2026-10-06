@@ -152,7 +152,7 @@ class Machine:
         app = create_shell(self.config)
         app.state.shell.client = InProcessShellClient(self.shell_server, child_id)  # type: ignore[assignment]
         app.state.shell.launcher = _NeverActuallyStarts(self.config)
-        return TestClient(app)
+        return TestClient(app, base_url="http://127.0.0.1:7879")
 
     async def run_for(self, seconds: int) -> None:
         for _ in range(seconds // TICK):

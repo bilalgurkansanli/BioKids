@@ -73,7 +73,7 @@ def with_user(monkeypatch: pytest.MonkeyPatch, home: Path) -> Any:
     # real chown to it fails with EPERM, and as root it succeeds and leaves
     # files owned by a stranger; neither is what these tests are about. The
     # tests that are about ownership record the calls instead.
-    monkeypatch.setattr(prov.os, "chown", lambda *_a: None, raising=False)
+    monkeypatch.setattr(prov, "_own", lambda *_a: None)
     return fake
 
 
@@ -221,10 +221,10 @@ def test_files_are_owned_by_the_child_not_by_root(
     """
     owned: list[tuple[str, int, int]] = []
 
-    def record(path: object, uid: int, gid: int) -> None:
+    def record(path: object, _fd: object, uid: int, gid: int) -> None:
         owned.append((str(path), uid, gid))
 
-    monkeypatch.setattr(prov.os, "chown", record, raising=False)
+    monkeypatch.setattr(prov, "_own", record)
 
     prov.install_session_files("ayse", config)
 
@@ -241,7 +241,7 @@ def test_a_home_directory_that_cannot_be_written_is_reported(
     def refuse(*_a: object, **_k: object) -> None:
         raise PermissionError("read-only file system")
 
-    monkeypatch.setattr(prov.shutil, "copyfile", refuse)
+    monkeypatch.setattr(prov, "_write_into_home", refuse)
 
     written, problems = prov.install_session_files("ayse", config)
 
@@ -292,10 +292,10 @@ def test_every_directory_on_the_way_down_belongs_to_the_child(
     """
     owned: list[str] = []
 
-    def record(path: object, uid: int, gid: int) -> None:
+    def record(path: object, _fd: object, uid: int, gid: int) -> None:
         owned.append(str(path))
 
-    monkeypatch.setattr(prov.os, "chown", record, raising=False)
+    monkeypatch.setattr(prov, "_own", record)
 
     prov.install_session_files("ayse", config)
 
@@ -314,7 +314,7 @@ def test_nothing_above_the_home_directory_is_touched(
 ) -> None:
     """Walking up to chown must stop at the home directory, not at the root of the disk."""
     owned: list[str] = []
-    monkeypatch.setattr(prov.os, "chown", lambda p, _u, _g: owned.append(str(p)), raising=False)
+    monkeypatch.setattr(prov, "_own", lambda p, _f, _u, _g: owned.append(str(p)))
 
     prov.install_session_files("ayse", config)
 
@@ -322,6 +322,41 @@ def test_nothing_above_the_home_directory_is_touched(
         assert Path(path) == home or home in Path(path).parents, (
             f"chowned {path}, which is outside the child's home"
         )
+
+
+@pytest.mark.skipif(not prov._SAFE_OPEN, reason="needs O_NOFOLLOW and dir_fd (Linux)")
+def test_a_symlink_in_the_childs_home_is_never_followed(
+    with_user: Any, share: Path, home: Path, config: Config, tmp_path: Path
+) -> None:
+    """Root writes here, and the child owns the directory: the textbook symlink attack.
+
+    A child who points `~/.config` at `/etc` must not get root to create
+    directories there, write files there or chown it to them.
+    """
+    elsewhere = tmp_path / "etc"
+    elsewhere.mkdir()
+    (home / ".config").symlink_to(elsewhere)
+
+    written, problems = prov.install_session_files("ayse", config)
+
+    assert written == []
+    assert len(problems) == 3
+    assert list(elsewhere.iterdir()) == [], "root wrote through the child's link"
+
+
+@pytest.mark.skipif(not prov._SAFE_OPEN, reason="needs O_NOFOLLOW and dir_fd (Linux)")
+def test_a_dangling_link_where_a_file_belongs_is_refused(
+    with_user: Any, share: Path, home: Path, config: Config, tmp_path: Path
+) -> None:
+    autostart = home / ".config" / "autostart"
+    autostart.mkdir(parents=True)
+    target = tmp_path / "anywhere.desktop"
+    (autostart / "biokids-shell.desktop").symlink_to(target)
+
+    _written, problems = prov.install_session_files("ayse", config, overwrite=True)
+
+    assert any("biokids-shell.desktop" in problem for problem in problems)
+    assert not target.exists(), "root created a file at the end of the child's link"
 
 
 # --------------------------------------------- the sandbox the panel really runs in

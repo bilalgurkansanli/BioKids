@@ -151,6 +151,10 @@ Depends: biokids-core (= ${binary:Version}),
          devilspie2,
          fonts-noto-color-emoji,
          light-locker,
+         python3-fastapi,
+         python3-jinja2,
+         python3-python-multipart,
+         python3-uvicorn,
          xdotool,
          xfconf,
          ${misc:Depends},
@@ -179,10 +183,10 @@ Package: biokids-voice
 Architecture: all
 Section: sound
 Depends: biokids-core (= ${binary:Version}),
+         espeak-ng,
          pipewire,
          ${misc:Depends},
          ${python3:Depends}
-Recommends: espeak-ng
 Suggests: mbrola-tr1, mbrola-tr2
 Description: parental controls for Debian - Zio and Sio, the voice companions
  Zio and Sio are the two characters who tell a child what is happening: ten

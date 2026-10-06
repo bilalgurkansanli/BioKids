@@ -117,7 +117,8 @@
         <button class="btn" type="submit">{{ _('today.lock') }}</button>
       </form>
       <form method="post" action="/children/{{ child.child_id }}/poweroff"
-            onsubmit="return confirm('{{ _('today.poweroff.confirm', name=child.display_name) }}')">
+            data-confirm="{{ _('today.poweroff.confirm', name=child.display_name) }}"
+            onsubmit="return confirm(this.dataset.confirm)">
         <input type="hidden" name="csrf_token" value="{{ csrf }}">
         <input type="hidden" name="confirm" value="yes">
         <button class="btn btn--danger" type="submit">{{ _('today.poweroff') }}</button>

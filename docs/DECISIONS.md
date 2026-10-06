@@ -1740,3 +1740,49 @@ parent:
   wizard in the browser of whoever logs in: the parent who just installed BioKids
   is taken to it rather than told about it. It does nothing in a child's session,
   and nothing once `/` stops leading to the wizard.
+
+**D-171 [owner] The review's security findings, closed.**
+An end-to-end review on 2026-10-06 found these, and the owner asked for all of them
+to be fixed before anything new:
+
+* **Root no longer follows a child's symlinks.** Provisioning writes into the
+  child's home as root, and used `mkdir`, `copyfile` and `chown`, all of which
+  follow links: `~/.config` pointing at `/etc` would have had root chown `/etc`
+  to the child. Every level is now opened with `O_NOFOLLOW` relative to the one
+  above, given to the child through its descriptor, and the file is refused unless
+  it is a regular file with one name (`provision._write_into_home`).
+* **The launcher answers only its own page.** Its form routes (power off, ask a
+  parent, launch, volume) took a POST from any website the child opened. Every
+  request must now carry a loopback Host (no DNS rebinding), and every change must
+  not be cross-site by `Sec-Fetch-Site` and `Origin`.
+* **The panel is closed to the children by nftables**, by port and the whole
+  tailnet, instead of by three spellings in Chromium's policy. The policy no longer
+  names it, so the parent's own Chromium opens it from the menu (D-170).
+  `stop-dns-rebind` in the filter, and more DoH resolver addresses.
+* **The browser policy** moved to `biokids_core.browser_policy`: the daemon writes
+  it and imported it from `biokids_shell`, which `biokids-daemon` does not depend
+  on, so the daemon failed to start without the launcher installed. It now also
+  closes `file://`, typed `javascript:`, more of Chromium's own pages, guest and
+  add-person, and clicking through a certificate warning.
+* **Dependencies.** `biokids-shell` depends on the Python libraries it imports;
+  `espeak-ng` is a Depends of `biokids-voice`, since the spoken warning is the
+  exit criterion and `--no-install-recommends` used to silence it.
+* **`biokids-ai` is not in the `biokids` group**, which can grant time and power
+  the machine off; the assistant never opens the daemon's socket. Upgrades remove
+  it from the group.
+* **The recovery code must look like one.** The wizard hashed whatever its hidden
+  field sent, so an empty code could be stored and then reset the PIN. A code is
+  now eight words from the list or it is refused, at both ends.
+* **The passphrase gate stops after five wrong tries in fifteen minutes**, counted
+  from the audit log; the PIN fallback goes through the same function. Signing out
+  needs the CSRF token, the alert page's `next` goes through `safe_next`, and the
+  power-off confirmation no longer puts a child's name inside JavaScript.
+* **The daemon bounds a grant (12 h) and a timeout (24 h)**; a negative grant used
+  to take time away.
+* **A database copy before every migration**: `biokids-admin backup-db`, run by the
+  postinst, SQLite's online backup, three kept, in `/var/lib/biokids/backups`.
+* **systemd**: the daemon keeps only `CAP_NET_ADMIN` and `CAP_CHOWN`, the panel no
+  capability at all; both get the remaining `Protect*`/`Restrict*` settings, and
+  neither may write `/etc/dnsmasq.d`, `/etc/nftables.d` or `/etc/biokids`, which
+  nothing wrote.
+

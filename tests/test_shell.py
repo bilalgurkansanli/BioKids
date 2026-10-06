@@ -36,6 +36,9 @@ from biokids_shell.kiosk import (
 )
 from biokids_shell.launcher import AppLauncher, LaunchRequest
 
+LAUNCHER = "http://127.0.0.1:7879"
+"""Where the kiosk opens the launcher; any other Host is refused (DNS rebinding)."""
+
 
 def a_state(**overrides: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
@@ -147,7 +150,7 @@ def client(config: Config, daemon: FakeShellDaemon) -> TestClient:
     app.state.shell.client = daemon  # type: ignore[assignment]
     # Never actually start a process during a test.
     app.state.shell.launcher = _RecordingLauncher(config)
-    return TestClient(app)
+    return TestClient(app, base_url=LAUNCHER)
 
 
 class _RecordingLauncher(AppLauncher):
@@ -404,7 +407,7 @@ def test_the_launcher_holds_when_the_daemon_is_gone(config: Config) -> None:
     """A working launcher with no limits behind it is the failure to avoid."""
     app = create_app(config)
     app.state.shell.client = FakeShellDaemon(None)  # type: ignore[assignment]
-    client = TestClient(app)
+    client = TestClient(app, base_url=LAUNCHER)
 
     page = client.get("/").text
     assert "Boya" not in page, "no application may be launchable with nothing supervising"
@@ -420,7 +423,7 @@ def test_the_launcher_does_not_address_a_six_year_old_as_siz(config: Config) -> 
     """
     app = create_app(config)
     app.state.shell.client = FakeShellDaemon(None)  # type: ignore[assignment]
-    page = TestClient(app).get("/").text
+    page = TestClient(app, base_url=LAUNCHER).get("/").text
 
     assert "deneyin" not in page, "the child is addressed as 'siz'"
     assert "yeniden başlat" not in page, "advice only a parent can act on"
@@ -448,7 +451,7 @@ def test_the_time_up_screen_says_what_will_actually_happen(
         )
         app = create_app(config)
         app.state.shell.client = daemon  # type: ignore[assignment]
-        wording[action] = TestClient(app).get("/").text
+        wording[action] = TestClient(app, base_url=LAUNCHER).get("/").text
 
     assert "kapanacak" in wording["poweroff"]
     assert "kilitlenecek" in wording["lock"], "a lock was announced as a shutdown"
@@ -466,7 +469,7 @@ def test_an_unknown_end_action_falls_back_rather_than_guessing(
     )
     app = create_app(config)
     app.state.shell.client = daemon  # type: ignore[assignment]
-    page = TestClient(app).get("/").text
+    page = TestClient(app, base_url=LAUNCHER).get("/").text
 
     assert "süren doldu" in page
     assert "kapanacak" not in page and "kilitlenecek" not in page
@@ -891,14 +894,23 @@ def test_games_are_found_where_debian_puts_them(monkeypatch: pytest.MonkeyPatch)
 # ------------------------------------------------ the open internet (D-167)
 
 
-def test_open_mode_has_no_wildcard_and_keeps_the_panel_closed() -> None:
-    """Harmful sites are the DNS filter's job; the browser keeps the panel shut."""
+def test_open_mode_has_no_wildcard_and_keeps_chromiums_own_pages_closed() -> None:
+    """Harmful sites are the DNS filter's job; the browser keeps its own pages shut."""
     policy = kiosk_policy("127.0.0.1:7879", ["eba.gov.tr"], mode="blocklist")
     blocked = policy["URLBlocklist"]
     assert isinstance(blocked, list)
     assert "*" not in blocked
-    assert "127.0.0.1:7878" in blocked and "ts.net" in blocked
     assert "chrome://settings" in blocked and "chrome://flags" in blocked
+    assert "file://*" in blocked, "Ctrl+O browses the disk"
+    assert policy["SSLErrorOverrideAllowed"] is False
+
+
+def test_the_policy_does_not_close_the_parents_panel() -> None:
+    """Chromium's policy is machine-wide. The panel is closed to the children by
+    nftables (render_nft), so the parent's own browser opens it from the menu."""
+    blocked = kiosk_policy("127.0.0.1:7879", mode="allowlist")["URLBlocklist"]
+    assert isinstance(blocked, list)
+    assert not any("7878" in str(entry) for entry in blocked)
 
 
 def test_safe_search_is_forced_in_every_mode() -> None:
@@ -914,3 +926,39 @@ def test_chromes_own_pages_are_closed_even_with_the_wildcard() -> None:
     blocked = kiosk_policy("127.0.0.1:7879")["URLBlocklist"]
     assert isinstance(blocked, list)
     assert "chrome://settings" in blocked
+
+
+# ------------------------------------------------- only the launcher's own page
+
+
+def test_a_website_cannot_power_the_machine_off(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    """Any page the child opens could submit a form to 127.0.0.1:7879."""
+    response = client.post(
+        "/shutdown",
+        headers={"origin": "https://example.com", "sec-fetch-site": "cross-site"},
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "path", ["/shutdown", "/ask-a-parent", "/first-run", "/device/volume?value=100"]
+)
+def test_every_change_refuses_another_site(client: TestClient, path: str) -> None:
+    response = client.post(path, headers={"sec-fetch-site": "cross-site"})
+    assert response.status_code == 403
+
+
+def test_a_rebound_name_is_not_the_launcher(client: TestClient) -> None:
+    """evil.example resolving to 127.0.0.1 is same-origin with itself, not with us."""
+    response = client.get("/state", headers={"host": "evil.example:7879"})
+    assert response.status_code == 421
+
+
+def test_the_launchers_own_page_still_works(client: TestClient) -> None:
+    response = client.post(
+        "/device/volume?value=40",
+        headers={"origin": LAUNCHER, "sec-fetch-site": "same-origin"},
+    )
+    assert response.status_code == 200

@@ -1137,3 +1137,7 @@ msgstr "Telefondan erişim kuruldu"
 
 msgid "audit.action.remote_setup_started"
 msgstr "Telefondan erişim kurulumu başlatıldı"
+
+# Wizard step 3: the posted recovery code was not a real one
+msgid "wizard.recovery.replaced"
+msgstr "Kurtarma kodu sayfadan doğru gelmedi. Bu yeni kodu yazın ve tekrar onaylayın."

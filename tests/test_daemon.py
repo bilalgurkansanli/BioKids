@@ -1654,8 +1654,8 @@ async def test_the_browser_policy_follows_the_childrens_web_tiles(
     supervisor: Supervisor, session: Session, config: Config
 ) -> None:
     """Machine-wide, so it must name every web tile a parent enabled (D-156)."""
+    from biokids_core.browser_policy import POLICY_FILENAME
     from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
-    from biokids_shell.kiosk import POLICY_FILENAME
 
     sync_catalog(session, load_catalog(config=config))
     enable_for_child(session, 1, ["eba", "volume"])

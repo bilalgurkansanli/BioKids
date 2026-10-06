@@ -74,27 +74,67 @@ SAFE_SEARCH: Final[dict[str, tuple[tuple[str, ...], tuple[str, ...]]]] = {
 DOH_ADDRESSES: Final = (
     "1.1.1.1",
     "1.0.0.1",
+    "1.1.1.2",
+    "1.0.0.2",
+    "1.1.1.3",
+    "1.0.0.3",
     "8.8.8.8",
     "8.8.4.4",
     "9.9.9.9",
     "149.112.112.112",
+    "9.9.9.10",
+    "149.112.112.10",
+    "9.9.9.11",
+    "149.112.112.11",
     "94.140.14.14",
     "94.140.15.15",
+    "94.140.14.15",
+    "94.140.15.16",
     "208.67.222.222",
     "208.67.220.220",
+    "208.67.222.123",
+    "208.67.220.123",
     "185.228.168.168",
+    "185.228.168.9",
+    "185.228.169.9",
     "76.76.2.0",
     "76.76.10.0",
+    "45.90.28.0",
+    "45.90.30.0",
+    "194.242.2.2",
+    "194.242.2.3",
+    "194.242.2.4",
+    "194.242.2.5",
+    "194.242.2.6",
+    "194.242.2.9",
 )
 DOH_ADDRESSES6: Final = (
     "2606:4700:4700::1111",
     "2606:4700:4700::1001",
+    "2606:4700:4700::1112",
+    "2606:4700:4700::1002",
+    "2606:4700:4700::1113",
+    "2606:4700:4700::1003",
     "2001:4860:4860::8888",
     "2001:4860:4860::8844",
     "2620:fe::fe",
     "2620:fe::9",
+    "2620:fe::10",
+    "2620:fe::fe:10",
+    "2620:fe::11",
     "2a10:50c0::ad1:ff",
+    "2a10:50c0::ad2:ff",
+    "2a07:a8c0::",
+    "2a07:a8c1::",
+    "2a07:e340::2",
 )
+
+PANEL_PORT: Final = 7878
+TAILNET4: Final = "100.64.0.0/10"
+TAILNET6: Final = "fd7a:115c:a1e0::/48"
+"""Tailscale's address ranges. The panel is published there (D-33); a child has
+nothing to reach on the family's tailnet, and closing it by address closes the
+panel under every name it has there."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -167,6 +207,10 @@ def render_conf(
         "no-hosts",
         "domain-needed",
         "bogus-priv",
+        # No public name may answer with a private address, 127.0.0.1 included:
+        # that is how a web page reaches the launcher or the router as its own
+        # origin (DNS rebinding). A child has no LAN names to look up.
+        "stop-dns-rebind",
         "cache-size=10000",
         "resolv-file=/etc/resolv.conf",
         f"user={user}",
@@ -186,8 +230,17 @@ def render_conf(
     return "\n".join(lines) + "\n"
 
 
-def render_nft(child_uids: Sequence[int]) -> str:
-    """The children's redirect and the DoH/DoT refusals, as one atomic nft file."""
+def render_nft(child_uids: Sequence[int], panel_port: int = PANEL_PORT) -> str:
+    """The children's redirect, the DoH/DoT refusals and the closed panel, as one
+    atomic nft file.
+
+    The panel is closed here and not only in the browser. A URL list closes the
+    spellings it names and nothing else - `127.0.0.1.nip.io:7878`, a tailnet
+    address or a rebound name all reached the PIN page, where a child could
+    trip the lockout and keep a parent out for a day. By uid, every program the
+    child runs is refused every way in, and the parent's own browser is not
+    touched.
+    """
     uids = ", ".join(str(uid) for uid in sorted(set(child_uids)))
     elements = f"\n\t\telements = {{ {uids} }}" if uids else ""
     doh4 = ", ".join(DOH_ADDRESSES)
@@ -213,6 +266,9 @@ table inet {NFT_TABLE} {{
 \t\tmeta skuid @children ip daddr {{ {doh4} }} udp dport 443 reject
 \t\tmeta skuid @children ip6 daddr {{ {doh6} }} tcp dport 443 reject
 \t\tmeta skuid @children ip6 daddr {{ {doh6} }} udp dport 443 reject
+\t\tmeta skuid @children tcp dport {panel_port} reject
+\t\tmeta skuid @children ip daddr {TAILNET4} reject
+\t\tmeta skuid @children ip6 daddr {TAILNET6} reject
 \t}}
 }}
 """
@@ -263,9 +319,12 @@ class DnsFilter:
     nftables service) may have removed it since.
     """
 
-    def __init__(self, directory: Path, lists_dir: Path = LISTS_DIR) -> None:
+    def __init__(
+        self, directory: Path, lists_dir: Path = LISTS_DIR, panel_port: int = PANEL_PORT
+    ) -> None:
         self.files = FilterFiles(directory)
         self.lists_dir = lists_dir
+        self.panel_port = panel_port
         self._blocklist: str | None = None
         self.last_error = ""
 
@@ -274,7 +333,7 @@ class DnsFilter:
         # DNS goes to the filter's port. If nothing answers there, they have no
         # internet; that is the fail-safe, never an unfiltered one (principle 3).
         try:
-            write_atomically(self.files.nft, render_nft(uids_of(child_users)))
+            write_atomically(self.files.nft, render_nft(uids_of(child_users), self.panel_port))
         except OSError as exc:
             self.last_error = f"files: {exc}"
             log.error("the children's DNS redirect could not be written: %s", exc)

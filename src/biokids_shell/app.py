@@ -30,7 +30,13 @@ from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Form, Request, Response
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    StreamingResponse,
+)
 from fastapi.staticfiles import StaticFiles
 from jinja2 import ChainableUndefined, Environment, FileSystemLoader, select_autoescape
 
@@ -232,6 +238,25 @@ def create_app(config: Config | None = None) -> FastAPI:
             response.headers["Cache-Control"] = "no-cache"
         return response
 
+    @app.middleware("http")
+    async def only_the_launcher(request: Request, call_next: Any) -> Response:
+        """Answer the launcher's own page, and nothing a website can forge.
+
+        The launcher acts as the child on the daemon's shell socket, so a request
+        here is the child asking: to start an app, to power the machine off, to
+        file a request with a parent. Any website the child opens could submit a
+        form to 127.0.0.1:7879, and a page on a name that resolves to 127.0.0.1
+        (DNS rebinding) is even same-origin with itself. So the Host must be a
+        loopback name, and a request that changes anything must not come from
+        another site.
+        """
+        if not _loopback_host(request.headers.get("host", "")):
+            return PlainTextResponse("", status_code=421)
+        if request.method not in SAFE_METHODS and not _same_origin(request):
+            return PlainTextResponse("", status_code=403)
+        response: Response = await call_next(request)
+        return response
+
     register_routes(app)
     return app
 
@@ -346,7 +371,7 @@ def register_routes(app: FastAPI) -> None:
                 exec_cmd=str(tile.get("exec", "")),
                 url=str(tile.get("url", "")),
                 category=str(tile.get("category", "")),
-                locale=normalise_locale(str(data.get("locale", "tr"))),
+                locale=normalise_locale(str((data or {}).get("locale", "tr"))),
             )
         )
         if result.ok:
@@ -526,6 +551,34 @@ def tile_can_start(tile: dict[str, Any]) -> bool:
 
 MAX_RECORDING_BYTES = 16_000 * 2 * 16 + 1024
 """Sixteen seconds of 16 kHz mono: the button stops at fifteen."""
+
+
+SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+LOOPBACK_NAMES = frozenset({"127.0.0.1", "localhost", "[::1]"})
+
+
+def _loopback_host(host: str) -> bool:
+    """True for a Host header naming this machine's loopback, with any port."""
+    host = host.strip().lower()
+    name = host.split("]", 1)[0] + "]" if host.startswith("[") else host.rsplit(":", 1)[0]
+    return name in LOOPBACK_NAMES
+
+
+def _same_origin(request: Request) -> bool:
+    """Whether the browser says this request came from the launcher's own page.
+
+    Chromium sends Sec-Fetch-Site and Origin with every POST it makes. A request
+    with neither did not come from a browser, and the child has no other program
+    that could send one.
+    """
+    site = request.headers.get("sec-fetch-site")
+    if site is not None and site not in {"same-origin", "none"}:
+        return False
+    origin = request.headers.get("origin")
+    if origin is None:
+        return True
+    host = request.headers.get("host", "")
+    return origin in {f"http://{host}", f"https://{host}"}
 
 
 def _from_launcher(request: Request, content_type: str) -> bool:

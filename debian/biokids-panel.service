@@ -40,12 +40,25 @@ RestrictNamespaces=yes
 RestrictSUIDSGID=yes
 MemoryDenyWriteExecute=yes
 SystemCallFilter=@system-service
-# Two deliberate differences from the block in SECURITY.md section 2:
-#   /etc/biokids is added, because writing config.toml is the panel's job;
-#   the three filter directories are left out, because the daemon is the single
-#   writer of a live filter (ARCHITECTURE.md section 2) and the panel asks it
-#   over the socket rather than rendering anything itself.
-ReadWritePaths=/var/lib/biokids /var/log/biokids /run/biokids /etc/biokids
+LockPersonality=yes
+RestrictRealtime=yes
+SystemCallArchitectures=native
+ProtectClock=yes
+ProtectKernelLogs=yes
+ProtectHostname=yes
+# Root by uid only: no capabilities at all. Everything the panel writes is
+# root-owned already, and what it asks of the system - starting the provisioning
+# unit, Tailscale's local API - is a socket that checks the caller's uid. The
+# panel is the one root process reachable from a phone; a bug in it should find
+# nothing to use.
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+# The filter directories are left out because the daemon is the single writer of
+# a live filter (ARCHITECTURE.md section 2) and the panel asks it over the
+# socket. Neither is /etc/biokids writable: nothing in the panel writes there;
+# what a parent changes lives in the database.
+ReadWritePaths=/var/lib/biokids /var/log/biokids /run/biokids
 # No IPAddressDeny= here, tempting as it is. The panel sends the parent's
 # notification mail through their own SMTP server (SECURITY.md section 4), and
 # an address filter that silently swallows those would be a worse bug than the

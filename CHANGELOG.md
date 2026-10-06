@@ -235,6 +235,17 @@ Found on the first Debian 13 VM (`docs/VM-RUNBOOK.md`), none of it visible from 
 - **The ring shows the minutes left, at every age** (D-162), in the corner and in the
   full-screen time warning.
 
+### Security
+
+- **D-171, the review's security findings.** Provisioning no longer follows symlinks
+  in a child's home as root. The launcher refuses requests from other sites and
+  rebound names. The panel is closed to the children by nftables (and no longer by
+  the machine-wide browser policy, so the parent's Chromium can open it). The browser
+  policy closes `file://` and certificate click-through. The recovery code and the
+  passphrase gate are validated and rate-limited. `biokids-ai` leaves the `biokids`
+  group. A database backup runs before every migration. The daemon and panel units
+  drop to two capabilities and none.
+
 ### Known gaps
 
 Stated here rather than discovered later:

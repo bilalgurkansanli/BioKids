@@ -38,7 +38,7 @@ from sqlalchemy.orm import Session
 from biokids_core import repo, security
 from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
 from biokids_core.config import Config, get_config
-from biokids_core.db.models import Policy, utcnow
+from biokids_core.db.models import Policy
 from biokids_core.errors import IpcError
 from biokids_core.i18n import Translator
 from biokids_core.ipc import AsyncDaemonClient, Op
@@ -341,7 +341,15 @@ def register_routes(app: FastAPI) -> None:
         return response
 
     @app.post("/logout")
-    def logout(request: Request, session: Db) -> Response:
+    def logout(
+        request: Request,
+        session: Db,
+        state: Auth,
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        # A page elsewhere must not be able to sign the parent out mid-task.
+        if state.session is not None and not auth.csrf_ok(state, csrf_token):
+            return see_other("/today?error=csrf")
         auth.logout(session, request.cookies.get(auth.SESSION_COOKIE))
         response = see_other("/login")
         response.delete_cookie(auth.SESSION_COOKIE, path="/")
@@ -651,31 +659,7 @@ def register_routes(app: FastAPI) -> None:
             return see_other("/children?error=1")
 
         if passphrase:
-            parent = state.parent
-            if parent is not None and not parent.passphrase_hash:
-                # No passphrase on this install: the PIN, re-entered, is the
-                # fallback. Never a dead end (principle #4).
-                accepted = security.verify_secret(parent.pin_hash, passphrase.strip())
-                if accepted and state.session is not None:
-                    state.session.passphrase_ok_until = utcnow() + dt.timedelta(
-                        minutes=auth.PASSPHRASE_GRACE_MINUTES
-                    )
-                if not accepted:
-                    # Audited, like every other failure at this gate. Without
-                    # this, a child who watched the PIN being typed could guess
-                    # at "turn protection off" indefinitely on an install with
-                    # no passphrase, and a parent checking the log for "did
-                    # somebody try to switch BioKids off" saw nothing at all.
-                    repo.audit(
-                        session,
-                        actor=_actor(state),
-                        action="passphrase_failed",
-                        target=f"child:{child_id}",
-                        detail={"via": "pin_fallback"},
-                        severity="warning",
-                    )
-            else:
-                auth.confirm_passphrase(session, state, passphrase)
+            auth.confirm_passphrase(session, state, passphrase)
 
         try:
             windows = {
@@ -1058,7 +1042,7 @@ def register_routes(app: FastAPI) -> None:
         blocked = _guard(request, session, state)
         if blocked:
             return blocked
-        target = next if next.startswith("/") and not next.startswith("//") else "/today"
+        target = auth.safe_next(next)
         if not auth.csrf_ok(state, csrf_token):
             return see_other(f"{target}?error=csrf")
         repo.dismiss_alert(session, alert_id)

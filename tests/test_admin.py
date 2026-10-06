@@ -468,3 +468,37 @@ def test_every_other_subcommand_still_refuses_a_broken_config(
 
     with pytest.raises(ConfigError):
         admin.main(["--config", str(broken), "status"])
+
+
+# ---------------------------------------------------------------- backup-db
+
+
+def test_a_backup_is_a_readable_copy_and_only_the_newest_are_kept(
+    config: Config, db: Database, family_with_children: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The postinst takes one before every migration (SQLite cannot roll most back)."""
+    import sqlite3
+
+    stamps = iter(["20260101T000000Z", "20260102T000000Z", "20260103T000000Z"])
+
+    class Clock:
+        @staticmethod
+        def now(_tz: object) -> Any:
+            return mock.Mock(strftime=lambda _f: next(stamps))
+
+    monkeypatch.setattr(admin.dt, "datetime", Clock)
+    copies = [admin.backup_database(config, keep=2, reason="upgrade") for _ in range(3)]
+
+    assert all(copy is not None for copy in copies)
+    remaining = sorted(p.name for p in copies[0].parent.iterdir())  # type: ignore[union-attr]
+    assert remaining == [
+        "biokids-20260102T000000Z-upgrade.db",
+        "biokids-20260103T000000Z-upgrade.db",
+    ]
+    with sqlite3.connect(copies[-1]) as con:  # type: ignore[arg-type]
+        assert con.execute("select count(*) from child").fetchone()[0] == 2
+
+
+def test_no_database_yet_is_not_an_error(tmp_path: Path) -> None:
+    config = Config.load(tmp_path / "nonexistent.toml").with_prefix(tmp_path / "empty")
+    assert admin.backup_database(config) is None

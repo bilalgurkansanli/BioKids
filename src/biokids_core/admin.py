@@ -22,10 +22,13 @@ override is not a parental-control product.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import getpass
 import json
 import logging
 import os
+import re
+import sqlite3
 import subprocess
 import sys
 from collections.abc import Sequence
@@ -61,6 +64,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "provision-child": cmd_provision_child,
         "refresh-greeter": cmd_refresh_greeter,
         "remote-setup": cmd_remote_setup,
+        "backup-db": cmd_backup_db,
         "version": cmd_version,
     }
     handler = handlers.get(args.command)
@@ -124,6 +128,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="show every child's name and picture on the login screen (D-170)",
     )
     sub.add_parser("version", help="print the version")
+
+    backup = sub.add_parser(
+        "backup-db",
+        help="copy the database next to it, as biokids.db's postinst does before a migration",
+    )
+    backup.add_argument("--keep", type=int, default=3, help="how many copies to keep")
+    backup.add_argument(
+        "--reason", default="manual", help="a word for the file name, such as 'upgrade'"
+    )
 
     reset = sub.add_parser("reset-pin", help="set a new parent PIN (D-50)")
     # Read from the terminal, not from argv: an argument is visible to every
@@ -310,6 +323,62 @@ def _audit_lockdown(config: Config, locked: Sequence[str], users: Sequence[str])
         database.dispose()
     except Exception:
         log.exception("the lockdown could not be written to the audit log")
+
+
+# ---------------------------------------------------------------- backup-db
+
+BACKUP_DIR_NAME = "backups"
+_BACKUP_NAME = re.compile(r"^biokids-\d{8}T\d{6}Z-[a-z0-9-]+\.db$")
+
+
+def backup_database(config: Config, *, keep: int = 3, reason: str = "manual") -> Path | None:
+    """Copy the database with SQLite's online backup; return the copy, or None
+    when there is no database yet.
+
+    Online backup is consistent while the daemon is writing, unlike a file copy
+    of a WAL database. Copies are 0600 in a 0700 directory beside the database,
+    because they hold exactly what it holds. Only the newest `keep` remain.
+    """
+    source = config.paths.db_path
+    if not source.exists():
+        return None
+    directory = source.parent / BACKUP_DIR_NAME
+    directory.mkdir(mode=0o700, exist_ok=True)
+    tag = re.sub(r"[^a-z0-9-]+", "-", reason.lower()).strip("-") or "manual"
+    stamp = dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
+    target = directory / f"biokids-{stamp}-{tag}.db"
+
+    reader = sqlite3.connect(f"file:{source}?mode=ro", uri=True)
+    try:
+        # Created empty and 0600 before a byte of the family's data is in it.
+        target.touch(mode=0o600)
+        writer = sqlite3.connect(target)
+        try:
+            reader.backup(writer)
+        finally:
+            writer.close()
+    finally:
+        reader.close()
+
+    copies = sorted(p for p in directory.iterdir() if _BACKUP_NAME.match(p.name))
+    for old in copies[: max(0, len(copies) - max(keep, 1))]:
+        old.unlink(missing_ok=True)
+    return target
+
+
+def cmd_backup_db(args: argparse.Namespace, config: Config) -> int:
+    """Fails loudly: the postinst runs it before a migration, and migrating a
+    database there is no copy of is the thing it exists to prevent."""
+    try:
+        copy = backup_database(config, keep=args.keep, reason=args.reason)
+    except (OSError, sqlite3.Error) as exc:
+        log.error("could not back up %s: %s", config.paths.db_path, exc)
+        return 1
+    if copy is None:
+        log.info("no database at %s yet; nothing to back up", config.paths.db_path)
+    else:
+        log.info("database copied to %s", copy)
+    return 0
 
 
 # -------------------------------------------------------------------- status

@@ -1137,3 +1137,7 @@ msgstr "Phone access set up"
 
 msgid "audit.action.remote_setup_started"
 msgstr "Phone access setup started"
+
+# Wizard step 3: the posted recovery code was not a real one
+msgid "wizard.recovery.replaced"
+msgstr "The recovery code did not come back from the page intact. Write down this new one and confirm again."
