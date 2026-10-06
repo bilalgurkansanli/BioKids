@@ -235,6 +235,42 @@ Found on the first Debian 13 VM (`docs/VM-RUNBOOK.md`), none of it visible from 
 - **The ring shows the minutes left, at every age** (D-162), in the corner and in the
   full-screen time warning.
 
+### Added (review follow-ups)
+
+- **D-176, hours are picked, not typed.** Two ranges per kind of day with the
+  browser's time picker, and any weekday with its own minutes and hours.
+- **D-177, mail to the parent** through their own SMTP server: alerts and requests
+  within a minute, the week on Sunday evening, retried when offline.
+- **D-178, a local encyclopedia for the assistant.** Kiwix's Wikipedia summaries,
+  searched by `kiwix-serve` inside the assistant's own network namespace, given to
+  the model as the facts to prefer. The self-harm answer names 183 and 112.
+- **D-174, the parent's own voice** for the seven spoken lines, recorded on the phone.
+- **D-175, for a child who cannot read yet**: tiles and screens read themselves in
+  the 4-7 band, and a sun sets along the time ring.
+- **CI** shellchecks the maintainer scripts, installs, upgrades and purges the
+  packages on a clean trixie, checks the migrations against the models, and a
+  release runs the suite before it publishes.
+
+- **D-173, "Anneme sor" answered.** A requests screen in the panel (more time with
+  +15/+30/+60, sites and apps with yes/not now), a "Biraz daha süre iste" button in
+  the launcher's last fifteen minutes, the answer shown and spoken on the child's
+  screen, "Kilidi aç" on Today, and grants of +10 and +30.
+- **D-172, fail-safe that is checked.** A systemd watchdog, command and tick
+  timeouts, a once-a-minute outside check of the DNS filter, verified locks, a
+  wall clock the daemon guards against date changes, and a lockdown that works
+  without the database.
+
+### Security
+
+- **D-171, the review's security findings.** Provisioning no longer follows symlinks
+  in a child's home as root. The launcher refuses requests from other sites and
+  rebound names. The panel is closed to the children by nftables (and no longer by
+  the machine-wide browser policy, so the parent's Chromium can open it). The browser
+  policy closes `file://` and certificate click-through. The recovery code and the
+  passphrase gate are validated and rate-limited. `biokids-ai` leaves the `biokids`
+  group. A database backup runs before every migration. The daemon and panel units
+  drop to two capabilities and none.
+
 ### Known gaps
 
 Stated here rather than discovered later:

@@ -195,6 +195,19 @@ def register_wizard(app: FastAPI) -> None:
                 error=tr("wizard.recovery.not_confirmed"),
                 recovery=recovery,
             )
+        if not security.is_recovery_code(recovery):
+            # Not the code this page showed. A fresh one, shown with the reason,
+            # rather than the hash of whatever arrived.
+            return _render_step(
+                ctx,
+                request,
+                session,
+                state,
+                tr,
+                3,
+                error=tr("wizard.recovery.replaced"),
+                recovery=security.generate_recovery_code(),
+            )
         parent = repo.get_parent(session)
         if parent is None:
             return see_other("/wizard/2")

@@ -58,6 +58,19 @@ def test_the_filter_cannot_simply_be_gone_round() -> None:
     assert "1.1.1.1" in rules and "8.8.8.8" in rules, "DoH by address"
 
 
+def test_the_panel_is_closed_to_children_every_way_in() -> None:
+    """By port, whatever name or address was typed, and the whole tailnet."""
+    rules = render_nft([1001], panel_port=7878)
+    assert "meta skuid @children tcp dport 7878 reject" in rules
+    assert "meta skuid @children ip daddr 100.64.0.0/10 reject" in rules
+    assert "meta skuid @children ip6 daddr fd7a:115c:a1e0::/48 reject" in rules
+
+
+def test_a_public_name_cannot_answer_with_a_private_address(tmp_path: Path) -> None:
+    """DNS rebinding: 127.0.0.1.nip.io would otherwise be a way to the launcher."""
+    assert "stop-dns-rebind" in render_conf(FilterFiles(tmp_path)).splitlines()
+
+
 def test_the_rules_replace_themselves_in_one_transaction() -> None:
     """`destroy` then the table, in one file: nft -f applies it atomically."""
     rules = render_nft([1001])

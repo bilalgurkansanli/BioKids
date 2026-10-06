@@ -1,0 +1,3 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}
+Good news, {name}! A grown-up said yes.
+You got a yes! Off you go.

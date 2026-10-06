@@ -4,11 +4,11 @@
 back when it goes away. The lockdown is three layers, because any one of them
 alone is a bypass:
 
-1. **A managed policy for this profile alone.** `URLBlocklist: ["*"]` with the
-   launcher's own origin as the single exception, no developer tools, no
-   extensions, no incognito, no printing, no downloads. Written to the child's
-   own Chromium user-data-dir, not the system policy directory, so it cannot
-   affect the parent's browser.
+1. **A managed policy** (`biokids_core.browser_policy`): no developer tools, no
+   extensions, no incognito, no printing, no downloads, no `file://`, and in
+   "only the sites I choose" mode `URLBlocklist: ["*"]` with the launcher and
+   the web tiles as the exceptions. Chromium reads it machine-wide from
+   `/etc/chromium/policies/managed`; the daemon writes it.
 2. **Chromium's own switches**: `--kiosk`, `--app=`, no first-run bubbles, no
    default-browser prompt, no translate bar.
 3. **The window manager.** Chromium cannot suppress `Alt+F4` or `Ctrl+Alt+F2` —
@@ -27,27 +27,25 @@ import asyncio
 import json
 import logging
 import shutil
-from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
+# Re-exported: the policy lives in biokids_core so that the daemon, which writes
+# it, does not need this package installed.
+from biokids_core.browser_policy import (
+    INTERNAL_PAGES as INTERNAL_PAGES,
+)
+from biokids_core.browser_policy import (
+    MANAGED_POLICY_DIR as MANAGED_POLICY_DIR,
+)
+from biokids_core.browser_policy import (
+    POLICY_FILENAME,
+    kiosk_policy,
+)
 from biokids_core.config import Config, get_config
 
 log = logging.getLogger(__name__)
 
-MANAGED_POLICY_DIR = Path("/etc/chromium/policies/managed")
-"""The only place Chromium on Linux reads a managed policy from, and the default
-for `PathsConfig.chromium_policy_dir`.
-
-Not `<user-data-dir>/policies/managed/`, which is where this file used to write
-one: `--user-data-dir` adds no policy source, so every lockdown T5.2 promises
-was inert and `chrome://policy` in the kiosk profile was empty.
-
-The daemon writes the file - it runs as root and its unit carries this directory
-in `ReadWritePaths` - and the launcher, which runs as the child, only checks that
-it is there."""
-
-POLICY_FILENAME = "biokids-kiosk.json"
 
 KIOSK_WINDOW_CLASS = "biokids-kiosk"
 """The launcher window's WM_CLASS, set with Chromium's `--class`. It is how the
@@ -58,82 +56,6 @@ RESTART_BACKOFF_MAX = 30.0
 """If Chromium is crash-looping, back off rather than spinning the CPU. The
 child still sees a locked screen, because the session is the desktop and the
 desktop has nothing on it."""
-
-
-PANEL_ADDRESSES = ("127.0.0.1:7878", "localhost:7878", "[::1]:7878", "ts.net")
-"""The parent's panel, which a child must not reach even to look at its PIN
-page: by address, and over Tailscale, where the machine's own name ends in
-ts.net (SECURITY.md section 1)."""
-
-INTERNAL_PAGES = (
-    "chrome://settings",
-    "chrome://flags",
-    "chrome://extensions",
-    "chrome://net-internals",
-    "chrome://inspect",
-    "chrome://downloads",
-    "chrome://password-manager",
-    "chrome://about",
-)
-
-
-def kiosk_policy(
-    origin: str, web_hosts: Sequence[str] = (), mode: str = "allowlist"
-) -> dict[str, object]:
-    """The managed policy for the kiosk, and for the child's browsing window.
-
-    Everything here is a `SECURITY.md` §5 setting. Chromium on Linux reads
-    managed policy only from `/etc/chromium/policies/managed`, for every
-    profile on the machine at once - a profile directory adds no policy source
-    (D-149) - so this one file governs the launcher *and* the window a web tile
-    opens. With only the launcher's origin allowed, every web tile a parent
-    enabled opened on "This page is blocked" (D-156).
-
-    So the allowlist is the launcher's origin plus `web_hosts`: the hosts of
-    the web tiles enabled for any child, which the daemon collects. A host with
-    no scheme allows it over http and https and allows its subdomains, which
-    is what a site that sends you from `eba.gov.tr` to `giris.eba.gov.tr` needs.
-    "Type another address" still has nowhere to go.
-    """
-    allowed = [origin, *sorted({host for host in web_hosts if host and host != origin})]
-    # In "open internet" mode (D-167) there is no wildcard: harmful sites are
-    # stopped by the children's DNS filter, and the browser keeps only what
-    # must never open for a child - the parent's panel, by address and over
-    # Tailscale, and Chromium's own settings pages, which `*` stopped covering
-    # in Chromium 147.
-    closed = [*PANEL_ADDRESSES, *INTERNAL_PAGES]
-    return {
-        "URLBlocklist": ["*", *closed] if mode == "allowlist" else closed,
-        "URLAllowlist": allowed,
-        "ForceGoogleSafeSearch": True,
-        "ForceYouTubeRestrict": 2,
-        "ForceBingSafeSearch": 2,
-        "URLBlocklistExceptions": [],
-        "DeveloperToolsAvailability": 2,
-        "IncognitoModeAvailability": 1,
-        "ExtensionInstallBlocklist": ["*"],
-        "BrowserSignin": 0,
-        "SyncDisabled": True,
-        "PasswordManagerEnabled": False,
-        "DownloadRestrictions": 3,
-        "PrintingEnabled": False,
-        "DefaultPopupsSetting": 2,
-        "DefaultNotificationsSetting": 2,
-        "DefaultGeolocationSetting": 2,
-        "TranslateEnabled": False,
-        "ShowHomeButton": False,
-        "BookmarkBarEnabled": False,
-        "EditBookmarksEnabled": False,
-        "AutofillAddressEnabled": False,
-        "AutofillCreditCardEnabled": False,
-        "DnsOverHttpsMode": "off",
-        # The microphone: the launcher's own page may use it - for press-and-
-        # speak, and only while the child holds the button (D-166) - and no
-        # site, app page or extension may. No prompt either way.
-        "AudioCaptureAllowed": False,
-        "AudioCaptureAllowedUrls": [f"http://{origin}"],
-        "VideoCaptureAllowed": False,
-    }
 
 
 @dataclass

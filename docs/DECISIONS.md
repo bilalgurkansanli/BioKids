@@ -1740,3 +1740,123 @@ parent:
   wizard in the browser of whoever logs in: the parent who just installed BioKids
   is taken to it rather than told about it. It does nothing in a child's session,
   and nothing once `/` stops leading to the wizard.
+
+**D-171 [owner] The review's security findings, closed.**
+An end-to-end review on 2026-10-06 found these, and the owner asked for all of them
+to be fixed before anything new:
+
+* **Root no longer follows a child's symlinks.** Provisioning writes into the
+  child's home as root, and used `mkdir`, `copyfile` and `chown`, all of which
+  follow links: `~/.config` pointing at `/etc` would have had root chown `/etc`
+  to the child. Every level is now opened with `O_NOFOLLOW` relative to the one
+  above, given to the child through its descriptor, and the file is refused unless
+  it is a regular file with one name (`provision._write_into_home`).
+* **The launcher answers only its own page.** Its form routes (power off, ask a
+  parent, launch, volume) took a POST from any website the child opened. Every
+  request must now carry a loopback Host (no DNS rebinding), and every change must
+  not be cross-site by `Sec-Fetch-Site` and `Origin`.
+* **The panel is closed to the children by nftables**, by port and the whole
+  tailnet, instead of by three spellings in Chromium's policy. The policy no longer
+  names it, so the parent's own Chromium opens it from the menu (D-170).
+  `stop-dns-rebind` in the filter, and more DoH resolver addresses.
+* **The browser policy** moved to `biokids_core.browser_policy`: the daemon writes
+  it and imported it from `biokids_shell`, which `biokids-daemon` does not depend
+  on, so the daemon failed to start without the launcher installed. It now also
+  closes `file://`, typed `javascript:`, more of Chromium's own pages, guest and
+  add-person, and clicking through a certificate warning.
+* **Dependencies.** `biokids-shell` depends on the Python libraries it imports;
+  `espeak-ng` is a Depends of `biokids-voice`, since the spoken warning is the
+  exit criterion and `--no-install-recommends` used to silence it.
+* **`biokids-ai` is not in the `biokids` group**, which can grant time and power
+  the machine off; the assistant never opens the daemon's socket. Upgrades remove
+  it from the group.
+* **The recovery code must look like one.** The wizard hashed whatever its hidden
+  field sent, so an empty code could be stored and then reset the PIN. A code is
+  now eight words from the list or it is refused, at both ends.
+* **The passphrase gate stops after five wrong tries in fifteen minutes**, counted
+  from the audit log; the PIN fallback goes through the same function. Signing out
+  needs the CSRF token, the alert page's `next` goes through `safe_next`, and the
+  power-off confirmation no longer puts a child's name inside JavaScript.
+* **The daemon bounds a grant (12 h) and a timeout (24 h)**; a negative grant used
+  to take time away.
+* **A database copy before every migration**: `biokids-admin backup-db`, run by the
+  postinst, SQLite's online backup, three kept, in `/var/lib/biokids/backups`.
+* **systemd**: the daemon keeps only `CAP_NET_ADMIN` and `CAP_CHOWN`, the panel no
+  capability at all; both get the remaining `Protect*`/`Restrict*` settings, and
+  neither may write `/etc/dnsmasq.d`, `/etc/nftables.d` or `/etc/biokids`, which
+  nothing wrote.
+
+
+**D-172 [owner] Fail-safe that is checked, not assumed.**
+From the same review (D-171). The daemon is `Type=notify` with `WatchdogSec=90s` and pings only after a tick that finished; every command it runs is killed after 30 s and a tick after 60 s; a failed tick rolls the shared Session back. The DNS filter is checked from the outside once a minute (nft table present, NXDOMAIN for a canary): open means one repair, then every child at the machine is locked until it closes; not answering is reported. A lock is verified from logind (still on screen and unlocked; light-locker never sets LockedHint, D-155) and after three ticks the session is ended. The wall time the daemon uses runs on BOOTTIME (`GuardedClock`): a jump is ignored until NTP confirms it, so moving the date no longer resets the quota. The lockdown falls back to the `biokids-child` group when the database cannot be read and ends sessions that did not lock. The ledger carries fractions of a second and re-reads its day rows after a failed commit. Closing and `manager` sessions no longer count as a child at the machine.
+
+**D-173 [owner] "Anneme sor" is answered: requests, unlock, grants of any size.**
+A child could file a request since D-65 and nothing could answer it: the panel
+counted them in a badge on the audit screen and offered no way to say yes. Now:
+
+* **Three kinds**, a column on `access_request` (migration `3e8b51c0d2a7`):
+  `time` (more minutes today), `site`, `app`. The launcher asks for time with a
+  "Biraz daha süre iste" pill in its footer during the last fifteen minutes -
+  before the lock, because after it there is nothing to press - and the block
+  page asks for whatever stopped the child: out of minutes is time, an app not on
+  their screen is that app, anything else the page.
+* **One question is one request.** Asking again while it waits returns the same
+  request; six in an hour is the limit, and the seventh is told so kindly.
+  Unanswered requests expire after twelve hours.
+* **İstekler**, a screen of its own, linked from Today and badged on its nav item:
+  more time is answered with +15, +30 or +60 minutes, everything else with İzin ver
+  or Şimdi değil. Yes to time is a grant (which also lets a locked child back in);
+  yes to a site allows its host for the children by policy and by DNS (a
+  `filter_rule` row, source `request`); yes to an app puts it on their screen.
+* **The child is told**, on screen and, when the voices are on, by Zio or Sio
+  (`request_approved`, `request_denied` lines). A question that disappears into
+  silence teaches a child not to ask.
+* **Today** gains "Kilidi aç", which lifts a lock without adding time - "Kilitle"
+  had no way back but "+10 dk" - and grants of +10 and +30.
+
+A site cannot yet be asked for from the browser itself: blocked names fail in
+Chromium's own error page, and the block page that would carry the button (D-64)
+needs the extension. The request kind and the approval path are ready for it.
+
+
+**D-174 [owner] Zio and Sio in the parent's own voice, without cloning.**
+Phase 2a's voice cloning is ninety seconds of audio, a GPU and a month; most of what a child would hear in it is seven sentences. **Ayarlar → Kendi sesiniz** lets a parent say those themselves, on their phone: welcome, 10/5/1 minutes left, time is up, and yes / not now to a request. The page records a mono 16-bit WAV itself (no MediaRecorder, whose formats differ by phone and which `pw-play` cannot read), the panel checks it (PCM, mono, 8-48 kHz, 0.5-15 s, 2 MB) and keeps it in `/var/lib/biokids-voices/<locale>/<event>.wav` with the sentence that was said. That directory is world-readable and outside `/var/lib/biokids`, because the voice service that plays it runs as the child; nothing else of the family's is in it and nothing in it leaves the machine. The voice service plays a recording before any synthesiser and shows the parent's sentence on the card, with Zio or Sio as the parent chose. A line nobody recorded is spoken as before. Purging with the data removes the recordings; the encryption key now goes only with the data as well, so a database kept across a reinstall can still read what it encrypted.
+
+**D-175 [owner] For a child who cannot read yet.**
+UX.md section 2.2 promised spoken labels for 4-7 and `data-speak` was rendered with nothing reading it. In the young band a tap now says the tile's name (throttled, so drumming on tiles is names, not a pile-up), and the full screens nothing else speaks - blocked, asked, first run, shutdown - say their sentence once as they open, through the voice service's `say` (a launcher route that, like the assistant's, takes JSON from its own page only). The ring keeps its minutes for every age (D-162); for 4-7 a sun rides the end of it and goes from yellow to orange to red as the time runs down: something to watch that needs no number.
+
+**D-176 [owner] Hours are picked, not typed; some days can be different.**
+The time screen asked a parent to type `16:00-20:00, 07:30-08:15` and refused anything else. Each kind of day now has two ranges of `<input type="time">`, the phone's own clock picker; half a range is refused with a sentence that says so. Under **Gelişmiş**, any day of the week can be ticked as different, with its own minutes and hours (`policy.schedule_json`, migration `9a4f2c7e1b36`): swimming on Wednesday is thirty minutes between six and seven. A day that names only its minutes keeps the usual hours, and an unticked day follows the weekday or weekend rule, so nothing changes for a family that never opens it.
+
+**D-177 [owner] Mail to the parent, through their own server.**
+"The parent is notified" meant an audit row nobody read until evening. **Ayarlar → E-posta bildirimleri** takes the parent's own SMTP server (SECURITY.md section 4 has listed it, opt-in, from the start); the settings are stored encrypted in `parent.smtp_json_encrypted` with the key in `/etc/biokids/secret.key`, and the password is never shown back. Once a minute the daemon mails, in one message, every new alert-severity audit row (a filter that failed, a lock that did not take, the daemon giving up), every request a child filed and every assistant alert; turning mail on starts from the present rather than sending the history. On Sunday from 19:00 it mails each child's time per day for the week. A mail that cannot be sent is retried with a growing pause and nothing is marked sent until it was. A message says what happened and to which child, never what a child typed: the panel holds the details. The send runs in a thread with a 20-second timeout, outside the tick's failure count, so a mail server that is down never stops supervision.
+
+**D-178 [owner] The assistant checks itself against an encyclopedia on the machine.**
+The gap the owner saw between Gemma 4 E4B and a cloud model was facts, not style
+(D-165), and no prompt removes a small model's confident mistakes. A source does,
+and it has to be local (principle 5, and the owner's "it must be a local LLM").
+The same download button now also fetches the opening paragraphs of the most-read
+Turkish and English Wikipedia articles as Kiwix packs them -
+`wikipedia_tr_top_mini_2026-07.zim` (138 MB) and `wikipedia_en_top_mini_2026-09.zim`
+(297 MB), CC BY-SA 4.0, pinned by the SHA-256 Kiwix publishes and checked after the
+download. Before the model answers a question the classifier let through, its
+subject is searched with `kiwix-serve` (kiwix-tools, GPL-3, in Debian; a separate
+process, never linked) running inside the assistant's own network namespace on
+127.0.0.1, started with the first question and stopped when idle like the model.
+Up to two articles' opening text goes into the answer prompt as the facts to
+prefer over memory, after the word list has screened it. Nothing found, a slow
+lookup or a missing kiwix-serve is not an error: the model answers as before.
+SECURITY.md section 4 lists the new download; `biokids-ai` Recommends kiwix-tools.
+
+Two smaller fixes from the review: the classifier's input is quoted with
+`json.dumps`, so a question containing a quote mark can no longer close the
+quotation and append a verdict of its own; and the self-harm answer gives a child
+with no grown-up nearby a number to call (183, and 112 for an emergency).
+
+
+**D-179 [claude] What the live run on the VM found.**
+The D-171 to D-178 packages were installed on the `s7c-ahmet` VM and driven with a real child session. The watchdog fired 84 seconds after the daemon was frozen, the lockdown locked Ahmet and the daemon came back; the guarded clock kept the day and the minutes when the date was moved to tomorrow; a request filed from the launcher was approved and the minutes moved from 17 to 32; a cross-site post to the launcher got 403; the child could not reach the panel by address or by `nip.io`. Three things were wrong, and are fixed:
+
+* **The lockdown ended a session that was about to lock.** It checked three seconds after asking; light-locker fades and hands the seat to the greeter in eight to ten. It now polls once a second for up to twenty, and only a session still on screen after that is ended.
+* **Every daemon start reported the filter as down.** The first check ran while dnsmasq, restarted by the same reload, was still reading its 300,000 names. The first check now waits thirty seconds, and a repair waits for dnsmasq to answer before judging it.
+* **The encyclopedia found the wrong articles, or none.** A full-text search for "Ay neyin etrafında döner?" found nothing, and "Gökkuşağı" found the flag. The subject is now looked up as an article title first, with Turkish endings removed ("dinozorlar" → "Dinozor", "Dünya'nın" → "Dünya") and the Turkish capital İ; only the opening paragraphs are taken, never the infobox. The Moon now comes back as "Dünya'nın tek doğal uydusu".

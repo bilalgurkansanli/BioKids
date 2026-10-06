@@ -424,7 +424,7 @@ msgid "today.poweroff"
 msgstr "Shut down"
 
 msgid "today.grant.done"
-msgstr "Added 10 minutes for {name}."
+msgstr "{minutes} minutes added for {name}."
 
 msgid "today.lock.done"
 msgstr "{name}'s session is locked."
@@ -528,7 +528,7 @@ msgid "time.windows.weekend"
 msgstr "Weekend hours"
 
 msgid "time.windows.invalid"
-msgstr "An hour range must be written like 16:00-20:00."
+msgstr "Choose both the start and the end of each time range."
 
 msgid "time.end_action"
 msgstr "When time runs out"
@@ -971,7 +971,7 @@ msgid "assistant.refuse.default"
 msgstr "I can't answer that. You could ask a grown-up in your family."
 
 msgid "assistant.refuse.self_harm"
-msgstr "I'm so sorry you feel this way. Please tell someone in your family or a grown-up you trust right now. They want to listen and help you."
+msgstr "I'm so sorry you feel this way. Please tell someone in your family or a grown-up you trust right now. They want to listen and help you. If no one is with you, call your local emergency number."
 
 msgid "assistant.refuse.personal_info"
 msgstr "Don't type your address, phone number or password to anyone, not even me. Keeping them secret keeps you safe."
@@ -1137,3 +1137,337 @@ msgstr "Phone access set up"
 
 msgid "audit.action.remote_setup_started"
 msgstr "Phone access setup started"
+
+# Wizard step 3: the posted recovery code was not a real one
+msgid "wizard.recovery.replaced"
+msgstr "The recovery code did not come back from the page intact. Write down this new one and confirm again."
+
+# D-172: the fail-safe checks
+msgid "audit.action.filter_failed"
+msgstr "The internet filter stopped working; the children were locked"
+
+msgid "audit.action.filter_down"
+msgstr "The internet filter is not answering; the children have no internet"
+
+msgid "audit.action.filter_restored"
+msgstr "The internet filter is working again"
+
+msgid "audit.action.lock_failed"
+msgstr "The screen would not lock; the session was ended"
+
+# D-173: answering a child's request
+msgid "audit.action.request_approved"
+msgstr "Request approved"
+
+msgid "audit.action.request_denied"
+msgstr "Request declined"
+
+msgid "audit.action.session_unlock_requested"
+msgstr "Screen unlocked"
+
+# D-173: a child's request, from the launcher
+msgid "shell.request.time"
+msgstr "Ask for more time"
+
+msgid "shell.request.time_waiting"
+msgstr "You asked for more time; waiting for an answer"
+
+msgid "shell.request.too_often"
+msgstr "You have asked a lot this hour. You can ask again a bit later."
+
+msgid "shell.request.approved"
+msgstr "A grown-up said yes!"
+
+msgid "shell.request.approved_time"
+msgstr "A grown-up gave you {minutes} more minutes!"
+
+msgid "shell.request.denied"
+msgstr "A grown-up said not now. You can talk about it later."
+
+# D-173: the requests screen, unlocking, and grants of any size
+msgid "requests.title"
+msgstr "Requests"
+
+msgid "requests.help"
+msgstr "What your children asked you for. Your answer appears on the child's screen at once and is spoken."
+
+msgid "requests.none"
+msgstr "Nothing is waiting for an answer."
+
+msgid "requests.asks.time"
+msgstr "{name} would like more time"
+
+msgid "requests.asks.site"
+msgstr "{name} would like to open a site"
+
+msgid "requests.asks.app"
+msgstr "{name} would like an app"
+
+msgid "requests.approve"
+msgstr "Allow"
+
+msgid "requests.deny"
+msgstr "Not now"
+
+msgid "requests.recent"
+msgstr "Recently answered"
+
+msgid "requests.status.approved"
+msgstr "allowed"
+
+msgid "requests.status.denied"
+msgstr "not now"
+
+msgid "today.grant_n"
+msgstr "+{minutes} min"
+
+msgid "today.unlock"
+msgstr "Unlock"
+
+msgid "today.unlock.done"
+msgstr "{name}'s screen is unlocked."
+
+# D-174: a parent's own voice
+msgid "voices.title"
+msgstr "Your own voice"
+
+msgid "voices.teaser"
+msgstr "Let your own voice say the warnings instead of Zio and Sio's."
+
+msgid "voices.open"
+msgstr "Record the lines"
+
+msgid "voices.help"
+msgstr "Record each sentence once: press Record, say it, press Stop. The recordings stay on this computer. Sentences you do not record are still said by the computer's voice."
+
+msgid "voices.persona"
+msgstr "Whose voice is it?"
+
+msgid "voices.persona.zio"
+msgstr "Mother's (Zio is shown)"
+
+msgid "voices.persona.sio"
+msgstr "Father's (Sio is shown)"
+
+msgid "voices.say_this"
+msgstr "The sentence you will say"
+
+msgid "voices.record"
+msgstr "● Record"
+
+msgid "voices.stop"
+msgstr "■ Stop"
+
+msgid "voices.saving"
+msgstr "Saving…"
+
+msgid "voices.delete"
+msgstr "Delete recording"
+
+msgid "voices.recorded"
+msgstr "Recorded ({seconds} s)"
+
+msgid "voices.mic_failed"
+msgstr "The microphone could not be opened. Check that the browser is allowed to use it."
+
+msgid "voices.unsupported"
+msgstr "This browser cannot record."
+
+msgid "voices.error.too_short"
+msgstr "The recording is too short. Press Stop after you have said the sentence."
+
+msgid "voices.error.too_long"
+msgstr "A recording cannot be longer than 15 seconds."
+
+msgid "voices.error.not_audio"
+msgstr "That does not look like a recording."
+
+msgid "voices.event.welcome"
+msgstr "When the child logs in"
+
+msgid "voices.event.warn_10"
+msgstr "10 minutes left"
+
+msgid "voices.event.warn_5"
+msgstr "5 minutes left"
+
+msgid "voices.event.warn_1"
+msgstr "1 minute left"
+
+msgid "voices.event.time_up"
+msgstr "When time is up"
+
+msgid "voices.event.request_approved"
+msgstr "When you say yes to a request"
+
+msgid "voices.event.request_denied"
+msgstr "When you say not now"
+
+msgid "voices.suggest.welcome"
+msgstr "Welcome, sweetheart, have fun!"
+
+msgid "voices.suggest.warn_10"
+msgstr "Ten minutes left, start wrapping up slowly."
+
+msgid "voices.suggest.warn_5"
+msgstr "Five minutes left, sweetheart."
+
+msgid "voices.suggest.warn_1"
+msgstr "One last minute, let's finish up."
+
+msgid "voices.suggest.time_up"
+msgstr "That's your time for today. We'll play again tomorrow!"
+
+msgid "voices.suggest.request_approved"
+msgstr "All right, you can. Have fun!"
+
+msgid "voices.suggest.request_denied"
+msgstr "Not now, sweetheart. Let's talk this evening."
+
+msgid "audit.action.voice_recorded"
+msgstr "Voice line recorded"
+
+# D-176: time pickers and a schedule per day
+msgid "time.windows.from"
+msgstr "From"
+
+msgid "time.windows.to"
+msgstr "Until"
+
+msgid "time.windows.help_pickers"
+msgstr "Leave the times empty to allow the whole day. You can choose two ranges, such as before and after school."
+
+msgid "time.days.title"
+msgstr "Some days are different"
+
+msgid "time.days.help"
+msgstr "On a ticked day the minutes and hours here apply. Anything left empty follows the weekday or weekend rule."
+
+msgid "day.0"
+msgstr "Monday"
+
+msgid "day.1"
+msgstr "Tuesday"
+
+msgid "day.2"
+msgstr "Wednesday"
+
+msgid "day.3"
+msgstr "Thursday"
+
+msgid "day.4"
+msgstr "Friday"
+
+msgid "day.5"
+msgstr "Saturday"
+
+msgid "day.6"
+msgstr "Sunday"
+
+# D-177: mail to the parent
+msgid "mail.alerts.subject"
+msgstr "BioKids: {count} new notifications"
+
+msgid "mail.assistant_alert"
+msgstr "{name} asked the assistant something a parent should know about ({category})"
+
+msgid "mail.footer"
+msgstr "The details are in the BioKids parent panel. This message was sent by BioKids on your computer, through your own mail server."
+
+msgid "mail.weekly.subject"
+msgstr "BioKids: this week"
+
+msgid "mail.weekly.intro"
+msgstr "The last seven days, child by child:"
+
+msgid "mail.weekly.child"
+msgstr "{name} — {total} in all"
+
+msgid "mail.minutes"
+msgstr "{minutes} min"
+
+msgid "mail.test.subject"
+msgstr "BioKids test message"
+
+msgid "mail.test.body"
+msgstr "This is a test. BioKids will send its notifications to this address."
+
+# D-177: the mail settings
+msgid "mail.panel.title"
+msgstr "Email notifications"
+
+msgid "mail.panel.help"
+msgstr "Get an email when something needs you - the filter stops, your child asks for something - and a summary every Sunday evening. Mail goes through your own mail server; nothing your child typed is put in it."
+
+msgid "mail.panel.recipients"
+msgstr "Send to"
+
+msgid "mail.panel.alerts"
+msgstr "Tell me at once when something needs me"
+
+msgid "mail.panel.weekly"
+msgstr "Send a weekly summary on Sunday evening"
+
+msgid "mail.panel.server"
+msgstr "Mail server"
+
+msgid "mail.panel.server_help"
+msgstr "Your mail provider's SMTP details. For Gmail: smtp.gmail.com, 587, STARTTLS and an \"app password\"."
+
+msgid "mail.panel.host"
+msgstr "Server"
+
+msgid "mail.panel.port"
+msgstr "Port"
+
+msgid "mail.panel.security"
+msgstr "Security"
+
+msgid "mail.panel.security.starttls"
+msgstr "STARTTLS (recommended)"
+
+msgid "mail.panel.security.ssl"
+msgstr "SSL/TLS"
+
+msgid "mail.panel.security.none"
+msgstr "None (only for a server on your home network)"
+
+msgid "mail.panel.username"
+msgstr "Username"
+
+msgid "mail.panel.password"
+msgstr "Password"
+
+msgid "mail.panel.password_kept"
+msgstr "The saved password is kept"
+
+msgid "mail.panel.password_help"
+msgstr "Stored encrypted on this computer and never shown again."
+
+msgid "mail.panel.sender"
+msgstr "From address (the username if empty)"
+
+msgid "mail.panel.test"
+msgstr "Save and send a test"
+
+msgid "mail.panel.remove"
+msgstr "Turn email off"
+
+msgid "mail.panel.sent"
+msgstr "The test message was sent. Check your inbox."
+
+msgid "mail.incomplete"
+msgstr "A recipient and a mail server are needed."
+
+msgid "mail.failed"
+msgstr "The message could not be sent. Check the server, port and password."
+
+msgid "audit.action.mail_saved"
+msgstr "Email settings saved"
+
+msgid "audit.action.mail_removed"
+msgstr "Email notifications turned off"
+
+# D-178
+msgid "assistant.knowledge.on"
+msgstr "It checks its answers against Wikipedia summaries kept on this computer; it does not go online."

@@ -304,8 +304,15 @@ class ShellServer:
 
     async def _ask_a_parent(self, caller: ShellCaller, request: Request) -> Response:
         url = str(request.args.get("url", ""))[:1024]
-        created = self.supervisor.file_access_request(caller.child_id, url)
-        return Response(id=request.id, ok=True, data={"request_id": created})
+        kind = str(request.args.get("kind", "site"))
+        created = self.supervisor.file_access_request(caller.child_id, url, kind)
+        # 0 is "asked too often this hour": the launcher says so kindly.
+        return Response(
+            id=request.id,
+            ok=created > 0,
+            data={"request_id": created},
+            error="" if created else "shell.request.too_often",
+        )
 
     async def _ask_assistant(self, caller: ShellCaller, request: Request) -> Response:
         question = str(request.args.get("question", ""))[:1000]

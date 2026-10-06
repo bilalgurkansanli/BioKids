@@ -122,7 +122,12 @@ class Model(Protocol):
         persona: str,
         name: str = "",
         wait_s: float | None = None,
+        context: str = "",
     ) -> str: ...
+
+
+class Reference(Protocol):
+    async def lookup(self, question: str, locale: str) -> str: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,9 +166,13 @@ def tidy(question: str) -> str:
 
 
 class Assistant:
-    def __init__(self, model: Model, lexicon: Lexicon | None = None) -> None:
+    def __init__(
+        self, model: Model, lexicon: Lexicon | None = None, reference: Reference | None = None
+    ) -> None:
         self.model = model
         self.lexicon = lexicon or Lexicon.load()
+        self.reference = reference
+        """The encyclopedia on the machine (D-178), when the parent downloaded one."""
 
     async def ask(
         self, question: str, *, age: int, locale: str, persona: str = "zio", name: str = ""
@@ -189,8 +198,11 @@ class Assistant:
             log.info("question refused by the classifier (%s)", category)
             return refuse(category, "classifier")
 
+        context = await self._look_up(question, locale)
         try:
-            answer = await self.model.answer(question, age, locale, persona, name)
+            answer = await self.model.answer(
+                question, age, locale, persona, name, context=context
+            )
         except ModelError as exc:
             log.warning("the model could not answer: %s", exc)
             return refuse("unavailable", "error")
@@ -204,3 +216,17 @@ class Assistant:
             log.warning("an answer was stopped by the word list (%s)", hit.category)
             return refuse(hit.category, "answer")
         return Reply(refused=False, text=answer, stage="answer")
+
+    async def _look_up(self, question: str, locale: str) -> str:
+        """What the encyclopedia says, or "". Screened like everything else: a
+        passage the word list stops is not handed to the model."""
+        if self.reference is None:
+            return ""
+        try:
+            found = await self.reference.lookup(question, locale)
+        except Exception:  # a lookup is a help, never a reason to fail
+            log.exception("the encyclopedia lookup failed")
+            return ""
+        if found and self.lexicon.screen(found) is not None:
+            return ""
+        return found

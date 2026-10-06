@@ -14,7 +14,7 @@ time and policy engines actually work.
                                    │
                     ┌──────────────▼───────────────┐
                     │  biokids-panel  (FastAPI)    │   root
-                    │  Jinja2 + HTMX, PWA          │
+                    │  Jinja2 + forms, PWA         │
                     └──────────────┬───────────────┘
                                    │ unix socket /run/biokids/daemon.sock
                     ┌──────────────▼───────────────┐
@@ -346,6 +346,10 @@ Focus tracking on X11: `_NET_ACTIVE_WINDOW` via python-xlib, mapped to a PID via
 | Failure | Response |
 |---|---|
 | daemon crashes | `Restart=always`; `OnFailure=biokids-lockdown.service` locks the child session |
+| daemon hangs | `Type=notify` with `WatchdogSec=90s`: only a tick that finished pings the watchdog, so systemd kills a hung daemon, the lockdown runs, and it restarts (D-172) |
+| a lock does not take | the child's screen locker is asked every tick; a session still on screen after four ticks is ended (D-172) |
+| the DNS filter is open | checked from outside once a minute (nftables table present, NXDOMAIN for a canary); one repair, then every child at the machine is locked until it closes (D-172) |
+| the wall clock jumps | ignored for the day and the time windows until NTP confirms it (`GuardedClock`, D-172) |
 | daemon unreachable from the launcher | the launcher shows a holding screen and starts nothing. A working launcher with no limits behind it is the failure principle #3 exists to prevent |
 | daemon unreachable from the panel | the children are still listed, from the database, with their live state shown as unknown and the action buttons withheld. "Not responding" is never rendered as "no children" |
 | panel crashes | restart; enforcement is unaffected |
@@ -354,6 +358,6 @@ Focus tracking on X11: `_NET_ACTIVE_WINDOW` via python-xlib, mapped to a PID via
 | voice service crashes | fall back to a plain on-screen banner |
 | DB corrupt | fail closed: lock the child session, show a recovery message to the parent |
 | disk full | stop writing evidence first, then ticks; alert the parent |
-| no network | everything works; blocklist refresh and email are queued |
+| no network | everything works; mail to the parent is retried with a growing pause until it goes (D-177) |
 
 The rule: **enforcement failures lock; convenience failures degrade.**

@@ -14,7 +14,9 @@ enough to read in one sitting.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -25,6 +27,9 @@ LOGIND_PATH = "/org/freedesktop/login1"
 MANAGER_IFACE = "org.freedesktop.login1.Manager"
 SESSION_IFACE = "org.freedesktop.login1.Session"
 PROPERTIES_IFACE = "org.freedesktop.DBus.Properties"
+
+SNAPSHOT_TIMEOUT = 15.0
+"""A logind that does not answer within this is a failed refresh, not a hung tick."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +62,19 @@ class SessionInfo:
             and self.session_class == "user"
         )
 
+    @property
+    def is_person(self) -> bool:
+        """A login a person is sitting in, now.
+
+        Not the user's systemd `manager` or a `background` session, which have no
+        screen, and not a `closing` one: with Debian's `KillUserProcesses=no` a
+        logged-out session lingers in that state while anything it started is
+        still running, and counting it ran the end of the day - lock, countdown,
+        poweroff - for a child who had already gone, and refused the shutdown
+        tile to a sibling because "someone else is logged in".
+        """
+        return self.session_class.startswith("user") and self.state != "closing"
+
 
 @dataclass(frozen=True, slots=True)
 class UserPresence:
@@ -67,8 +85,8 @@ class UserPresence:
 
     @property
     def present(self) -> bool:
-        """True when this user has a session at all, active or not."""
-        return bool(self.sessions)
+        """True when this user is logged in at all, on screen or not."""
+        return any(s.is_person for s in self.sessions)
 
     @property
     def active(self) -> bool:
@@ -87,7 +105,9 @@ class UserPresence:
 
     @property
     def lockable_session_ids(self) -> tuple[str, ...]:
-        return tuple(s.session_id for s in self.sessions if s.session_class == "user")
+        return tuple(
+            s.session_id for s in self.sessions if s.session_class == "user" and s.is_person
+        )
 
     @property
     def relockable_session_ids(self) -> tuple[str, ...]:
@@ -99,7 +119,9 @@ class UserPresence:
         against a screen that is already locked.
         """
         return tuple(
-            s.session_id for s in self.sessions if s.session_class == "user" and not s.locked
+            s.session_id
+            for s in self.sessions
+            if s.session_class == "user" and s.is_person and not s.locked
         )
 
     @property
@@ -144,6 +166,11 @@ class SessionWatcher:
 
     async def start(self) -> None:
         await self._source.start()
+        # logind's PrepareForSleep, where the source can deliver it: the
+        # enforcer must not lock or power off while a lid is closing.
+        subscribe = getattr(self._source, "on_sleep", None)
+        if callable(subscribe):
+            subscribe(self.set_suspending)
         await self.refresh()
 
     async def stop(self) -> None:
@@ -151,7 +178,7 @@ class SessionWatcher:
 
     async def refresh(self) -> dict[str, UserPresence]:
         try:
-            self._sessions = await self._source.snapshot()
+            self._sessions = await asyncio.wait_for(self._source.snapshot(), SNAPSHOT_TIMEOUT)
         except Exception:
             log.exception("could not read logind sessions; keeping the previous snapshot")
             return self._presence
@@ -240,7 +267,15 @@ class LogindSessionSource:
         introspection = await self._bus.introspect(LOGIND_BUS, LOGIND_PATH)
         proxy = self._bus.get_proxy_object(LOGIND_BUS, LOGIND_PATH, introspection)
         self._manager = proxy.get_interface(MANAGER_IFACE)
+        for callback in self._on_change:
+            self._manager.on_prepare_for_sleep(callback)
         log.info("connected to logind")
+
+    def on_sleep(self, callback: Callable[[bool], None]) -> None:
+        """Call `callback(True)` as the machine starts to suspend, `False` after."""
+        self._on_change.append(callback)
+        if self._manager is not None:
+            self._manager.on_prepare_for_sleep(callback)
 
     async def stop(self) -> None:
         if self._bus is not None:

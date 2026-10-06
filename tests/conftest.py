@@ -11,6 +11,7 @@ from __future__ import annotations
 import datetime as dt
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy.orm import Session
@@ -44,6 +45,36 @@ def no_real_system_commands(monkeypatch: pytest.MonkeyPatch) -> None:
     from biokids_daemon import dnsfilter
 
     monkeypatch.setattr(dnsfilter, "_run", lambda _argv: True)
+    # The once-a-minute check asks the filter on 127.0.0.1:5354 (D-172); a test
+    # machine has no filter there, and a real one would answer for the machine.
+    monkeypatch.setattr(dnsfilter, "dns_query_blocked", lambda *_a, **_k: True)
+    # Every supervisor start renders the blocklist: 291,000 domains, ten
+    # megabytes per test, 600 MB of /tmp per run. The lists themselves are
+    # tested in test_dnsfilter.py, which imports load_domains directly.
+    real_load_domains = dnsfilter.load_domains
+
+    def small_lists(
+        lists_dir: Path = dnsfilter.LISTS_DIR, categories: Any = dnsfilter.CATEGORIES
+    ) -> set[str]:
+        if lists_dir == dnsfilter.LISTS_DIR:
+            return {dnsfilter.CANARY, "dns.google"}
+        return real_load_domains(lists_dir, categories)
+
+    monkeypatch.setattr(dnsfilter, "load_domains", small_lists)
+    from biokids_daemon import supervisor
+
+    monkeypatch.setattr(supervisor, "FILTER_SETTLE_PAUSE", 0.0)
+
+    # The lockdown's own checks (D-172) ask the real logind about a session id
+    # and the real biokids-child group. On a machine with BioKids installed
+    # those exist - "c1" is the greeter's session - and a test must never end
+    # one. Tests about them patch these back in.
+    from biokids_core import admin
+
+    monkeypatch.setattr(admin, "LOCK_SETTLE_SECONDS", 0.0)
+    monkeypatch.setattr(admin, "session_property", lambda _s, _n: "")
+    monkeypatch.setattr(admin, "terminate_session", lambda _s: False)
+    monkeypatch.setattr(admin, "group_members", lambda _g: set())
     monkeypatch.setattr(
         remote,
         "run_command",

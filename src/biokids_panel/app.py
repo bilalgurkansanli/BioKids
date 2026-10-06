@@ -35,10 +35,10 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Stre
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
-from biokids_core import repo, security
+from biokids_core import mail, recorded_voice, repo, security
 from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
 from biokids_core.config import Config, get_config
-from biokids_core.db.models import Policy, utcnow
+from biokids_core.db.models import Policy
 from biokids_core.errors import IpcError
 from biokids_core.i18n import Translator
 from biokids_core.ipc import AsyncDaemonClient, Op
@@ -163,6 +163,10 @@ def _utc_bounds_of_local_day(day: dt.date) -> tuple[dt.datetime, dt.datetime]:
     )
 
 
+REQUEST_GRANT_CHOICES = (15, 30, 60)
+"""What "more time" can be answered with, in minutes: three buttons, no typing."""
+
+
 def _needs_setup(session: Session) -> bool:
     return not repo.setup_complete(session)
 
@@ -196,10 +200,15 @@ def _action_notice(
                 return str(child.get("display_name", ""))
         return ""
 
-    for flag, key in (("granted", "today.grant.done"), ("locked", "today.lock.done")):
+    minutes = query.get("minutes", "10")
+    for flag, key in (
+        ("granted", "today.grant.done"),
+        ("locked", "today.lock.done"),
+        ("unlocked", "today.unlock.done"),
+    ):
         raw = query.get(flag, "")
         if raw:
-            return {"tone": "ok", "text": tr(key, name=name_of(raw))}
+            return {"tone": "ok", "text": tr(key, name=name_of(raw), minutes=minutes)}
 
     if query.get("poweroff"):
         return {"tone": "ok", "text": tr("today.poweroff.done")}
@@ -341,7 +350,15 @@ def register_routes(app: FastAPI) -> None:
         return response
 
     @app.post("/logout")
-    def logout(request: Request, session: Db) -> Response:
+    def logout(
+        request: Request,
+        session: Db,
+        state: Auth,
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        # A page elsewhere must not be able to sign the parent out mid-task.
+        if state.session is not None and not auth.csrf_ok(state, csrf_token):
+            return see_other("/today?error=csrf")
         auth.logout(session, request.cookies.get(auth.SESSION_COOKIE))
         response = see_other("/login")
         response.delete_cookie(auth.SESSION_COOKIE, path="/")
@@ -460,11 +477,214 @@ def register_routes(app: FastAPI) -> None:
             return blocked
         if not auth.csrf_ok(state, csrf_token):
             return see_other("/today?error=csrf")
-        seconds = max(0, min(minutes, MAX_GRANT_SECONDS // 60)) * 60
+        minutes = max(1, min(minutes, MAX_GRANT_SECONDS // 60))
         ok = _call_daemon(
-            ctx, Op.GRANT_TIME, child_id=child_id, seconds=seconds, actor=_actor(state)
+            ctx, Op.GRANT_TIME, child_id=child_id, seconds=minutes * 60, actor=_actor(state)
         )
-        return see_other(f"/today?granted={child_id}" if ok else "/today?error=daemon")
+        return see_other(
+            f"/today?granted={child_id}&minutes={minutes}" if ok else "/today?error=daemon"
+        )
+
+    @app.post("/children/{child_id}/unlock")
+    def unlock_now(
+        request: Request,
+        ctx: Ctx,
+        session: Db,
+        state: Auth,
+        child_id: int,
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        """Back in, without adding time (D-173). "Kilitle" had no way back but "+10 dk"."""
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        if not auth.csrf_ok(state, csrf_token):
+            return see_other("/today?error=csrf")
+        ok = _call_daemon(ctx, Op.UNLOCK_NOW, child_id=child_id, actor=_actor(state))
+        return see_other(f"/today?unlocked={child_id}" if ok else "/today?error=daemon")
+
+    # ------------------------------------------------------------- voices
+
+    @app.get("/voices", response_class=HTMLResponse)
+    def voices_view(request: Request, ctx: Ctx, session: Db, state: Auth, tr: Tr) -> Response:
+        """A parent records Zio and Sio's lines in their own voice (D-174)."""
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        directory = ctx.config.paths.recorded_voice_dir
+        locale = tr.locale
+        lines = []
+        for event in recorded_voice.EVENTS:
+            found = recorded_voice.lookup(directory, locale, event)
+            lines.append(
+                {
+                    "event": event,
+                    "recorded": found is not None,
+                    "text": found.text
+                    if found and found.text
+                    else tr(f"voices.suggest.{event}"),
+                    "seconds": round(found.seconds, 1) if found else 0,
+                }
+            )
+        return render(
+            ctx,
+            request,
+            session,
+            state,
+            tr,
+            "voices.html",
+            lines=lines,
+            locale=locale,
+            persona=recorded_voice.persona(directory),
+        )
+
+    @app.get("/voices/{locale}/{event}.wav")
+    def voice_file(
+        request: Request, ctx: Ctx, session: Db, state: Auth, locale: str, event: str
+    ) -> Response:
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        found = recorded_voice.lookup(ctx.config.paths.recorded_voice_dir, locale, event)
+        if found is None:
+            return Response(status_code=404)
+        return Response(found.path.read_bytes(), media_type="audio/wav")
+
+    @app.post("/voices/{event}")
+    async def voice_upload(
+        request: Request, ctx: Ctx, session: Db, state: Auth, tr: Tr, event: str, text: str = ""
+    ) -> Response:
+        """The recording itself: a WAV body, the CSRF token in a header."""
+        if _guard(request, session, state) is not None:
+            return JSONResponse({"ok": False, "error": tr("error.unknown")}, status_code=401)
+        if not auth.csrf_ok(state, request.headers.get("x-csrf-token")):
+            return JSONResponse({"ok": False, "error": tr("error.unknown")}, status_code=403)
+        data = await request.body()
+        try:
+            recorded_voice.save(
+                ctx.config.paths.recorded_voice_dir,
+                tr.locale,
+                event,
+                data,
+                text or tr(f"voices.suggest.{event}"),
+            )
+        except recorded_voice.RecordingError as exc:
+            return JSONResponse({"ok": False, "error": tr(str(exc))}, status_code=400)
+        except OSError:
+            return JSONResponse(
+                {"ok": False, "error": tr("error.save_failed")}, status_code=500
+            )
+        repo.audit(
+            session, actor=_actor(state), action="voice_recorded", detail={"event": event}
+        )
+        session.commit()
+        return JSONResponse({"ok": True})
+
+    @app.post("/voices/{event}/delete")
+    def voice_delete(
+        request: Request,
+        ctx: Ctx,
+        session: Db,
+        state: Auth,
+        tr: Tr,
+        event: str,
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        if not auth.csrf_ok(state, csrf_token):
+            return see_other("/voices?error=csrf")
+        try:
+            recorded_voice.delete(ctx.config.paths.recorded_voice_dir, tr.locale, event)
+        except recorded_voice.RecordingError:
+            return see_other("/voices?error=1")
+        return see_other("/voices?saved=1")
+
+    @app.post("/voice-persona")
+    def voice_persona(
+        request: Request,
+        ctx: Ctx,
+        session: Db,
+        state: Auth,
+        persona: Annotated[str, Form()] = "zio",
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        if not auth.csrf_ok(state, csrf_token):
+            return see_other("/voices?error=csrf")
+        try:
+            recorded_voice.set_persona(ctx.config.paths.recorded_voice_dir, persona)
+        except (recorded_voice.RecordingError, OSError):
+            return see_other("/voices?error=1")
+        return see_other("/voices?saved=1")
+
+    # ----------------------------------------------------------- requests
+
+    @app.get("/requests", response_class=HTMLResponse)
+    def requests_view(request: Request, ctx: Ctx, session: Db, state: Auth, tr: Tr) -> Response:
+        """What the children asked for, newest first, answerable in one tap (D-173)."""
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        children = {child.id: child for child in repo.list_children(session)}
+        apps = {app.slug: app for app in repo.list_apps(session)}
+        pending, decided = repo.access_requests(session)
+
+        def describe(row: Any) -> dict[str, Any]:
+            child = children.get(row.child_id)
+            app = apps.get(row.url) if row.kind == "app" else None
+            return {
+                "id": row.id,
+                "kind": row.kind,
+                "child": child.display_name if child else "?",
+                "avatar": child.avatar if child else "",
+                "what": app.name(tr.locale) if app else row.url,
+                "status": row.status,
+                "minutes": row.minutes,
+                "created_at": row.created_at,
+            }
+
+        return render(
+            ctx,
+            request,
+            session,
+            state,
+            tr,
+            "requests.html",
+            pending=[describe(row) for row in pending],
+            decided=[describe(row) for row in decided],
+            grant_choices=REQUEST_GRANT_CHOICES,
+        )
+
+    @app.post("/requests/{request_id}/decide")
+    def request_decide(
+        request: Request,
+        ctx: Ctx,
+        session: Db,
+        state: Auth,
+        request_id: int,
+        approve: Annotated[str, Form()] = "",
+        minutes: Annotated[int, Form()] = 0,
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        if not auth.csrf_ok(state, csrf_token):
+            return see_other("/requests?error=csrf")
+        yes = approve == "yes"
+        ok = _call_daemon(
+            ctx,
+            Op.DECIDE_REQUEST,
+            request_id=request_id,
+            approve=yes,
+            minutes=minutes if yes else 0,
+            actor=_actor(state),
+        )
+        return see_other("/requests?saved=1" if ok else "/requests?error=daemon")
 
     @app.post("/children/{child_id}/lock")
     def lock_now(
@@ -617,6 +837,7 @@ def register_routes(app: FastAPI) -> None:
             child=child,
             policy=policy,
             windows=policy.windows,
+            schedule=policy.schedule,
             end_actions=[e.value for e in EndAction],
         )
 
@@ -632,6 +853,15 @@ def register_routes(app: FastAPI) -> None:
         weekend_quota_min: Annotated[int, Form()] = 120,
         weekday_windows: Annotated[str, Form()] = "",
         weekend_windows: Annotated[str, Form()] = "",
+        weekday_from: Annotated[list[str] | None, Form()] = None,
+        weekday_to: Annotated[list[str] | None, Form()] = None,
+        weekend_from: Annotated[list[str] | None, Form()] = None,
+        weekend_to: Annotated[list[str] | None, Form()] = None,
+        day_custom: Annotated[list[str] | None, Form()] = None,
+        day_quota: Annotated[list[str] | None, Form()] = None,
+        day_from: Annotated[list[str] | None, Form()] = None,
+        day_to: Annotated[list[str] | None, Form()] = None,
+        schedule: Annotated[str, Form()] = "",
         end_action: Annotated[str, Form()] = EndAction.POWEROFF.value,
         enabled: Annotated[str, Form()] = "",
         break_enabled: Annotated[str, Form()] = "",
@@ -651,37 +881,24 @@ def register_routes(app: FastAPI) -> None:
             return see_other("/children?error=1")
 
         if passphrase:
-            parent = state.parent
-            if parent is not None and not parent.passphrase_hash:
-                # No passphrase on this install: the PIN, re-entered, is the
-                # fallback. Never a dead end (principle #4).
-                accepted = security.verify_secret(parent.pin_hash, passphrase.strip())
-                if accepted and state.session is not None:
-                    state.session.passphrase_ok_until = utcnow() + dt.timedelta(
-                        minutes=auth.PASSPHRASE_GRACE_MINUTES
-                    )
-                if not accepted:
-                    # Audited, like every other failure at this gate. Without
-                    # this, a child who watched the PIN being typed could guess
-                    # at "turn protection off" indefinitely on an install with
-                    # no passphrase, and a parent checking the log for "did
-                    # somebody try to switch BioKids off" saw nothing at all.
-                    repo.audit(
-                        session,
-                        actor=_actor(state),
-                        action="passphrase_failed",
-                        target=f"child:{child_id}",
-                        detail={"via": "pin_fallback"},
-                        severity="warning",
-                    )
-            else:
-                auth.confirm_passphrase(session, state, passphrase)
+            auth.confirm_passphrase(session, state, passphrase)
 
         try:
+            # The time pickers when the page sent them (D-176); the old text
+            # field otherwise, which is also what the passphrase step re-posts.
+            if weekday_from is not None:
+                weekday_windows = _windows_from_pickers(weekday_from, weekday_to or [])
+            if weekend_from is not None:
+                weekend_windows = _windows_from_pickers(weekend_from, weekend_to or [])
             windows = {
                 "weekday": _parse_window_list(weekday_windows),
                 "weekend": _parse_window_list(weekend_windows),
             }
+            days = (
+                _schedule_from_form(day_custom, day_quota or [], day_from or [], day_to or [])
+                if day_custom is not None or day_quota is not None
+                else _schedule_from_json(schedule)
+            )
         except ValueError:
             policy = repo.get_or_create_policy(session, child_id)
             return render(
@@ -695,6 +912,7 @@ def register_routes(app: FastAPI) -> None:
                 child=child,
                 policy=policy,
                 windows=policy.windows,
+                schedule=policy.schedule,
                 end_actions=[e.value for e in EndAction],
                 error=tr("time.windows.invalid"),
             )
@@ -723,6 +941,7 @@ def register_routes(app: FastAPI) -> None:
                 child=child,
                 policy=policy,
                 windows=policy.windows,
+                schedule=policy.schedule,
                 end_actions=[e.value for e in EndAction],
                 confirm_disable=True,
                 submitted={
@@ -730,6 +949,7 @@ def register_routes(app: FastAPI) -> None:
                     "weekend_quota_min": weekend_quota_min,
                     "weekday_windows": weekday_windows,
                     "weekend_windows": weekend_windows,
+                    "schedule": json.dumps({str(k): v for k, v in days.items()}),
                     "end_action": end_action,
                     "break_enabled": break_enabled,
                     "break_work_min": break_work_min,
@@ -748,6 +968,7 @@ def register_routes(app: FastAPI) -> None:
         policy.weekday_quota_min = max(0, min(weekday_quota_min, 24 * 60))
         policy.weekend_quota_min = max(0, min(weekend_quota_min, 24 * 60))
         policy.windows = windows
+        policy.schedule = days
         policy.end_action = _one_of(end_action, EndAction, EndAction.POWEROFF).value
         policy.enabled = enabled == "on"
         policy.break_enabled = break_enabled == "on"
@@ -1058,7 +1279,7 @@ def register_routes(app: FastAPI) -> None:
         blocked = _guard(request, session, state)
         if blocked:
             return blocked
-        target = next if next.startswith("/") and not next.startswith("//") else "/today"
+        target = auth.safe_next(next)
         if not auth.csrf_ok(state, csrf_token):
             return see_other(f"{target}?error=csrf")
         repo.dismiss_alert(session, alert_id)
@@ -1132,8 +1353,70 @@ def register_routes(app: FastAPI) -> None:
             "settings.html",
             family=repo.get_family(session),
             daemon_up=ctx.client.available(),
+            mail_settings=mail.load_settings(session, ctx.config),
             **phone.view(ctx, session),
         )
+
+    @app.post("/settings/mail")
+    def settings_mail(
+        request: Request,
+        ctx: Ctx,
+        session: Db,
+        state: Auth,
+        tr: Tr,
+        action: Annotated[str, Form()] = "save",
+        host: Annotated[str, Form()] = "",
+        port: Annotated[int, Form()] = 587,
+        security: Annotated[str, Form()] = "starttls",
+        username: Annotated[str, Form()] = "",
+        password: Annotated[str, Form()] = "",
+        sender: Annotated[str, Form()] = "",
+        recipients: Annotated[str, Form()] = "",
+        alerts: Annotated[str, Form()] = "",
+        weekly: Annotated[str, Form()] = "",
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        """The parent's own mail server, for alerts and the weekly summary (D-177).
+
+        The password field is never filled in on the page; left empty, the one
+        already stored is kept.
+        """
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        if not auth.csrf_ok(state, csrf_token):
+            return see_other("/settings?error=csrf#mail")
+        current = mail.load_settings(session, ctx.config)
+        if action == "remove":
+            mail.save_settings(session, ctx.config, None)
+            repo.audit(session, actor=_actor(state), action="mail_removed")
+            session.commit()
+            return see_other("/settings?saved=1#mail")
+
+        settings = mail.MailSettings(
+            host=host.strip(),
+            port=max(1, min(port, 65535)),
+            security=security if security in mail.SECURITY_MODES else "starttls",
+            username=username.strip(),
+            password=password or (current.password if current else ""),
+            sender=sender.strip(),
+            recipients=mail.parse_recipients(recipients),
+            alerts=alerts == "on",
+            weekly=weekly == "on",
+        )
+        if not settings.usable:
+            return see_other("/settings?error=mail.incomplete#mail")
+        mail.save_settings(session, ctx.config, settings)
+        repo.audit(session, actor=_actor(state), action="mail_saved")
+        session.commit()
+        if action == "test":
+            try:
+                mail.send(settings, tr("mail.test.subject"), tr("mail.test.body"))
+            except mail.MailError as exc:
+                log.warning("the test mail failed: %s", exc)
+                return see_other("/settings?error=mail.failed#mail")
+            return see_other("/settings?saved=mail_sent#mail")
+        return see_other("/settings?saved=1#mail")
 
     @app.get("/settings/phone", response_class=HTMLResponse)
     def settings_phone(
@@ -1494,6 +1777,51 @@ async def _event_stream(ctx: PanelContext, request: Request) -> AsyncIterator[by
             yield b'event: daemon_state\ndata: {"state":"unreachable"}\n\n'
         with contextlib.suppress(asyncio.CancelledError):
             await asyncio.sleep(3)
+
+
+def _windows_from_pickers(starts: list[str], ends: list[str]) -> str:
+    """Pairs of `<input type="time">` values as the text the old field took.
+
+    A pair with only one side filled is a mistake worth saying so about, not a
+    window to guess at.
+    """
+    ranges: list[str] = []
+    for start, end in zip(starts, ends, strict=False):
+        start, end = start.strip(), end.strip()
+        if start and end:
+            ranges.append(f"{start}-{end}")
+        elif start or end:
+            raise ValueError("half a window")
+    return ", ".join(ranges)
+
+
+def _schedule_from_form(
+    custom: list[str] | None, quotas: list[str], starts: list[str], ends: list[str]
+) -> dict[int, dict[str, Any]]:
+    """The per-day overrides (D-176): only the days ticked as different."""
+    ticked = {int(day) for day in (custom or []) if day.isdigit() and 0 <= int(day) <= 6}
+    days: dict[int, dict[str, Any]] = {}
+    for day in sorted(ticked):
+        entry: dict[str, Any] = {}
+        quota = quotas[day].strip() if day < len(quotas) else ""
+        if quota:
+            entry["quota"] = max(0, min(int(quota), 24 * 60))
+        start = starts[day] if day < len(starts) else ""
+        end = ends[day] if day < len(ends) else ""
+        text = _windows_from_pickers([start], [end])
+        if text:
+            entry["windows"] = _parse_window_list(text)
+        if entry:
+            days[day] = entry
+    return days
+
+
+def _schedule_from_json(raw: str) -> dict[int, dict[str, Any]]:
+    """The same overrides, as the passphrase step carries them back."""
+    if not raw:
+        return {}
+    probe = Policy(schedule_json=raw)
+    return probe.schedule
 
 
 def _parse_window_list(raw: str) -> list[str]:

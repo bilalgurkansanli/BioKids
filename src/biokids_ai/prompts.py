@@ -11,6 +11,7 @@ a fixed sentence from the catalogs (`assistant.refuse.*`), written by people.
 
 from __future__ import annotations
 
+import json
 from typing import Final
 
 #: Every category the classifier may return. "ok" is the only one answered.
@@ -179,13 +180,29 @@ def band_for(age: int) -> str:
 def classify_messages(question: str, age: int) -> list[dict[str, str]]:
     return [
         {"role": "system", "content": CLASSIFY_SYSTEM.format(age=age)},
-        # Quoted, so the question is data and not an instruction.
-        {"role": "user", "content": f'Message: "{question}"'},
+        # Quoted, so the question is data and not an instruction - and quoted
+        # by json.dumps, so a question with a quote mark in it cannot close the
+        # quotation and append a verdict of its own.
+        {"role": "user", "content": f"Message: {json.dumps(question, ensure_ascii=False)}"},
     ]
 
 
+KNOWLEDGE_NOTE: Final = {
+    "tr": (
+        "\n\nAşağıdaki bilgi bir ansiklopediden alındı. Soruyla ilgili kısmını doğru kabul et "
+        "ve kendi hatırladığınla çelişirse bunu kullan; ilgisiz kısmı yok say. Ansiklopediden "
+        "söz etme, kaynak ya da internet sitesi verme.\n---\n{context}\n---"
+    ),
+    "en": (
+        "\n\nThe text below is from an encyclopedia. Treat the part that fits the question as "
+        "true and prefer it over what you remember; ignore the rest. Do not mention the "
+        "encyclopedia or give sources or websites.\n---\n{context}\n---"
+    ),
+}
+
+
 def answer_messages(
-    question: str, age: int, locale: str, persona: str, name: str = ""
+    question: str, age: int, locale: str, persona: str, name: str = "", context: str = ""
 ) -> list[dict[str, str]]:
     language = "tr" if locale.startswith("tr") else "en"
     band = band_for(age)
@@ -197,6 +214,8 @@ def answer_messages(
         sentences=SENTENCES[band],
         words=WORDS[(language, band)],
     )
+    if context:
+        system += KNOWLEDGE_NOTE[language].format(context=context)
     example_question, example_answer = EXAMPLES[(language, band)]
     return [
         {"role": "system", "content": system},

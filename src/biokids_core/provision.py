@@ -20,10 +20,12 @@ remove their drawings.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import re
 import shutil
+import stat
 import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -361,48 +363,117 @@ def install_session_files(
         plan.append((entry, home / AUTOSTART_DIR / entry.name))
 
     for src, dst in plan:
-        if dst.exists() and not overwrite:
-            continue
         try:
-            _make_owned(dst.parent, home, uid, gid)
-            shutil.copyfile(src, dst)
-            dst.chmod(0o644)
-            _own(dst, uid, gid)
+            if _write_into_home(src, dst, home, uid, gid, overwrite=overwrite):
+                written.append(str(dst))
         except OSError as exc:
             problems.append(f"{dst}: {exc}")
-            continue
-        written.append(str(dst))
 
     return written, problems
 
 
-def _make_owned(directory: Path, home: Path, uid: int, gid: int) -> None:
-    """Create `directory` and give the child every level of it.
+# POSIX-only names, read through getattr for the same reason as `pwd` above.
+_O_NOFOLLOW: int = getattr(os, "O_NOFOLLOW", 0)
+_O_DIRECTORY: int = getattr(os, "O_DIRECTORY", 0)
+_O_CLOEXEC: int = getattr(os, "O_CLOEXEC", 0)
+_DIR_FLAGS = os.O_RDONLY | _O_DIRECTORY | _O_NOFOLLOW | _O_CLOEXEC
+_SAFE_OPEN = os.open in os.supports_dir_fd and _O_NOFOLLOW != 0
+"""Whether this host can walk a directory tree without following symlinks.
 
-    Not just the leaf. `mkdir(parents=True)` runs as root and creates the whole
-    chain as root, so writing `~/.config/autostart/biokids-shell.desktop` used
-    to leave `~/.config` itself root-owned - and a child who cannot write
-    `~/.config` cannot start a session, which from where they are sitting looks
-    exactly like BioKids refusing to let them in.
+Every Linux can. The Windows host this is developed on cannot, and has no
+child accounts to protect either; there the plain path below is used."""
 
-    Stops at `home`, which already belongs to the child and is not ours to
-    change.
+
+def _write_into_home(
+    src: Path, dst: Path, home: Path, uid: int, gid: int, *, overwrite: bool
+) -> bool:
+    """Copy `src` to `dst` inside the child's home as root, safely. True if written.
+
+    This runs as root in a directory the child owns, which is the textbook
+    setting for a symlink attack: a child who makes `~/.config` a link to
+    `/etc` would have had root create directories there and then chown `/etc`
+    to them, and a dangling link in `~/.config/autostart` would have had root
+    create a file anywhere on the disk. So nothing here follows a link. Each
+    level is opened relative to the one above with O_NOFOLLOW, created when it
+    is missing, and given to the child through its file descriptor; the file
+    itself is opened the same way and refused if it is anything but a regular
+    file with one name. A link where a directory should be is an error the
+    parent sees, not a path root walks down.
+
+    Every level is owned by the child, not just the leaf: `mkdir` as root
+    creates root-owned directories, and a child who cannot write `~/.config`
+    cannot start a session at all.
     """
-    directory.mkdir(parents=True, exist_ok=True)
-    walked = directory
-    while True:
-        _own(walked, uid, gid)
-        if walked == home or walked.parent == walked:
-            return
-        walked = walked.parent
+    relative = dst.relative_to(home)
+    if not _SAFE_OPEN:
+        if dst.exists() and not overwrite:
+            return False
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        walked = dst.parent
+        while walked != home and home in walked.parents:
+            _own(walked, None, uid, gid)
+            walked = walked.parent
+        shutil.copyfile(src, dst)
+        dst.chmod(0o644)
+        _own(dst, None, uid, gid)
+        return True
+
+    data = src.read_bytes()
+    directory = os.open(home, _DIR_FLAGS)
+    try:
+        walked = home
+        for part in relative.parent.parts:
+            walked = walked / part
+            with contextlib.suppress(FileExistsError):
+                os.mkdir(part, 0o755, dir_fd=directory)
+            # ELOOP or ENOTDIR here is a link or a file where a directory
+            # belongs; the OSError reaches the caller as a problem.
+            inner = os.open(
+                part,
+                _DIR_FLAGS,
+                dir_fd=directory,
+            )
+            os.close(directory)
+            directory = inner
+            _own(walked, directory, uid, gid)
+
+        name = relative.name
         try:
-            walked.relative_to(home)
-        except ValueError:
-            # Above the home directory: nothing up there is ours to touch.
-            return
+            existing = os.stat(name, dir_fd=directory, follow_symlinks=False)
+        except FileNotFoundError:
+            existing = None
+        if existing is not None and not overwrite:
+            return False
+
+        target = os.open(
+            name,
+            os.O_WRONLY | os.O_CREAT | _O_NOFOLLOW | _O_CLOEXEC,
+            0o644,
+            dir_fd=directory,
+        )
+        try:
+            info = os.fstat(target)
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                # A hard link to someone else's file would be truncated as root.
+                raise OSError(f"{dst} is not a plain file; refusing to write it")
+            os.ftruncate(target, 0)
+            os.write(target, data)
+            os.fchmod(target, 0o644)
+            _own(dst, target, uid, gid)
+        finally:
+            os.close(target)
+    finally:
+        os.close(directory)
+    return True
 
 
-def _own(path: Path, uid: int, gid: int) -> None:
+def _own(path: Path, fd: int | None, uid: int, gid: int) -> None:
+    """Give `path` to the child: through `fd` when there is one, so it is the
+    file that was opened and not whatever a name points at now."""
+    fchown = getattr(os, "fchown", None)
+    if fd is not None and fchown is not None:
+        fchown(fd, uid, gid)
+        return
     chown = getattr(os, "chown", None)
     if chown is not None:
         chown(path, uid, gid)

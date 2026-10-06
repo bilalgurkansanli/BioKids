@@ -20,12 +20,12 @@ import datetime as dt
 import logging
 from dataclasses import dataclass
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from biokids_core import repo, security
 from biokids_core.config import Config
-from biokids_core.db.models import PanelSession, Parent, utcnow
+from biokids_core.db.models import AuditLog, PanelSession, Parent, utcnow
 
 log = logging.getLogger(__name__)
 
@@ -250,6 +250,28 @@ def logout_everywhere(session: Session, parent_id: int) -> int:
 # ---------------------------------------------------------------- passphrase
 
 
+PASSPHRASE_ATTEMPTS = 5
+PASSPHRASE_WINDOW_MINUTES = 15
+
+
+def passphrase_locked(session: Session, *, now: dt.datetime | None = None) -> bool:
+    """Five wrong passphrases in fifteen minutes stop the gate for the rest of them.
+
+    The passphrase guards switching protection off. Behind a PIN a child may have
+    watched being typed, it was the one secret with no limit on guesses. The
+    count comes from the audit log, which records every failure already, so
+    there is no second counter to fall out of step with it.
+    """
+    now = now or utcnow()
+    since = now - dt.timedelta(minutes=PASSPHRASE_WINDOW_MINUTES)
+    failures = session.scalar(
+        select(func.count())
+        .select_from(AuditLog)
+        .where(AuditLog.action == "passphrase_failed", AuditLog.ts >= since)
+    )
+    return int(failures or 0) >= PASSPHRASE_ATTEMPTS
+
+
 def confirm_passphrase(
     session: Session,
     state: AuthState,
@@ -257,18 +279,28 @@ def confirm_passphrase(
     *,
     now: dt.datetime | None = None,
 ) -> bool:
-    """Open the grace window for destructive actions, or refuse."""
+    """Open the grace window for destructive actions, or refuse.
+
+    An install with no passphrase takes the PIN, re-entered, instead: never a
+    dead end (principle 4). Either way a failure is audited and counts towards
+    `passphrase_locked`.
+    """
     if state.parent is None or state.session is None:
         return False
-    if not security.verify_secret(state.parent.passphrase_hash, passphrase.strip()):
+    now = now or utcnow()
+    stored = state.parent.passphrase_hash or state.parent.pin_hash
+    if passphrase_locked(session, now=now) or not security.verify_secret(
+        stored, passphrase.strip()
+    ):
         repo.audit(
             session,
             actor=f"parent:{state.parent.id}",
             action="passphrase_failed",
+            detail={} if state.parent.passphrase_hash else {"via": "pin_fallback"},
             severity="warning",
         )
+        session.flush()
         return False
-    now = now or utcnow()
     state.session.passphrase_ok_until = now + dt.timedelta(minutes=PASSPHRASE_GRACE_MINUTES)
     session.flush()
     return True

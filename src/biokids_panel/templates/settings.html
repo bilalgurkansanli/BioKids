@@ -19,6 +19,92 @@
     <button class="btn" type="submit">{{ _('common.save') }}</button>
   </form>
 
+  {# -------------------------------------------------------------- mail #}
+  {#
+    The parent's own mail server (D-177). The password is never put back into
+    the page; left empty it stays as it was.
+  #}
+  <form class="card" method="post" action="/settings/mail" id="mail">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <h2>{{ _('mail.panel.title') }}</h2>
+    <p class="muted">{{ _('mail.panel.help') }}</p>
+
+    <div class="field">
+      <label for="mail-to">{{ _('mail.panel.recipients') }}</label>
+      <input id="mail-to" name="recipients" type="email" multiple autocomplete="email"
+             value="{{ mail_settings.recipients|join(', ') if mail_settings else '' }}">
+    </div>
+    <div class="checkline">
+      <input type="checkbox" id="mail-alerts" name="alerts"
+             {% if not mail_settings or mail_settings.alerts %}checked{% endif %}>
+      <label for="mail-alerts">{{ _('mail.panel.alerts') }}</label>
+    </div>
+    <div class="checkline">
+      <input type="checkbox" id="mail-weekly" name="weekly"
+             {% if not mail_settings or mail_settings.weekly %}checked{% endif %}>
+      <label for="mail-weekly">{{ _('mail.panel.weekly') }}</label>
+    </div>
+
+    <details class="advanced" {% if not mail_settings %}open{% endif %}>
+      <summary>{{ _('mail.panel.server') }}</summary>
+      <span class="help">{{ _('mail.panel.server_help') }}</span>
+      <div class="row row--wrap">
+        <div class="field grow">
+          <label for="mail-host">{{ _('mail.panel.host') }}</label>
+          <input id="mail-host" name="host" type="text" placeholder="smtp.gmail.com"
+                 value="{{ mail_settings.host if mail_settings else '' }}">
+        </div>
+        <div class="field">
+          <label for="mail-port">{{ _('mail.panel.port') }}</label>
+          <input id="mail-port" name="port" type="number" min="1" max="65535"
+                 value="{{ mail_settings.port if mail_settings else 587 }}">
+        </div>
+      </div>
+      <div class="field">
+        <label for="mail-security">{{ _('mail.panel.security') }}</label>
+        <select id="mail-security" name="security">
+          {% for mode in ('starttls', 'ssl', 'none') %}
+            <option value="{{ mode }}"
+              {% if (mail_settings.security if mail_settings else 'starttls') == mode %}selected{% endif %}>
+              {{ _('mail.panel.security.' ~ mode) }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="mail-user">{{ _('mail.panel.username') }}</label>
+        <input id="mail-user" name="username" type="text" autocomplete="username"
+               value="{{ mail_settings.username if mail_settings else '' }}">
+      </div>
+      <div class="field">
+        <label for="mail-pass">{{ _('mail.panel.password') }}</label>
+        <input id="mail-pass" name="password" type="password" autocomplete="new-password"
+               placeholder="{{ _('mail.panel.password_kept') if mail_settings else '' }}">
+        <span class="help">{{ _('mail.panel.password_help') }}</span>
+      </div>
+      <div class="field">
+        <label for="mail-from">{{ _('mail.panel.sender') }}</label>
+        <input id="mail-from" name="sender" type="email"
+               value="{{ mail_settings.sender if mail_settings else '' }}">
+      </div>
+    </details>
+
+    <div class="row row--wrap">
+      <button class="btn btn--primary" type="submit" name="action" value="save">{{ _('common.save') }}</button>
+      <button class="btn" type="submit" name="action" value="test">{{ _('mail.panel.test') }}</button>
+      {% if mail_settings %}
+        <button class="btn btn--quiet" type="submit" name="action" value="remove">{{ _('mail.panel.remove') }}</button>
+      {% endif %}
+    </div>
+  </form>
+
+  {# ------------------------------------------------------------ voices #}
+  <section class="card">
+    <h2>{{ _('voices.title') }}</h2>
+    <p class="muted">{{ _('voices.teaser') }}</p>
+    <a class="btn" href="/voices">{{ _('voices.open') }}</a>
+  </section>
+
   {# ------------------------------------------------------ phone access #}
   <section class="card" id="phone">
     <h2>{{ _('wizard.remote.title') }}</h2>
@@ -85,7 +171,6 @@
     <p class="muted">{{ _('common.coming_soon.help') }}</p>
     <ul class="muted small">
       <li>{{ _('wizard.filter.title') }}</li>
-      <li>{{ _('wizard.email.title') }}</li>
       <li>{{ _('wizard.extras.title') }}</li>
     </ul>
   </section>

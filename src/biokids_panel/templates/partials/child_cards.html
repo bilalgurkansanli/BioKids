@@ -15,7 +15,7 @@
 {% if pending_requests %}
   <div class="requests-banner">
     <span>{{ _('today.requests_pending', count=pending_requests) }}</span>
-    <a class="btn" href="/audit">{{ _('nav.requests') }}</a>
+    <a class="btn btn--primary" href="/requests">{{ _('nav.requests') }}</a>
   </div>
 {% endif %}
 
@@ -107,17 +107,24 @@
 
     {% if child.managed and not child.unknown %}
     <div class="actions">
-      <form method="post" action="/children/{{ child.child_id }}/grant">
-        <input type="hidden" name="csrf_token" value="{{ csrf }}">
-        <input type="hidden" name="minutes" value="10">
-        <button class="btn btn--ok" type="submit">{{ _('today.grant_10') }}</button>
-      </form>
+      {% for extra in (10, 30) %}
+        <form method="post" action="/children/{{ child.child_id }}/grant">
+          <input type="hidden" name="csrf_token" value="{{ csrf }}">
+          <input type="hidden" name="minutes" value="{{ extra }}">
+          <button class="btn btn--ok" type="submit">{{ _('today.grant_n', minutes=extra) }}</button>
+        </form>
+      {% endfor %}
       <form method="post" action="/children/{{ child.child_id }}/lock">
         <input type="hidden" name="csrf_token" value="{{ csrf }}">
         <button class="btn" type="submit">{{ _('today.lock') }}</button>
       </form>
+      <form method="post" action="/children/{{ child.child_id }}/unlock">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button class="btn" type="submit">{{ _('today.unlock') }}</button>
+      </form>
       <form method="post" action="/children/{{ child.child_id }}/poweroff"
-            onsubmit="return confirm('{{ _('today.poweroff.confirm', name=child.display_name) }}')">
+            data-confirm="{{ _('today.poweroff.confirm', name=child.display_name) }}"
+            onsubmit="return confirm(this.dataset.confirm)">
         <input type="hidden" name="csrf_token" value="{{ csrf }}">
         <input type="hidden" name="confirm" value="yes">
         <button class="btn btn--danger" type="submit">{{ _('today.poweroff') }}</button>

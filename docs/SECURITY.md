@@ -79,9 +79,23 @@ RestrictNamespaces=yes
 RestrictSUIDSGID=yes
 MemoryDenyWriteExecute=yes
 SystemCallFilter=@system-service
-ReadWritePaths=/var/lib/biokids /var/log/biokids /run/biokids /etc/dnsmasq.d \
-               /etc/chromium/policies/managed /etc/nftables.d
+LockPersonality=yes
+RestrictRealtime=yes
+SystemCallArchitectures=native
+ProtectClock=yes
+ProtectKernelLogs=yes
+ProtectHostname=yes
 ```
+
+On top of that block, each root unit names the little of root it keeps (D-171):
+
+| Unit | `CapabilityBoundingSet=` | `RestrictAddressFamilies=` | `ReadWritePaths=` |
+|---|---|---|---|
+| `biokids-daemon` | `CAP_NET_ADMIN` (nft), `CAP_CHOWN` (its socket) | unix, netlink, inet, inet6 | `/var/lib/biokids /var/log/biokids /run/biokids /etc/chromium/policies/managed` |
+| `biokids-panel` | none | unix, inet, inet6 | `/var/lib/biokids /var/log/biokids /run/biokids` |
+
+The panel is root by uid only: the one root process a phone can reach holds no
+capability a bug in it could use.
 
 `biokids-ai` always runs with `PrivateNetwork=yes`: it has no reason to speak to the
 internet and cannot. The one-time model download is a separate unit,
@@ -125,6 +139,7 @@ entry in `DECISIONS.md` and a note in the README.**
 | `pkgs.tailscale.com` | the Tailscale package and its updates, through apt, signed by the key BioKids ships | yes: only after the parent presses "Telefondan erişimi aç" on a machine without Tailscale (D-169) |
 | `log.tailscale.com` | Tailscale's own client logs | **turned off**: the runbook starts `tailscaled` with `--no-logs-no-support` (D-157) |
 | Hugging Face | one-time download of the assistant's models | yes: only with the AI package, only when the parent presses the button (D-165) |
+| `download.kiwix.org` and the mirror it redirects to | one-time download of the encyclopedia the assistant checks itself against, pinned by SHA-256 | yes: the same button, the same package (D-178) |
 | ElevenLabs | cloud TTS | yes, opt-in, off by default, clearly labelled |
 
 Zero telemetry. No crash reporting. No version ping. No analytics.
@@ -162,9 +177,20 @@ table inet biokids {
     meta skuid @children udp dport 853 reject
     meta skuid @children ip daddr { 1.1.1.1, 8.8.8.8, 9.9.9.9, ... } tcp dport 443 reject
     # ... and the same for UDP and for the resolvers' IPv6 addresses
+    meta skuid @children tcp dport 7878 reject           # the parent's panel
+    meta skuid @children ip daddr 100.64.0.0/10 reject   # the tailnet
+    meta skuid @children ip6 daddr fd7a:115c:a1e0::/48 reject
   }
 }
 ```
+
+The panel is closed here, by uid, rather than in the browser (D-171). A URL list
+closes the spellings it names: `127.0.0.1.nip.io:7878`, the machine's tailnet
+address or a rebound name all reached the PIN page, where a child could trip the
+lockout and keep a parent out for a day. And because Chromium's policy is
+machine-wide, every address it closed was closed in the parent's own browser too.
+dnsmasq also runs with `stop-dns-rebind`: no public name may answer with a private
+or loopback address for a child.
 
 Port 5354 is `dnsmasq`, run by `biokids-dns.service` from `dnsmasq-base` with a
 configuration the daemon writes to `/var/lib/biokids/dns/`: loopback only, the
@@ -181,13 +207,16 @@ the table.
 
 ### Allowlist mode
 
-"Only the sites I choose". The open mode is the same policy without the `*`: the
-panel's addresses and Chromium's own settings pages stay blocked in both. Chromium
-reads one managed policy per machine, so the strictest child's mode applies.
+"Only the sites I choose". The open mode is the same policy without the `*`:
+`file://`, typed `javascript:` and Chromium's own pages stay blocked in both, and
+certificate warnings cannot be clicked through. Chromium reads one managed policy
+per machine, so the strictest child's mode applies; the parent's panel is not in it
+(nftables closes it to the children, above). The policy is
+`biokids_core.browser_policy`.
 
 ```json
 {
-  "URLBlocklist": ["*", "127.0.0.1:7878", "ts.net", "chrome://settings", "..."],
+  "URLBlocklist": ["*", "file://*", "javascript://*", "chrome://settings", "..."],
   "URLAllowlist": ["127.0.0.1:7879", "eba.gov.tr", "trtcocuk.net.tr"],
   "AudioCaptureAllowed": false,
   "AudioCaptureAllowedUrls": ["http://127.0.0.1:7879"],

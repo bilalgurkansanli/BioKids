@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from biokids_core import repo, security
 from biokids_core.config import Config
-from biokids_core.db import AuditLog, Database, Parent
+from biokids_core.db import AuditLog, Database, Parent, Policy
 from biokids_core.db.models import utcnow
 from biokids_core.errors import IpcError
 from biokids_core.ipc import Response
@@ -320,8 +320,38 @@ def test_an_idle_session_expires(
 
 def test_signing_out_invalidates_the_session(client: TestClient, family_ready: None) -> None:
     login(client)
-    client.post("/logout", follow_redirects=False)
+    client.post("/logout", data={"csrf_token": csrf_of(client)}, follow_redirects=False)
     assert client.get("/today", follow_redirects=False).status_code == 303
+
+
+def test_another_site_cannot_sign_a_parent_out(client: TestClient, family_ready: None) -> None:
+    login(client)
+    client.post("/logout", follow_redirects=False)
+    assert client.get("/today", follow_redirects=False).status_code == 200
+
+
+def test_an_empty_recovery_code_never_resets_the_pin(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """The wizard once hashed whatever its hidden field sent, "" included."""
+    with db.session() as session:
+        parent = repo.get_parent(session)
+        assert parent is not None
+        parent.recovery_hash = security.hash_secret("")
+    response = client.post("/recovery", data={"code": "", "pin": "135790"})
+    assert response.status_code == 400
+
+
+def test_the_passphrase_gate_stops_after_five_wrong_guesses(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    from biokids_panel import auth
+
+    with db.session() as session:
+        for _ in range(auth.PASSPHRASE_ATTEMPTS):
+            repo.audit(session, actor="parent:1", action="passphrase_failed")
+        session.flush()
+        assert auth.passphrase_locked(session)
 
 
 def test_the_recovery_code_resets_the_pin(
@@ -453,7 +483,7 @@ def test_a_malformed_window_is_rejected_with_a_readable_message(
         },
     )
     assert response.status_code == 400
-    assert "16:00-20:00" in response.text
+    assert "hem başlangıcı hem bitişi" in response.text
     with db.session() as session:
         assert repo.get_or_create_policy(session, 1).weekday_quota_min == 60
 
@@ -1485,6 +1515,10 @@ def test_the_panel_does_not_hold_a_shutdown_for_an_open_phone(
     seen: dict[str, Any] = {}
     monkeypatch.setattr(panel_main.uvicorn, "run", lambda *_a, **kw: seen.update(kw))
     monkeypatch.setattr(panel_main, "set_config", lambda _config: None)
+    # Not the real app: built from the default paths it opens the machine's own
+    # /var/lib/biokids/biokids.db, which fails on a machine with BioKids
+    # installed and creates one on a machine without.
+    monkeypatch.setattr(panel_main, "create_app", lambda _config: object())
 
     panel_main.main(["--config", str(tmp_path / "nonexistent.toml")])
 
@@ -1754,3 +1788,177 @@ def test_the_wizard_opens_by_itself_only_for_a_parent_and_only_until_setup_is_do
     assert '*" biokids-child "*) exit 0' in script, "never in a child's session"
     assert '"/wizard" in location' in script, "only while / still leads to the wizard"
     assert script.rstrip().endswith('exec xdg-open "http://127.0.0.1:7878/wizard/1"')
+
+
+# ------------------------------------------------------- D-173 requests
+
+
+def test_the_requests_screen_answers_in_one_tap(
+    client: TestClient, family_ready: None, db: Database, daemon: FakeDaemon
+) -> None:
+    from biokids_core.db import AccessRequest
+
+    with db.session() as session:
+        session.add(AccessRequest(child_id=1, url="", kind="time", status="pending"))
+    login(client)
+
+    page = client.get("/requests").text
+    assert "/requests/1/decide" in page
+
+    client.post(
+        "/requests/1/decide",
+        data={"approve": "yes", "minutes": 30, "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    op, args = daemon.calls[-1]
+    assert op == "decide_request"
+    assert args["approve"] is True and args["minutes"] == 30
+
+
+def test_unlock_needs_no_time_to_be_given(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    login(client)
+    client.post(
+        "/children/1/unlock", data={"csrf_token": csrf_of(client)}, follow_redirects=False
+    )
+    assert daemon.ran("unlock_now") and not daemon.ran("grant_time")
+
+
+# ------------------------------------------------- D-174 recordings
+
+
+def test_the_panel_keeps_a_recording_sent_from_the_phone(
+    client: TestClient, family_ready: None, config: Config
+) -> None:
+    from biokids_core import recorded_voice
+    from test_recorded_voice import a_wav
+
+    login(client)
+    token = csrf_of(client)
+    response = client.post(
+        "/voices/warn_1?text=Son%20dakika",
+        content=a_wav(1.5),
+        headers={"content-type": "audio/wav", "x-csrf-token": token},
+    )
+    assert response.json() == {"ok": True}
+    found = recorded_voice.lookup(config.paths.recorded_voice_dir, "tr", "warn_1")
+    assert found is not None and found.text == "Son dakika"
+    assert "/voices/tr/warn_1.wav" in client.get("/voices").text
+
+
+def test_a_recording_without_the_token_is_refused(
+    client: TestClient, family_ready: None
+) -> None:
+    from test_recorded_voice import a_wav
+
+    login(client)
+    response = client.post(
+        "/voices/warn_1", content=a_wav(), headers={"content-type": "audio/wav"}
+    )
+    assert response.status_code == 403
+
+
+# ------------------------------------------------------ D-176 time pickers
+
+
+def test_hours_come_from_the_time_pickers(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    response = client.post(
+        "/children/1/time",
+        data={
+            "csrf_token": csrf_of(client),
+            "weekday_quota_min": 60,
+            "weekend_quota_min": 90,
+            "weekday_from": ["07:30", "16:00"],
+            "weekday_to": ["08:15", "19:00"],
+            "weekend_from": ["", ""],
+            "weekend_to": ["", ""],
+            "day_custom": ["2"],
+            "day_quota": ["", "", "30", "", "", "", ""],
+            "day_from": ["", "", "18:00", "", "", "", ""],
+            "day_to": ["", "", "19:00", "", "", "", ""],
+            "enabled": "on",
+            "end_action": "lock",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    with db.session() as session:
+        policy = session.get(Policy, 1)
+        assert policy is not None
+        assert policy.windows["weekday"] == ["07:30-08:15", "16:00-19:00"]
+        assert policy.windows["weekend"] == []
+        assert policy.schedule == {2: {"quota": 30, "windows": ["18:00-19:00"]}}
+
+
+def test_half_a_range_is_said_not_guessed(client: TestClient, family_ready: None) -> None:
+    login(client)
+    response = client.post(
+        "/children/1/time",
+        data={
+            "csrf_token": csrf_of(client),
+            "weekday_from": ["16:00", ""],
+            "weekday_to": ["", ""],
+            "enabled": "on",
+        },
+    )
+    assert response.status_code == 400
+
+
+# ------------------------------------------------------------ D-177 mail
+
+
+def test_the_mail_password_is_kept_when_left_empty(
+    client: TestClient, family_ready: None, db: Database, config: Config
+) -> None:
+    from biokids_core import mail
+
+    login(client)
+    form = {
+        "csrf_token": csrf_of(client),
+        "host": "smtp.example.com",
+        "port": 587,
+        "security": "starttls",
+        "username": "anne@example.com",
+        "password": "app-password",
+        "recipients": "anne@example.com",
+        "alerts": "on",
+    }
+    client.post("/settings/mail", data=form, follow_redirects=False)
+    form["password"] = ""
+    form["csrf_token"] = csrf_of(client)
+    client.post("/settings/mail", data=form, follow_redirects=False)
+
+    with db.session() as session:
+        saved = mail.load_settings(session, config)
+    assert saved is not None and saved.password == "app-password"
+    assert saved.weekly is False and saved.alerts is True
+    assert "app-password" not in client.get("/settings").text
+
+
+def test_a_test_mail_says_whether_it_went(
+    client: TestClient, family_ready: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from biokids_core import mail
+
+    def refuse(*_a: object, **_k: object) -> None:
+        raise mail.MailError("SMTPAuthenticationError: 535")
+
+    monkeypatch.setattr(mail, "send", refuse)
+    login(client)
+    response = client.post(
+        "/settings/mail",
+        data={
+            "csrf_token": csrf_of(client),
+            "action": "test",
+            "host": "smtp.example.com",
+            "username": "anne@example.com",
+            "password": "wrong",
+            "recipients": "anne@example.com",
+        },
+        follow_redirects=False,
+    )
+    assert "error=mail.failed" in response.headers["location"]

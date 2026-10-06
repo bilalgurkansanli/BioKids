@@ -169,9 +169,7 @@ def base_context(
     """What every template needs, assembled once."""
     pending = 0
     if state.authenticated:
-        from biokids_core.db.models import AccessRequest
-
-        pending = session.query(AccessRequest).filter(AccessRequest.status == "pending").count()
+        pending = len(repo.access_requests(session, decided_limit=0)[0])
     return {
         "request": request,
         "_": tr,
@@ -218,6 +216,8 @@ def flash_for(request: Request, tr: Translator) -> dict[str, str] | None:
         return {"tone": "danger", "text": tr(key, remaining="", minutes="")}
 
     saved = query.get("saved", "")
+    if saved == "mail_sent":
+        return {"tone": "ok", "text": tr("mail.panel.sent")}
     if saved == "download":
         # Started, not finished: it takes minutes, and the status card says when.
         return {"tone": "ok", "text": tr("assistant.panel.download.started")}

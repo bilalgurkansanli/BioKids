@@ -24,13 +24,20 @@ import functools
 import hashlib
 import json
 import logging
+import math
 import shlex
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Form, Request, Response
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    StreamingResponse,
+)
 from fastapi.staticfiles import StaticFiles
 from jinja2 import ChainableUndefined, Environment, FileSystemLoader, select_autoescape
 
@@ -129,6 +136,9 @@ class ShellState:
         self.env.filters["icon"] = lambda name: TILE_ICONS.get(str(name), TILE_ICONS["app"])
         self.env.filters["avatar"] = lambda slug: AVATARS.get(str(slug), AVATARS["fox"])
         self.env.filters["expression"] = set_expression
+        # The setting sun on the young band's ring (D-175) is placed in the template.
+        self.env.filters["cos"] = math.cos
+        self.env.filters["sin"] = math.sin
         self.characters = _load_characters(config)
         self.voice = AsyncDaemonClient(voice_socket_path(config))
         self.warming: asyncio.Task[None] | None = None
@@ -230,6 +240,25 @@ def create_app(config: Config | None = None) -> FastAPI:
         response: Response = await call_next(request)
         if request.url.path.startswith("/static/"):
             response.headers["Cache-Control"] = "no-cache"
+        return response
+
+    @app.middleware("http")
+    async def only_the_launcher(request: Request, call_next: Any) -> Response:
+        """Answer the launcher's own page, and nothing a website can forge.
+
+        The launcher acts as the child on the daemon's shell socket, so a request
+        here is the child asking: to start an app, to power the machine off, to
+        file a request with a parent. Any website the child opens could submit a
+        form to 127.0.0.1:7879, and a page on a name that resolves to 127.0.0.1
+        (DNS rebinding) is even same-origin with itself. So the Host must be a
+        loopback name, and a request that changes anything must not come from
+        another site.
+        """
+        if not _loopback_host(request.headers.get("host", "")):
+            return PlainTextResponse("", status_code=421)
+        if request.method not in SAFE_METHODS and not _same_origin(request):
+            return PlainTextResponse("", status_code=403)
+        response: Response = await call_next(request)
         return response
 
     register_routes(app)
@@ -346,7 +375,7 @@ def register_routes(app: FastAPI) -> None:
                 exec_cmd=str(tile.get("exec", "")),
                 url=str(tile.get("url", "")),
                 category=str(tile.get("category", "")),
-                locale=normalise_locale(str(data.get("locale", "tr"))),
+                locale=normalise_locale(str((data or {}).get("locale", "tr"))),
             )
         )
         if result.ok:
@@ -362,21 +391,32 @@ def register_routes(app: FastAPI) -> None:
         request: Request,
         shell: Shell,
         url: str = "",
+        slug: str = "",
         reason: str = Reason.FILTER_BLOCKED,
     ) -> Response:
         data = await shell.client.state()
         return await render(
-            shell, request, "blocked.html", data, reason=reason, blocked_url=url
+            shell,
+            request,
+            "blocked.html",
+            data,
+            reason=reason,
+            blocked_url=url,
+            ask_kind=_request_kind_for(reason, url, slug),
+            ask_what=url or slug,
         )
 
     @app.post("/ask-a-parent")
     async def ask_a_parent(
-        request: Request, shell: Shell, url: Annotated[str, Form()] = ""
+        request: Request,
+        shell: Shell,
+        url: Annotated[str, Form()] = "",
+        kind: Annotated[str, Form()] = "site",
     ) -> Response:
-        """The button that turns the filter into a conversation (D-65)."""
-        ok = await shell.client.ask_a_parent(url)
+        """The button that turns a wall into a conversation (D-65, D-173)."""
+        ok, reason = await shell.client.ask_a_parent(url, kind)
         data = await shell.client.state()
-        return await render(shell, request, "asked.html", data, ok=ok)
+        return await render(shell, request, "asked.html", data, ok=ok, reason=reason)
 
     @app.get("/shutdown", response_class=HTMLResponse)
     async def shutdown_confirm(request: Request, shell: Shell) -> Response:
@@ -433,6 +473,22 @@ def register_routes(app: FastAPI) -> None:
         return JSONResponse(
             {"text": text, "refused": refused}, headers={"Cache-Control": "no-store"}
         )
+
+    @app.post("/speak-label")
+    async def speak_label(request: Request, shell: Shell) -> Response:
+        """A tile's name, or a screen's sentence, read out for a child who cannot
+        read yet (UX.md section 2.2, D-175). Only from the launcher's own page."""
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        try:
+            body = json.loads(await request.body() or b"{}")
+        except ValueError:
+            return JSONResponse({"error": "bad request"}, status_code=400)
+        text = " ".join(str(body.get("text", "") if isinstance(body, dict) else "").split())
+        if text:
+            data = await shell.client.state() or {}
+            await shell.say(text[:300], normalise_locale(str(data.get("locale", "tr"))))
+        return JSONResponse({"ok": bool(text)})
 
     @app.post("/assistant/warmup")
     async def assistant_warmup(request: Request, shell: Shell) -> Response:
@@ -528,6 +584,34 @@ MAX_RECORDING_BYTES = 16_000 * 2 * 16 + 1024
 """Sixteen seconds of 16 kHz mono: the button stops at fifteen."""
 
 
+SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+LOOPBACK_NAMES = frozenset({"127.0.0.1", "localhost", "[::1]"})
+
+
+def _loopback_host(host: str) -> bool:
+    """True for a Host header naming this machine's loopback, with any port."""
+    host = host.strip().lower()
+    name = host.split("]", 1)[0] + "]" if host.startswith("[") else host.rsplit(":", 1)[0]
+    return name in LOOPBACK_NAMES
+
+
+def _same_origin(request: Request) -> bool:
+    """Whether the browser says this request came from the launcher's own page.
+
+    Chromium sends Sec-Fetch-Site and Origin with every POST it makes. A request
+    with neither did not come from a browser, and the child has no other program
+    that could send one.
+    """
+    site = request.headers.get("sec-fetch-site")
+    if site is not None and site not in {"same-origin", "none"}:
+        return False
+    origin = request.headers.get("origin")
+    if origin is None:
+        return True
+    host = request.headers.get("host", "")
+    return origin in {f"http://{host}", f"https://{host}"}
+
+
 def _from_launcher(request: Request, content_type: str) -> bool:
     """The launcher's own page, and nothing a web page can forge.
 
@@ -543,6 +627,19 @@ def _from_launcher(request: Request, content_type: str) -> bool:
         return True
     host = request.headers.get("host", "")
     return origin in {f"http://{host}", f"https://{host}"}
+
+
+def _request_kind_for(reason: str, url: str, slug: str) -> str:
+    """What "ask a grown-up" asks for, from why the child was stopped.
+
+    Out of minutes for the day or for a kind of app: more time. An app that is
+    not on their screen: that app. Anything else: the page they wanted.
+    """
+    if reason in {Reason.QUOTA_EXHAUSTED, Reason.CATEGORY_EXHAUSTED}:
+        return "time"
+    if reason == Reason.APP_NOT_ALLOWED and slug and not url:
+        return "app"
+    return "site"
 
 
 def _screen_for(data: dict[str, Any]) -> str | None:
@@ -572,6 +669,9 @@ def _browser_strings(tr: Translator) -> dict[str, str]:
     return {
         "warning": tr("quota.warning", minutes="{minutes}"),
         "earned": tr("shell.earned.body", minutes="{minutes}"),
+        "request_approved": tr("shell.request.approved"),
+        "request_approved_time": tr("shell.request.approved_time", minutes="{minutes}"),
+        "request_denied": tr("shell.request.denied"),
         "timeup": tr("shell.timeup.title"),
         # What a screen reader says for the ring, kept in step with the number.
         "remaining": tr("shell.remaining_label")
@@ -596,6 +696,8 @@ def _spoken_lines(tr: Translator) -> dict[str, str]:
         "blocked": tr("shell.blocked.title"),
         "earned": tr("shell.earned.title"),
         "break_start": tr("shell.break.title"),
+        "request_approved": tr("shell.request.approved"),
+        "request_denied": tr("shell.request.denied"),
     }
 
 

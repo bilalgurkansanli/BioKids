@@ -51,21 +51,23 @@ case "$1" in
             addgroup --system "$CHILD_GROUP"
         fi
 
-        # The screen watcher's account. Created here rather than in biokids-ai
-        # so that ownership under /var/lib/biokids is settled once and turning
-        # the optional package on later changes no permissions. It has no home,
-        # no shell and no password; all it ever needs is the X display and the
-        # daemon socket.
+        # The assistant's account (D-165). Created here rather than in
+        # biokids-ai so that ownership under /var/lib/biokids is settled once
+        # and turning the optional package on later changes no permissions. It
+        # has no home, no shell and no password.
         if ! getent passwd "$AI_USER" >/dev/null; then
             adduser --system --group --no-create-home --home /nonexistent \
                     --shell /usr/sbin/nologin \
-                    --gecos "BioKids screen watcher" "$AI_USER"
+                    --gecos "BioKids assistant" "$AI_USER"
         fi
-        # Guarded, because adduser warns on every upgrade otherwise, and a
-        # warning in apt's output on every upgrade teaches people to skip them.
+        # It is never in the biokids group. That group can grant time, unlock
+        # and power the machine off (D-123), and the assistant never opens the
+        # daemon's socket: the daemon calls it. Earlier versions added it, so
+        # an upgrade takes it out again.
         case " $(id -nG "$AI_USER") " in
-            *" $BIOKIDS_GROUP "*) ;;
-            *) adduser --quiet "$AI_USER" "$BIOKIDS_GROUP" ;;
+            # gpasswd, not deluser: trixie's deluser refuses this pair with
+            # "invalid characters in input string".
+            *" $BIOKIDS_GROUP "*) gpasswd -d "$AI_USER" "$BIOKIDS_GROUP" >/dev/null || true ;;
         esac
 
         # These three are created here instead of being shipped in the package
@@ -76,6 +78,10 @@ case "$1" in
         install -d -o root -g root -m 0700 "$DATA_DIR"
         install -d -o root -g root -m 0700 "$EVIDENCE_DIR"
         install -d -o root -g adm -m 0750 "$LOG_DIR"
+        # A parent's own recordings of the spoken lines (D-174). Readable by
+        # everyone, because the voice service that plays them is the child's
+        # process; written only by the panel.
+        install -d -o root -g root -m 0755 /var/lib/biokids-voices
         # /run is a tmpfs, so this covers the window between installing and the
         # first boot. After that the daemon unit's RuntimeDirectory= owns it.
         install -d -o root -g root -m 0755 "$RUN_DIR"
@@ -105,6 +111,13 @@ from pathlib import Path
 from biokids_core.security import load_or_create_key
 load_or_create_key(Path(sys.argv[1]))' "$CONF_DIR/secret.key"
         fi
+
+        # A copy of the family's database before its schema changes. SQLite
+        # cannot roll back most schema changes, so a migration that fails half
+        # way would otherwise leave a database neither version can read. The
+        # copy is taken with SQLite's online backup, safe while the daemon
+        # writes, and the last three are kept.
+        biokids-admin backup-db --keep 3 --reason upgrade
 
         # The schema. Alembic is authoritative in production. The database URL
         # is not in the ini: migrations/env.py asks biokids_core.config for it,

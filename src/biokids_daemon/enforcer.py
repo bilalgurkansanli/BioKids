@@ -17,6 +17,7 @@ up in some of these arguments, and a display name is user input.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import shutil
 from collections.abc import Awaitable, Callable, Sequence
@@ -28,6 +29,21 @@ from biokids_core.types import EndAction
 log = logging.getLogger(__name__)
 
 CommandRunner = Callable[[Sequence[str]], Awaitable["CommandResult"]]
+
+COMMAND_TIMEOUT = 30.0
+"""Every command the daemon runs ends within this, or is killed.
+
+`loginctl` waiting on a wedged logind, or `systemctl --user` on a user manager
+that is shutting down, used to hold the whole tick - and a held tick is a daemon
+that enforces nothing while looking alive. The watchdog (notify.py) catches
+what this misses."""
+
+LOCK_ATTEMPTS_BEFORE_LOGOUT = 3
+"""Ticks a lock may fail to take before the session is ended instead.
+
+`loginctl lock-session` only asks; the child's screen locker does the locking.
+If it is not running, logind reports success and nothing locks, and the end of
+the day was a child carrying on at an unlocked screen (principle 3)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,8 +58,12 @@ class CommandResult:
         return self.returncode == 0
 
 
-async def run_command(argv: Sequence[str]) -> CommandResult:
-    """Run a command, capturing output, never raising on a non-zero exit."""
+async def run_command(argv: Sequence[str], limit: float = COMMAND_TIMEOUT) -> CommandResult:
+    """Run a command, capturing output, never raising on a non-zero exit.
+
+    A command that has not finished in `limit` seconds is killed and reported
+    as exit 124, like coreutils' `timeout`.
+    """
     if shutil.which(argv[0]) is None:
         log.warning("%s is not installed; skipping %s", argv[0], " ".join(argv))
         return CommandResult(tuple(argv), returncode=127, stderr="not installed")
@@ -53,10 +73,18 @@ async def run_command(argv: Sequence[str]) -> CommandResult:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        out, err = await process.communicate()
     except OSError as exc:
         log.exception("could not run %s", " ".join(argv))
         return CommandResult(tuple(argv), returncode=126, stderr=str(exc))
+    try:
+        out, err = await asyncio.wait_for(process.communicate(), limit)
+    except TimeoutError:
+        with contextlib.suppress(ProcessLookupError):
+            process.kill()
+        with contextlib.suppress(Exception):
+            await asyncio.wait_for(process.wait(), 5)
+        log.error("%s did not finish in %s s and was killed", " ".join(argv), limit)
+        return CommandResult(tuple(argv), returncode=124, stderr="timed out")
     result = CommandResult(
         tuple(argv),
         returncode=process.returncode or 0,
@@ -164,6 +192,10 @@ class Enforcer:
             return False
         results = [await self.lock_session(sid) for sid in session_ids]
         return any(results)
+
+    async def terminate_session(self, session_id: str) -> bool:
+        result = await self._run(["loginctl", "terminate-session", session_id])
+        return result.ok
 
     async def logout_user(self, unix_user: str) -> bool:
         result = await self._run(["loginctl", "terminate-user", unix_user])

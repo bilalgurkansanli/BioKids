@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import datetime as dt
 import os
+import subprocess
 import time
 import uuid
 from collections.abc import Callable
@@ -189,3 +190,98 @@ def read_boot_id(path: Path = BOOT_ID_PATH) -> str | None:
 
 def is_linux() -> bool:
     return os.name == "posix" and _CLOCK_BOOTTIME is not None
+
+
+@dataclass(frozen=True, slots=True)
+class WallCorrection:
+    """A wall-clock jump the guard saw, and what it did about it."""
+
+    delta_seconds: float
+    """How far the wall clock moved beyond the time that actually passed."""
+    trusted: bool
+    """True when the jump was accepted, because NTP says the clock is right."""
+
+
+def ntp_synchronized() -> bool:
+    """Whether systemd-timesyncd (or any NTP client logind knows of) has synced.
+
+    Asked only when the wall clock has just jumped, so the cost of a subprocess
+    is paid a few times a year. Anything that cannot be read is a no.
+    """
+    try:
+        result = subprocess.run(
+            ["timedatectl", "show", "--property=NTPSynchronized", "--value"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+            env={**os.environ, "LC_ALL": "C"},
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0 and result.stdout.strip() == "yes"
+
+
+class GuardedClock:
+    """A clock whose wall time cannot be moved under a running daemon.
+
+    The ledger decides which day's quota applies from the wall clock, and the
+    policy engine evaluates time windows with it (ARCHITECTURE.md section 3.1).
+    That was the one way the wall clock still reached the accounting: moving the
+    date to tomorrow gave a child tomorrow's quota, and the jump was only
+    written to the audit log.
+
+    So the wall time handed out here advances with `CLOCK_BOOTTIME`, which no
+    one can move. When the real wall clock disagrees by more than the threshold,
+    the difference is kept as an offset and the old timeline continues - unless
+    NTP says the clock is now synchronised, in which case the jump was a
+    correction (a dead RTC battery, the first sync after boot) and is accepted.
+    A parent who deliberately changes the time on a machine without NTP gets it
+    at the next restart of the daemon, which a reboot does.
+
+    Every jump is recorded in `corrections`, for the audit log.
+    """
+
+    def __init__(
+        self,
+        inner: Clock,
+        *,
+        threshold_seconds: float = 600.0,
+        trust_jump: Callable[[], bool] = ntp_synchronized,
+    ) -> None:
+        self._inner = inner
+        self._threshold = threshold_seconds
+        self._trust_jump = trust_jump
+        self._offset = dt.timedelta(0)
+        self._last: ClockReading | None = None
+        self.corrections: list[WallCorrection] = []
+
+    def read(self) -> ClockReading:
+        raw = self._inner.read()
+        previous = self._last
+        self._last = raw
+        if previous is not None and previous.boot_id == raw.boot_id:
+            drift = raw.wall_delta(previous) - (raw.boot - previous.boot)
+            if abs(drift) > self._threshold:
+                trusted = self._trust_jump()
+                if trusted:
+                    self._offset = dt.timedelta(0)
+                else:
+                    self._offset += dt.timedelta(seconds=round(drift))
+                self.corrections.append(WallCorrection(delta_seconds=drift, trusted=trusted))
+        if not self._offset:
+            return raw
+        return ClockReading(
+            boot=raw.boot,
+            monotonic=raw.monotonic,
+            wall=raw.wall - self._offset,
+            boot_id=raw.boot_id,
+        )
+
+    def take_corrections(self) -> list[WallCorrection]:
+        taken, self.corrections = self.corrections, []
+        return taken
+
+    @property
+    def offset_seconds(self) -> float:
+        return self._offset.total_seconds()

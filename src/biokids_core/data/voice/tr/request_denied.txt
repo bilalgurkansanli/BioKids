@@ -1,0 +1,3 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}
+Büyüğün şimdilik hayır dedi. Sonra birlikte konuşabilirsiniz.
+Bu sefer olmadı {name}. Akşam büyüğünle konuşabilirsin.

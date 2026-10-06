@@ -49,6 +49,23 @@ jobs:
           # Release notes are generated from the commits since the last tag.
           fetch-depth: 0
 
+      # A tag publishes to every family's apt. It is not published unless the
+      # suite passes on the libraries those families have, as an ordinary user.
+      - name: The tests pass on Debian 13's libraries
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          set -eu
+          apt-get install -y --no-install-recommends \
+            python3-pytest python3-pytest-asyncio python3-httpx python3-alembic \
+            python3-sqlalchemy python3-fastapi python3-uvicorn python3-jinja2 \
+            python3-argon2 python3-cryptography python3-itsdangerous \
+            python3-python-multipart python3-qrcode python3-dbus-next
+          useradd --create-home tester
+          chown -R tester: "$GITHUB_WORKSPACE"
+          runuser -u tester -- env PYTHONPATH=src python3 -m pytest -q -p no:cacheprovider
+          chown -R root: "$GITHUB_WORKSPACE"
+
       - name: The tag and debian/changelog must agree
         run: |
           set -eu

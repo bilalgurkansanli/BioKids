@@ -25,13 +25,14 @@ from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlsplit
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from biokids_core import repo
-from biokids_core.catalog import load_catalog
-from biokids_core.clock import Clock, SystemClock
+from biokids_core.catalog import enable_for_child, load_catalog
+from biokids_core.clock import Clock, GuardedClock, SystemClock
 from biokids_core.config import Config, get_config
-from biokids_core.db.models import AccessRequest
+from biokids_core.db.models import AccessRequest, App, FilterRule, utcnow
 from biokids_core.db.session import Database
 from biokids_core.errors import ConfigError
 from biokids_core.ipc import EventKind
@@ -48,9 +49,11 @@ from biokids_core.types import (
     Reason,
     SpeechRequest,
 )
+from biokids_daemon import notify
 from biokids_daemon.bus import EventBus
-from biokids_daemon.dnsfilter import DnsFilter
-from biokids_daemon.enforcer import Enforcer
+from biokids_daemon.dnsfilter import DnsFilter, FilterHealth
+from biokids_daemon.enforcer import LOCK_ATTEMPTS_BEFORE_LOGOUT, Enforcer
+from biokids_daemon.notifier import Notifier
 from biokids_daemon.sessions import SessionWatcher, UserPresence
 
 log = logging.getLogger(__name__)
@@ -64,6 +67,21 @@ machine off with no lock screen, no two minutes and no "time's up"."""
 
 END_ACTION_BACKOFF_SECONDS: tuple[int, ...] = (10, 20, 40, 80, 120)
 """How long to wait before retrying an end action that did not work."""
+
+REQUEST_KINDS = ("time", "site", "app")
+REQUESTS_PER_HOUR = 6
+"""A child may ask this often. Asking again for the same thing while it is still
+waiting is the same request, not another one."""
+REQUEST_EXPIRY = dt.timedelta(hours=12)
+"""A request nobody answered is gone by the next morning: "more time" asked for
+yesterday is not a question about today."""
+
+FILTER_CHECK_SECONDS = 60
+"""How often the children's DNS filter is checked from the outside (D-172)."""
+FILTER_SETTLE_SECONDS = 30
+"""The first check waits this long after the daemon starts."""
+FILTER_SETTLE_TRIES = 5
+FILTER_SETTLE_PAUSE = 2.0
 
 END_ACTION_GIVE_UP_AFTER = 3
 """After this many consecutive failures, escalate to the lockdown path (D-106)
@@ -117,6 +135,13 @@ class ChildRuntime:
     """The break or timeout currently in force, so the child's applications are
     stopped once on the way in rather than on every tick."""
 
+    lock_attempts: int = 0
+    """Consecutive ticks the end-of-day lock was asked for and logind still says
+    the screen is unlocked. LOCK_ATTEMPTS_BEFORE_LOGOUT of them end the session."""
+    locked_for_filter: bool = False
+    """BioKids locked this child because the DNS filter was open, and unlocks
+    them when it is closed again."""
+
     earned_pending_s: int = 0
     """Earned seconds not yet announced. A tick's payout is ten seconds at the
     default ratio, and `10 // 60` is the zero the child was congratulated for."""
@@ -150,12 +175,18 @@ class Supervisor:
     _session: Session | None = None
     _ledger: TimeLedger | None = None
     _dns_filter: DnsFilter | None = None
+    filter_health: FilterHealth | None = None
+    _filter_checked_at: float | None = None
+    _notifier: Notifier | None = None
+    _notified_at: float | None = None
 
     @property
     def dns_filter(self) -> DnsFilter:
         """The children's DNS filter (D-167), its files under the data directory."""
         if self._dns_filter is None:
-            self._dns_filter = DnsFilter(self.config.paths.data_dir / "dns")
+            self._dns_filter = DnsFilter(
+                self.config.paths.data_dir / "dns", panel_port=self.config.panel.port
+            )
         return self._dns_filter
 
     # ------------------------------------------------------------ lifecycle
@@ -223,7 +254,7 @@ class Supervisor:
         `chrome://policy` was empty on every machine and the kiosk was an
         ordinary browser with an ordinary Ctrl+Shift+I.
         """
-        from biokids_shell.kiosk import POLICY_FILENAME, kiosk_policy
+        from biokids_core.browser_policy import POLICY_FILENAME, kiosk_policy
 
         directory = self.config.paths.chromium_policy_dir
         origin = f"{self.config.shell.host}:{self.config.shell.port}"
@@ -306,6 +337,16 @@ class Supervisor:
                     pattern = web_tile_pattern(app.url)
                     if pattern:
                         patterns.add(pattern)
+        # Sites a parent said yes to when a child asked (D-173).
+        patterns.update(
+            rule.pattern
+            for rule in self.session.scalars(
+                select(FilterRule).where(
+                    FilterRule.kind == "allow", FilterRule.child_id.in_(list(self.children))
+                )
+            )
+            if rule.pattern
+        )
         return sorted(patterns)
 
     def reload(self) -> None:
@@ -784,6 +825,7 @@ class Supervisor:
         return EndAction.LOCK
 
     def _clear_end_sequence(self, runtime: ChildRuntime, day: dt.date, remaining: int) -> None:
+        runtime.lock_attempts = 0
         runtime.end_action_sessions = frozenset()
         runtime.end_action_failures = 0
         runtime.end_action_next_attempt = 0.0
@@ -826,8 +868,46 @@ class Supervisor:
             presence.relockable_session_ids if only_unlocked else presence.lockable_session_ids
         )
         if not targets:
+            runtime.lock_attempts = 0
             return
         await self.enforcer.lock_sessions(targets)
+        if not only_unlocked:
+            return
+        # The end of the day re-asserts the lock every tick. Whether the last
+        # one took is read from this tick's snapshot: a session that is still
+        # on screen and unlocked. Not LockedHint alone - light-locker never sets
+        # it (D-155); it locks by handing the seat to the greeter, which makes
+        # the child's session inactive. If a session stays on screen, the
+        # child's screen locker is not there - `loginctl lock-session` only
+        # asks - and the child carries on. Ending the session is the fail-safe.
+        on_screen = [
+            s.session_id
+            for s in presence.sessions
+            if s.session_id in targets and s.active and not s.locked
+        ]
+        if not on_screen:
+            runtime.lock_attempts = 0
+            return
+        runtime.lock_attempts += 1
+        if runtime.lock_attempts <= LOCK_ATTEMPTS_BEFORE_LOGOUT:
+            return
+        targets = tuple(on_screen)
+        ended = [sid for sid in targets if await self.enforcer.terminate_session(sid)]
+        runtime.lock_attempts = 0
+        log.error(
+            "%s's screen did not lock after %s attempts; ended %s",
+            runtime.unix_user,
+            LOCK_ATTEMPTS_BEFORE_LOGOUT,
+            ", ".join(ended) or "nothing",
+        )
+        repo.audit(
+            self.session,
+            actor="daemon",
+            action="lock_failed",
+            target=f"child:{runtime.child_id}",
+            detail={"sessions": list(targets), "ended": ended},
+            severity="alert",
+        )
 
     def _on_earned(self, runtime: ChildRuntime, seconds: int, now_boot: float) -> None:
         """Celebrate earned minutes - once they are minutes, and not every tick.
@@ -929,6 +1009,28 @@ class Supervisor:
         )
 
     def _audit_anomalies(self) -> None:
+        if isinstance(self.clock, GuardedClock):
+            for correction in self.clock.take_corrections():
+                repo.audit(
+                    self.session,
+                    actor="system",
+                    action="clock_jump",
+                    detail={
+                        "delta_seconds": round(correction.delta_seconds),
+                        "direction": "forward" if correction.delta_seconds > 0 else "back",
+                        # Not trusted: the day and the time windows carry on from
+                        # the old clock until NTP or a restart confirms the new one.
+                        "ignored": not correction.trusted,
+                    },
+                    severity="warning",
+                )
+                log.warning(
+                    "the wall clock moved %+d s; %s",
+                    round(correction.delta_seconds),
+                    "NTP confirms it"
+                    if correction.trusted
+                    else "ignored until NTP confirms it",
+                )
         for anomaly in self.ledger.take_anomalies():
             repo.audit(
                 self.session,
@@ -952,6 +1054,99 @@ class Supervisor:
                 anomaly.direction,
                 round(abs(anomaly.delta_seconds)),
             )
+
+    # ---------------------------------------------------------- the filter
+
+    async def check_filter(self, now_boot: float) -> None:
+        """Check the children's DNS filter from the outside, once a minute (D-172).
+
+        The filter was written, loaded and then trusted. `nft -f` failing was a
+        log line; `systemctl restart nftables` - which flushes every table -
+        removed the children's redirect until the daemon next reloaded, and the
+        panel said "running" because dnsmasq was. So: is the redirect there, and
+        does the filter refuse a name every adult list has?
+
+        Open - the children could reach what the lists close - is principle 3:
+        one repair is tried, and if the filter is still open every child at the
+        machine is locked, and unlocked again when it closes. Not answering is
+        already closed (no DNS, no internet) and is reported, not locked.
+        """
+        if self._filter_checked_at is None:
+            # Not in the first half-minute: dnsmasq is (re)started by the same
+            # reload that started the daemon, and reading 300,000 names takes it
+            # a few seconds. A check then reported "not answering" on every
+            # start - and, with mail on, told the parent so.
+            self._filter_checked_at = now_boot - FILTER_CHECK_SECONDS + FILTER_SETTLE_SECONDS
+            return
+        if now_boot - self._filter_checked_at < FILTER_CHECK_SECONDS:
+            return
+        self._filter_checked_at = now_boot
+        users = [r.unix_user for r in self.children.values() if r.policy is not None]
+        if not users:
+            self.filter_health = None
+            return
+        health = await asyncio.to_thread(self.dns_filter.verify, users)
+        if health.open or not health.answering:
+            log.warning("the DNS filter is not right (%s); applying it again", health)
+            await asyncio.to_thread(self._apply_dns_filter)
+            # The repair restarts dnsmasq; give it the seconds it needs to load.
+            for _ in range(FILTER_SETTLE_TRIES):
+                health = await asyncio.to_thread(self.dns_filter.verify, users)
+                if health.answering and not health.open:
+                    break
+                await asyncio.sleep(FILTER_SETTLE_PAUSE)
+
+        previous = self.filter_health
+        self.filter_health = health
+        if health.open:
+            if previous is None or not previous.open:
+                repo.audit(
+                    self.session,
+                    actor="daemon",
+                    action="filter_failed",
+                    detail={"redirect": health.redirect, "filtering": health.filtering},
+                    severity="alert",
+                )
+            for runtime in self.children.values():
+                presence = self.watcher.presence(runtime.unix_user)
+                if presence.lockable_session_ids:
+                    runtime.locked_for_filter = True
+                    await self._lock(runtime, presence, only_unlocked=False)
+        elif not health.answering:
+            if previous is None or previous.answering or previous.open:
+                repo.audit(
+                    self.session,
+                    actor="daemon",
+                    action="filter_down",
+                    detail={"error": self.dns_filter.last_error},
+                    severity="alert",
+                )
+        elif previous is not None and (previous.open or not previous.answering):
+            repo.audit(self.session, actor="daemon", action="filter_restored")
+        if not health.open:
+            for runtime in self.children.values():
+                if runtime.locked_for_filter:
+                    runtime.locked_for_filter = False
+                    await self._unlock(runtime)
+        self.session.commit()
+
+    async def notify_parent(self, now_boot: float) -> None:
+        """Mail what the parent should know, once a minute (D-177). Never raises:
+        a mail server that is down is not a reason to stop supervising."""
+        if (
+            self._notified_at is not None
+            and now_boot - self._notified_at < FILTER_CHECK_SECONDS
+        ):
+            return
+        self._notified_at = now_boot
+        if self._notifier is None:
+            self._notifier = Notifier(self.config)
+        try:
+            await self._notifier.run(self.session, self.clock.read().wall, now_boot)
+        except Exception:
+            log.exception("the parent's mail could not be prepared")
+            with contextlib.suppress(Exception):
+                self.session.rollback()
 
     # ------------------------------------------------------- operations
 
@@ -1012,7 +1207,11 @@ class Supervisor:
             # D-167: so a parent can see that harmful sites are really being
             # stopped, and why not when they are not.
             "dns_filter": {
-                "running": self.dns_filter.running(),
+                # From the last outside check rather than a `systemctl` call per
+                # panel poll, which ran synchronously on the event loop.
+                "running": self.filter_health is None
+                or (self.filter_health.answering and not self.filter_health.open),
+                "open": bool(self.filter_health and self.filter_health.open),
                 "error": self.dns_filter.last_error,
                 "mode": self._browser_mode(),
             },
@@ -1079,6 +1278,7 @@ class Supervisor:
             "supervision_indicator": child.supervision_indicator if child else "badge",
             "first_run_done": bool(child.first_run_done) if child else True,
             "tiles": tiles,
+            "asked_for_time": self.pending_request(child_id, "time"),
             "remaining_seconds": decision.remaining_seconds,
             "remaining_minutes": decision.remaining_minutes,
             "quota_seconds": quota + state.granted_s,
@@ -1177,23 +1377,160 @@ class Supervisor:
         self.ledger.persist()
         return await self.enforcer.poweroff()
 
-    def file_access_request(self, child_id: int, url: str) -> int:
-        """ "Anneme sor" (D-65). Turns the filter from a wall into a conversation."""
+    def file_access_request(self, child_id: int, url: str, kind: str = "site") -> int:
+        """ "Anneme sor" (D-65, D-173). Turns the filter from a wall into a conversation.
+
+        Returns the request's id, or 0 when the child has asked too often. The
+        same question asked twice while it waits is one request: a child who
+        presses the button five times is asking once, impatiently.
+        """
         runtime = self._require(child_id)
-        row = AccessRequest(child_id=child_id, url=url, status="pending")
+        kind = kind if kind in REQUEST_KINDS else "site"
+        url = url[:1024] if kind != "time" else ""
+        self._expire_requests()
+        waiting = self.session.scalar(
+            select(AccessRequest).where(
+                AccessRequest.child_id == child_id,
+                AccessRequest.status == "pending",
+                AccessRequest.kind == kind,
+                AccessRequest.url == url,
+            )
+        )
+        if waiting is not None:
+            return int(waiting.id)
+        recent = self.session.scalar(
+            select(func.count())
+            .select_from(AccessRequest)
+            .where(
+                AccessRequest.child_id == child_id,
+                AccessRequest.created_at >= utcnow() - dt.timedelta(hours=1),
+            )
+        )
+        if int(recent or 0) >= REQUESTS_PER_HOUR:
+            log.info(
+                "%s asked %s times this hour; not filing another", runtime.unix_user, recent
+            )
+            return 0
+        row = AccessRequest(child_id=child_id, url=url, kind=kind, status="pending")
         self.session.add(row)
         repo.audit(
             self.session,
             actor=f"child:{runtime.unix_user}",
             action="access_requested",
             target=f"child:{child_id}",
-            detail={"url": url},
+            detail={"url": url, "kind": kind},
         )
         self.session.commit()
         self.bus.publish(
-            EventKind.ACCESS_REQUEST, child_id=child_id, url=url, request_id=row.id
+            EventKind.ACCESS_REQUEST,
+            child_id=child_id,
+            url=url,
+            request_kind=kind,
+            request_id=row.id,
         )
         return int(row.id)
+
+    def _expire_requests(self) -> None:
+        cutoff = utcnow() - REQUEST_EXPIRY
+        for row in self.session.scalars(
+            select(AccessRequest).where(
+                AccessRequest.status == "pending", AccessRequest.created_at < cutoff
+            )
+        ):
+            row.status = "expired"
+            row.decided_at = utcnow()
+
+    def pending_request(self, child_id: int, kind: str) -> bool:
+        return (
+            self.session.scalar(
+                select(AccessRequest.id).where(
+                    AccessRequest.child_id == child_id,
+                    AccessRequest.status == "pending",
+                    AccessRequest.kind == kind,
+                    AccessRequest.created_at >= utcnow() - REQUEST_EXPIRY,
+                )
+            )
+            is not None
+        )
+
+    async def decide_request(
+        self, request_id: int, approve: bool, minutes: int = 0, actor: str = "parent"
+    ) -> dict[str, Any]:
+        """A parent's answer to a child's question, carried out and told to the child.
+
+        Yes to more time is a grant (which also lets a locked child back in);
+        yes to a site allows its host for that child, by policy and by DNS; yes
+        to an app enables it on their screen. No is no, said kindly. Either way
+        the child hears it from Zio or Sio and sees it on screen, because a
+        question that disappears into silence teaches a child not to ask.
+        """
+        row = self.session.get(AccessRequest, request_id)
+        if row is None or row.status != "pending":
+            return {"ok": False, "error": "error.not_found"}
+        runtime = self._require(row.child_id)
+        if approve and row.kind == "time" and not 0 < minutes <= 12 * 60:
+            return {"ok": False, "error": "error.invalid_input"}
+
+        row.status = "approved" if approve else "denied"
+        row.decided_at = utcnow()
+        row.minutes = minutes if approve and row.kind == "time" else 0
+        host = web_tile_pattern(row.url) if row.url else ""
+        if approve and row.kind == "site" and host:
+            self.session.add(
+                FilterRule(child_id=row.child_id, kind="allow", pattern=host, source="request")
+            )
+        if approve and row.kind == "app" and self.session.get(App, row.url) is not None:
+            enable_for_child(self.session, row.child_id, [row.url], replace=False)
+        repo.audit(
+            self.session,
+            actor=actor,
+            action="request_approved" if approve else "request_denied",
+            target=f"child:{row.child_id}",
+            detail={"kind": row.kind, "url": row.url, "minutes": row.minutes},
+        )
+        self.session.commit()
+
+        if approve and row.kind == "time":
+            await self.grant_time(row.child_id, minutes * 60, actor)
+        elif approve:
+            self.reload()
+
+        self.bus.publish(
+            EventKind.REQUEST_DECIDED,
+            child_id=row.child_id,
+            approved=approve,
+            request_kind=row.kind,
+            minutes=row.minutes,
+        )
+        self._speak(
+            runtime,
+            SpeechRequest(
+                event="request_approved" if approve else "request_denied",
+                vars={"minutes": row.minutes, "name": runtime.display_name},
+                priority="high",
+                expression="happy" if approve else "neutral",
+            ),
+        )
+        return {"ok": True, "status": row.status}
+
+    async def unlock_now(self, child_id: int, actor: str = "parent") -> bool:
+        """The "Kilidi aç" button: back in, without changing the day's time.
+
+        A lock from the panel had no way back except "+10 dk", which gave time
+        the parent may not have meant to give. If the day is over or a window is
+        closed, the launcher still shows that; only the lock comes down.
+        """
+        runtime = self._require(child_id)
+        await self._unlock(runtime)
+        runtime.locked_for_filter = False
+        repo.audit(
+            self.session,
+            actor=actor,
+            action="session_unlock_requested",
+            target=f"child:{child_id}",
+        )
+        self.session.commit()
+        return True
 
     async def grant_time(
         self, child_id: int, seconds: int, actor: str = "parent"
@@ -1361,6 +1698,9 @@ class Supervisor:
         return runtime
 
 
+TICK_TIMEOUT_SECONDS = 60
+"""The longest one tick may take before it counts as failed."""
+
 TICK_FAILURES_BEFORE_GIVING_UP = 3
 """Consecutive failed ticks before the loop stops pretending it is supervising.
 
@@ -1389,14 +1729,30 @@ async def run_forever(supervisor: Supervisor, stop_event: asyncio.Event) -> None
     net catches what is left.
     """
     interval = supervisor.config.daemon.tick_seconds
+    limit = max(TICK_TIMEOUT_SECONDS, 3 * interval)
     failures = 0
     while not stop_event.is_set():
         try:
-            await supervisor.tick()
+            # Bounded: a tick that never returns is a failed tick, not a daemon
+            # that looks alive while enforcing nothing.
+            await asyncio.wait_for(supervisor.tick(), timeout=limit)
+            now_boot = supervisor.clock.read().boot
+            await asyncio.wait_for(supervisor.check_filter(now_boot), timeout=limit)
             failures = 0
+            # Outside the failure count: mail is a convenience, enforcement is not.
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(supervisor.notify_parent(now_boot), timeout=limit)
+            # Only a tick that finished pings the watchdog; WatchdogSec= in
+            # the unit kills a daemon whose ticks stopped finishing.
+            notify.watchdog()
         except Exception as exc:  # one bad tick must not stop enforcement
             failures += 1
             log.exception("tick failed (%s in a row)", failures)
+            # The daemon's one long-lived Session: a failed flush anywhere in a
+            # tick left it needing a rollback, and every later tick then died
+            # on PendingRollbackError until the loop gave up.
+            with contextlib.suppress(Exception):
+                supervisor.session.rollback()
             if failures >= TICK_FAILURES_BEFORE_GIVING_UP:
                 await _give_up(supervisor, failures, exc)
                 raise

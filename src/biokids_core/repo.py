@@ -20,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from biokids_core.db.models import (
+    AccessRequest,
     AiAlert,
     App,
     AuditLog,
@@ -31,6 +32,7 @@ from biokids_core.db.models import (
     Policy,
     Setting,
     UsageEvent,
+    utcnow,
 )
 from biokids_core.types import (
     AgeBand,
@@ -121,6 +123,14 @@ def load_policy(
         weekend_quota_min=row.weekend_quota_min,
         weekday_windows=_parse_windows(windows.get("weekday", [])),
         weekend_windows=_parse_windows(windows.get("weekend", [])),
+        day_quota_min={
+            day: entry["quota"] for day, entry in row.schedule.items() if "quota" in entry
+        },
+        day_windows={
+            day: _parse_windows(entry["windows"])
+            for day, entry in row.schedule.items()
+            if "windows" in entry
+        },
         end_action=_enum_or(EndAction, row.end_action, EndAction.POWEROFF),
         warn_minutes=_warn_minutes(session),
         lock_countdown_seconds=row.lock_countdown_seconds,
@@ -359,6 +369,31 @@ def default_filter_mode(band: AgeBand) -> FilterMode:
     over D-61). "Selected sites only" is there for a parent who wants it."""
     del band
     return FilterMode.BLOCKLIST
+
+
+def access_requests(
+    session: Session, *, decided_limit: int = 20
+) -> tuple[list[AccessRequest], list[AccessRequest]]:
+    """(waiting, recently answered). Waiting ones older than a day are not shown:
+    the daemon marks them expired on the next request, and "more time" from
+    yesterday is not a question about today."""
+    since = utcnow() - dt.timedelta(hours=12)
+    waiting = list(
+        session.scalars(
+            select(AccessRequest)
+            .where(AccessRequest.status == "pending", AccessRequest.created_at >= since)
+            .order_by(AccessRequest.created_at.desc())
+        )
+    )
+    answered = list(
+        session.scalars(
+            select(AccessRequest)
+            .where(AccessRequest.status.in_(("approved", "denied")))
+            .order_by(AccessRequest.decided_at.desc())
+            .limit(decided_limit)
+        )
+    )
+    return waiting, answered
 
 
 def assistant_alerts(session: Session, child_id: int, *, limit: int = 20) -> list[AiAlert]:

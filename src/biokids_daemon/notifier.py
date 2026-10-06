@@ -1,0 +1,201 @@
+"""What the daemon mails to the parent, and when (D-177).
+
+Once a minute, from the supervisor's loop:
+
+* **Alerts**, batched into one message: every audit row of severity `alert`
+  since the last mail - a filter that failed, a lock that did not take, the
+  daemon giving up - every request a child filed, and every assistant alert.
+  Only what is new: the first run starts from the present, so turning mail on
+  does not send a family its history.
+* **The week**, on Sunday from 19:00: each child's time per day.
+
+A mail that cannot be sent is tried again later, with a growing pause, and
+nothing is marked sent until it was (principle 5: offline is a queue, not a
+loss). The send runs in a thread with its own timeout; the loop never waits on
+an SMTP server for longer than that.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import datetime as dt
+import logging
+from dataclasses import dataclass
+from typing import Final
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from biokids_core import mail, repo
+from biokids_core.config import Config
+from biokids_core.db.models import AiAlert, AuditLog, Child, LedgerDay
+from biokids_core.i18n import Translator, normalise_locale, translator
+
+log = logging.getLogger(__name__)
+
+LAST_AUDIT: Final = "mail.last_audit_id"
+LAST_WEEK: Final = "mail.last_weekly"
+MAILED_ACTIONS: Final = frozenset({"access_requested"})
+"""Not alerts, but a parent wants them at once: a child is waiting for an answer."""
+BACKOFF: Final = (60, 300, 900, 3600)
+MAX_ROWS: Final = 40
+WEEKLY_HOUR: Final = 19
+
+
+@dataclass
+class Notifier:
+    config: Config
+    failures: int = 0
+    next_attempt: float = 0.0
+
+    async def run(self, session: Session, now_wall: dt.datetime, now_boot: float) -> bool:
+        """Send what is due. True when a message went out."""
+        settings = mail.load_settings(session, self.config)
+        if settings is None or not settings.usable:
+            return False
+        if now_boot < self.next_attempt:
+            return False
+        tr = _family_translator(session)
+        sent = False
+        try:
+            if settings.alerts:
+                sent = await self._alerts(session, settings, tr) or sent
+            if settings.weekly:
+                sent = await self._weekly(session, settings, tr, now_wall) or sent
+        except mail.MailError as exc:
+            self.failures += 1
+            wait = BACKOFF[min(self.failures - 1, len(BACKOFF) - 1)]
+            self.next_attempt = now_boot + wait
+            log.warning("mail to the parent failed (%s); trying again in %s s", exc, wait)
+            session.rollback()
+            return False
+        self.failures = 0
+        return sent
+
+    # ------------------------------------------------------------- alerts
+
+    async def _alerts(
+        self, session: Session, settings: mail.MailSettings, tr: Translator
+    ) -> bool:
+        stored = repo.get_setting(session, LAST_AUDIT, "")
+        newest = int(session.scalar(select(func.max(AuditLog.id))) or 0)
+        if not stored:
+            # Mail was just turned on: start from now, not from the family's history.
+            repo.set_setting(session, LAST_AUDIT, str(newest))
+            for alert in session.scalars(select(AiAlert).where(AiAlert.notified.is_(False))):
+                alert.notified = True
+            session.commit()
+            return False
+        last = int(stored)
+        rows = list(
+            session.scalars(
+                select(AuditLog)
+                .where(
+                    AuditLog.id > last,
+                    (AuditLog.severity == "alert") | AuditLog.action.in_(MAILED_ACTIONS),
+                )
+                .order_by(AuditLog.id)
+                .limit(MAX_ROWS)
+            )
+        )
+        assistant = list(
+            session.scalars(
+                select(AiAlert).where(AiAlert.notified.is_(False)).order_by(AiAlert.id)
+            )
+        )
+        if not rows and not assistant:
+            if newest > last:
+                repo.set_setting(session, LAST_AUDIT, str(newest))
+                session.commit()
+            return False
+
+        names = _child_names(session)
+        lines = [_describe(row, names, tr) for row in rows]
+        lines += [
+            tr(
+                "mail.assistant_alert",
+                name=names.get(alert.child_id, "?"),
+                category=tr(f"assistant.category.{alert.category}"),
+            )
+            for alert in assistant
+        ]
+        subject = tr("mail.alerts.subject", count=len(lines))
+        body = "\n".join(f"- {line}" for line in lines) + "\n\n" + tr("mail.footer")
+        await asyncio.to_thread(mail.send, settings, subject, body)
+
+        repo.set_setting(session, LAST_AUDIT, str(rows[-1].id if rows else newest))
+        for alert in assistant:
+            alert.notified = True
+        session.commit()
+        log.info("mailed %s alert line(s) to the parent", len(lines))
+        return True
+
+    # ------------------------------------------------------------- weekly
+
+    async def _weekly(
+        self,
+        session: Session,
+        settings: mail.MailSettings,
+        tr: Translator,
+        now_wall: dt.datetime,
+    ) -> bool:
+        if now_wall.weekday() != 6 or now_wall.hour < WEEKLY_HOUR:
+            return False
+        week = now_wall.date().isoformat()
+        if repo.get_setting(session, LAST_WEEK, "") == week:
+            return False
+        body = weekly_summary(session, tr, now_wall.date())
+        await asyncio.to_thread(mail.send, settings, tr("mail.weekly.subject"), body)
+        repo.set_setting(session, LAST_WEEK, week)
+        session.commit()
+        return True
+
+
+def weekly_summary(session: Session, tr: Translator, last_day: dt.date) -> str:
+    """Each child's time on each of the last seven days, and the total."""
+    first = last_day - dt.timedelta(days=6)
+    paragraphs: list[str] = [tr("mail.weekly.intro")]
+    for child in session.scalars(select(Child).order_by(Child.id)):
+        rows = {
+            row.day: row.general_s
+            for row in session.scalars(
+                select(LedgerDay).where(
+                    LedgerDay.child_id == child.id,
+                    LedgerDay.day >= first,
+                    LedgerDay.day <= last_day,
+                )
+            )
+        }
+        total = sum(rows.values())
+        days = [
+            f"  {tr(f'day.{day.weekday()}')}: {_minutes(rows.get(day, 0), tr)}"
+            for day in (first + dt.timedelta(days=n) for n in range(7))
+        ]
+        paragraphs.append(
+            tr("mail.weekly.child", name=child.display_name, total=_minutes(total, tr))
+            + "\n"
+            + "\n".join(days)
+        )
+    paragraphs.append(tr("mail.footer"))
+    return "\n\n".join(paragraphs)
+
+
+def _minutes(seconds: int, tr: Translator) -> str:
+    return tr("mail.minutes", minutes=round(seconds / 60))
+
+
+def _child_names(session: Session) -> dict[int, str]:
+    return {child.id: child.display_name for child in session.scalars(select(Child))}
+
+
+def _describe(row: AuditLog, names: dict[int, str], tr: Translator) -> str:
+    what = tr(f"audit.action.{row.action}")
+    target = row.target or ""
+    if target.startswith("child:") and target[6:].isdigit():
+        return f"{names.get(int(target[6:]), '?')}: {what}"
+    return what
+
+
+def _family_translator(session: Session) -> Translator:
+    family = repo.get_family(session)
+    return translator(normalise_locale(family.locale if family else None))

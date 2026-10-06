@@ -54,6 +54,9 @@ class PathsConfig:
     of the language model it runs (D-165)."""
     ai_models_dir: Path = Path("/var/lib/biokids-ai/models")
     """Model files a parent downloaded for the assistant, owned by `biokids-ai`."""
+    recorded_voice_dir: Path = Path("/var/lib/biokids-voices")
+    """A parent's own recordings of the spoken lines (D-174). Outside the 0700
+    data directory because the voice service, which runs as the child, plays them."""
 
     @property
     def catalog_dir(self) -> Path:
@@ -124,6 +127,8 @@ class AiConfig:
     """Questions a child may ask the assistant in ten minutes (D-165)."""
     llama_server_binary: str = "llama-server"
     whisper_server_binary: str = "whisper-server"
+    kiwix_serve_binary: str = "kiwix-serve"
+    """Searches the encyclopedia the assistant checks its answers against (D-178)."""
     idle_unload_minutes: int = 10
     """A model nobody has asked anything for this long is unloaded, giving its
     memory back to the child's apps."""

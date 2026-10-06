@@ -117,8 +117,9 @@ class InProcessShellClient:
     async def request_shutdown(self) -> bool:
         return (await self._call(ShellOp.REQUEST_SHUTDOWN)).ok
 
-    async def ask_a_parent(self, url: str) -> bool:
-        return (await self._call(ShellOp.ASK_A_PARENT, url=url)).ok
+    async def ask_a_parent(self, url: str, kind: str = "site") -> tuple[bool, str]:
+        response = await self._call(ShellOp.ASK_A_PARENT, url=url, kind=kind)
+        return response.ok, response.error or ""
 
 
 class Machine:
@@ -152,7 +153,7 @@ class Machine:
         app = create_shell(self.config)
         app.state.shell.client = InProcessShellClient(self.shell_server, child_id)  # type: ignore[assignment]
         app.state.shell.launcher = _NeverActuallyStarts(self.config)
-        return TestClient(app)
+        return TestClient(app, base_url="http://127.0.0.1:7879")
 
     async def run_for(self, seconds: int) -> None:
         for _ in range(seconds // TICK):

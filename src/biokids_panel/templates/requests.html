@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ _('requests.title') }} · {{ _('panel.title') }}{% endblock %}
+
+{#
+  What the children asked for (D-173). One card per question, the answer in one
+  tap: a parent reading this on their phone in a meeting has a few seconds.
+#}
+{% block content %}
+  <h1>{{ _('requests.title') }}</h1>
+  <p class="muted">{{ _('requests.help') }}</p>
+
+  {% if not pending %}
+    <div class="card card--flat"><p>{{ _('requests.none') }}</p></div>
+  {% endif %}
+
+  {% for row in pending %}
+    <div class="card">
+      <h2>
+        <span aria-hidden="true">{{ row.avatar|avatar }}</span>
+        {{ _('requests.asks.' ~ row.kind, name=row.child) }}
+      </h2>
+      {% if row.kind != 'time' and row.what %}
+        <p><strong>{{ row.what }}</strong></p>
+      {% endif %}
+      <p class="muted small">{{ row.created_at|when }}</p>
+      <div class="row row--wrap">
+        {% if row.kind == 'time' %}
+          {% for minutes in grant_choices %}
+            <form method="post" action="/requests/{{ row.id }}/decide">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}">
+              <input type="hidden" name="approve" value="yes">
+              <input type="hidden" name="minutes" value="{{ minutes }}">
+              <button class="btn btn--ok" type="submit">{{ _('today.grant_n', minutes=minutes) }}</button>
+            </form>
+          {% endfor %}
+        {% else %}
+          <form method="post" action="/requests/{{ row.id }}/decide">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <input type="hidden" name="approve" value="yes">
+            <button class="btn btn--ok" type="submit">{{ _('requests.approve') }}</button>
+          </form>
+        {% endif %}
+        <form method="post" action="/requests/{{ row.id }}/decide">
+          <input type="hidden" name="csrf_token" value="{{ csrf }}">
+          <input type="hidden" name="approve" value="no">
+          <button class="btn" type="submit">{{ _('requests.deny') }}</button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+
+  {% if decided %}
+    <h2>{{ _('requests.recent') }}</h2>
+    <ul class="list">
+      {% for row in decided %}
+        <li>
+          <span aria-hidden="true">{{ row.avatar|avatar }}</span>
+          {{ _('requests.asks.' ~ row.kind, name=row.child) }}
+          {% if row.kind != 'time' and row.what %}({{ row.what }}){% endif %}
+          — <strong>{{ _('requests.status.' ~ row.status, minutes=row.minutes) }}</strong>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,3 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}
+A grown-up said not now. You can talk about it later.
+Not this time, {name}. You can talk it over this evening.

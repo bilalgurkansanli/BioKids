@@ -107,6 +107,9 @@ class _ChildRuntime:
 
     last_reading: ClockReading | None = None
     dirty: bool = False
+    carry_seconds: float = 0.0
+    """The fraction of a second each interval leaves over. Dropping it every
+    tick undercounted by up to a second in ten, a few percent of every day."""
     pending_category_seconds: dict[tuple[Category, str], int] = field(default_factory=dict)
 
 
@@ -241,7 +244,9 @@ class TimeLedger:
             )
             awake = float(clamp)
 
+        awake += runtime.carry_seconds
         elapsed = int(awake)
+        runtime.carry_seconds = awake - elapsed
         day_rolled = previous.wall.date() != day
         if day_rolled:
             self._carry_over(item.child_id, previous.wall.date(), row)
@@ -719,11 +724,19 @@ class TimeLedger:
             log.exception("could not persist the ledger; rolling back to stay usable")
             with contextlib.suppress(Exception):
                 self._session.rollback()
+            # A row inserted in the transaction that just rolled back is gone
+            # from the session, but the cache still held it: every later second
+            # of that day went to an object nothing would ever write, and a
+            # restart gave the child the whole day back. Read them again.
+            self._days.clear()
             raise
 
         self._last_persist_boot = reading.boot
         for runtime in self._runtime.values():
             runtime.dirty = False
+            # Cleared only now that they are on disk; a failed commit keeps
+            # them for the next attempt.
+            runtime.pending_category_seconds.clear()
 
     def _flush_category_seconds(self, day: dt.date) -> None:
         for child_id, runtime in self._runtime.items():
@@ -749,7 +762,6 @@ class TimeLedger:
                     )
                     self._session.add(row)
                 row.seconds += seconds
-            runtime.pending_category_seconds.clear()
 
     def forget(self, child_id: int) -> None:
         """Drop in-memory state for a child, e.g. after they were deleted."""

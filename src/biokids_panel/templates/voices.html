@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ _('voices.title') }} · {{ _('panel.title') }}{% endblock %}
+
+{#
+  Zio and Sio in the parent's own voice (D-174). Seven sentences, each recorded
+  with one press to start and one to stop. Recording needs voices.js and a
+  microphone; listening to and deleting what is there does not.
+#}
+{% block content %}
+  <meta name="csrf-token" content="{{ csrf }}">
+  <h1>{{ _('voices.title') }}</h1>
+  <p class="muted">{{ _('voices.help') }}</p>
+
+  <form class="card card--flat" method="post" action="/voice-persona">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <fieldset>
+      <legend>{{ _('voices.persona') }}</legend>
+      <label><input type="radio" name="persona" value="zio" {% if persona == 'zio' %}checked{% endif %}>
+        {{ _('voices.persona.zio') }}</label>
+      <label><input type="radio" name="persona" value="sio" {% if persona == 'sio' %}checked{% endif %}>
+        {{ _('voices.persona.sio') }}</label>
+    </fieldset>
+    <button class="btn" type="submit">{{ _('common.save') }}</button>
+  </form>
+
+  {% for line in lines %}
+    <section class="card">
+      <h2>{{ _('voices.event.' ~ line.event) }}</h2>
+      <label for="text-{{ line.event }}" class="small muted">{{ _('voices.say_this') }}</label>
+      <input id="text-{{ line.event }}" type="text" maxlength="300" value="{{ line.text }}">
+      {% if line.recorded %}
+        <audio controls preload="none" src="/voices/{{ locale }}/{{ line.event }}.wav"></audio>
+        <p class="small muted">{{ _('voices.recorded', seconds=line.seconds) }}</p>
+      {% endif %}
+      <div class="row row--wrap">
+        <button class="btn btn--primary" type="button"
+                data-record="/voices/{{ line.event }}"
+                data-text="text-{{ line.event }}"
+                data-status="status-{{ line.event }}">{{ _('voices.record') }}</button>
+        {% if line.recorded %}
+          <form method="post" action="/voices/{{ line.event }}/delete">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <button class="btn" type="submit">{{ _('voices.delete') }}</button>
+          </form>
+        {% endif %}
+      </div>
+      <p class="small" id="status-{{ line.event }}" role="status"></p>
+    </section>
+  {% endfor %}
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    window.BIOKIDS_VOICE_STRINGS = {{ {
+      "record": _('voices.record'),
+      "stop": _('voices.stop'),
+      "saving": _('voices.saving'),
+      "failed": _('error.save_failed'),
+      "mic_failed": _('voices.mic_failed'),
+      "unsupported": _('voices.unsupported'),
+    }|tojson }};
+  </script>
+  <script src="/static/voices.js" defer></script>
+{% endblock %}

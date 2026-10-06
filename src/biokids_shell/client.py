@@ -79,11 +79,13 @@ class ShellClient:
         except (IpcError, OSError):
             return False
 
-    async def ask_a_parent(self, url: str) -> bool:
+    async def ask_a_parent(self, url: str, kind: str = "site") -> tuple[bool, str]:
+        """(filed, reason). The reason is a catalog key when it was not filed."""
         try:
-            return (await self._client.call(ShellOp.ASK_A_PARENT, url=url)).ok
+            response = await self._client.call(ShellOp.ASK_A_PARENT, url=url, kind=kind)
         except (IpcError, OSError):
-            return False
+            return False, "shell.error.unknown"
+        return response.ok, response.error or ""
 
     async def ask_assistant(self, question: str) -> dict[str, Any]:
         """The assistant's reply (D-165). A refusal when anything is unreachable.

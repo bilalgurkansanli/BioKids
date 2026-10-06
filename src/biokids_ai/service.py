@@ -25,8 +25,10 @@ from pathlib import Path
 from typing import Any, Final, cast
 
 from biokids_ai.assistant import Assistant, Reply, refuse
+from biokids_ai.knowledge import PORT as KNOWLEDGE_PORT
+from biokids_ai.knowledge import Book, Knowledge
 from biokids_ai.llm import WARMUP_TIMEOUT_S, ChatModel, ModelError
-from biokids_ai.localhttp import Endpoint
+from biokids_ai.localhttp import Endpoint, is_healthy
 from biokids_ai.models import ModelFile, by_key
 from biokids_ai.runtime import ManagedServer, ServerUnavailable
 from biokids_ai.setup import read_selection
@@ -77,6 +79,7 @@ class AssistantService:
         self._llm: ManagedServer | None = None
         self._stt: ManagedServer | None = None
         self._assistant: Assistant | None = None
+        self._knowledge: Knowledge | None = None
         self._transcriber: Transcriber | None = None
         self._loaded: dict[str, str] = {}
 
@@ -118,7 +121,7 @@ class AssistantService:
                 endpoint,
                 idle_seconds=idle,
             )
-            self._assistant = Assistant(ChatModel(endpoint))
+            self._assistant = Assistant(ChatModel(endpoint), reference=self._reference())
             self._loaded["chat"] = chat.key
         stt = self.selected("stt")
         if stt is not None and self._loaded.get("stt") != stt.key:
@@ -141,6 +144,39 @@ class AssistantService:
             )
             self._transcriber = Transcriber(endpoint)
             self._loaded["stt"] = stt.key
+
+    def _reference(self) -> Knowledge | None:
+        """kiwix-serve over the encyclopedias on disk (D-178), or None."""
+        books = [
+            Book(
+                locale=role.removeprefix("knowledge-"), name=model.filename.removesuffix(".zim")
+            )
+            for role in ("knowledge-tr", "knowledge-en")
+            if (model := self.selected(role)) is not None
+        ]
+        if not books:
+            return None
+        endpoint = Endpoint(f"http://127.0.0.1:{KNOWLEDGE_PORT}")
+
+        async def healthy(target: Endpoint) -> bool:
+            return await is_healthy(target, "/")
+
+        server = ManagedServer(
+            "kiwix-serve",
+            [
+                self.config.ai.kiwix_serve_binary,
+                "--address=127.0.0.1",
+                f"--port={KNOWLEDGE_PORT}",
+                "--nosearchbar",
+                *(str(self.models_dir / f"{book.name}.zim") for book in books),
+            ],
+            endpoint,
+            idle_seconds=self.config.ai.idle_unload_minutes * 60.0,
+            start_timeout=30.0,
+            healthy=healthy,
+        )
+        self._knowledge = Knowledge(server, books)
+        return self._knowledge
 
     # ---------------------------------------------------------------- ops
 
@@ -165,6 +201,11 @@ class AssistantService:
             "chat": chat.key if chat else "",
             "stt": stt.key if stt else "",
             "voice": stt is not None,
+            "knowledge": [
+                role.removeprefix("knowledge-")
+                for role in ("knowledge-tr", "knowledge-en")
+                if self.selected(role) is not None
+            ],
             "loaded": bool(self._llm and self._llm.running),
         }
 

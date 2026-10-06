@@ -6,7 +6,9 @@
 {% extends "base.html" %}
 {% block body %}
 <div class="full {{ tone|default('') }}">
-  <div class="full__inner">
+  {# For a child who cannot read yet, the screen says itself (D-175). Only the
+     screens nothing else speaks: the daemon already says time-up and breaks. #}
+  <div class="full__inner" {% if young and speak_on_load|default(false) %}data-speak-on-load{% endif %}>
     {% if persona and characters[persona] %}
       <div class="character" data-expression="{{ expression|default('neutral') }}">
         {{ characters[persona]|expression(expression|default('neutral'))|safe }}

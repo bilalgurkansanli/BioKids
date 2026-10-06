@@ -22,12 +22,17 @@ override is not a parental-control product.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import getpass
+import importlib
 import json
 import logging
 import os
+import re
+import sqlite3
 import subprocess
 import sys
+import time
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -38,11 +43,23 @@ from biokids_core.db.session import Database
 from biokids_core.errors import ConfigError
 from biokids_core.i18n import translator
 from biokids_core.ipc import DaemonClient, Op
-from biokids_core.provision import account_exists, provision, set_greeter_identity
+from biokids_core.provision import (
+    CHILD_GROUP,
+    account_exists,
+    provision,
+    set_greeter_identity,
+)
 
 log = logging.getLogger("biokids.admin")
 
 LOGINCTL_TIMEOUT = 10
+
+LOCK_SETTLE_SECONDS = 20.0
+"""How long a screen locker gets to take the screen before the lockdown ends the
+session. light-locker fades and hands the seat to the greeter in eight to ten
+seconds on the development VM; three, the first value, ended a session that
+was about to lock."""
+LOCK_POLL_SECONDS = 1.0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -61,6 +78,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "provision-child": cmd_provision_child,
         "refresh-greeter": cmd_refresh_greeter,
         "remote-setup": cmd_remote_setup,
+        "backup-db": cmd_backup_db,
         "version": cmd_version,
     }
     handler = handlers.get(args.command)
@@ -124,6 +142,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="show every child's name and picture on the login screen (D-170)",
     )
     sub.add_parser("version", help="print the version")
+
+    backup = sub.add_parser(
+        "backup-db",
+        help="copy the database next to it, as biokids.db's postinst does before a migration",
+    )
+    backup.add_argument("--keep", type=int, default=3, help="how many copies to keep")
+    backup.add_argument(
+        "--reason", default="manual", help="a word for the file name, such as 'upgrade'"
+    )
 
     reset = sub.add_parser("reset-pin", help="set a new parent PIN (D-50)")
     # Read from the terminal, not from argv: an argument is visible to every
@@ -241,15 +268,57 @@ def lock_session(session_id: str) -> bool:
     return result.returncode == 0
 
 
+def session_property(session_id: str, name: str) -> str:
+    output = _loginctl_output(
+        ("loginctl", "show-session", session_id, f"--property={name}", "--value")
+    )
+    return (output or "").strip()
+
+
+def terminate_session(session_id: str) -> bool:
+    return _loginctl_output(("loginctl", "terminate-session", session_id)) is not None
+
+
+def _still_on_screen(session_id: str) -> bool:
+    """On screen and not locked. light-locker never sets LockedHint (D-155); it
+    locks by handing the seat to the greeter, which makes the session inactive."""
+    if session_property(session_id, "Active") != "yes":
+        return False
+    return session_property(session_id, "LockedHint") != "yes"
+
+
+def group_members(group: str) -> set[str]:
+    """The members of a Unix group, or nothing on a host without `grp`."""
+    try:
+        getgrnam = importlib.import_module("grp").getgrnam
+    except ImportError:  # the Windows development host
+        return set()
+    try:
+        return set(getgrnam(group).gr_mem)
+    except KeyError:
+        return set()
+
+
 def cmd_lockdown(_args: argparse.Namespace, config: Config) -> int:
     """Lock every child session. Never fails softly, never locks the parent."""
     child_users = _child_users(config)
     sessions = list_sessions()
 
     if not child_users:
-        # The database is unreadable or empty. We will not guess which sessions
-        # belong to children — locking a parent out of their own machine during
-        # an incident is its own kind of failure.
+        # The database is unreadable - which is one of the likeliest reasons
+        # to be here at all (ARCHITECTURE.md section 9: "DB corrupt: fail
+        # closed"). The accounts that log in by their picture are children by
+        # construction (D-155): provisioning adds only password-less accounts
+        # outside every administrative group, and nothing else adds anyone.
+        # That is not a guess about who is a child.
+        child_users = group_members(CHILD_GROUP)
+        if child_users:
+            log.error(
+                "the child list could not be read from %s; locking the members of %s",
+                config.paths.db_path,
+                CHILD_GROUP,
+            )
+    if not child_users:
         log.error(
             "lockdown could not determine which users are children; "
             "no session was locked. Check %s",
@@ -266,6 +335,20 @@ def cmd_lockdown(_args: argparse.Namespace, config: Config) -> int:
         and not row.get("class", "").startswith(("manager", "background"))
     ]
     locked = [session_id for session_id in targets if lock_session(session_id)]
+    if locked:
+        # `loginctl lock-session` only asks the child's screen locker. One that
+        # is not running leaves the child on screen; end that session instead.
+        waiting = set(locked)
+        deadline = time.monotonic() + LOCK_SETTLE_SECONDS
+        while waiting:
+            waiting = {sid for sid in waiting if _still_on_screen(sid)}
+            if not waiting or time.monotonic() >= deadline:
+                break
+            time.sleep(LOCK_POLL_SECONDS)
+        for session_id in sorted(waiting):
+            log.error("session %s did not lock; ending it", session_id)
+            if not terminate_session(session_id):
+                locked.remove(session_id)
 
     log.warning(
         "lockdown: locked %s session(s) for %s", len(locked), ", ".join(sorted(child_users))
@@ -310,6 +393,62 @@ def _audit_lockdown(config: Config, locked: Sequence[str], users: Sequence[str])
         database.dispose()
     except Exception:
         log.exception("the lockdown could not be written to the audit log")
+
+
+# ---------------------------------------------------------------- backup-db
+
+BACKUP_DIR_NAME = "backups"
+_BACKUP_NAME = re.compile(r"^biokids-\d{8}T\d{6}Z-[a-z0-9-]+\.db$")
+
+
+def backup_database(config: Config, *, keep: int = 3, reason: str = "manual") -> Path | None:
+    """Copy the database with SQLite's online backup; return the copy, or None
+    when there is no database yet.
+
+    Online backup is consistent while the daemon is writing, unlike a file copy
+    of a WAL database. Copies are 0600 in a 0700 directory beside the database,
+    because they hold exactly what it holds. Only the newest `keep` remain.
+    """
+    source = config.paths.db_path
+    if not source.exists():
+        return None
+    directory = source.parent / BACKUP_DIR_NAME
+    directory.mkdir(mode=0o700, exist_ok=True)
+    tag = re.sub(r"[^a-z0-9-]+", "-", reason.lower()).strip("-") or "manual"
+    stamp = dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
+    target = directory / f"biokids-{stamp}-{tag}.db"
+
+    reader = sqlite3.connect(f"file:{source}?mode=ro", uri=True)
+    try:
+        # Created empty and 0600 before a byte of the family's data is in it.
+        target.touch(mode=0o600)
+        writer = sqlite3.connect(target)
+        try:
+            reader.backup(writer)
+        finally:
+            writer.close()
+    finally:
+        reader.close()
+
+    copies = sorted(p for p in directory.iterdir() if _BACKUP_NAME.match(p.name))
+    for old in copies[: max(0, len(copies) - max(keep, 1))]:
+        old.unlink(missing_ok=True)
+    return target
+
+
+def cmd_backup_db(args: argparse.Namespace, config: Config) -> int:
+    """Fails loudly: the postinst runs it before a migration, and migrating a
+    database there is no copy of is the thing it exists to prevent."""
+    try:
+        copy = backup_database(config, keep=args.keep, reason=args.reason)
+    except (OSError, sqlite3.Error) as exc:
+        log.error("could not back up %s: %s", config.paths.db_path, exc)
+        return 1
+    if copy is None:
+        log.info("no database at %s yet; nothing to back up", config.paths.db_path)
+    else:
+        log.info("database copied to %s", copy)
+    return 0
 
 
 # -------------------------------------------------------------------- status

@@ -19,7 +19,10 @@ from biokids_core.db.models import Base
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # Without this, fileConfig switches off every logger that already exists:
+    # run in-process (the migration test, `biokids-admin`), the rest of the
+    # process went quiet after the first upgrade.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 

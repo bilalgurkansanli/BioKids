@@ -306,6 +306,7 @@ WORDLIST: Final = [
 
 assert len(WORDLIST) == 256, f"wordlist must be 256 words, got {len(WORDLIST)}"
 assert len(set(WORDLIST)) == 256, "wordlist has duplicates"
+_WORDS = frozenset(WORDLIST)
 
 
 # ------------------------------------------------------------------ hashing
@@ -411,7 +412,21 @@ def normalise_recovery_code(code: str) -> str:
     return " ".join(tokens)
 
 
+def is_recovery_code(code: str) -> bool:
+    """Eight words, every one of them from the list: the shape of a real code.
+
+    Checked before anything is hashed or compared. The wizard used to hash
+    whatever its hidden field sent back, and the recovery page compared whatever
+    was typed, so a form posted with an empty code stored the hash of "" - and
+    an empty code then reset the PIN.
+    """
+    words = normalise_recovery_code(code).split()
+    return len(words) == RECOVERY_WORDS and all(word in _WORDS for word in words)
+
+
 def verify_recovery_code(stored_hash: str, candidate: str) -> bool:
+    if not is_recovery_code(candidate):
+        return False
     return verify_secret(stored_hash, normalise_recovery_code(candidate))
 
 

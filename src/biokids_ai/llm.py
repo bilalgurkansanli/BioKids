@@ -81,11 +81,14 @@ class ChatModel:
         persona: str,
         name: str = "",
         wait_s: float | None = None,
+        context: str = "",
     ) -> str:
         band = prompts.band_for(age)
         return await self._complete(
             {
-                "messages": prompts.answer_messages(question, age, locale, persona, name),
+                "messages": prompts.answer_messages(
+                    question, age, locale, persona, name, context
+                ),
                 "temperature": 0.2,
                 "top_p": 0.9,
                 "max_tokens": prompts.MAX_TOKENS[band],

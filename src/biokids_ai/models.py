@@ -44,9 +44,13 @@ class ModelFile:
     """Below this much physical memory the file is not offered."""
     label: str
     """What the parent sees, in plain words."""
+    source: str = ""
+    """A full download address, for a file that is not on Hugging Face."""
 
     @property
     def url(self) -> str:
+        if self.source:
+            return self.source
         return f"{HF}/{self.repo}/resolve/{self.revision}/{self.filename}"
 
     @property
@@ -54,7 +58,7 @@ class ModelFile:
         return round(self.size / 1_000_000)
 
 
-CATALOG: Final[tuple[ModelFile, ...]] = (
+MODELS: Final[tuple[ModelFile, ...]] = (
     ModelFile(
         key="gemma-4-e4b",
         role="chat",
@@ -104,6 +108,44 @@ CATALOG: Final[tuple[ModelFile, ...]] = (
         label="Whisper small (OpenAI) - understands spoken Turkish",
     ),
 )
+
+
+KIWIX: Final = "https://download.kiwix.org/zim/wikipedia"
+
+KNOWLEDGE: Final[tuple[ModelFile, ...]] = (
+    # D-178. The opening paragraphs of the most-read Wikipedia articles, as
+    # Kiwix packs them. Text under CC BY-SA 4.0, read by kiwix-serve, never by
+    # our code. Pinned like the models: the address and the SHA-256 Kiwix
+    # published for the file, checked again after the download.
+    ModelFile(
+        key="wikipedia-tr-top-mini",
+        role="knowledge-tr",
+        repo="kiwix",
+        revision="2026-07",
+        filename="wikipedia_tr_top_mini_2026-07.zim",
+        size=137_838_899,
+        sha256="3ad1f7c203cd612469f7a749645434e2427120080d38568531fa74dc917becde",
+        licence="CC-BY-SA-4.0",
+        min_ram_gb=0.0,
+        label="Vikipedi (Türkçe, en çok okunan maddelerin özeti)",
+        source=f"{KIWIX}/wikipedia_tr_top_mini_2026-07.zim",
+    ),
+    ModelFile(
+        key="wikipedia-en-top-mini",
+        role="knowledge-en",
+        repo="kiwix",
+        revision="2026-09",
+        filename="wikipedia_en_top_mini_2026-09.zim",
+        size=296_858_160,
+        sha256="9e75b5f03b4ff61864772d811bd9715c9cdc27a429229abb779aaa3cc3aa8e05",
+        licence="CC-BY-SA-4.0",
+        min_ram_gb=0.0,
+        label="Wikipedia (English, summaries of the most-read articles)",
+        source=f"{KIWIX}/wikipedia_en_top_mini_2026-09.zim",
+    ),
+)
+
+CATALOG: Final[tuple[ModelFile, ...]] = (*MODELS, *KNOWLEDGE)
 
 
 def by_key(key: str) -> ModelFile | None:

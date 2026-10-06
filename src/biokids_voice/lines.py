@@ -52,6 +52,8 @@ DEFAULT_EVENTS: Final = (
     "warn_1",
     "time_up",
     "window_waiting",
+    "request_approved",
+    "request_denied",
 )
 """What Phase 0 ships. VOICE.md §5 lists six more events for later phases; they
 need no code, only two more text files each."""

@@ -107,7 +107,9 @@
           launched = true;
           window.location.replace("/");
         } else {
-          window.location.href = "/blocked?reason=" + encodeURIComponent((result && result.reason) || "");
+          window.location.href =
+            "/blocked?reason=" + encodeURIComponent((result && result.reason) || "") +
+            "&slug=" + encodeURIComponent(slug);
         }
       })
       .catch(function () {
@@ -157,6 +159,12 @@
       "data-tone",
       fraction <= 0.1 ? "danger" : fraction <= 0.25 ? "warn" : "ok",
     );
+    var sun = document.getElementById("ring-sun");
+    if (sun) {
+      var angle = 2 * Math.PI * fraction;
+      sun.setAttribute("cx", (50 + 40 * Math.cos(angle)).toFixed(2));
+      sun.setAttribute("cy", (50 + 40 * Math.sin(angle)).toFixed(2));
+    }
     var minutes = minutesLeft(remainingSeconds);
     if (ringNumber) {
       ringNumber.textContent = String(minutes);
@@ -167,6 +175,48 @@
         window.BIOKIDS_STRINGS.remaining.replace("{minutes}", String(minutes)),
       );
     }
+  }
+
+  /* ------------------------------------------------- read aloud (D-175) */
+
+  /* A four-year-old cannot read a tile's name. In the young band a tap says it,
+   * and a screen with a sentence on it says that once as it opens. Throttled:
+   * a child drumming on the tiles hears names, not a pile-up. */
+  var young = !!document.querySelector('[data-band="4-7"]');
+  var lastSaid = "";
+  var lastSaidAt = 0;
+
+  function sayAloud(text) {
+    text = (text || "").replace(/\s+/g, " ").trim();
+    var now = Date.now();
+    if (!text || (text === lastSaid && now - lastSaidAt < 3000) || now - lastSaidAt < 700) {
+      return;
+    }
+    lastSaid = text;
+    lastSaidAt = now;
+    fetch("/speak-label", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text }),
+    }).catch(function () {});
+  }
+
+  if (young) {
+    document.addEventListener("pointerdown", function (event) {
+      var target = event.target && event.target.closest && event.target.closest("[data-speak]");
+      if (target) sayAloud(target.getAttribute("data-speak"));
+    });
+  }
+  var spoken = document.querySelector("[data-speak-on-load]");
+  if (spoken) {
+    var parts = [];
+    spoken.querySelectorAll("h1, p").forEach(function (node) {
+      parts.push(node.textContent);
+    });
+    window.setTimeout(function () {
+      sayAloud(parts.join(". "));
+    }, 400);
   }
 
   /* --------------------------------------------------------------- banner */
@@ -362,6 +412,23 @@
       source.addEventListener(kind, function () {
         window.location.href = "/";
       });
+    });
+
+    /* A parent answered (D-173). The banner always; Zio or Sio says it too
+     * when the voices are on, through the ordinary speak event. A yes to more
+     * time also arrives as a tick, which moves the ring. */
+    source.addEventListener("request_decided", function (event) {
+      var data = parse(event);
+      if (!data) return;
+      var strings = window.BIOKIDS_STRINGS || {};
+      var text = !data.approved
+        ? strings.request_denied
+        : data.request_kind === "time"
+          ? (strings.request_approved_time || "").replace("{minutes}", data.minutes || 0)
+          : strings.request_approved;
+      showBanner(text || "", data.approved ? "info" : "warn");
+      var asked = document.getElementById("ask-time");
+      if (asked) asked.hidden = true;
     });
 
     source.addEventListener("earned", function (event) {

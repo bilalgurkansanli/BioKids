@@ -1,0 +1,4 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}
+Müjde {name}! Büyüğün izin verdi.
+İzin geldi! Hadi bakalım.
+Büyüğün evet dedi, iyi eğlenceler.

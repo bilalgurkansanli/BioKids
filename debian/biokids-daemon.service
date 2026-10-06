@@ -15,7 +15,16 @@ StartLimitIntervalSec=60
 StartLimitBurst=5
 
 [Service]
-Type=simple
+# The daemon says READY=1 once it is supervising and WATCHDOG=1 after every
+# tick that finished (D-172). A tick that hangs stops the pings: systemd kills
+# the process, the ExecStopPost= lockdown below runs, and Restart= brings it
+# back. Before this a hung daemon was "active (running)" and enforced nothing.
+Type=notify
+NotifyAccess=main
+WatchdogSec=90s
+# Rendering the 300,000-line blocklist at the first start takes a while on an
+# old laptop.
+TimeoutStartSec=180s
 ExecStart=/usr/bin/biokids-daemon
 Restart=always
 RestartSec=2s
@@ -53,13 +62,29 @@ RestrictNamespaces=yes
 RestrictSUIDSGID=yes
 MemoryDenyWriteExecute=yes
 SystemCallFilter=@system-service
-# The "-" prefixes matter: a missing path in ReadWritePaths= is a unit that
-# refuses to start, and /etc/dnsmasq.d only exists once dnsmasq is installed.
-# /etc/chromium/policies/managed and /etc/nftables.d are shipped empty by this
-# package (biokids-daemon.dirs), because nothing else creates them: Debian's
+LockPersonality=yes
+RestrictRealtime=yes
+SystemCallArchitectures=native
+ProtectClock=yes
+ProtectKernelLogs=yes
+ProtectHostname=yes
+# Root, with two of root's powers: nft needs CAP_NET_ADMIN (and netlink, below),
+# and the daemon gives its socket to the biokids group with CAP_CHOWN. Locking,
+# logging out and powering off are D-Bus calls to logind and systemd, which
+# check the caller's uid and need no capability. Everything else root could do
+# - read any file, kill any process, load a module - is gone, and every program
+# the daemon runs (nft, loginctl, systemctl) inherits the same bound.
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_CHOWN
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6
+# The "-" prefix matters: a missing path in ReadWritePaths= is a unit that
+# refuses to start. /etc/chromium/policies/managed is shipped empty by this
+# package (biokids-daemon.dirs), because nothing else creates it: Debian's
 # chromium does not, and a skipped entry leaves the daemon unable to write the
-# kiosk policy with only a log line to say so.
-ReadWritePaths=/var/lib/biokids /var/log/biokids /run/biokids -/etc/dnsmasq.d -/etc/chromium/policies/managed -/etc/nftables.d
+# kiosk policy with only a log line to say so. The DNS filter's files live under
+# /var/lib/biokids/dns (D-167), so /etc/dnsmasq.d and /etc/nftables.d are not
+# writable any more.
+ReadWritePaths=/var/lib/biokids /var/log/biokids /run/biokids -/etc/chromium/policies/managed
 
 [Install]
 WantedBy=multi-user.target

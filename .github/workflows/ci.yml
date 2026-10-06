@@ -49,6 +49,14 @@ jobs:
       - name: the packaging names only things that exist
         run: python dev/check_packaging.py
 
+      # The maintainer scripts and the PAM helper run as root on every family's
+      # machine; a quoting mistake there is a broken install or worse.
+      - name: shellcheck the scripts that run as root
+        run: |
+          shellcheck -s sh -S warning \
+            debian/*.postinst debian/*.prerm debian/*.postrm debian/*.config \
+            debian/pam/biokids-child-login debian/parent/biokids-open-setup
+
       - name: pytest
         run: pytest --cov=biokids_core --cov=biokids_daemon --cov-report=term-missing
 
@@ -146,3 +154,52 @@ jobs:
           name: debs
           path: dist/*.deb
           if-no-files-found: error
+
+  install-smoke:
+    name: install, upgrade and remove on a clean Debian 13
+    # A package that builds and passes lintian can still fail in its postinst:
+    # the first real install did (D-153, D-154). This installs what was just
+    # built into an empty trixie, the way a family would, and takes it out again.
+    needs: debian-package
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: debs
+          path: dist
+
+      - name: Install the packages, without the desktop
+        run: |
+          apt-get update
+          apt-get install -y ./dist/biokids-core_*.deb ./dist/biokids-daemon_*.deb \
+            ./dist/biokids-panel_*.deb ./dist/biokids-voice_*.deb
+
+      - name: The install left what it promises
+        run: |
+          set -eu
+          biokids-admin version
+          test -f /var/lib/biokids/biokids.db
+          test "$(stat -c %a /var/lib/biokids)" = 700
+          test "$(stat -c %a /var/lib/biokids-voices)" = 755
+          test -f /etc/biokids/secret.key
+          # D-171: the assistant's account is never in the group that can grant time.
+          if id -nG biokids-ai | tr ' ' '\n' | grep -qx biokids; then
+            echo "biokids-ai is in the biokids group" >&2; exit 1
+          fi
+
+      - name: Reinstalling is an upgrade that backs the database up first
+        run: |
+          set -eu
+          apt-get install -y --reinstall ./dist/biokids-core_*.deb
+          ls /var/lib/biokids/backups/biokids-*-upgrade.db
+
+      - name: Remove, then purge
+        run: |
+          set -eu
+          apt-get remove -y biokids-panel biokids-daemon biokids-voice biokids-core
+          apt-get purge -y biokids-panel biokids-daemon biokids-voice biokids-core
+          ! dpkg -l 'biokids*' 2>/dev/null | grep -q '^ii'
+

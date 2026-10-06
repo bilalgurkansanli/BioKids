@@ -732,3 +732,25 @@ svg {
 
 /* The assistant's tile on the home grid: Zio's coral, so it reads as hers. */
 .tile--assistant { border-color: var(--bio-coral); }
+
+/* "Biraz daha süre iste" once asked (D-173): the same pill, not pressable. */
+.foot form {
+  display: contents;
+}
+
+.foot .tile-small--waiting {
+  border-style: dashed;
+  color: var(--ink-soft, var(--ink));
+  cursor: default;
+}
+
+/* The setting sun on the young band's ring (D-175). */
+.ring__sun {
+  fill: #ffc83d;
+  stroke: var(--surface);
+  stroke-width: 3;
+  transition: cx 1s linear, cy 1s linear, fill 1s;
+}
+
+.ring-wrap[data-tone="warn"] .ring__sun { fill: #ff9f3d; }
+.ring-wrap[data-tone="danger"] .ring__sun { fill: #ff6b3d; }
