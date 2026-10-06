@@ -1788,3 +1788,72 @@ def test_the_wizard_opens_by_itself_only_for_a_parent_and_only_until_setup_is_do
     assert '*" biokids-child "*) exit 0' in script, "never in a child's session"
     assert '"/wizard" in location' in script, "only while / still leads to the wizard"
     assert script.rstrip().endswith('exec xdg-open "http://127.0.0.1:7878/wizard/1"')
+
+
+# ------------------------------------------------------- D-173 requests
+
+
+def test_the_requests_screen_answers_in_one_tap(
+    client: TestClient, family_ready: None, db: Database, daemon: FakeDaemon
+) -> None:
+    from biokids_core.db import AccessRequest
+
+    with db.session() as session:
+        session.add(AccessRequest(child_id=1, url="", kind="time", status="pending"))
+    login(client)
+
+    page = client.get("/requests").text
+    assert "/requests/1/decide" in page
+
+    client.post(
+        "/requests/1/decide",
+        data={"approve": "yes", "minutes": 30, "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    op, args = daemon.calls[-1]
+    assert op == "decide_request"
+    assert args["approve"] is True and args["minutes"] == 30
+
+
+def test_unlock_needs_no_time_to_be_given(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    login(client)
+    client.post(
+        "/children/1/unlock", data={"csrf_token": csrf_of(client)}, follow_redirects=False
+    )
+    assert daemon.ran("unlock_now") and not daemon.ran("grant_time")
+
+
+# ------------------------------------------------- D-174 recordings
+
+
+def test_the_panel_keeps_a_recording_sent_from_the_phone(
+    client: TestClient, family_ready: None, config: Config
+) -> None:
+    from biokids_core import recorded_voice
+    from test_recorded_voice import a_wav
+
+    login(client)
+    token = csrf_of(client)
+    response = client.post(
+        "/voices/warn_1?text=Son%20dakika",
+        content=a_wav(1.5),
+        headers={"content-type": "audio/wav", "x-csrf-token": token},
+    )
+    assert response.json() == {"ok": True}
+    found = recorded_voice.lookup(config.paths.recorded_voice_dir, "tr", "warn_1")
+    assert found is not None and found.text == "Son dakika"
+    assert "/voices/tr/warn_1.wav" in client.get("/voices").text
+
+
+def test_a_recording_without_the_token_is_refused(
+    client: TestClient, family_ready: None
+) -> None:
+    from test_recorded_voice import a_wav
+
+    login(client)
+    response = client.post(
+        "/voices/warn_1", content=a_wav(), headers={"content-type": "audio/wav"}
+    )
+    assert response.status_code == 403

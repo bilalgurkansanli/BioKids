@@ -424,7 +424,7 @@ msgid "today.poweroff"
 msgstr "Kapat"
 
 msgid "today.grant.done"
-msgstr "{name} için 10 dakika eklendi."
+msgstr "{name} için {minutes} dakika eklendi."
 
 msgid "today.lock.done"
 msgstr "{name} oturumu kilitlendi."
@@ -1154,3 +1154,175 @@ msgstr "İnternet filtresi yeniden çalışıyor"
 
 msgid "audit.action.lock_failed"
 msgstr "Ekran kilitlenemedi; oturum kapatıldı"
+
+# D-173: answering a child's request
+msgid "audit.action.request_approved"
+msgstr "İsteğe izin verildi"
+
+msgid "audit.action.request_denied"
+msgstr "İstek reddedildi"
+
+msgid "audit.action.session_unlock_requested"
+msgstr "Kilit açıldı"
+
+# D-173: a child's request, from the launcher
+msgid "shell.request.time"
+msgstr "Biraz daha süre iste"
+
+msgid "shell.request.time_waiting"
+msgstr "Süre istedin, cevap bekleniyor"
+
+msgid "shell.request.too_often"
+msgstr "Bu saat içinde çok sordun. Biraz sonra yine sorabilirsin."
+
+msgid "shell.request.approved"
+msgstr "Büyüğün izin verdi!"
+
+msgid "shell.request.approved_time"
+msgstr "Büyüğün {minutes} dakika daha verdi!"
+
+msgid "shell.request.denied"
+msgstr "Büyüğün şimdilik hayır dedi. Sonra konuşabilirsiniz."
+
+# D-173: the requests screen, unlocking, and grants of any size
+msgid "requests.title"
+msgstr "İstekler"
+
+msgid "requests.help"
+msgstr "Çocuklarınızın sizden istedikleri. Cevabınız çocuğun ekranında hemen görünür ve sesli söylenir."
+
+msgid "requests.none"
+msgstr "Bekleyen istek yok."
+
+msgid "requests.asks.time"
+msgstr "{name} biraz daha süre istiyor"
+
+msgid "requests.asks.site"
+msgstr "{name} bir siteyi açmak istiyor"
+
+msgid "requests.asks.app"
+msgstr "{name} bir uygulama istiyor"
+
+msgid "requests.approve"
+msgstr "İzin ver"
+
+msgid "requests.deny"
+msgstr "Şimdi değil"
+
+msgid "requests.recent"
+msgstr "Son cevaplananlar"
+
+msgid "requests.status.approved"
+msgstr "izin verildi"
+
+msgid "requests.status.denied"
+msgstr "şimdi değil dendi"
+
+msgid "today.grant_n"
+msgstr "+{minutes} dk"
+
+msgid "today.unlock"
+msgstr "Kilidi aç"
+
+msgid "today.unlock.done"
+msgstr "{name} oturumunun kilidi açıldı."
+
+# D-174: a parent's own voice
+msgid "voices.title"
+msgstr "Kendi sesiniz"
+
+msgid "voices.teaser"
+msgstr "Uyarıları Zio ve Sio yerine sizin sesiniz söylesin."
+
+msgid "voices.open"
+msgstr "Sesleri kaydet"
+
+msgid "voices.help"
+msgstr "Her cümleyi bir kez kaydedin: Kaydet'e basın, cümleyi söyleyin, Durdur'a basın. Kayıtlar yalnızca bu bilgisayarda kalır. Kaydetmediğiniz cümleleri bilgisayarın sesi söylemeye devam eder."
+
+msgid "voices.persona"
+msgstr "Kaydedilen ses kimin?"
+
+msgid "voices.persona.zio"
+msgstr "Annenin (Zio görünür)"
+
+msgid "voices.persona.sio"
+msgstr "Babanın (Sio görünür)"
+
+msgid "voices.say_this"
+msgstr "Söyleyeceğiniz cümle"
+
+msgid "voices.record"
+msgstr "● Kaydet"
+
+msgid "voices.stop"
+msgstr "■ Durdur"
+
+msgid "voices.saving"
+msgstr "Kaydediliyor…"
+
+msgid "voices.delete"
+msgstr "Kaydı sil"
+
+msgid "voices.recorded"
+msgstr "Kaydedildi ({seconds} sn)"
+
+msgid "voices.mic_failed"
+msgstr "Mikrofon açılamadı. Tarayıcının mikrofon izni verildiğinden emin olun."
+
+msgid "voices.unsupported"
+msgstr "Bu tarayıcı kayıt yapamıyor."
+
+msgid "voices.error.too_short"
+msgstr "Kayıt çok kısa. Cümleyi söyledikten sonra Durdur'a basın."
+
+msgid "voices.error.too_long"
+msgstr "Kayıt 15 saniyeden uzun olamaz."
+
+msgid "voices.error.not_audio"
+msgstr "Bu bir ses kaydı gibi görünmüyor."
+
+msgid "voices.event.welcome"
+msgstr "Oturum açılınca"
+
+msgid "voices.event.warn_10"
+msgstr "10 dakika kala"
+
+msgid "voices.event.warn_5"
+msgstr "5 dakika kala"
+
+msgid "voices.event.warn_1"
+msgstr "1 dakika kala"
+
+msgid "voices.event.time_up"
+msgstr "Süre bitince"
+
+msgid "voices.event.request_approved"
+msgstr "Bir isteğe izin verince"
+
+msgid "voices.event.request_denied"
+msgstr "Bir isteğe hayır deyince"
+
+msgid "voices.suggest.welcome"
+msgstr "Hoş geldin canım, iyi eğlenceler!"
+
+msgid "voices.suggest.warn_10"
+msgstr "On dakikan kaldı, yavaş yavaş toparlanmaya başla."
+
+msgid "voices.suggest.warn_5"
+msgstr "Beş dakikan kaldı canım."
+
+msgid "voices.suggest.warn_1"
+msgstr "Son bir dakika, hadi bitirelim."
+
+msgid "voices.suggest.time_up"
+msgstr "Bugünlük süren bitti. Yarın yine oynarız!"
+
+msgid "voices.suggest.request_approved"
+msgstr "Tamam, izin veriyorum. İyi eğlenceler!"
+
+msgid "voices.suggest.request_denied"
+msgstr "Şimdi olmaz canım, akşam konuşalım."
+
+msgid "audit.action.voice_recorded"
+msgstr "Ses kaydedildi"

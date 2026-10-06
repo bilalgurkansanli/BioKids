@@ -1460,3 +1460,28 @@ def test_a_long_answer_is_cut_after_a_whole_sentence() -> None:
     assert whole_sentences(text, 200) == text
     assert whole_sentences(text, 40) == "Birinci cümle. İkinci cümle uzun!"
     assert whole_sentences("kelimekelimekelime", 5) == "kelim"
+
+
+# ------------------------------------------------- D-174 a parent's own voice
+
+
+async def test_the_recording_is_played_instead_of_a_synthesiser(config: Config) -> None:
+    from biokids_core import recorded_voice
+    from test_recorded_voice import a_wav
+
+    directory = config.paths.recorded_voice_dir
+    recorded_voice.save(directory, "tr", "warn_5", a_wav(1.0), "Beş dakikan kaldı canım.")
+    recorded_voice.set_persona(directory, "sio")
+    player = NullPlayer()
+    service = build_service(config, player=player)
+    async with Recorder(service) as recorder:
+        await service.start()
+        try:
+            reply = await service.handle(speak("warn_5", vars={"minutes": 5}))
+            assert reply.data["recorded"] is True
+            assert reply.data["text"] == "Beş dakikan kaldı canım."
+            assert reply.data["persona"] == "sio"
+            assert await recorder.wait_for(str(reply.data["id"])) == STATUS_SPOKEN
+        finally:
+            await service.aclose()
+    assert player.played == [directory / "tr" / "warn_5.wav"]

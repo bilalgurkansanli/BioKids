@@ -25,13 +25,14 @@ from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlsplit
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from biokids_core import repo
-from biokids_core.catalog import load_catalog
+from biokids_core.catalog import enable_for_child, load_catalog
 from biokids_core.clock import Clock, GuardedClock, SystemClock
 from biokids_core.config import Config, get_config
-from biokids_core.db.models import AccessRequest
+from biokids_core.db.models import AccessRequest, App, FilterRule, utcnow
 from biokids_core.db.session import Database
 from biokids_core.errors import ConfigError
 from biokids_core.ipc import EventKind
@@ -65,6 +66,14 @@ machine off with no lock screen, no two minutes and no "time's up"."""
 
 END_ACTION_BACKOFF_SECONDS: tuple[int, ...] = (10, 20, 40, 80, 120)
 """How long to wait before retrying an end action that did not work."""
+
+REQUEST_KINDS = ("time", "site", "app")
+REQUESTS_PER_HOUR = 6
+"""A child may ask this often. Asking again for the same thing while it is still
+waiting is the same request, not another one."""
+REQUEST_EXPIRY = dt.timedelta(hours=12)
+"""A request nobody answered is gone by the next morning: "more time" asked for
+yesterday is not a question about today."""
 
 FILTER_CHECK_SECONDS = 60
 """How often the children's DNS filter is checked from the outside (D-172)."""
@@ -321,6 +330,16 @@ class Supervisor:
                     pattern = web_tile_pattern(app.url)
                     if pattern:
                         patterns.add(pattern)
+        # Sites a parent said yes to when a child asked (D-173).
+        patterns.update(
+            rule.pattern
+            for rule in self.session.scalars(
+                select(FilterRule).where(
+                    FilterRule.kind == "allow", FilterRule.child_id.in_(list(self.children))
+                )
+            )
+            if rule.pattern
+        )
         return sorted(patterns)
 
     def reload(self) -> None:
@@ -1224,6 +1243,7 @@ class Supervisor:
             "supervision_indicator": child.supervision_indicator if child else "badge",
             "first_run_done": bool(child.first_run_done) if child else True,
             "tiles": tiles,
+            "asked_for_time": self.pending_request(child_id, "time"),
             "remaining_seconds": decision.remaining_seconds,
             "remaining_minutes": decision.remaining_minutes,
             "quota_seconds": quota + state.granted_s,
@@ -1322,23 +1342,160 @@ class Supervisor:
         self.ledger.persist()
         return await self.enforcer.poweroff()
 
-    def file_access_request(self, child_id: int, url: str) -> int:
-        """ "Anneme sor" (D-65). Turns the filter from a wall into a conversation."""
+    def file_access_request(self, child_id: int, url: str, kind: str = "site") -> int:
+        """ "Anneme sor" (D-65, D-173). Turns the filter from a wall into a conversation.
+
+        Returns the request's id, or 0 when the child has asked too often. The
+        same question asked twice while it waits is one request: a child who
+        presses the button five times is asking once, impatiently.
+        """
         runtime = self._require(child_id)
-        row = AccessRequest(child_id=child_id, url=url, status="pending")
+        kind = kind if kind in REQUEST_KINDS else "site"
+        url = url[:1024] if kind != "time" else ""
+        self._expire_requests()
+        waiting = self.session.scalar(
+            select(AccessRequest).where(
+                AccessRequest.child_id == child_id,
+                AccessRequest.status == "pending",
+                AccessRequest.kind == kind,
+                AccessRequest.url == url,
+            )
+        )
+        if waiting is not None:
+            return int(waiting.id)
+        recent = self.session.scalar(
+            select(func.count())
+            .select_from(AccessRequest)
+            .where(
+                AccessRequest.child_id == child_id,
+                AccessRequest.created_at >= utcnow() - dt.timedelta(hours=1),
+            )
+        )
+        if int(recent or 0) >= REQUESTS_PER_HOUR:
+            log.info(
+                "%s asked %s times this hour; not filing another", runtime.unix_user, recent
+            )
+            return 0
+        row = AccessRequest(child_id=child_id, url=url, kind=kind, status="pending")
         self.session.add(row)
         repo.audit(
             self.session,
             actor=f"child:{runtime.unix_user}",
             action="access_requested",
             target=f"child:{child_id}",
-            detail={"url": url},
+            detail={"url": url, "kind": kind},
         )
         self.session.commit()
         self.bus.publish(
-            EventKind.ACCESS_REQUEST, child_id=child_id, url=url, request_id=row.id
+            EventKind.ACCESS_REQUEST,
+            child_id=child_id,
+            url=url,
+            request_kind=kind,
+            request_id=row.id,
         )
         return int(row.id)
+
+    def _expire_requests(self) -> None:
+        cutoff = utcnow() - REQUEST_EXPIRY
+        for row in self.session.scalars(
+            select(AccessRequest).where(
+                AccessRequest.status == "pending", AccessRequest.created_at < cutoff
+            )
+        ):
+            row.status = "expired"
+            row.decided_at = utcnow()
+
+    def pending_request(self, child_id: int, kind: str) -> bool:
+        return (
+            self.session.scalar(
+                select(AccessRequest.id).where(
+                    AccessRequest.child_id == child_id,
+                    AccessRequest.status == "pending",
+                    AccessRequest.kind == kind,
+                    AccessRequest.created_at >= utcnow() - REQUEST_EXPIRY,
+                )
+            )
+            is not None
+        )
+
+    async def decide_request(
+        self, request_id: int, approve: bool, minutes: int = 0, actor: str = "parent"
+    ) -> dict[str, Any]:
+        """A parent's answer to a child's question, carried out and told to the child.
+
+        Yes to more time is a grant (which also lets a locked child back in);
+        yes to a site allows its host for that child, by policy and by DNS; yes
+        to an app enables it on their screen. No is no, said kindly. Either way
+        the child hears it from Zio or Sio and sees it on screen, because a
+        question that disappears into silence teaches a child not to ask.
+        """
+        row = self.session.get(AccessRequest, request_id)
+        if row is None or row.status != "pending":
+            return {"ok": False, "error": "error.not_found"}
+        runtime = self._require(row.child_id)
+        if approve and row.kind == "time" and not 0 < minutes <= 12 * 60:
+            return {"ok": False, "error": "error.invalid_input"}
+
+        row.status = "approved" if approve else "denied"
+        row.decided_at = utcnow()
+        row.minutes = minutes if approve and row.kind == "time" else 0
+        host = web_tile_pattern(row.url) if row.url else ""
+        if approve and row.kind == "site" and host:
+            self.session.add(
+                FilterRule(child_id=row.child_id, kind="allow", pattern=host, source="request")
+            )
+        if approve and row.kind == "app" and self.session.get(App, row.url) is not None:
+            enable_for_child(self.session, row.child_id, [row.url], replace=False)
+        repo.audit(
+            self.session,
+            actor=actor,
+            action="request_approved" if approve else "request_denied",
+            target=f"child:{row.child_id}",
+            detail={"kind": row.kind, "url": row.url, "minutes": row.minutes},
+        )
+        self.session.commit()
+
+        if approve and row.kind == "time":
+            await self.grant_time(row.child_id, minutes * 60, actor)
+        elif approve:
+            self.reload()
+
+        self.bus.publish(
+            EventKind.REQUEST_DECIDED,
+            child_id=row.child_id,
+            approved=approve,
+            request_kind=row.kind,
+            minutes=row.minutes,
+        )
+        self._speak(
+            runtime,
+            SpeechRequest(
+                event="request_approved" if approve else "request_denied",
+                vars={"minutes": row.minutes, "name": runtime.display_name},
+                priority="high",
+                expression="happy" if approve else "neutral",
+            ),
+        )
+        return {"ok": True, "status": row.status}
+
+    async def unlock_now(self, child_id: int, actor: str = "parent") -> bool:
+        """The "Kilidi aç" button: back in, without changing the day's time.
+
+        A lock from the panel had no way back except "+10 dk", which gave time
+        the parent may not have meant to give. If the day is over or a window is
+        closed, the launcher still shows that; only the lock comes down.
+        """
+        runtime = self._require(child_id)
+        await self._unlock(runtime)
+        runtime.locked_for_filter = False
+        repo.audit(
+            self.session,
+            actor=actor,
+            action="session_unlock_requested",
+            target=f"child:{child_id}",
+        )
+        self.session.commit()
+        return True
 
     async def grant_time(
         self, child_id: int, seconds: int, actor: str = "parent"

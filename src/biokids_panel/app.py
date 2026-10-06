@@ -35,7 +35,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Stre
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
-from biokids_core import repo, security
+from biokids_core import recorded_voice, repo, security
 from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
 from biokids_core.config import Config, get_config
 from biokids_core.db.models import Policy
@@ -163,6 +163,10 @@ def _utc_bounds_of_local_day(day: dt.date) -> tuple[dt.datetime, dt.datetime]:
     )
 
 
+REQUEST_GRANT_CHOICES = (15, 30, 60)
+"""What "more time" can be answered with, in minutes: three buttons, no typing."""
+
+
 def _needs_setup(session: Session) -> bool:
     return not repo.setup_complete(session)
 
@@ -196,10 +200,15 @@ def _action_notice(
                 return str(child.get("display_name", ""))
         return ""
 
-    for flag, key in (("granted", "today.grant.done"), ("locked", "today.lock.done")):
+    minutes = query.get("minutes", "10")
+    for flag, key in (
+        ("granted", "today.grant.done"),
+        ("locked", "today.lock.done"),
+        ("unlocked", "today.unlock.done"),
+    ):
         raw = query.get(flag, "")
         if raw:
-            return {"tone": "ok", "text": tr(key, name=name_of(raw))}
+            return {"tone": "ok", "text": tr(key, name=name_of(raw), minutes=minutes)}
 
     if query.get("poweroff"):
         return {"tone": "ok", "text": tr("today.poweroff.done")}
@@ -468,11 +477,214 @@ def register_routes(app: FastAPI) -> None:
             return blocked
         if not auth.csrf_ok(state, csrf_token):
             return see_other("/today?error=csrf")
-        seconds = max(0, min(minutes, MAX_GRANT_SECONDS // 60)) * 60
+        minutes = max(1, min(minutes, MAX_GRANT_SECONDS // 60))
         ok = _call_daemon(
-            ctx, Op.GRANT_TIME, child_id=child_id, seconds=seconds, actor=_actor(state)
+            ctx, Op.GRANT_TIME, child_id=child_id, seconds=minutes * 60, actor=_actor(state)
         )
-        return see_other(f"/today?granted={child_id}" if ok else "/today?error=daemon")
+        return see_other(
+            f"/today?granted={child_id}&minutes={minutes}" if ok else "/today?error=daemon"
+        )
+
+    @app.post("/children/{child_id}/unlock")
+    def unlock_now(
+        request: Request,
+        ctx: Ctx,
+        session: Db,
+        state: Auth,
+        child_id: int,
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        """Back in, without adding time (D-173). "Kilitle" had no way back but "+10 dk"."""
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        if not auth.csrf_ok(state, csrf_token):
+            return see_other("/today?error=csrf")
+        ok = _call_daemon(ctx, Op.UNLOCK_NOW, child_id=child_id, actor=_actor(state))
+        return see_other(f"/today?unlocked={child_id}" if ok else "/today?error=daemon")
+
+    # ------------------------------------------------------------- voices
+
+    @app.get("/voices", response_class=HTMLResponse)
+    def voices_view(request: Request, ctx: Ctx, session: Db, state: Auth, tr: Tr) -> Response:
+        """A parent records Zio and Sio's lines in their own voice (D-174)."""
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        directory = ctx.config.paths.recorded_voice_dir
+        locale = tr.locale
+        lines = []
+        for event in recorded_voice.EVENTS:
+            found = recorded_voice.lookup(directory, locale, event)
+            lines.append(
+                {
+                    "event": event,
+                    "recorded": found is not None,
+                    "text": found.text
+                    if found and found.text
+                    else tr(f"voices.suggest.{event}"),
+                    "seconds": round(found.seconds, 1) if found else 0,
+                }
+            )
+        return render(
+            ctx,
+            request,
+            session,
+            state,
+            tr,
+            "voices.html",
+            lines=lines,
+            locale=locale,
+            persona=recorded_voice.persona(directory),
+        )
+
+    @app.get("/voices/{locale}/{event}.wav")
+    def voice_file(
+        request: Request, ctx: Ctx, session: Db, state: Auth, locale: str, event: str
+    ) -> Response:
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        found = recorded_voice.lookup(ctx.config.paths.recorded_voice_dir, locale, event)
+        if found is None:
+            return Response(status_code=404)
+        return Response(found.path.read_bytes(), media_type="audio/wav")
+
+    @app.post("/voices/{event}")
+    async def voice_upload(
+        request: Request, ctx: Ctx, session: Db, state: Auth, tr: Tr, event: str, text: str = ""
+    ) -> Response:
+        """The recording itself: a WAV body, the CSRF token in a header."""
+        if _guard(request, session, state) is not None:
+            return JSONResponse({"ok": False, "error": tr("error.unknown")}, status_code=401)
+        if not auth.csrf_ok(state, request.headers.get("x-csrf-token")):
+            return JSONResponse({"ok": False, "error": tr("error.unknown")}, status_code=403)
+        data = await request.body()
+        try:
+            recorded_voice.save(
+                ctx.config.paths.recorded_voice_dir,
+                tr.locale,
+                event,
+                data,
+                text or tr(f"voices.suggest.{event}"),
+            )
+        except recorded_voice.RecordingError as exc:
+            return JSONResponse({"ok": False, "error": tr(str(exc))}, status_code=400)
+        except OSError:
+            return JSONResponse(
+                {"ok": False, "error": tr("error.save_failed")}, status_code=500
+            )
+        repo.audit(
+            session, actor=_actor(state), action="voice_recorded", detail={"event": event}
+        )
+        session.commit()
+        return JSONResponse({"ok": True})
+
+    @app.post("/voices/{event}/delete")
+    def voice_delete(
+        request: Request,
+        ctx: Ctx,
+        session: Db,
+        state: Auth,
+        tr: Tr,
+        event: str,
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        if not auth.csrf_ok(state, csrf_token):
+            return see_other("/voices?error=csrf")
+        try:
+            recorded_voice.delete(ctx.config.paths.recorded_voice_dir, tr.locale, event)
+        except recorded_voice.RecordingError:
+            return see_other("/voices?error=1")
+        return see_other("/voices?saved=1")
+
+    @app.post("/voice-persona")
+    def voice_persona(
+        request: Request,
+        ctx: Ctx,
+        session: Db,
+        state: Auth,
+        persona: Annotated[str, Form()] = "zio",
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        if not auth.csrf_ok(state, csrf_token):
+            return see_other("/voices?error=csrf")
+        try:
+            recorded_voice.set_persona(ctx.config.paths.recorded_voice_dir, persona)
+        except (recorded_voice.RecordingError, OSError):
+            return see_other("/voices?error=1")
+        return see_other("/voices?saved=1")
+
+    # ----------------------------------------------------------- requests
+
+    @app.get("/requests", response_class=HTMLResponse)
+    def requests_view(request: Request, ctx: Ctx, session: Db, state: Auth, tr: Tr) -> Response:
+        """What the children asked for, newest first, answerable in one tap (D-173)."""
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        children = {child.id: child for child in repo.list_children(session)}
+        apps = {app.slug: app for app in repo.list_apps(session)}
+        pending, decided = repo.access_requests(session)
+
+        def describe(row: Any) -> dict[str, Any]:
+            child = children.get(row.child_id)
+            app = apps.get(row.url) if row.kind == "app" else None
+            return {
+                "id": row.id,
+                "kind": row.kind,
+                "child": child.display_name if child else "?",
+                "avatar": child.avatar if child else "",
+                "what": app.name(tr.locale) if app else row.url,
+                "status": row.status,
+                "minutes": row.minutes,
+                "created_at": row.created_at,
+            }
+
+        return render(
+            ctx,
+            request,
+            session,
+            state,
+            tr,
+            "requests.html",
+            pending=[describe(row) for row in pending],
+            decided=[describe(row) for row in decided],
+            grant_choices=REQUEST_GRANT_CHOICES,
+        )
+
+    @app.post("/requests/{request_id}/decide")
+    def request_decide(
+        request: Request,
+        ctx: Ctx,
+        session: Db,
+        state: Auth,
+        request_id: int,
+        approve: Annotated[str, Form()] = "",
+        minutes: Annotated[int, Form()] = 0,
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        if not auth.csrf_ok(state, csrf_token):
+            return see_other("/requests?error=csrf")
+        yes = approve == "yes"
+        ok = _call_daemon(
+            ctx,
+            Op.DECIDE_REQUEST,
+            request_id=request_id,
+            approve=yes,
+            minutes=minutes if yes else 0,
+            actor=_actor(state),
+        )
+        return see_other("/requests?saved=1" if ok else "/requests?error=daemon")
 
     @app.post("/children/{child_id}/lock")
     def lock_now(

@@ -117,8 +117,9 @@ class InProcessShellClient:
     async def request_shutdown(self) -> bool:
         return (await self._call(ShellOp.REQUEST_SHUTDOWN)).ok
 
-    async def ask_a_parent(self, url: str) -> bool:
-        return (await self._call(ShellOp.ASK_A_PARENT, url=url)).ok
+    async def ask_a_parent(self, url: str, kind: str = "site") -> tuple[bool, str]:
+        response = await self._call(ShellOp.ASK_A_PARENT, url=url, kind=kind)
+        return response.ok, response.error or ""
 
 
 class Machine:

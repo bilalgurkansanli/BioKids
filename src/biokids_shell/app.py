@@ -24,6 +24,7 @@ import functools
 import hashlib
 import json
 import logging
+import math
 import shlex
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -135,6 +136,9 @@ class ShellState:
         self.env.filters["icon"] = lambda name: TILE_ICONS.get(str(name), TILE_ICONS["app"])
         self.env.filters["avatar"] = lambda slug: AVATARS.get(str(slug), AVATARS["fox"])
         self.env.filters["expression"] = set_expression
+        # The setting sun on the young band's ring (D-175) is placed in the template.
+        self.env.filters["cos"] = math.cos
+        self.env.filters["sin"] = math.sin
         self.characters = _load_characters(config)
         self.voice = AsyncDaemonClient(voice_socket_path(config))
         self.warming: asyncio.Task[None] | None = None
@@ -387,21 +391,32 @@ def register_routes(app: FastAPI) -> None:
         request: Request,
         shell: Shell,
         url: str = "",
+        slug: str = "",
         reason: str = Reason.FILTER_BLOCKED,
     ) -> Response:
         data = await shell.client.state()
         return await render(
-            shell, request, "blocked.html", data, reason=reason, blocked_url=url
+            shell,
+            request,
+            "blocked.html",
+            data,
+            reason=reason,
+            blocked_url=url,
+            ask_kind=_request_kind_for(reason, url, slug),
+            ask_what=url or slug,
         )
 
     @app.post("/ask-a-parent")
     async def ask_a_parent(
-        request: Request, shell: Shell, url: Annotated[str, Form()] = ""
+        request: Request,
+        shell: Shell,
+        url: Annotated[str, Form()] = "",
+        kind: Annotated[str, Form()] = "site",
     ) -> Response:
-        """The button that turns the filter into a conversation (D-65)."""
-        ok = await shell.client.ask_a_parent(url)
+        """The button that turns a wall into a conversation (D-65, D-173)."""
+        ok, reason = await shell.client.ask_a_parent(url, kind)
         data = await shell.client.state()
-        return await render(shell, request, "asked.html", data, ok=ok)
+        return await render(shell, request, "asked.html", data, ok=ok, reason=reason)
 
     @app.get("/shutdown", response_class=HTMLResponse)
     async def shutdown_confirm(request: Request, shell: Shell) -> Response:
@@ -458,6 +473,22 @@ def register_routes(app: FastAPI) -> None:
         return JSONResponse(
             {"text": text, "refused": refused}, headers={"Cache-Control": "no-store"}
         )
+
+    @app.post("/speak-label")
+    async def speak_label(request: Request, shell: Shell) -> Response:
+        """A tile's name, or a screen's sentence, read out for a child who cannot
+        read yet (UX.md section 2.2, D-175). Only from the launcher's own page."""
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        try:
+            body = json.loads(await request.body() or b"{}")
+        except ValueError:
+            return JSONResponse({"error": "bad request"}, status_code=400)
+        text = " ".join(str(body.get("text", "") if isinstance(body, dict) else "").split())
+        if text:
+            data = await shell.client.state() or {}
+            await shell.say(text[:300], normalise_locale(str(data.get("locale", "tr"))))
+        return JSONResponse({"ok": bool(text)})
 
     @app.post("/assistant/warmup")
     async def assistant_warmup(request: Request, shell: Shell) -> Response:
@@ -598,6 +629,19 @@ def _from_launcher(request: Request, content_type: str) -> bool:
     return origin in {f"http://{host}", f"https://{host}"}
 
 
+def _request_kind_for(reason: str, url: str, slug: str) -> str:
+    """What "ask a grown-up" asks for, from why the child was stopped.
+
+    Out of minutes for the day or for a kind of app: more time. An app that is
+    not on their screen: that app. Anything else: the page they wanted.
+    """
+    if reason in {Reason.QUOTA_EXHAUSTED, Reason.CATEGORY_EXHAUSTED}:
+        return "time"
+    if reason == Reason.APP_NOT_ALLOWED and slug and not url:
+        return "app"
+    return "site"
+
+
 def _screen_for(data: dict[str, Any]) -> str | None:
     """Which full-screen state, if any, replaces the tile grid right now."""
     if data.get("allow"):
@@ -625,6 +669,9 @@ def _browser_strings(tr: Translator) -> dict[str, str]:
     return {
         "warning": tr("quota.warning", minutes="{minutes}"),
         "earned": tr("shell.earned.body", minutes="{minutes}"),
+        "request_approved": tr("shell.request.approved"),
+        "request_approved_time": tr("shell.request.approved_time", minutes="{minutes}"),
+        "request_denied": tr("shell.request.denied"),
         "timeup": tr("shell.timeup.title"),
         # What a screen reader says for the ring, kept in step with the number.
         "remaining": tr("shell.remaining_label")
@@ -649,6 +696,8 @@ def _spoken_lines(tr: Translator) -> dict[str, str]:
         "blocked": tr("shell.blocked.title"),
         "earned": tr("shell.earned.title"),
         "break_start": tr("shell.break.title"),
+        "request_approved": tr("shell.request.approved"),
+        "request_denied": tr("shell.request.denied"),
     }
 
 

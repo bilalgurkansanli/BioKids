@@ -169,9 +169,7 @@ def base_context(
     """What every template needs, assembled once."""
     pending = 0
     if state.authenticated:
-        from biokids_core.db.models import AccessRequest
-
-        pending = session.query(AccessRequest).filter(AccessRequest.status == "pending").count()
+        pending = len(repo.access_requests(session, decided_limit=0)[0])
     return {
         "request": request,
         "_": tr,

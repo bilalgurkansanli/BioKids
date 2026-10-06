@@ -33,6 +33,15 @@
         <circle class="ring__value" id="ring-value" cx="50" cy="50" r="40"
                 stroke-dasharray="251.33"
                 stroke-dashoffset="{{ (251.33 * (1 - fraction))|round(2) }}"></circle>
+        {# For 4-7, a sun rides the end of the ring and sets with the time
+           (D-175): something to watch that needs no number. The number stays,
+           for every age (D-162). #}
+        {% if young %}
+          {% set angle = 6.283185 * fraction %}
+          <circle class="ring__sun" id="ring-sun" r="8"
+                  cx="{{ (50 + 40 * angle|cos)|round(2) }}"
+                  cy="{{ (50 + 40 * angle|sin)|round(2) }}"></circle>
+        {% endif %}
       </svg>
       {# Minutes inside the circle, for every age (D-162). A child who cannot
          read the number still has the shrinking circle around it; the parent
@@ -82,6 +91,25 @@
       <span class="visually-hidden">{{ _('shell.brightness') }}</span>
       <input type="range" id="brightness" min="20" max="100" step="5" value="100">
     </label>
+
+    {# Asking for more time, in the last quarter of an hour (D-173). After the
+       screen locks there is nothing to press, so the question has to be
+       possible before. Once asked, it says so instead of asking again. #}
+    {% if state.allow and 0 < remaining <= 900 %}
+      {% if state.asked_for_time %}
+        <span class="tile-small tile-small--waiting" id="ask-time">
+          <span aria-hidden="true">⏳</span> {{ _('shell.request.time_waiting') }}
+        </span>
+      {% else %}
+        <form method="post" action="/ask-a-parent" id="ask-time">
+          <input type="hidden" name="kind" value="time">
+          <button class="tile-small" type="submit"
+                  {% if young %}data-speak="{{ _('shell.request.time') }}"{% endif %}>
+            <span aria-hidden="true">⏳</span> {{ _('shell.request.time') }}
+          </button>
+        </form>
+      {% endif %}
+    {% endif %}
 
     <a class="tile-small" href="/shutdown">
       <span aria-hidden="true">⏻</span> {{ _('shell.shutdown') }}

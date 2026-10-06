@@ -1789,3 +1789,38 @@ to be fixed before anything new:
 
 **D-172 [owner] Fail-safe that is checked, not assumed.**
 From the same review (D-171). The daemon is `Type=notify` with `WatchdogSec=90s` and pings only after a tick that finished; every command it runs is killed after 30 s and a tick after 60 s; a failed tick rolls the shared Session back. The DNS filter is checked from the outside once a minute (nft table present, NXDOMAIN for a canary): open means one repair, then every child at the machine is locked until it closes; not answering is reported. A lock is verified from logind (still on screen and unlocked; light-locker never sets LockedHint, D-155) and after three ticks the session is ended. The wall time the daemon uses runs on BOOTTIME (`GuardedClock`): a jump is ignored until NTP confirms it, so moving the date no longer resets the quota. The lockdown falls back to the `biokids-child` group when the database cannot be read and ends sessions that did not lock. The ledger carries fractions of a second and re-reads its day rows after a failed commit. Closing and `manager` sessions no longer count as a child at the machine.
+
+**D-173 [owner] "Anneme sor" is answered: requests, unlock, grants of any size.**
+A child could file a request since D-65 and nothing could answer it: the panel
+counted them in a badge on the audit screen and offered no way to say yes. Now:
+
+* **Three kinds**, a column on `access_request` (migration `3e8b51c0d2a7`):
+  `time` (more minutes today), `site`, `app`. The launcher asks for time with a
+  "Biraz daha süre iste" pill in its footer during the last fifteen minutes -
+  before the lock, because after it there is nothing to press - and the block
+  page asks for whatever stopped the child: out of minutes is time, an app not on
+  their screen is that app, anything else the page.
+* **One question is one request.** Asking again while it waits returns the same
+  request; six in an hour is the limit, and the seventh is told so kindly.
+  Unanswered requests expire after twelve hours.
+* **İstekler**, a screen of its own, linked from Today and badged on its nav item:
+  more time is answered with +15, +30 or +60 minutes, everything else with İzin ver
+  or Şimdi değil. Yes to time is a grant (which also lets a locked child back in);
+  yes to a site allows its host for the children by policy and by DNS (a
+  `filter_rule` row, source `request`); yes to an app puts it on their screen.
+* **The child is told**, on screen and, when the voices are on, by Zio or Sio
+  (`request_approved`, `request_denied` lines). A question that disappears into
+  silence teaches a child not to ask.
+* **Today** gains "Kilidi aç", which lifts a lock without adding time - "Kilitle"
+  had no way back but "+10 dk" - and grants of +10 and +30.
+
+A site cannot yet be asked for from the browser itself: blocked names fail in
+Chromium's own error page, and the block page that would carry the button (D-64)
+needs the extension. The request kind and the approval path are ready for it.
+
+
+**D-174 [owner] Zio and Sio in the parent's own voice, without cloning.**
+Phase 2a's voice cloning is ninety seconds of audio, a GPU and a month; most of what a child would hear in it is seven sentences. **Ayarlar → Kendi sesiniz** lets a parent say those themselves, on their phone: welcome, 10/5/1 minutes left, time is up, and yes / not now to a request. The page records a mono 16-bit WAV itself (no MediaRecorder, whose formats differ by phone and which `pw-play` cannot read), the panel checks it (PCM, mono, 8-48 kHz, 0.5-15 s, 2 MB) and keeps it in `/var/lib/biokids-voices/<locale>/<event>.wav` with the sentence that was said. That directory is world-readable and outside `/var/lib/biokids`, because the voice service that plays it runs as the child; nothing else of the family's is in it and nothing in it leaves the machine. The voice service plays a recording before any synthesiser and shows the parent's sentence on the card, with Zio or Sio as the parent chose. A line nobody recorded is spoken as before. Purging with the data removes the recordings; the encryption key now goes only with the data as well, so a database kept across a reinstall can still read what it encrypted.
+
+**D-175 [owner] For a child who cannot read yet.**
+UX.md section 2.2 promised spoken labels for 4-7 and `data-speak` was rendered with nothing reading it. In the young band a tap now says the tile's name (throttled, so drumming on tiles is names, not a pile-up), and the full screens nothing else speaks - blocked, asked, first run, shutdown - say their sentence once as they open, through the voice service's `say` (a launcher route that, like the assistant's, takes JSON from its own page only). The ring keeps its minutes for every age (D-162); for 4-7 a sun rides the end of it and goes from yellow to orange to red as the time runs down: something to watch that needs no number.

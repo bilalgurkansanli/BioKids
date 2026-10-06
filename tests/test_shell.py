@@ -96,6 +96,7 @@ class FakeShellDaemon:
         self.first_run_calls = 0
         self.shutdown_calls = 0
         self.asked: list[str] = []
+        self.asked_kinds: list[str] = []
         self.shutdown_ok = True
 
     async def available(self) -> bool:
@@ -120,9 +121,10 @@ class FakeShellDaemon:
         self.shutdown_calls += 1
         return self.shutdown_ok
 
-    async def ask_a_parent(self, url: str) -> bool:
+    async def ask_a_parent(self, url: str, kind: str = "site") -> tuple[bool, str]:
         self.asked.append(url)
-        return True
+        self.asked_kinds.append(kind)
+        return True, ""
 
 
 def _visible_text(page: str) -> str:
@@ -962,3 +964,78 @@ def test_the_launchers_own_page_still_works(client: TestClient) -> None:
         headers={"origin": LAUNCHER, "sec-fetch-site": "same-origin"},
     )
     assert response.status_code == 200
+
+
+# -------------------------------------------------- D-173 asking for things
+
+
+def test_out_of_minutes_asks_for_time(client: TestClient) -> None:
+    page = client.get("/blocked?reason=quota.exhausted").text
+    assert 'name="kind" value="time"' in page
+
+
+def test_an_app_that_is_not_on_the_screen_asks_for_that_app(client: TestClient) -> None:
+    page = client.get("/blocked?reason=app.not_allowed&slug=tuxpaint").text
+    assert 'name="kind" value="app"' in page and 'value="tuxpaint"' in page
+
+
+def test_the_request_carries_its_kind(client: TestClient, daemon: FakeShellDaemon) -> None:
+    response = client.post(
+        "/ask-a-parent",
+        data={"kind": "time"},
+        headers={"origin": LAUNCHER, "sec-fetch-site": "same-origin"},
+    )
+    assert response.status_code == 200
+    assert daemon.asked_kinds == ["time"]
+
+
+# ---------------------------------------------- D-175 for a child who cannot read
+
+
+class SaidAloud:
+    def __init__(self) -> None:
+        self.said: list[tuple[str, str]] = []
+
+    async def __call__(self, text: str, locale: str) -> None:
+        self.said.append((text, locale))
+
+
+def test_a_tiles_name_is_read_out_on_request(client: TestClient) -> None:
+    said = SaidAloud()
+    client.app.state.shell.say = said  # type: ignore[attr-defined]
+    response = client.post(
+        "/speak-label",
+        json={"text": "  Boya  "},
+        headers={"origin": LAUNCHER, "sec-fetch-site": "same-origin"},
+    )
+    assert response.json() == {"ok": True}
+    assert said.said == [("Boya", "tr")]
+
+
+def test_a_website_cannot_make_the_launcher_talk(client: TestClient) -> None:
+    said = SaidAloud()
+    client.app.state.shell.say = said  # type: ignore[attr-defined]
+    response = client.post(
+        "/speak-label",
+        content="text=hello",
+        headers={"content-type": "application/x-www-form-urlencoded", "origin": LAUNCHER},
+    )
+    assert response.status_code == 403 and said.said == []
+
+
+def test_the_young_bands_ring_has_a_setting_sun(client: TestClient) -> None:
+    page = client.get("/").text
+    assert 'id="ring-sun"' in page
+    assert 'id="ring-number"' in page, "the minutes stay, for every age (D-162)"
+
+
+def test_the_older_band_keeps_the_plain_ring(config: Config, daemon: FakeShellDaemon) -> None:
+    daemon.data = a_state(age_band="8-10")
+    app = create_app(config)
+    app.state.shell.client = daemon  # type: ignore[assignment]
+    page = TestClient(app, base_url=LAUNCHER).get("/").text
+    assert 'id="ring-sun"' not in page
+
+
+def test_a_screen_with_a_sentence_says_it_for_the_young_band(client: TestClient) -> None:
+    assert "data-speak-on-load" in client.get("/blocked").text

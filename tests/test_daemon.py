@@ -1898,3 +1898,103 @@ async def test_a_tick_that_never_returns_is_a_failed_tick(
     with pytest.raises(TimeoutError):
         await run_forever(supervisor, asyncio.Event())
     assert runner.ran("loginctl", "lock-session"), "it gave up without locking"
+
+
+# ------------------------------------------------- D-173 "Anneme sor", answered
+
+
+async def test_asking_twice_while_waiting_is_one_request(
+    supervisor: Supervisor, session: Session
+) -> None:
+    await supervisor.start()
+    first = supervisor.file_access_request(1, "", "time")
+    again = supervisor.file_access_request(1, "", "time")
+    assert first == again > 0
+    assert supervisor.shell_state(1)["asked_for_time"] is True
+
+
+async def test_a_child_cannot_flood_the_parent(supervisor: Supervisor) -> None:
+    from biokids_daemon.supervisor import REQUESTS_PER_HOUR
+
+    await supervisor.start()
+    ids = [
+        supervisor.file_access_request(1, f"site{n}.example", "site")
+        for n in range(REQUESTS_PER_HOUR + 2)
+    ]
+    assert ids[-1] == 0 and all(ids[:REQUESTS_PER_HOUR])
+
+
+async def test_yes_to_more_time_grants_it_and_tells_the_child(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    bus: EventBus,
+    session: Session,
+) -> None:
+    set_quota(session, 1, 20)
+    await supervisor.start()
+    source.log_in("elif")
+    await run_for(supervisor, clock, 60)
+    before = supervisor.status()["children"][0]["remaining_seconds"]
+
+    request_id = supervisor.file_access_request(1, "", "time")
+    result = await supervisor.decide_request(request_id, True, 15, "parent:1")
+
+    assert result["ok"]
+    after = supervisor.status()["children"][0]["remaining_seconds"]
+    assert after - before == 15 * 60
+    decided = events_of(bus, EventKind.REQUEST_DECIDED)
+    assert decided and decided[-1]["approved"] is True and decided[-1]["minutes"] == 15
+    spoken = [e["event"] for e in events_of(bus, EventKind.SPEAK)]
+    assert "request_approved" in spoken
+    assert supervisor.shell_state(1)["asked_for_time"] is False
+
+
+async def test_a_request_is_answered_once(supervisor: Supervisor) -> None:
+    await supervisor.start()
+    request_id = supervisor.file_access_request(1, "", "time")
+    assert (await supervisor.decide_request(request_id, False))["ok"]
+    assert not (await supervisor.decide_request(request_id, True, 30))["ok"]
+
+
+async def test_yes_to_a_site_opens_it_for_the_children(
+    supervisor: Supervisor, config: Config, session: Session
+) -> None:
+    await supervisor.start()
+    request_id = supervisor.file_access_request(1, "https://www.nasa.gov/kids", "site")
+    await supervisor.decide_request(request_id, True)
+
+    from biokids_core.browser_policy import POLICY_FILENAME
+
+    policy = json.loads(
+        (config.paths.chromium_policy_dir / POLICY_FILENAME).read_text(encoding="utf-8")
+    )
+    assert "nasa.gov" in policy["URLAllowlist"]
+
+
+async def test_no_is_said_kindly_and_changes_nothing(
+    supervisor: Supervisor, bus: EventBus, session: Session
+) -> None:
+    await supervisor.start()
+    request_id = supervisor.file_access_request(1, "https://example.com", "site")
+    await supervisor.decide_request(request_id, False)
+    decided = events_of(bus, EventKind.REQUEST_DECIDED)
+    assert decided[-1]["approved"] is False
+
+
+async def test_unlock_lets_the_child_back_in_without_adding_time(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    session: Session,
+) -> None:
+    set_quota(session, 1, 30)
+    await supervisor.start()
+    logged_in = source.log_in("elif")
+    await run_for(supervisor, clock, 60)
+    before = supervisor.status()["children"][0]["remaining_seconds"]
+    await supervisor.lock_now(1)
+    assert await supervisor.unlock_now(1)
+    assert runner.ran("loginctl", "unlock-session", logged_in.session_id)
+    assert supervisor.status()["children"][0]["remaining_seconds"] == before

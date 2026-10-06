@@ -424,7 +424,7 @@ msgid "today.poweroff"
 msgstr "Shut down"
 
 msgid "today.grant.done"
-msgstr "Added 10 minutes for {name}."
+msgstr "{minutes} minutes added for {name}."
 
 msgid "today.lock.done"
 msgstr "{name}'s session is locked."
@@ -1154,3 +1154,175 @@ msgstr "The internet filter is working again"
 
 msgid "audit.action.lock_failed"
 msgstr "The screen would not lock; the session was ended"
+
+# D-173: answering a child's request
+msgid "audit.action.request_approved"
+msgstr "Request approved"
+
+msgid "audit.action.request_denied"
+msgstr "Request declined"
+
+msgid "audit.action.session_unlock_requested"
+msgstr "Screen unlocked"
+
+# D-173: a child's request, from the launcher
+msgid "shell.request.time"
+msgstr "Ask for more time"
+
+msgid "shell.request.time_waiting"
+msgstr "You asked for more time; waiting for an answer"
+
+msgid "shell.request.too_often"
+msgstr "You have asked a lot this hour. You can ask again a bit later."
+
+msgid "shell.request.approved"
+msgstr "A grown-up said yes!"
+
+msgid "shell.request.approved_time"
+msgstr "A grown-up gave you {minutes} more minutes!"
+
+msgid "shell.request.denied"
+msgstr "A grown-up said not now. You can talk about it later."
+
+# D-173: the requests screen, unlocking, and grants of any size
+msgid "requests.title"
+msgstr "Requests"
+
+msgid "requests.help"
+msgstr "What your children asked you for. Your answer appears on the child's screen at once and is spoken."
+
+msgid "requests.none"
+msgstr "Nothing is waiting for an answer."
+
+msgid "requests.asks.time"
+msgstr "{name} would like more time"
+
+msgid "requests.asks.site"
+msgstr "{name} would like to open a site"
+
+msgid "requests.asks.app"
+msgstr "{name} would like an app"
+
+msgid "requests.approve"
+msgstr "Allow"
+
+msgid "requests.deny"
+msgstr "Not now"
+
+msgid "requests.recent"
+msgstr "Recently answered"
+
+msgid "requests.status.approved"
+msgstr "allowed"
+
+msgid "requests.status.denied"
+msgstr "not now"
+
+msgid "today.grant_n"
+msgstr "+{minutes} min"
+
+msgid "today.unlock"
+msgstr "Unlock"
+
+msgid "today.unlock.done"
+msgstr "{name}'s screen is unlocked."
+
+# D-174: a parent's own voice
+msgid "voices.title"
+msgstr "Your own voice"
+
+msgid "voices.teaser"
+msgstr "Let your own voice say the warnings instead of Zio and Sio's."
+
+msgid "voices.open"
+msgstr "Record the lines"
+
+msgid "voices.help"
+msgstr "Record each sentence once: press Record, say it, press Stop. The recordings stay on this computer. Sentences you do not record are still said by the computer's voice."
+
+msgid "voices.persona"
+msgstr "Whose voice is it?"
+
+msgid "voices.persona.zio"
+msgstr "Mother's (Zio is shown)"
+
+msgid "voices.persona.sio"
+msgstr "Father's (Sio is shown)"
+
+msgid "voices.say_this"
+msgstr "The sentence you will say"
+
+msgid "voices.record"
+msgstr "● Record"
+
+msgid "voices.stop"
+msgstr "■ Stop"
+
+msgid "voices.saving"
+msgstr "Saving…"
+
+msgid "voices.delete"
+msgstr "Delete recording"
+
+msgid "voices.recorded"
+msgstr "Recorded ({seconds} s)"
+
+msgid "voices.mic_failed"
+msgstr "The microphone could not be opened. Check that the browser is allowed to use it."
+
+msgid "voices.unsupported"
+msgstr "This browser cannot record."
+
+msgid "voices.error.too_short"
+msgstr "The recording is too short. Press Stop after you have said the sentence."
+
+msgid "voices.error.too_long"
+msgstr "A recording cannot be longer than 15 seconds."
+
+msgid "voices.error.not_audio"
+msgstr "That does not look like a recording."
+
+msgid "voices.event.welcome"
+msgstr "When the child logs in"
+
+msgid "voices.event.warn_10"
+msgstr "10 minutes left"
+
+msgid "voices.event.warn_5"
+msgstr "5 minutes left"
+
+msgid "voices.event.warn_1"
+msgstr "1 minute left"
+
+msgid "voices.event.time_up"
+msgstr "When time is up"
+
+msgid "voices.event.request_approved"
+msgstr "When you say yes to a request"
+
+msgid "voices.event.request_denied"
+msgstr "When you say not now"
+
+msgid "voices.suggest.welcome"
+msgstr "Welcome, sweetheart, have fun!"
+
+msgid "voices.suggest.warn_10"
+msgstr "Ten minutes left, start wrapping up slowly."
+
+msgid "voices.suggest.warn_5"
+msgstr "Five minutes left, sweetheart."
+
+msgid "voices.suggest.warn_1"
+msgstr "One last minute, let's finish up."
+
+msgid "voices.suggest.time_up"
+msgstr "That's your time for today. We'll play again tomorrow!"
+
+msgid "voices.suggest.request_approved"
+msgstr "All right, you can. Have fun!"
+
+msgid "voices.suggest.request_denied"
+msgstr "Not now, sweetheart. Let's talk this evening."
+
+msgid "audit.action.voice_recorded"
+msgstr "Voice line recorded"

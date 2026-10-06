@@ -78,6 +78,10 @@ case "$1" in
         install -d -o root -g root -m 0700 "$DATA_DIR"
         install -d -o root -g root -m 0700 "$EVIDENCE_DIR"
         install -d -o root -g adm -m 0750 "$LOG_DIR"
+        # A parent's own recordings of the spoken lines (D-174). Readable by
+        # everyone, because the voice service that plays them is the child's
+        # process; written only by the panel.
+        install -d -o root -g root -m 0755 /var/lib/biokids-voices
         # /run is a tmpfs, so this covers the window between installing and the
         # first boot. After that the daemon unit's RuntimeDirectory= owns it.
         install -d -o root -g root -m 0755 "$RUN_DIR"

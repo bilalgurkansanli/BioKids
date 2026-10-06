@@ -1,4 +1,5 @@
 {% extends "_full.html" %}
+{% set speak_on_load = true %}
 {% set tone = 'full--warm' %}
 {% set persona = 'zio' %}
 {% set expression = 'concerned' %}
@@ -10,7 +11,8 @@
 
   <div class="btn-row">
     <form method="post" action="/ask-a-parent">
-      <input type="hidden" name="url" value="{{ blocked_url|default('') }}">
+      <input type="hidden" name="url" value="{{ ask_what|default('') }}">
+      <input type="hidden" name="kind" value="{{ ask_kind|default('site') }}">
       {# Not "ask my mum": BioKids has one parent account and this request goes
          to whoever holds it, who may be the father and may be the only one. #}
       <button class="big-btn" type="submit">{{ _('shell.blocked.ask') }}</button>

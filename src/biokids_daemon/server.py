@@ -241,6 +241,8 @@ class DaemonServer:
             Op.ASSISTANT_STATUS: self._assistant_status,
             Op.ASSISTANT_SETUP: self._assistant_setup,
             Op.REMOTE_SETUP: self._remote_setup,
+            Op.DECIDE_REQUEST: self._decide_request,
+            Op.UNLOCK_NOW: self._unlock_now,
         }
 
     async def _ping(self, request: Request) -> Response:
@@ -288,6 +290,24 @@ class DaemonServer:
         actor = str(request.args.get("actor", "parent"))
         ok = await self.supervisor.poweroff_now(actor)
         return Response(id=request.id, ok=ok, data={"poweroff": ok})
+
+    async def _decide_request(self, request: Request) -> Response:
+        data = await self.supervisor.decide_request(
+            _int_arg(request, "request_id"),
+            bool(request.args.get("approve", False)),
+            _int_arg(request, "minutes", default=0),
+            str(request.args.get("actor", "parent")),
+        )
+        if not data.get("ok"):
+            return Response.failure(request.id, str(data.get("error", "error.not_found")))
+        return Response(id=request.id, ok=True, data=data)
+
+    async def _unlock_now(self, request: Request) -> Response:
+        child_id = _int_arg(request, "child_id")
+        ok = await self.supervisor.unlock_now(
+            child_id, str(request.args.get("actor", "parent"))
+        )
+        return Response(id=request.id, ok=ok, data={"unlocked": ok})
 
     async def _start_timeout(self, request: Request) -> Response:
         child_id = _int_arg(request, "child_id")

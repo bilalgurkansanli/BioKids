@@ -305,6 +305,10 @@ class AccessRequest(Base):
         ForeignKey("child.id", ondelete="CASCADE"), index=True
     )
     url: Mapped[str] = mapped_column(String(1024))
+    kind: Mapped[str] = mapped_column(String(16), default="site", server_default="site")
+    """`time` (more minutes today) | `site` | `app` (D-173)."""
+    minutes: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    """For `time`: what the parent granted when they approved it."""
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow, index=True)
     status: Mapped[str] = mapped_column(String(16), default="pending")
     """`pending` | `approved` | `denied` | `expired`."""

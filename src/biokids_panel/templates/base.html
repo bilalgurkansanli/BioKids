@@ -38,13 +38,13 @@
   <nav class="nav" aria-label="{{ _('panel.subtitle') }}">
     <a href="/today" {% if path.startswith('/today') %}aria-current="page"{% endif %}>
       <span class="icon" aria-hidden="true">🏠</span>{{ _('nav.today') }}
+      {% if pending_requests %}<span class="badge">{{ pending_requests }}</span>{% endif %}
     </a>
     <a href="/children" {% if path.startswith('/children') %}aria-current="page"{% endif %}>
       <span class="icon" aria-hidden="true">👧</span>{{ _('nav.children') }}
     </a>
     <a href="/audit" {% if path.startswith('/audit') %}aria-current="page"{% endif %}>
       <span class="icon" aria-hidden="true">📋</span>{{ _('nav.audit') }}
-      {% if pending_requests %}<span class="badge">{{ pending_requests }}</span>{% endif %}
     </a>
     <a href="/settings" {% if path.startswith('/settings') %}aria-current="page"{% endif %}>
       <span class="icon" aria-hidden="true">⚙️</span>{{ _('nav.settings') }}

@@ -235,6 +235,17 @@ Found on the first Debian 13 VM (`docs/VM-RUNBOOK.md`), none of it visible from 
 - **The ring shows the minutes left, at every age** (D-162), in the corner and in the
   full-screen time warning.
 
+### Added (review follow-ups)
+
+- **D-173, "Anneme sor" answered.** A requests screen in the panel (more time with
+  +15/+30/+60, sites and apps with yes/not now), a "Biraz daha süre iste" button in
+  the launcher's last fifteen minutes, the answer shown and spoken on the child's
+  screen, "Kilidi aç" on Today, and grants of +10 and +30.
+- **D-172, fail-safe that is checked.** A systemd watchdog, command and tick
+  timeouts, a once-a-minute outside check of the DNS filter, verified locks, a
+  wall clock the daemon guards against date changes, and a lockdown that works
+  without the database.
+
 ### Security
 
 - **D-171, the review's security findings.** Provisioning no longer follows symlinks

@@ -1,9 +1,17 @@
 {% extends "_full.html" %}
+{% set speak_on_load = true %}
 {% set tone = 'full--calm' %}
 {% set persona = 'sio' %}
-{% set expression = 'happy' %}
+{% set expression = 'happy' if ok else 'concerned' %}
 {% block title %}{{ _('shell.blocked.asked') }}{% endblock %}
 {% block inner %}
-  <h1>{{ _('shell.blocked.asked') if ok else _('shell.error.unknown') }}</h1>
+  {% if ok %}
+    <h1>{{ _('shell.blocked.asked') }}</h1>
+  {% elif reason == 'shell.request.too_often' %}
+    {# Asked six times this hour (D-173). Said as a fact, not a telling-off. #}
+    <h1>{{ _('shell.request.too_often') }}</h1>
+  {% else %}
+    <h1>{{ _('shell.error.unknown') }}</h1>
+  {% endif %}
   <a class="big-btn" href="/">{{ _('shell.blocked.back') }}</a>
 {% endblock %}

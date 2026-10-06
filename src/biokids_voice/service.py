@@ -51,6 +51,7 @@ from itertools import count
 from pathlib import Path
 from typing import Any, Final, cast
 
+from biokids_core import recorded_voice
 from biokids_core.clock import Clock, SystemClock
 from biokids_core.config import Config, get_config
 from biokids_core.errors import IpcError
@@ -144,6 +145,8 @@ class Utterance:
     locale: str
     hold_s: float
     sequence: int
+    recording: str = ""
+    """A parent's own recording of this line (D-174), played instead of a synthesiser."""
 
     @property
     def is_high(self) -> bool:
@@ -155,6 +158,7 @@ class Utterance:
             "id": self.id,
             "event": self.event,
             "text": self.text,
+            "recorded": bool(self.recording),
             "persona": self.persona,
             "expression": self.expression,
             "locale": self.locale,
@@ -280,9 +284,24 @@ class VoiceService:
         variables = args.get("vars")
         # No session: this process cannot open the database (see lines.py). A
         # family's own wording reaches it through the installed text files.
+        recorded = recorded_voice.lookup(self._config.paths.recorded_voice_dir, locale, event)
         line = self._lines.render(
             event, locale, variables if isinstance(variables, dict) else {}
         )
+        if recorded is not None and self._audio:
+            # A parent said this one themselves (D-174). Their sentence is what
+            # the card shows, and their face - Zio or Sio - is the one on it.
+            return self._enqueue(
+                request.id,
+                event=event,
+                text=recorded.text or (line.text if line else ""),
+                locale=locale,
+                persona=recorded_voice.persona(self._config.paths.recorded_voice_dir),
+                expression=_expression(_as_str(args.get("expression")), event),
+                priority=_priority(_as_str(args.get("priority")), event),
+                recording=str(recorded.path),
+                hold=recorded.seconds + 0.5,
+            )
         if line is None:
             # Not a failure the child sees: the daemon asked for an event this
             # machine ships no text for. Logged so a packager can fix it.
@@ -335,10 +354,12 @@ class VoiceService:
             priority=PRIORITY_NORMAL,
         )
 
-    def _enqueue(self, request_id: str, **fields: Any) -> Response:
+    def _enqueue(
+        self, request_id: str, *, hold: float | None = None, **fields: Any
+    ) -> Response:
         utterance = Utterance(
             id=f"u{next(self._ids)}",
-            hold_s=self._hold(fields["text"]),
+            hold_s=hold if hold is not None else self._hold(fields["text"]),
             sequence=next(self._sequence),
             **fields,
         )
@@ -417,6 +438,9 @@ class VoiceService:
             # laptop a second of CPU for silence.
             await self._hold_card(utterance)
             return STATUS_BANNER
+
+        if utterance.recording and await self._player.play(Path(utterance.recording)):
+            return STATUS_SPOKEN
 
         voices: tuple[VoiceSpec, ...] = self._voices.candidates(
             utterance.persona, utterance.locale
