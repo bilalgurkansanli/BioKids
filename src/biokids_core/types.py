@@ -191,6 +191,10 @@ class ChildPolicy:
     weekend_quota_min: int = 120
     weekday_windows: tuple[TimeWindow, ...] = ()
     weekend_windows: tuple[TimeWindow, ...] = ()
+    day_quota_min: dict[int, int] = field(default_factory=dict)
+    """Per day of the week, Monday 0 (D-176). Wins over the weekday/weekend quota."""
+    day_windows: dict[int, tuple[TimeWindow, ...]] = field(default_factory=dict)
+    """Per day of the week. A day named here with no windows is open all day."""
 
     end_action: EndAction = EndAction.POWEROFF
     warn_minutes: tuple[int, ...] = (10, 5, 1)
@@ -228,6 +232,8 @@ class ChildPolicy:
     """A disabled policy means BioKids does not manage this child at all."""
 
     def quota_minutes(self, day: dt.date) -> int:
+        if day.weekday() in self.day_quota_min:
+            return self.day_quota_min[day.weekday()]
         return (
             self.weekend_quota_min
             if Weekday.for_date(day) is Weekday.WEEKEND
@@ -235,6 +241,8 @@ class ChildPolicy:
         )
 
     def windows(self, day: dt.date) -> tuple[TimeWindow, ...]:
+        if day.weekday() in self.day_windows:
+            return self.day_windows[day.weekday()]
         return (
             self.weekend_windows
             if Weekday.for_date(day) is Weekday.WEEKEND

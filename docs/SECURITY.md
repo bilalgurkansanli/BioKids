@@ -139,6 +139,7 @@ entry in `DECISIONS.md` and a note in the README.**
 | `pkgs.tailscale.com` | the Tailscale package and its updates, through apt, signed by the key BioKids ships | yes: only after the parent presses "Telefondan erişimi aç" on a machine without Tailscale (D-169) |
 | `log.tailscale.com` | Tailscale's own client logs | **turned off**: the runbook starts `tailscaled` with `--no-logs-no-support` (D-157) |
 | Hugging Face | one-time download of the assistant's models | yes: only with the AI package, only when the parent presses the button (D-165) |
+| `download.kiwix.org` and the mirror it redirects to | one-time download of the encyclopedia the assistant checks itself against, pinned by SHA-256 | yes: the same button, the same package (D-178) |
 | ElevenLabs | cloud TTS | yes, opt-in, off by default, clearly labelled |
 
 Zero telemetry. No crash reporting. No version ping. No analytics.

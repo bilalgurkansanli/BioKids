@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from biokids_core import repo, security
 from biokids_core.config import Config
-from biokids_core.db import AuditLog, Database, Parent
+from biokids_core.db import AuditLog, Database, Parent, Policy
 from biokids_core.db.models import utcnow
 from biokids_core.errors import IpcError
 from biokids_core.ipc import Response
@@ -1857,3 +1857,108 @@ def test_a_recording_without_the_token_is_refused(
         "/voices/warn_1", content=a_wav(), headers={"content-type": "audio/wav"}
     )
     assert response.status_code == 403
+
+
+# ------------------------------------------------------ D-176 time pickers
+
+
+def test_hours_come_from_the_time_pickers(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    response = client.post(
+        "/children/1/time",
+        data={
+            "csrf_token": csrf_of(client),
+            "weekday_quota_min": 60,
+            "weekend_quota_min": 90,
+            "weekday_from": ["07:30", "16:00"],
+            "weekday_to": ["08:15", "19:00"],
+            "weekend_from": ["", ""],
+            "weekend_to": ["", ""],
+            "day_custom": ["2"],
+            "day_quota": ["", "", "30", "", "", "", ""],
+            "day_from": ["", "", "18:00", "", "", "", ""],
+            "day_to": ["", "", "19:00", "", "", "", ""],
+            "enabled": "on",
+            "end_action": "lock",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    with db.session() as session:
+        policy = session.get(Policy, 1)
+        assert policy is not None
+        assert policy.windows["weekday"] == ["07:30-08:15", "16:00-19:00"]
+        assert policy.windows["weekend"] == []
+        assert policy.schedule == {2: {"quota": 30, "windows": ["18:00-19:00"]}}
+
+
+def test_half_a_range_is_said_not_guessed(client: TestClient, family_ready: None) -> None:
+    login(client)
+    response = client.post(
+        "/children/1/time",
+        data={
+            "csrf_token": csrf_of(client),
+            "weekday_from": ["16:00", ""],
+            "weekday_to": ["", ""],
+            "enabled": "on",
+        },
+    )
+    assert response.status_code == 400
+
+
+# ------------------------------------------------------------ D-177 mail
+
+
+def test_the_mail_password_is_kept_when_left_empty(
+    client: TestClient, family_ready: None, db: Database, config: Config
+) -> None:
+    from biokids_core import mail
+
+    login(client)
+    form = {
+        "csrf_token": csrf_of(client),
+        "host": "smtp.example.com",
+        "port": 587,
+        "security": "starttls",
+        "username": "anne@example.com",
+        "password": "app-password",
+        "recipients": "anne@example.com",
+        "alerts": "on",
+    }
+    client.post("/settings/mail", data=form, follow_redirects=False)
+    form["password"] = ""
+    form["csrf_token"] = csrf_of(client)
+    client.post("/settings/mail", data=form, follow_redirects=False)
+
+    with db.session() as session:
+        saved = mail.load_settings(session, config)
+    assert saved is not None and saved.password == "app-password"
+    assert saved.weekly is False and saved.alerts is True
+    assert "app-password" not in client.get("/settings").text
+
+
+def test_a_test_mail_says_whether_it_went(
+    client: TestClient, family_ready: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from biokids_core import mail
+
+    def refuse(*_a: object, **_k: object) -> None:
+        raise mail.MailError("SMTPAuthenticationError: 535")
+
+    monkeypatch.setattr(mail, "send", refuse)
+    login(client)
+    response = client.post(
+        "/settings/mail",
+        data={
+            "csrf_token": csrf_of(client),
+            "action": "test",
+            "host": "smtp.example.com",
+            "username": "anne@example.com",
+            "password": "wrong",
+            "recipients": "anne@example.com",
+        },
+        follow_redirects=False,
+    )
+    assert "error=mail.failed" in response.headers["location"]

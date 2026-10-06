@@ -151,6 +151,10 @@ class Policy(Base):
     weekday_quota_min: Mapped[int] = mapped_column(Integer, default=60)
     weekend_quota_min: Mapped[int] = mapped_column(Integer, default=120)
     windows_json: Mapped[str] = mapped_column(Text, default='{"weekday": [], "weekend": []}')
+    schedule_json: Mapped[str] = mapped_column(Text, default="{}", server_default="{}")
+    """Per day of the week (D-176), over the weekday/weekend pair: `{"0": {"quota":
+    45, "windows": ["16:00-18:00"]}}` with Monday as 0. A day that is not there,
+    or a key a day does not name, follows the weekday or weekend rule."""
 
     end_action: Mapped[str] = mapped_column(String(16), default=EndAction.POWEROFF.value)
     lock_countdown_seconds: Mapped[int] = mapped_column(Integer, default=120)
@@ -205,6 +209,28 @@ class Policy(Base):
         self.windows_json = json.dumps(
             {"weekday": value.get("weekday", []), "weekend": value.get("weekend", [])}
         )
+
+    @property
+    def schedule(self) -> dict[int, dict[str, Any]]:
+        raw = _load_json(self.schedule_json, {})
+        days: dict[int, dict[str, Any]] = {}
+        for key, entry in raw.items():
+            if not str(key).isdigit() or not 0 <= int(key) <= 6 or not isinstance(entry, dict):
+                continue
+            day: dict[str, Any] = {}
+            quota = entry.get("quota")
+            if isinstance(quota, int) and 0 <= quota <= 1440:
+                day["quota"] = quota
+            windows = entry.get("windows")
+            if isinstance(windows, list):
+                day["windows"] = [str(w) for w in windows]
+            if day:
+                days[int(key)] = day
+        return days
+
+    @schedule.setter
+    def schedule(self, value: dict[int, dict[str, Any]]) -> None:
+        self.schedule_json = json.dumps({str(k): v for k, v in sorted(value.items()) if v})
 
     @property
     def voice_events(self) -> dict[str, bool]:

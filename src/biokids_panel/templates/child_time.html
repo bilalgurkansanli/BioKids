@@ -65,18 +65,30 @@
              value="{{ policy.weekend_quota_min }}" inputmode="numeric">
     </div>
 
-    <div class="field">
-      <label for="wd-windows">{{ _('time.windows.weekday') }}</label>
-      <input id="wd-windows" name="weekday_windows" type="text" placeholder="16:00-20:00"
-             value="{{ windows.weekday|join(', ') }}">
-      <span class="help">{{ _('time.windows.help') }}</span>
-    </div>
-
-    <div class="field">
-      <label for="we-windows">{{ _('time.windows.weekend') }}</label>
-      <input id="we-windows" name="weekend_windows" type="text" placeholder="10:00-20:00"
-             value="{{ windows.weekend|join(', ') }}">
-    </div>
+    {#
+      Times with the phone's own clock picker, not typed (D-176). Two ranges
+      per kind of day is enough for "before school and after it"; empty means
+      free all day.
+    #}
+    {% macro pickers(kind, current) %}
+      <fieldset class="windows">
+        <legend>{{ _('time.windows.' ~ kind) }}</legend>
+        {% for n in range(2) %}
+          {% set pair = (current[n].split('-') if current|length > n else ['', '']) %}
+          <div class="row row--wrap window-row">
+            <label class="grow">{{ _('time.windows.from') }}
+              <input type="time" name="{{ kind }}_from" value="{{ pair[0] }}" step="300">
+            </label>
+            <label class="grow">{{ _('time.windows.to') }}
+              <input type="time" name="{{ kind }}_to" value="{{ pair[1] }}" step="300">
+            </label>
+          </div>
+        {% endfor %}
+        <span class="help">{{ _('time.windows.help_pickers') }}</span>
+      </fieldset>
+    {% endmacro %}
+    {{ pickers('weekday', windows.weekday) }}
+    {{ pickers('weekend', windows.weekend) }}
 
     <fieldset>
       <legend>{{ _('time.end_action') }}</legend>
@@ -102,6 +114,36 @@
 
     <details class="advanced">
       <summary>{{ _('common.advanced') }}</summary>
+
+      {# A different rule for some days of the week (D-176). Unticked days
+         follow the weekday or weekend rule above. #}
+      <fieldset class="days">
+        <legend>{{ _('time.days.title') }}</legend>
+        <span class="help">{{ _('time.days.help') }}</span>
+        {% for day in range(7) %}
+          {% set entry = schedule.get(day, {}) %}
+          {% set pair = (entry.windows[0].split('-') if entry.windows else ['', '']) %}
+          <div class="day-row">
+            <div class="checkline">
+              <input type="checkbox" id="day-{{ day }}" name="day_custom" value="{{ day }}"
+                     {% if entry %}checked{% endif %}>
+              <label for="day-{{ day }}">{{ _('day.' ~ day) }}</label>
+            </div>
+            <div class="row row--wrap">
+              <label class="grow">{{ _('common.minutes') }}
+                <input type="number" name="day_quota" min="0" max="1440" step="5"
+                       inputmode="numeric" value="{{ entry.quota if entry.quota is defined else '' }}">
+              </label>
+              <label class="grow">{{ _('time.windows.from') }}
+                <input type="time" name="day_from" value="{{ pair[0] }}" step="300">
+              </label>
+              <label class="grow">{{ _('time.windows.to') }}
+                <input type="time" name="day_to" value="{{ pair[1] }}" step="300">
+              </label>
+            </div>
+          </div>
+        {% endfor %}
+      </fieldset>
 
       <div class="checkline">
         <input type="checkbox" id="break_enabled" name="break_enabled"

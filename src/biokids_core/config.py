@@ -127,6 +127,8 @@ class AiConfig:
     """Questions a child may ask the assistant in ten minutes (D-165)."""
     llama_server_binary: str = "llama-server"
     whisper_server_binary: str = "whisper-server"
+    kiwix_serve_binary: str = "kiwix-serve"
+    """Searches the encyclopedia the assistant checks its answers against (D-178)."""
     idle_unload_minutes: int = 10
     """A model nobody has asked anything for this long is unloaded, giving its
     memory back to the child's apps."""

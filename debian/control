@@ -250,7 +250,7 @@ Depends: biokids-core (= ${binary:Version}),
          llama.cpp-tools (>= 0.5.0),
          ${misc:Depends},
          ${python3:Depends}
-Recommends: whisper.cpp-tools
+Recommends: kiwix-tools, whisper.cpp-tools
 Enhances: biokids-daemon, biokids-shell
 Description: parental controls for Debian - optional local assistant
  An optional assistant in the child's launcher: the child types or says a

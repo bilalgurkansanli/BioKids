@@ -35,7 +35,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Stre
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
-from biokids_core import recorded_voice, repo, security
+from biokids_core import mail, recorded_voice, repo, security
 from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
 from biokids_core.config import Config, get_config
 from biokids_core.db.models import Policy
@@ -837,6 +837,7 @@ def register_routes(app: FastAPI) -> None:
             child=child,
             policy=policy,
             windows=policy.windows,
+            schedule=policy.schedule,
             end_actions=[e.value for e in EndAction],
         )
 
@@ -852,6 +853,15 @@ def register_routes(app: FastAPI) -> None:
         weekend_quota_min: Annotated[int, Form()] = 120,
         weekday_windows: Annotated[str, Form()] = "",
         weekend_windows: Annotated[str, Form()] = "",
+        weekday_from: Annotated[list[str] | None, Form()] = None,
+        weekday_to: Annotated[list[str] | None, Form()] = None,
+        weekend_from: Annotated[list[str] | None, Form()] = None,
+        weekend_to: Annotated[list[str] | None, Form()] = None,
+        day_custom: Annotated[list[str] | None, Form()] = None,
+        day_quota: Annotated[list[str] | None, Form()] = None,
+        day_from: Annotated[list[str] | None, Form()] = None,
+        day_to: Annotated[list[str] | None, Form()] = None,
+        schedule: Annotated[str, Form()] = "",
         end_action: Annotated[str, Form()] = EndAction.POWEROFF.value,
         enabled: Annotated[str, Form()] = "",
         break_enabled: Annotated[str, Form()] = "",
@@ -874,10 +884,21 @@ def register_routes(app: FastAPI) -> None:
             auth.confirm_passphrase(session, state, passphrase)
 
         try:
+            # The time pickers when the page sent them (D-176); the old text
+            # field otherwise, which is also what the passphrase step re-posts.
+            if weekday_from is not None:
+                weekday_windows = _windows_from_pickers(weekday_from, weekday_to or [])
+            if weekend_from is not None:
+                weekend_windows = _windows_from_pickers(weekend_from, weekend_to or [])
             windows = {
                 "weekday": _parse_window_list(weekday_windows),
                 "weekend": _parse_window_list(weekend_windows),
             }
+            days = (
+                _schedule_from_form(day_custom, day_quota or [], day_from or [], day_to or [])
+                if day_custom is not None or day_quota is not None
+                else _schedule_from_json(schedule)
+            )
         except ValueError:
             policy = repo.get_or_create_policy(session, child_id)
             return render(
@@ -891,6 +912,7 @@ def register_routes(app: FastAPI) -> None:
                 child=child,
                 policy=policy,
                 windows=policy.windows,
+                schedule=policy.schedule,
                 end_actions=[e.value for e in EndAction],
                 error=tr("time.windows.invalid"),
             )
@@ -919,6 +941,7 @@ def register_routes(app: FastAPI) -> None:
                 child=child,
                 policy=policy,
                 windows=policy.windows,
+                schedule=policy.schedule,
                 end_actions=[e.value for e in EndAction],
                 confirm_disable=True,
                 submitted={
@@ -926,6 +949,7 @@ def register_routes(app: FastAPI) -> None:
                     "weekend_quota_min": weekend_quota_min,
                     "weekday_windows": weekday_windows,
                     "weekend_windows": weekend_windows,
+                    "schedule": json.dumps({str(k): v for k, v in days.items()}),
                     "end_action": end_action,
                     "break_enabled": break_enabled,
                     "break_work_min": break_work_min,
@@ -944,6 +968,7 @@ def register_routes(app: FastAPI) -> None:
         policy.weekday_quota_min = max(0, min(weekday_quota_min, 24 * 60))
         policy.weekend_quota_min = max(0, min(weekend_quota_min, 24 * 60))
         policy.windows = windows
+        policy.schedule = days
         policy.end_action = _one_of(end_action, EndAction, EndAction.POWEROFF).value
         policy.enabled = enabled == "on"
         policy.break_enabled = break_enabled == "on"
@@ -1328,8 +1353,70 @@ def register_routes(app: FastAPI) -> None:
             "settings.html",
             family=repo.get_family(session),
             daemon_up=ctx.client.available(),
+            mail_settings=mail.load_settings(session, ctx.config),
             **phone.view(ctx, session),
         )
+
+    @app.post("/settings/mail")
+    def settings_mail(
+        request: Request,
+        ctx: Ctx,
+        session: Db,
+        state: Auth,
+        tr: Tr,
+        action: Annotated[str, Form()] = "save",
+        host: Annotated[str, Form()] = "",
+        port: Annotated[int, Form()] = 587,
+        security: Annotated[str, Form()] = "starttls",
+        username: Annotated[str, Form()] = "",
+        password: Annotated[str, Form()] = "",
+        sender: Annotated[str, Form()] = "",
+        recipients: Annotated[str, Form()] = "",
+        alerts: Annotated[str, Form()] = "",
+        weekly: Annotated[str, Form()] = "",
+        csrf_token: Annotated[str, Form()] = "",
+    ) -> Response:
+        """The parent's own mail server, for alerts and the weekly summary (D-177).
+
+        The password field is never filled in on the page; left empty, the one
+        already stored is kept.
+        """
+        blocked = _guard(request, session, state)
+        if blocked:
+            return blocked
+        if not auth.csrf_ok(state, csrf_token):
+            return see_other("/settings?error=csrf#mail")
+        current = mail.load_settings(session, ctx.config)
+        if action == "remove":
+            mail.save_settings(session, ctx.config, None)
+            repo.audit(session, actor=_actor(state), action="mail_removed")
+            session.commit()
+            return see_other("/settings?saved=1#mail")
+
+        settings = mail.MailSettings(
+            host=host.strip(),
+            port=max(1, min(port, 65535)),
+            security=security if security in mail.SECURITY_MODES else "starttls",
+            username=username.strip(),
+            password=password or (current.password if current else ""),
+            sender=sender.strip(),
+            recipients=mail.parse_recipients(recipients),
+            alerts=alerts == "on",
+            weekly=weekly == "on",
+        )
+        if not settings.usable:
+            return see_other("/settings?error=mail.incomplete#mail")
+        mail.save_settings(session, ctx.config, settings)
+        repo.audit(session, actor=_actor(state), action="mail_saved")
+        session.commit()
+        if action == "test":
+            try:
+                mail.send(settings, tr("mail.test.subject"), tr("mail.test.body"))
+            except mail.MailError as exc:
+                log.warning("the test mail failed: %s", exc)
+                return see_other("/settings?error=mail.failed#mail")
+            return see_other("/settings?saved=mail_sent#mail")
+        return see_other("/settings?saved=1#mail")
 
     @app.get("/settings/phone", response_class=HTMLResponse)
     def settings_phone(
@@ -1690,6 +1777,51 @@ async def _event_stream(ctx: PanelContext, request: Request) -> AsyncIterator[by
             yield b'event: daemon_state\ndata: {"state":"unreachable"}\n\n'
         with contextlib.suppress(asyncio.CancelledError):
             await asyncio.sleep(3)
+
+
+def _windows_from_pickers(starts: list[str], ends: list[str]) -> str:
+    """Pairs of `<input type="time">` values as the text the old field took.
+
+    A pair with only one side filled is a mistake worth saying so about, not a
+    window to guess at.
+    """
+    ranges: list[str] = []
+    for start, end in zip(starts, ends, strict=False):
+        start, end = start.strip(), end.strip()
+        if start and end:
+            ranges.append(f"{start}-{end}")
+        elif start or end:
+            raise ValueError("half a window")
+    return ", ".join(ranges)
+
+
+def _schedule_from_form(
+    custom: list[str] | None, quotas: list[str], starts: list[str], ends: list[str]
+) -> dict[int, dict[str, Any]]:
+    """The per-day overrides (D-176): only the days ticked as different."""
+    ticked = {int(day) for day in (custom or []) if day.isdigit() and 0 <= int(day) <= 6}
+    days: dict[int, dict[str, Any]] = {}
+    for day in sorted(ticked):
+        entry: dict[str, Any] = {}
+        quota = quotas[day].strip() if day < len(quotas) else ""
+        if quota:
+            entry["quota"] = max(0, min(int(quota), 24 * 60))
+        start = starts[day] if day < len(starts) else ""
+        end = ends[day] if day < len(ends) else ""
+        text = _windows_from_pickers([start], [end])
+        if text:
+            entry["windows"] = _parse_window_list(text)
+        if entry:
+            days[day] = entry
+    return days
+
+
+def _schedule_from_json(raw: str) -> dict[int, dict[str, Any]]:
+    """The same overrides, as the passphrase step carries them back."""
+    if not raw:
+        return {}
+    probe = Policy(schedule_json=raw)
+    return probe.schedule
 
 
 def _parse_window_list(raw: str) -> list[str]:

@@ -123,6 +123,14 @@ def load_policy(
         weekend_quota_min=row.weekend_quota_min,
         weekday_windows=_parse_windows(windows.get("weekday", [])),
         weekend_windows=_parse_windows(windows.get("weekend", [])),
+        day_quota_min={
+            day: entry["quota"] for day, entry in row.schedule.items() if "quota" in entry
+        },
+        day_windows={
+            day: _parse_windows(entry["windows"])
+            for day, entry in row.schedule.items()
+            if "windows" in entry
+        },
         end_action=_enum_or(EndAction, row.end_action, EndAction.POWEROFF),
         warn_minutes=_warn_minutes(session),
         lock_countdown_seconds=row.lock_countdown_seconds,

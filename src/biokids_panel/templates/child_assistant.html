@@ -69,6 +69,9 @@
     {% elif status.ready %}
       <p>{{ _('assistant.panel.ready') }}</p>
       <p class="help">{{ _('assistant.model.' ~ status.chat) }}{% if status.stt %} · {{ _('assistant.model.' ~ status.stt) }}{% endif %}</p>
+      {% if status.knowledge %}
+        <p class="help">{{ _('assistant.knowledge.on') }}</p>
+      {% endif %}
     {% else %}
       <p>{{ _('assistant.panel.need_download') }}</p>
     {% endif %}

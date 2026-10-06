@@ -53,6 +53,7 @@ from biokids_daemon import notify
 from biokids_daemon.bus import EventBus
 from biokids_daemon.dnsfilter import DnsFilter, FilterHealth
 from biokids_daemon.enforcer import LOCK_ATTEMPTS_BEFORE_LOGOUT, Enforcer
+from biokids_daemon.notifier import Notifier
 from biokids_daemon.sessions import SessionWatcher, UserPresence
 
 log = logging.getLogger(__name__)
@@ -172,6 +173,8 @@ class Supervisor:
     _dns_filter: DnsFilter | None = None
     filter_health: FilterHealth | None = None
     _filter_checked_at: float | None = None
+    _notifier: Notifier | None = None
+    _notified_at: float | None = None
 
     @property
     def dns_filter(self) -> DnsFilter:
@@ -1113,6 +1116,24 @@ class Supervisor:
                     await self._unlock(runtime)
         self.session.commit()
 
+    async def notify_parent(self, now_boot: float) -> None:
+        """Mail what the parent should know, once a minute (D-177). Never raises:
+        a mail server that is down is not a reason to stop supervising."""
+        if (
+            self._notified_at is not None
+            and now_boot - self._notified_at < FILTER_CHECK_SECONDS
+        ):
+            return
+        self._notified_at = now_boot
+        if self._notifier is None:
+            self._notifier = Notifier(self.config)
+        try:
+            await self._notifier.run(self.session, self.clock.read().wall, now_boot)
+        except Exception:
+            log.exception("the parent's mail could not be prepared")
+            with contextlib.suppress(Exception):
+                self.session.rollback()
+
     # ------------------------------------------------------- operations
 
     def status(self) -> dict[str, Any]:
@@ -1701,10 +1722,12 @@ async def run_forever(supervisor: Supervisor, stop_event: asyncio.Event) -> None
             # Bounded: a tick that never returns is a failed tick, not a daemon
             # that looks alive while enforcing nothing.
             await asyncio.wait_for(supervisor.tick(), timeout=limit)
-            await asyncio.wait_for(
-                supervisor.check_filter(supervisor.clock.read().boot), timeout=limit
-            )
+            now_boot = supervisor.clock.read().boot
+            await asyncio.wait_for(supervisor.check_filter(now_boot), timeout=limit)
             failures = 0
+            # Outside the failure count: mail is a convenience, enforcement is not.
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(supervisor.notify_parent(now_boot), timeout=limit)
             # Only a tick that finished pings the watchdog; WatchdogSec= in
             # the unit kills a daemon whose ticks stopped finishing.
             notify.watchdog()

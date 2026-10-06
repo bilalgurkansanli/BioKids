@@ -528,7 +528,7 @@ msgid "time.windows.weekend"
 msgstr "Hafta sonu saatler"
 
 msgid "time.windows.invalid"
-msgstr "Saat aralığı 16:00-20:00 gibi yazılmalı."
+msgstr "Her saat aralığı için hem başlangıcı hem bitişi seçin."
 
 msgid "time.end_action"
 msgstr "Süre bitince"
@@ -971,7 +971,7 @@ msgid "assistant.refuse.default"
 msgstr "Buna cevap veremiyorum. Bunu ailenden bir büyüğe sorabilirsin."
 
 msgid "assistant.refuse.self_harm"
-msgstr "Bunu duyduğuma çok üzüldüm. Lütfen hemen ailenden birine ya da güvendiğin bir büyüğe anlat. Seni dinlemek ve sana yardım etmek isterler."
+msgstr "Bunu duyduğuma çok üzüldüm. Lütfen hemen ailenden birine ya da güvendiğin bir büyüğe anlat. Seni dinlemek ve sana yardım etmek isterler. Yanında kimse yoksa 183'ü arayabilirsin; acil bir durumsa 112'yi ara."
 
 msgid "assistant.refuse.personal_info"
 msgstr "Adresini, telefonunu ya da şifreni kimseye yazma, bana bile. Bunlar seni korumak için sır kalmalı."
@@ -1326,3 +1326,148 @@ msgstr "Şimdi olmaz canım, akşam konuşalım."
 
 msgid "audit.action.voice_recorded"
 msgstr "Ses kaydedildi"
+
+# D-176: time pickers and a schedule per day
+msgid "time.windows.from"
+msgstr "Başlangıç"
+
+msgid "time.windows.to"
+msgstr "Bitiş"
+
+msgid "time.windows.help_pickers"
+msgstr "Saat seçmezseniz gün boyu serbesttir. Okul öncesi ve sonrası gibi iki aralık seçebilirsiniz."
+
+msgid "time.days.title"
+msgstr "Bazı günler farklı olsun"
+
+msgid "time.days.help"
+msgstr "İşaretlediğiniz günde buradaki süre ve saat geçerli olur. Boş bıraktığınız kısım hafta içi/hafta sonu kuralını izler."
+
+msgid "day.0"
+msgstr "Pazartesi"
+
+msgid "day.1"
+msgstr "Salı"
+
+msgid "day.2"
+msgstr "Çarşamba"
+
+msgid "day.3"
+msgstr "Perşembe"
+
+msgid "day.4"
+msgstr "Cuma"
+
+msgid "day.5"
+msgstr "Cumartesi"
+
+msgid "day.6"
+msgstr "Pazar"
+
+# D-177: mail to the parent
+msgid "mail.alerts.subject"
+msgstr "BioKids: {count} yeni bildirim"
+
+msgid "mail.assistant_alert"
+msgstr "{name}: asistana ailenin bilmesi gereken bir soru sordu ({category})"
+
+msgid "mail.footer"
+msgstr "Ayrıntılar BioKids ebeveyn panelinde. Bu e-posta sizin posta sunucunuz üzerinden, bilgisayarınızdaki BioKids tarafından gönderildi."
+
+msgid "mail.weekly.subject"
+msgstr "BioKids: bu haftanın özeti"
+
+msgid "mail.weekly.intro"
+msgstr "Son yedi gün, çocuk çocuk:"
+
+msgid "mail.weekly.child"
+msgstr "{name} — toplam {total}"
+
+msgid "mail.minutes"
+msgstr "{minutes} dk"
+
+msgid "mail.test.subject"
+msgstr "BioKids deneme e-postası"
+
+msgid "mail.test.body"
+msgstr "Bu bir deneme. BioKids bildirimleri bu adrese gelecek."
+
+# D-177: the mail settings
+msgid "mail.panel.title"
+msgstr "E-posta bildirimleri"
+
+msgid "mail.panel.help"
+msgstr "Önemli bir şey olduğunda (filtre çalışmazsa, çocuğunuz bir şey isterse) ve her pazar akşamı haftanın özetiyle size e-posta gelsin. E-posta kendi posta sunucunuz üzerinden gider; çocuğunuzun yazdıkları e-postaya konmaz."
+
+msgid "mail.panel.recipients"
+msgstr "Hangi adrese gelsin?"
+
+msgid "mail.panel.alerts"
+msgstr "Önemli olaylarda hemen haber ver"
+
+msgid "mail.panel.weekly"
+msgstr "Pazar akşamı haftalık özet gönder"
+
+msgid "mail.panel.server"
+msgstr "Posta sunucusu"
+
+msgid "mail.panel.server_help"
+msgstr "E-posta sağlayıcınızın SMTP bilgileri. Gmail için: smtp.gmail.com, 587, STARTTLS ve bir \"uygulama şifresi\"."
+
+msgid "mail.panel.host"
+msgstr "Sunucu"
+
+msgid "mail.panel.port"
+msgstr "Port"
+
+msgid "mail.panel.security"
+msgstr "Güvenlik"
+
+msgid "mail.panel.security.starttls"
+msgstr "STARTTLS (önerilen)"
+
+msgid "mail.panel.security.ssl"
+msgstr "SSL/TLS"
+
+msgid "mail.panel.security.none"
+msgstr "Yok (yalnızca ev ağındaki sunucu için)"
+
+msgid "mail.panel.username"
+msgstr "Kullanıcı adı"
+
+msgid "mail.panel.password"
+msgstr "Şifre"
+
+msgid "mail.panel.password_kept"
+msgstr "Kayıtlı şifre korunur"
+
+msgid "mail.panel.password_help"
+msgstr "Bu bilgisayarda şifreli saklanır ve bir daha gösterilmez."
+
+msgid "mail.panel.sender"
+msgstr "Gönderen adresi (boşsa kullanıcı adı)"
+
+msgid "mail.panel.test"
+msgstr "Kaydet ve deneme gönder"
+
+msgid "mail.panel.remove"
+msgstr "E-postayı kapat"
+
+msgid "mail.panel.sent"
+msgstr "Deneme e-postası gönderildi. Gelen kutunuza bakın."
+
+msgid "mail.incomplete"
+msgstr "Bir alıcı adresi ve posta sunucusu gerekli."
+
+msgid "mail.failed"
+msgstr "E-posta gönderilemedi. Sunucu, port ve şifreyi kontrol edin."
+
+msgid "audit.action.mail_saved"
+msgstr "E-posta ayarları kaydedildi"
+
+msgid "audit.action.mail_removed"
+msgstr "E-posta bildirimleri kapatıldı"
+
+# D-178
+msgid "assistant.knowledge.on"
+msgstr "Cevaplarını bu bilgisayardaki Vikipedi özetleriyle kontrol ediyor; internete bağlanmıyor."

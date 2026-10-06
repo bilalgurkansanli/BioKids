@@ -1824,3 +1824,32 @@ Phase 2a's voice cloning is ninety seconds of audio, a GPU and a month; most of 
 
 **D-175 [owner] For a child who cannot read yet.**
 UX.md section 2.2 promised spoken labels for 4-7 and `data-speak` was rendered with nothing reading it. In the young band a tap now says the tile's name (throttled, so drumming on tiles is names, not a pile-up), and the full screens nothing else speaks - blocked, asked, first run, shutdown - say their sentence once as they open, through the voice service's `say` (a launcher route that, like the assistant's, takes JSON from its own page only). The ring keeps its minutes for every age (D-162); for 4-7 a sun rides the end of it and goes from yellow to orange to red as the time runs down: something to watch that needs no number.
+
+**D-176 [owner] Hours are picked, not typed; some days can be different.**
+The time screen asked a parent to type `16:00-20:00, 07:30-08:15` and refused anything else. Each kind of day now has two ranges of `<input type="time">`, the phone's own clock picker; half a range is refused with a sentence that says so. Under **Gelişmiş**, any day of the week can be ticked as different, with its own minutes and hours (`policy.schedule_json`, migration `9a4f2c7e1b36`): swimming on Wednesday is thirty minutes between six and seven. A day that names only its minutes keeps the usual hours, and an unticked day follows the weekday or weekend rule, so nothing changes for a family that never opens it.
+
+**D-177 [owner] Mail to the parent, through their own server.**
+"The parent is notified" meant an audit row nobody read until evening. **Ayarlar → E-posta bildirimleri** takes the parent's own SMTP server (SECURITY.md section 4 has listed it, opt-in, from the start); the settings are stored encrypted in `parent.smtp_json_encrypted` with the key in `/etc/biokids/secret.key`, and the password is never shown back. Once a minute the daemon mails, in one message, every new alert-severity audit row (a filter that failed, a lock that did not take, the daemon giving up), every request a child filed and every assistant alert; turning mail on starts from the present rather than sending the history. On Sunday from 19:00 it mails each child's time per day for the week. A mail that cannot be sent is retried with a growing pause and nothing is marked sent until it was. A message says what happened and to which child, never what a child typed: the panel holds the details. The send runs in a thread with a 20-second timeout, outside the tick's failure count, so a mail server that is down never stops supervision.
+
+**D-178 [owner] The assistant checks itself against an encyclopedia on the machine.**
+The gap the owner saw between Gemma 4 E4B and a cloud model was facts, not style
+(D-165), and no prompt removes a small model's confident mistakes. A source does,
+and it has to be local (principle 5, and the owner's "it must be a local LLM").
+The same download button now also fetches the opening paragraphs of the most-read
+Turkish and English Wikipedia articles as Kiwix packs them -
+`wikipedia_tr_top_mini_2026-07.zim` (138 MB) and `wikipedia_en_top_mini_2026-09.zim`
+(297 MB), CC BY-SA 4.0, pinned by the SHA-256 Kiwix publishes and checked after the
+download. Before the model answers a question the classifier let through, its
+subject is searched with `kiwix-serve` (kiwix-tools, GPL-3, in Debian; a separate
+process, never linked) running inside the assistant's own network namespace on
+127.0.0.1, started with the first question and stopped when idle like the model.
+Up to two articles' opening text goes into the answer prompt as the facts to
+prefer over memory, after the word list has screened it. Nothing found, a slow
+lookup or a missing kiwix-serve is not an error: the model answers as before.
+SECURITY.md section 4 lists the new download; `biokids-ai` Recommends kiwix-tools.
+
+Two smaller fixes from the review: the classifier's input is quoted with
+`json.dumps`, so a question containing a quote mark can no longer close the
+quotation and append a verdict of its own; and the self-harm answer gives a child
+with no grown-up nearby a number to call (183, and 112 for an emergency).
+

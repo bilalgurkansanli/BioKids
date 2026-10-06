@@ -561,3 +561,38 @@ def test_seconds_until_the_next_window_opens() -> None:
     assert policy.seconds_until_window_opens(at_0830) == 7 * 3600 + 30 * 60
     assert policy.seconds_until_window_opens(dt.datetime(2026, 9, 21, 21, 0)) is None
     assert make_policy().seconds_until_window_opens(dt.datetime(2026, 9, 21, 9, 0)) is None
+
+
+# ------------------------------------------------------ D-176 a schedule per day
+
+
+def test_a_day_of_its_own_wins_over_weekday_and_weekend() -> None:
+    from biokids_core.types import ChildPolicy, TimeWindow
+
+    policy = ChildPolicy(
+        child_id=1,
+        weekday_quota_min=60,
+        weekend_quota_min=120,
+        weekday_windows=(TimeWindow.parse("16:00-20:00"),),
+        day_quota_min={2: 30},  # Wednesday: swimming
+        day_windows={2: (TimeWindow.parse("18:00-19:00"),)},
+    )
+    wednesday = dt.date(2026, 10, 7)
+    thursday = dt.date(2026, 10, 8)
+    assert policy.quota_minutes(wednesday) == 30
+    assert policy.quota_minutes(thursday) == 60
+    assert not policy.window_open(dt.datetime(2026, 10, 7, 17, 0))
+    assert policy.window_open(dt.datetime(2026, 10, 8, 17, 0))
+
+
+def test_a_day_that_names_only_its_minutes_keeps_the_usual_hours() -> None:
+    from biokids_core.types import ChildPolicy, TimeWindow
+
+    policy = ChildPolicy(
+        child_id=1,
+        weekend_windows=(TimeWindow.parse("10:00-20:00"),),
+        day_quota_min={6: 30},
+    )
+    sunday = dt.datetime(2026, 10, 11, 21, 0)
+    assert policy.quota_minutes(sunday.date()) == 30
+    assert not policy.window_open(sunday)
