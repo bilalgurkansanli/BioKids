@@ -60,6 +60,8 @@ class LoginctlAwareRunner(RecordingRunner):
         result = await super().__call__(argv)
         if result.ok and list(argv[:2]) == ["loginctl", "lock-session"] and len(argv) > 2:
             self.source.set(argv[2], locked=True)
+        if result.ok and list(argv[:2]) == ["loginctl", "terminate-session"] and len(argv) > 2:
+            self.source.sessions = [s for s in self.source.sessions if s.session_id != argv[2]]
         if result.ok and list(argv[:2]) == ["loginctl", "terminate-user"] and len(argv) > 2:
             self.source.sessions = [s for s in self.source.sessions if s.unix_user != argv[2]]
         return result
@@ -1724,3 +1726,175 @@ async def test_the_microphone_is_never_on_without_the_assistant(
     set_quota(session, 1, 60, assistant_enabled=False, assistant_voice=True)
     await supervisor.start()
     assert supervisor.shell_state(1)["assistant"] == {"enabled": False, "voice": False}
+
+
+# ------------------------------------------------------------- D-172 fail-safe
+
+
+async def test_a_screen_that_will_not_lock_is_ended(
+    db: Database,
+    bus: EventBus,
+    source: FakeSessionSource,
+    clock: FakeClock,
+    config: Config,
+    child: Child,
+    session: Session,
+) -> None:
+    """`loginctl lock-session` only asks the child's screen locker. With none
+    running, logind says yes, nothing locks, and the child carries on."""
+    from biokids_daemon.enforcer import LOCK_ATTEMPTS_BEFORE_LOGOUT
+
+    runner = RecordingRunner()  # never marks the session locked
+    supervisor = Supervisor(
+        database=db,
+        bus=bus,
+        watcher=SessionWatcher(source),
+        enforcer=Enforcer(config, runner),
+        clock=clock,
+        config=config,
+    )
+    set_quota(session, 1, 1, end_action=EndAction.LOCK.value, lock_countdown_seconds=600)
+    await supervisor.start()
+    logged_in = source.log_in("elif")
+
+    await run_for(supervisor, clock, 60 + TICK * (LOCK_ATTEMPTS_BEFORE_LOGOUT + 3))
+
+    assert runner.ran("loginctl", "terminate-session", logged_in.session_id)
+    actions = [row.action for row in session.query(AuditLog).all()]
+    assert "lock_failed" in actions
+
+
+async def test_a_lock_that_takes_is_never_followed_by_a_logout(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    session: Session,
+) -> None:
+    set_quota(session, 1, 1, end_action=EndAction.LOCK.value, lock_countdown_seconds=600)
+    await supervisor.start()
+    source.log_in("elif")
+    await run_for(supervisor, clock, 300)
+    assert not runner.ran("loginctl", "terminate-session")
+
+
+async def test_an_open_filter_locks_the_children_until_it_closes(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`systemctl restart nftables` flushes the children's redirect; the panel
+    still said "running" because dnsmasq was. Principle 3: lock, then let them
+    back in when it is closed again."""
+    from biokids_daemon import dnsfilter
+
+    await supervisor.start()
+    logged_in = source.log_in("elif")
+    table = {"present": False}
+    monkeypatch.setattr(
+        dnsfilter,
+        "_run",
+        lambda argv: table["present"] if argv[:2] == ["nft", "list"] else True,
+    )
+
+    clock.advance(TICK)
+    await supervisor.tick()
+    await supervisor.check_filter(clock.read().boot)
+
+    assert runner.ran("loginctl", "lock-session", logged_in.session_id)
+    assert supervisor.status()["dns_filter"]["open"] is True
+    actions = [row.action for row in session.query(AuditLog).all()]
+    assert "filter_failed" in actions
+
+    table["present"] = True
+    clock.advance(70)
+    await supervisor.check_filter(clock.read().boot)
+    assert runner.ran("loginctl", "unlock-session", logged_in.session_id)
+    actions = [row.action for row in session.query(AuditLog).all()]
+    assert "filter_restored" in actions
+
+
+async def test_a_filter_that_does_not_answer_is_reported_not_locked(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No DNS is no internet: already closed. The parent is told; the child keeps
+    their games."""
+    from biokids_daemon import dnsfilter
+
+    monkeypatch.setattr(dnsfilter, "dns_query_blocked", lambda *_a, **_k: None)
+    await supervisor.start()
+    source.log_in("elif")
+    await supervisor.check_filter(clock.read().boot)
+    assert not runner.ran("loginctl", "lock-session")
+    actions = [row.action for row in session.query(AuditLog).all()]
+    assert "filter_down" in actions
+
+
+async def test_moving_the_date_does_not_give_the_quota_back(
+    db: Database,
+    bus: EventBus,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    clock: FakeClock,
+    config: Config,
+    child: Child,
+    session: Session,
+) -> None:
+    """SECURITY.md lists the clock as in scope, and the day came from it (D-172)."""
+    from biokids_core.clock import GuardedClock
+
+    supervisor = Supervisor(
+        database=db,
+        bus=bus,
+        watcher=SessionWatcher(source),
+        enforcer=Enforcer(config, runner),
+        clock=GuardedClock(clock, trust_jump=lambda: False),
+        config=config,
+    )
+    set_quota(session, 1, 20)
+    await supervisor.start()
+    source.log_in("elif")
+    await run_for(supervisor, clock, 20 * 60 + 2 * TICK)
+    assert supervisor.status()["children"][0]["remaining_seconds"] == 0
+
+    clock.wall += dt.timedelta(days=1)
+    clock.advance(TICK)
+    await supervisor.tick()
+
+    assert supervisor.status()["children"][0]["remaining_seconds"] == 0
+    details = [row.detail for row in session.query(AuditLog).filter_by(action="clock_jump")]
+    assert details and details[-1]["ignored"] is True
+
+
+async def test_a_tick_that_never_returns_is_a_failed_tick(
+    supervisor: Supervisor,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A wedged D-Bus call held the loop forever, and the daemon looked alive."""
+    from biokids_daemon import supervisor as module
+
+    await supervisor.start()
+    source.log_in("elif")
+    monkeypatch.setattr(module, "TICK_TIMEOUT_SECONDS", 0.05)
+    supervisor.config = dataclasses.replace(
+        supervisor.config,
+        daemon=dataclasses.replace(supervisor.config.daemon, tick_seconds=0),
+    )
+
+    async def hangs() -> None:
+        await asyncio.sleep(3600)
+
+    supervisor.tick = hangs  # type: ignore[method-assign]
+    with pytest.raises(TimeoutError):
+        await run_forever(supervisor, asyncio.Event())
+    assert runner.ran("loginctl", "lock-session"), "it gave up without locking"

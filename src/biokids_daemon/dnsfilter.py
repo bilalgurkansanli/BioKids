@@ -27,11 +27,14 @@ never been online. A site a parent enabled as a tile is never blocked.
 
 from __future__ import annotations
 
+import concurrent.futures
 import gzip
 import hashlib
 import importlib
 import logging
+import secrets
 import socket
+import struct
 import subprocess
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
@@ -129,6 +132,10 @@ DOH_ADDRESSES6: Final = (
     "2a07:e340::2",
 )
 
+CANARY: Final = "pornhub.com"
+"""A name every adult list has. The filter is asked for it once a minute, and an
+answer that is not NXDOMAIN means the children's DNS is not being filtered."""
+
 PANEL_PORT: Final = 7878
 TAILNET4: Final = "100.64.0.0/10"
 TAILNET6: Final = "fd7a:115c:a1e0::/48"
@@ -172,21 +179,55 @@ def render_blocklist(domains: Iterable[str]) -> str:
     return "".join(f"local=/{domain}/\n" for domain in sorted(domains))
 
 
-def resolve_safe_search() -> dict[str, tuple[str, ...]]:
-    """Each SafeSearch target's current addresses, or the built-in ones."""
-    answer: dict[str, tuple[str, ...]] = {}
-    previous = socket.getdefaulttimeout()
-    socket.setdefaulttimeout(3)
+def resolve_safe_search(timeout: float = 3.0) -> dict[str, tuple[str, ...]]:
+    """Each SafeSearch target's current addresses, or the built-in ones.
+
+    `getaddrinfo` ignores `socket.setdefaulttimeout`, and offline it can take the
+    resolver's full retry schedule - tens of seconds, on the daemon's event loop.
+    So the lookups run in threads, and whatever has not answered in `timeout`
+    falls back to the addresses this module ships.
+    """
+    answer = {target: fallback for target, (_names, fallback) in SAFE_SEARCH.items()}
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=len(SAFE_SEARCH))
     try:
-        for target, (_names, fallback) in SAFE_SEARCH.items():
+        futures = {
+            pool.submit(socket.getaddrinfo, target, 443): target for target in SAFE_SEARCH
+        }
+        done, _pending = concurrent.futures.wait(futures, timeout=timeout)
+        for future in done:
             try:
-                found = {str(info[4][0]) for info in socket.getaddrinfo(target, 443)}
+                found = {str(info[4][0]) for info in future.result()}
             except OSError:
-                found = set()
-            answer[target] = tuple(sorted(found)) or fallback
+                continue
+            if found:
+                answer[futures[future]] = tuple(sorted(found))
     finally:
-        socket.setdefaulttimeout(previous)
+        pool.shutdown(wait=False, cancel_futures=True)
     return answer
+
+
+def dns_query_blocked(name: str, port: int = DNS_PORT, timeout: float = 2.0) -> bool | None:
+    """Ask the filter for `name`: True for NXDOMAIN, False for any other answer,
+    None when nothing answered.
+
+    A dozen lines of the DNS wire format rather than a dependency: one A query,
+    and the response code from the header.
+    """
+    query_id = secrets.randbits(16)
+    header = struct.pack(">HHHHHH", query_id, 0x0100, 1, 0, 0, 0)
+    labels = b"".join(bytes([len(part)]) + part.encode("ascii") for part in name.split("."))
+    packet = header + labels + b"\0" + struct.pack(">HH", 1, 1)
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.settimeout(timeout)
+            sock.sendto(packet, ("127.0.0.1", port))
+            while True:
+                data, _ = sock.recvfrom(4096)
+                if len(data) >= 4 and struct.unpack(">H", data[:2])[0] == query_id:
+                    break
+    except OSError:
+        return None
+    return (data[3] & 0x0F) == 3
 
 
 def render_conf(
@@ -367,6 +408,38 @@ class DnsFilter:
 
     def running(self) -> bool:
         return _run(["systemctl", "is-active", "--quiet", SERVICE])
+
+    def verify(self, child_users: Iterable[str]) -> FilterHealth:
+        """Is the children's DNS actually filtered right now? Blocking; seconds.
+
+        Two facts, each enough to be wrong on its own. The nftables table can
+        vanish under a running daemon - `systemctl restart nftables` flushes the
+        whole ruleset - and then the children resolve through the ordinary
+        resolver, unfiltered, while dnsmasq looks perfectly healthy. And dnsmasq
+        can answer without its lists. So: is the table there, and does the
+        filter say NXDOMAIN to a name every adult list has?
+        """
+        users = list(child_users)
+        table = not users or _run(["nft", "list", "table", "inet", NFT_TABLE])
+        answer = dns_query_blocked(CANARY)
+        return FilterHealth(
+            redirect=table, filtering=answer is True, answering=answer is not None
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class FilterHealth:
+    redirect: bool
+    """The children's DNS goes to the filter. False is unfiltered internet."""
+    filtering: bool
+    """The filter says NXDOMAIN to the canary."""
+    answering: bool
+    """The filter answers at all. False alone is no internet, which is closed."""
+
+    @property
+    def open(self) -> bool:
+        """Children could reach what the lists close: the case that must lock."""
+        return not self.redirect or (self.answering and not self.filtering)
 
 
 def _run(argv: list[str]) -> bool:

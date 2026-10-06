@@ -1141,3 +1141,16 @@ msgstr "Phone access setup started"
 # Wizard step 3: the posted recovery code was not a real one
 msgid "wizard.recovery.replaced"
 msgstr "The recovery code did not come back from the page intact. Write down this new one and confirm again."
+
+# D-172: the fail-safe checks
+msgid "audit.action.filter_failed"
+msgstr "The internet filter stopped working; the children were locked"
+
+msgid "audit.action.filter_down"
+msgstr "The internet filter is not answering; the children have no internet"
+
+msgid "audit.action.filter_restored"
+msgstr "The internet filter is working again"
+
+msgid "audit.action.lock_failed"
+msgstr "The screen would not lock; the session was ended"

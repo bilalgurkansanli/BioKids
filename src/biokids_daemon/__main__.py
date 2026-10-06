@@ -16,9 +16,10 @@ import signal
 import sys
 from pathlib import Path
 
-from biokids_core.clock import SystemClock, is_linux
+from biokids_core.clock import GuardedClock, SystemClock, is_linux
 from biokids_core.config import Config, set_config
 from biokids_core.db.session import Database
+from biokids_daemon import notify
 from biokids_daemon.bus import EventBus
 from biokids_daemon.enforcer import Enforcer
 from biokids_daemon.server import DaemonServer
@@ -83,7 +84,11 @@ async def main_async(args: argparse.Namespace) -> int:
         bus=bus,
         watcher=watcher,
         enforcer=enforcer,
-        clock=SystemClock(),
+        # Guarded: the wall time the daemon uses cannot be moved under it
+        # without NTP's agreement (D-172).
+        clock=GuardedClock(
+            SystemClock(), threshold_seconds=config.daemon.clock_jump_threshold_seconds
+        ),
         config=config,
     )
     server = DaemonServer(supervisor, bus, config)
@@ -92,6 +97,9 @@ async def main_async(args: argparse.Namespace) -> int:
     await supervisor.start()
     await server.start()
     await shell_server.start()
+    # Type=notify: systemd counts the daemon as started - and starts pinging
+    # for the watchdog - only once it is actually supervising.
+    notify.ready()
 
     if args.once:
         await supervisor.tick()
@@ -109,6 +117,7 @@ async def main_async(args: argparse.Namespace) -> int:
     try:
         await run_forever(supervisor, stop_event)
     finally:
+        notify.stopping()
         await shell_server.stop()
         await server.stop()
         await supervisor.stop()

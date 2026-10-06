@@ -15,7 +15,16 @@ StartLimitIntervalSec=60
 StartLimitBurst=5
 
 [Service]
-Type=simple
+# The daemon says READY=1 once it is supervising and WATCHDOG=1 after every
+# tick that finished (D-172). A tick that hangs stops the pings: systemd kills
+# the process, the ExecStopPost= lockdown below runs, and Restart= brings it
+# back. Before this a hung daemon was "active (running)" and enforced nothing.
+Type=notify
+NotifyAccess=main
+WatchdogSec=90s
+# Rendering the 300,000-line blocklist at the first start takes a while on an
+# old laptop.
+TimeoutStartSec=180s
 ExecStart=/usr/bin/biokids-daemon
 Restart=always
 RestartSec=2s

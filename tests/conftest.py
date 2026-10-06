@@ -44,6 +44,12 @@ def no_real_system_commands(monkeypatch: pytest.MonkeyPatch) -> None:
     from biokids_daemon import dnsfilter
 
     monkeypatch.setattr(dnsfilter, "_run", lambda _argv: True)
+    # The once-a-minute check asks the filter on 127.0.0.1:5354 (D-172); a test
+    # machine has no filter there, and a real one would answer for the machine.
+    monkeypatch.setattr(dnsfilter, "dns_query_blocked", lambda *_a, **_k: True)
+    from biokids_core import admin
+
+    monkeypatch.setattr(admin, "LOCK_SETTLE_SECONDS", 0.0)
     monkeypatch.setattr(
         remote,
         "run_command",

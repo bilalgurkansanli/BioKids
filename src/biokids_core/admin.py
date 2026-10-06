@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import getpass
+import importlib
 import json
 import logging
 import os
@@ -31,6 +32,7 @@ import re
 import sqlite3
 import subprocess
 import sys
+import time
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -41,11 +43,19 @@ from biokids_core.db.session import Database
 from biokids_core.errors import ConfigError
 from biokids_core.i18n import translator
 from biokids_core.ipc import DaemonClient, Op
-from biokids_core.provision import account_exists, provision, set_greeter_identity
+from biokids_core.provision import (
+    CHILD_GROUP,
+    account_exists,
+    provision,
+    set_greeter_identity,
+)
 
 log = logging.getLogger("biokids.admin")
 
 LOGINCTL_TIMEOUT = 10
+
+LOCK_SETTLE_SECONDS = 3.0
+"""How long a screen locker gets to take the screen before the lockdown checks."""
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -254,15 +264,49 @@ def lock_session(session_id: str) -> bool:
     return result.returncode == 0
 
 
+def session_property(session_id: str, name: str) -> str:
+    output = _loginctl_output(
+        ("loginctl", "show-session", session_id, f"--property={name}", "--value")
+    )
+    return (output or "").strip()
+
+
+def terminate_session(session_id: str) -> bool:
+    return _loginctl_output(("loginctl", "terminate-session", session_id)) is not None
+
+
+def group_members(group: str) -> set[str]:
+    """The members of a Unix group, or nothing on a host without `grp`."""
+    try:
+        getgrnam = importlib.import_module("grp").getgrnam
+    except ImportError:  # the Windows development host
+        return set()
+    try:
+        return set(getgrnam(group).gr_mem)
+    except KeyError:
+        return set()
+
+
 def cmd_lockdown(_args: argparse.Namespace, config: Config) -> int:
     """Lock every child session. Never fails softly, never locks the parent."""
     child_users = _child_users(config)
     sessions = list_sessions()
 
     if not child_users:
-        # The database is unreadable or empty. We will not guess which sessions
-        # belong to children — locking a parent out of their own machine during
-        # an incident is its own kind of failure.
+        # The database is unreadable - which is one of the likeliest reasons
+        # to be here at all (ARCHITECTURE.md section 9: "DB corrupt: fail
+        # closed"). The accounts that log in by their picture are children by
+        # construction (D-155): provisioning adds only password-less accounts
+        # outside every administrative group, and nothing else adds anyone.
+        # That is not a guess about who is a child.
+        child_users = group_members(CHILD_GROUP)
+        if child_users:
+            log.error(
+                "the child list could not be read from %s; locking the members of %s",
+                config.paths.db_path,
+                CHILD_GROUP,
+            )
+    if not child_users:
         log.error(
             "lockdown could not determine which users are children; "
             "no session was locked. Check %s",
@@ -279,6 +323,17 @@ def cmd_lockdown(_args: argparse.Namespace, config: Config) -> int:
         and not row.get("class", "").startswith(("manager", "background"))
     ]
     locked = [session_id for session_id in targets if lock_session(session_id)]
+    if locked:
+        # `loginctl lock-session` only asks the child's screen locker. One that
+        # is not running leaves the child on screen; end that session instead.
+        time.sleep(LOCK_SETTLE_SECONDS)
+        for session_id in list(locked):
+            on_screen = session_property(session_id, "Active") == "yes"
+            hinted = session_property(session_id, "LockedHint") == "yes"
+            if on_screen and not hinted:
+                log.error("session %s did not lock; ending it", session_id)
+                if not terminate_session(session_id):
+                    locked.remove(session_id)
 
     log.warning(
         "lockdown: locked %s session(s) for %s", len(locked), ", ".join(sorted(child_users))

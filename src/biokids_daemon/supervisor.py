@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session
 
 from biokids_core import repo
 from biokids_core.catalog import load_catalog
-from biokids_core.clock import Clock, SystemClock
+from biokids_core.clock import Clock, GuardedClock, SystemClock
 from biokids_core.config import Config, get_config
 from biokids_core.db.models import AccessRequest
 from biokids_core.db.session import Database
@@ -48,9 +48,10 @@ from biokids_core.types import (
     Reason,
     SpeechRequest,
 )
+from biokids_daemon import notify
 from biokids_daemon.bus import EventBus
-from biokids_daemon.dnsfilter import DnsFilter
-from biokids_daemon.enforcer import Enforcer
+from biokids_daemon.dnsfilter import DnsFilter, FilterHealth
+from biokids_daemon.enforcer import LOCK_ATTEMPTS_BEFORE_LOGOUT, Enforcer
 from biokids_daemon.sessions import SessionWatcher, UserPresence
 
 log = logging.getLogger(__name__)
@@ -64,6 +65,9 @@ machine off with no lock screen, no two minutes and no "time's up"."""
 
 END_ACTION_BACKOFF_SECONDS: tuple[int, ...] = (10, 20, 40, 80, 120)
 """How long to wait before retrying an end action that did not work."""
+
+FILTER_CHECK_SECONDS = 60
+"""How often the children's DNS filter is checked from the outside (D-172)."""
 
 END_ACTION_GIVE_UP_AFTER = 3
 """After this many consecutive failures, escalate to the lockdown path (D-106)
@@ -117,6 +121,13 @@ class ChildRuntime:
     """The break or timeout currently in force, so the child's applications are
     stopped once on the way in rather than on every tick."""
 
+    lock_attempts: int = 0
+    """Consecutive ticks the end-of-day lock was asked for and logind still says
+    the screen is unlocked. LOCK_ATTEMPTS_BEFORE_LOGOUT of them end the session."""
+    locked_for_filter: bool = False
+    """BioKids locked this child because the DNS filter was open, and unlocks
+    them when it is closed again."""
+
     earned_pending_s: int = 0
     """Earned seconds not yet announced. A tick's payout is ten seconds at the
     default ratio, and `10 // 60` is the zero the child was congratulated for."""
@@ -150,6 +161,8 @@ class Supervisor:
     _session: Session | None = None
     _ledger: TimeLedger | None = None
     _dns_filter: DnsFilter | None = None
+    filter_health: FilterHealth | None = None
+    _filter_checked_at: float | None = None
 
     @property
     def dns_filter(self) -> DnsFilter:
@@ -786,6 +799,7 @@ class Supervisor:
         return EndAction.LOCK
 
     def _clear_end_sequence(self, runtime: ChildRuntime, day: dt.date, remaining: int) -> None:
+        runtime.lock_attempts = 0
         runtime.end_action_sessions = frozenset()
         runtime.end_action_failures = 0
         runtime.end_action_next_attempt = 0.0
@@ -828,8 +842,46 @@ class Supervisor:
             presence.relockable_session_ids if only_unlocked else presence.lockable_session_ids
         )
         if not targets:
+            runtime.lock_attempts = 0
             return
         await self.enforcer.lock_sessions(targets)
+        if not only_unlocked:
+            return
+        # The end of the day re-asserts the lock every tick. Whether the last
+        # one took is read from this tick's snapshot: a session that is still
+        # on screen and unlocked. Not LockedHint alone - light-locker never sets
+        # it (D-155); it locks by handing the seat to the greeter, which makes
+        # the child's session inactive. If a session stays on screen, the
+        # child's screen locker is not there - `loginctl lock-session` only
+        # asks - and the child carries on. Ending the session is the fail-safe.
+        on_screen = [
+            s.session_id
+            for s in presence.sessions
+            if s.session_id in targets and s.active and not s.locked
+        ]
+        if not on_screen:
+            runtime.lock_attempts = 0
+            return
+        runtime.lock_attempts += 1
+        if runtime.lock_attempts <= LOCK_ATTEMPTS_BEFORE_LOGOUT:
+            return
+        targets = tuple(on_screen)
+        ended = [sid for sid in targets if await self.enforcer.terminate_session(sid)]
+        runtime.lock_attempts = 0
+        log.error(
+            "%s's screen did not lock after %s attempts; ended %s",
+            runtime.unix_user,
+            LOCK_ATTEMPTS_BEFORE_LOGOUT,
+            ", ".join(ended) or "nothing",
+        )
+        repo.audit(
+            self.session,
+            actor="daemon",
+            action="lock_failed",
+            target=f"child:{runtime.child_id}",
+            detail={"sessions": list(targets), "ended": ended},
+            severity="alert",
+        )
 
     def _on_earned(self, runtime: ChildRuntime, seconds: int, now_boot: float) -> None:
         """Celebrate earned minutes - once they are minutes, and not every tick.
@@ -931,6 +983,28 @@ class Supervisor:
         )
 
     def _audit_anomalies(self) -> None:
+        if isinstance(self.clock, GuardedClock):
+            for correction in self.clock.take_corrections():
+                repo.audit(
+                    self.session,
+                    actor="system",
+                    action="clock_jump",
+                    detail={
+                        "delta_seconds": round(correction.delta_seconds),
+                        "direction": "forward" if correction.delta_seconds > 0 else "back",
+                        # Not trusted: the day and the time windows carry on from
+                        # the old clock until NTP or a restart confirms the new one.
+                        "ignored": not correction.trusted,
+                    },
+                    severity="warning",
+                )
+                log.warning(
+                    "the wall clock moved %+d s; %s",
+                    round(correction.delta_seconds),
+                    "NTP confirms it"
+                    if correction.trusted
+                    else "ignored until NTP confirms it",
+                )
         for anomaly in self.ledger.take_anomalies():
             repo.audit(
                 self.session,
@@ -954,6 +1028,71 @@ class Supervisor:
                 anomaly.direction,
                 round(abs(anomaly.delta_seconds)),
             )
+
+    # ---------------------------------------------------------- the filter
+
+    async def check_filter(self, now_boot: float) -> None:
+        """Check the children's DNS filter from the outside, once a minute (D-172).
+
+        The filter was written, loaded and then trusted. `nft -f` failing was a
+        log line; `systemctl restart nftables` - which flushes every table -
+        removed the children's redirect until the daemon next reloaded, and the
+        panel said "running" because dnsmasq was. So: is the redirect there, and
+        does the filter refuse a name every adult list has?
+
+        Open - the children could reach what the lists close - is principle 3:
+        one repair is tried, and if the filter is still open every child at the
+        machine is locked, and unlocked again when it closes. Not answering is
+        already closed (no DNS, no internet) and is reported, not locked.
+        """
+        if self._filter_checked_at is not None and (
+            now_boot - self._filter_checked_at < FILTER_CHECK_SECONDS
+        ):
+            return
+        self._filter_checked_at = now_boot
+        users = [r.unix_user for r in self.children.values() if r.policy is not None]
+        if not users:
+            self.filter_health = None
+            return
+        health = await asyncio.to_thread(self.dns_filter.verify, users)
+        if health.open or not health.answering:
+            log.warning("the DNS filter is not right (%s); applying it again", health)
+            await asyncio.to_thread(self._apply_dns_filter)
+            health = await asyncio.to_thread(self.dns_filter.verify, users)
+
+        previous = self.filter_health
+        self.filter_health = health
+        if health.open:
+            if previous is None or not previous.open:
+                repo.audit(
+                    self.session,
+                    actor="daemon",
+                    action="filter_failed",
+                    detail={"redirect": health.redirect, "filtering": health.filtering},
+                    severity="alert",
+                )
+            for runtime in self.children.values():
+                presence = self.watcher.presence(runtime.unix_user)
+                if presence.lockable_session_ids:
+                    runtime.locked_for_filter = True
+                    await self._lock(runtime, presence, only_unlocked=False)
+        elif not health.answering:
+            if previous is None or previous.answering or previous.open:
+                repo.audit(
+                    self.session,
+                    actor="daemon",
+                    action="filter_down",
+                    detail={"error": self.dns_filter.last_error},
+                    severity="alert",
+                )
+        elif previous is not None and (previous.open or not previous.answering):
+            repo.audit(self.session, actor="daemon", action="filter_restored")
+        if not health.open:
+            for runtime in self.children.values():
+                if runtime.locked_for_filter:
+                    runtime.locked_for_filter = False
+                    await self._unlock(runtime)
+        self.session.commit()
 
     # ------------------------------------------------------- operations
 
@@ -1014,7 +1153,11 @@ class Supervisor:
             # D-167: so a parent can see that harmful sites are really being
             # stopped, and why not when they are not.
             "dns_filter": {
-                "running": self.dns_filter.running(),
+                # From the last outside check rather than a `systemctl` call per
+                # panel poll, which ran synchronously on the event loop.
+                "running": self.filter_health is None
+                or (self.filter_health.answering and not self.filter_health.open),
+                "open": bool(self.filter_health and self.filter_health.open),
                 "error": self.dns_filter.last_error,
                 "mode": self._browser_mode(),
             },
@@ -1363,6 +1506,9 @@ class Supervisor:
         return runtime
 
 
+TICK_TIMEOUT_SECONDS = 60
+"""The longest one tick may take before it counts as failed."""
+
 TICK_FAILURES_BEFORE_GIVING_UP = 3
 """Consecutive failed ticks before the loop stops pretending it is supervising.
 
@@ -1391,14 +1537,28 @@ async def run_forever(supervisor: Supervisor, stop_event: asyncio.Event) -> None
     net catches what is left.
     """
     interval = supervisor.config.daemon.tick_seconds
+    limit = max(TICK_TIMEOUT_SECONDS, 3 * interval)
     failures = 0
     while not stop_event.is_set():
         try:
-            await supervisor.tick()
+            # Bounded: a tick that never returns is a failed tick, not a daemon
+            # that looks alive while enforcing nothing.
+            await asyncio.wait_for(supervisor.tick(), timeout=limit)
+            await asyncio.wait_for(
+                supervisor.check_filter(supervisor.clock.read().boot), timeout=limit
+            )
             failures = 0
+            # Only a tick that finished pings the watchdog; WatchdogSec= in
+            # the unit kills a daemon whose ticks stopped finishing.
+            notify.watchdog()
         except Exception as exc:  # one bad tick must not stop enforcement
             failures += 1
             log.exception("tick failed (%s in a row)", failures)
+            # The daemon's one long-lived Session: a failed flush anywhere in a
+            # tick left it needing a rollback, and every later tick then died
+            # on PendingRollbackError until the loop gave up.
+            with contextlib.suppress(Exception):
+                supervisor.session.rollback()
             if failures >= TICK_FAILURES_BEFORE_GIVING_UP:
                 await _give_up(supervisor, failures, exc)
                 raise

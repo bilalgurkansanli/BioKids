@@ -1786,3 +1786,6 @@ to be fixed before anything new:
   neither may write `/etc/dnsmasq.d`, `/etc/nftables.d` or `/etc/biokids`, which
   nothing wrote.
 
+
+**D-172 [owner] Fail-safe that is checked, not assumed.**
+From the same review (D-171). The daemon is `Type=notify` with `WatchdogSec=90s` and pings only after a tick that finished; every command it runs is killed after 30 s and a tick after 60 s; a failed tick rolls the shared Session back. The DNS filter is checked from the outside once a minute (nft table present, NXDOMAIN for a canary): open means one repair, then every child at the machine is locked until it closes; not answering is reported. A lock is verified from logind (still on screen and unlocked; light-locker never sets LockedHint, D-155) and after three ticks the session is ended. The wall time the daemon uses runs on BOOTTIME (`GuardedClock`): a jump is ignored until NTP confirms it, so moving the date no longer resets the quota. The lockdown falls back to the `biokids-child` group when the database cannot be read and ends sessions that did not lock. The ledger carries fractions of a second and re-reads its day rows after a failed commit. Closing and `manager` sessions no longer count as a child at the machine.

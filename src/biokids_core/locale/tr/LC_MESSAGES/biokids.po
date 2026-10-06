@@ -1141,3 +1141,16 @@ msgstr "Telefondan erişim kurulumu başlatıldı"
 # Wizard step 3: the posted recovery code was not a real one
 msgid "wizard.recovery.replaced"
 msgstr "Kurtarma kodu sayfadan doğru gelmedi. Bu yeni kodu yazın ve tekrar onaylayın."
+
+# D-172: the fail-safe checks
+msgid "audit.action.filter_failed"
+msgstr "İnternet filtresi çalışmıyor; çocuklar kilitlendi"
+
+msgid "audit.action.filter_down"
+msgstr "İnternet filtresi yanıt vermiyor; çocuklar için internet kapalı"
+
+msgid "audit.action.filter_restored"
+msgstr "İnternet filtresi yeniden çalışıyor"
+
+msgid "audit.action.lock_failed"
+msgstr "Ekran kilitlenemedi; oturum kapatıldı"

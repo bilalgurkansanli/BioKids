@@ -492,3 +492,69 @@ def test_the_same_boot_seen_twice_reuses_its_epoch(
         assert s.query(BootEpoch).count() == 1
         epoch = s.query(BootEpoch).one()
         assert epoch.last_boot_offset == pytest.approx(600, abs=1)
+
+
+# ------------------------------------------------------------ D-172
+
+
+def test_the_fractions_of_a_second_are_carried(
+    db: Database, clock: FakeClock, config: Config, child: object
+) -> None:
+    """A tick is ten seconds plus however long the tick took. Dropping the
+    fraction every time undercounted a day by a few percent."""
+    with db.session() as session:
+        ledger = TimeLedger(session, clock, config)
+        ledger.begin()
+        prime(ledger, 1)
+        for _ in range(100):
+            clock.advance(10.25)
+            ledger.tick([TickInput(child_id=1, active=True, idle=False)])
+        assert ledger.state(1).general_used_s == 1025
+
+
+def test_a_day_first_written_in_a_failed_commit_is_not_lost(
+    db: Database,
+    clock: FakeClock,
+    config: Config,
+    child: object,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The day's row was inserted in the transaction that rolled back. The cache
+    kept the dead object, every later second went to it, and a restart gave the
+    whole day back."""
+    from sqlalchemy.exc import OperationalError
+
+    with db.session() as session:
+        ledger = TimeLedger(session, clock, config)
+        ledger.begin()
+        prime(ledger, 1)
+        run(ledger, clock, 1, 60)
+
+        # A new day: its row is inserted by the next tick, and the commit that
+        # would have written it fails.
+        clock.wall = dt.datetime.combine(
+            clock.wall.date() + dt.timedelta(days=1), dt.time(0, 0, 5)
+        )
+        new_day = clock.wall.date()
+        real_commit = session.commit
+        calls = {"n": 0}
+
+        def once_broken() -> None:
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise OperationalError("commit", {}, Exception("database is locked"))
+            real_commit()
+
+        monkeypatch.setattr(session, "commit", once_broken)
+        clock.advance(10)
+        ledger.tick([TickInput(child_id=1, active=True, idle=False)])
+        with pytest.raises(OperationalError):
+            ledger.persist()
+        monkeypatch.undo()
+
+        run(ledger, clock, 1, 300)
+        ledger.persist()
+
+    with db.session() as reread:
+        row = reread.get(LedgerDay, {"child_id": 1, "day": new_day})
+        assert row is not None and row.general_s >= 300
