@@ -330,6 +330,13 @@ svg {
 .full--night { background: color-mix(in srgb, var(--bio-indigo) 12%, var(--bg)); }
 
 .big-btn {
+  /* A link drawn as a button ("Geri dön") centres its words as a <button>
+   * does; without this they sat at the top of an 84px pill, underlined. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  text-decoration: none;
   min-height: 84px;
   padding: 0 var(--sp-6);
   border: 0;
