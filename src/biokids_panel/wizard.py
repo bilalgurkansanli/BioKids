@@ -428,6 +428,12 @@ def provision_child(session: Session, child: Child) -> ProvisionResult:
     # privileged half lives in biokids-provision@.service. `None` means there is
     # no systemd to ask - a panel started by hand, or the test suite - and then
     # the work happens here, unsandboxed, exactly as it always did.
+    #
+    # The unit is another process and reads the child's name and picture from
+    # the database, so they are committed first. Found on the VM: renaming a
+    # child left the old name on the login screen, because the unit read the
+    # row as it was before this request.
+    session.commit()
     result = provision_via_systemd(child.unix_user)
     if result is None:
         result = provision(child.unix_user, child.display_name, avatar=child.avatar)

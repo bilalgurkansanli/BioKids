@@ -2285,3 +2285,26 @@ def test_saving_the_assistant_without_its_speech_model_keeps_the_voice_setting(
     login(client)
     page = client.get("/children/1/assistant").text
     assert 'type="hidden" name="assistant_voice" value="on"' in page
+
+
+def test_the_provision_unit_reads_a_committed_row(
+    family_ready: None, db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The unit is another process: it must find the new name, not the old one."""
+    from biokids_core.provision import ProvisionResult
+
+    seen: list[str] = []
+
+    def unit(user: str) -> ProvisionResult:
+        with db.session() as other:  # a second connection, like the unit's
+            child = repo.get_child_by_user(other, user)
+            seen.append(child.display_name if child else "")
+        return ProvisionResult(unix_user=user, account_existed=True)
+
+    monkeypatch.setattr(wizard, "provision_via_systemd", unit)
+    with db.session() as session:
+        child = repo.get_child(session, 1)
+        assert child is not None
+        child.display_name = "Elif Nur"
+        wizard.provision_child(session, child)
+    assert seen == ["Elif Nur"]
