@@ -33,7 +33,11 @@ open_setup_in_open_sessions() {
         if [ -n "$home" ] && [ -f "$home/.Xauthority" ]; then
             set -- "$@" --setenv=XAUTHORITY="$home/.Xauthority"
         fi
-        timeout 10 systemd-run --user --machine="$user@.host" --quiet --collect "$@" \
+        # ExitType=cgroup: the unit lives as long as the browser it started.
+        # Without it the unit ended when xdg-open returned and systemd took the
+        # new browser window down with it - found on the VM's fresh install.
+        timeout 10 systemd-run --user --machine="$user@.host" --quiet --collect \
+            --property=ExitType=cgroup "$@" \
             /usr/lib/biokids/biokids-open-setup >/dev/null 2>&1 || true
     done
 }
