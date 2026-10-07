@@ -25,7 +25,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from biokids_core import repo, security
-from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
+from biokids_core.catalog import ALWAYS_ON_TILES, enable_for_child, load_catalog, sync_catalog
 from biokids_core.config import Config
 from biokids_core.db.models import Child, Parent, utcnow
 from biokids_core.i18n import Translator
@@ -281,9 +281,19 @@ def register_wizard(app: FastAPI) -> None:
         if child is None:
             return see_other("/wizard/4")
         form = await request.form()
-        slugs = [str(value) for value in form.getlist("apps")]
-        sync_catalog(session, load_catalog(config=ctx.config))
-        enable_for_child(session, child.id, slugs)
+        catalog = load_catalog(config=ctx.config)
+        sync_catalog(session, catalog)
+        # As on the panel's apps screen: only what can start here, and never
+        # without volume, brightness and shutdown (D-164). The step listed them
+        # as boxes a parent could untick, which left a child with no way to end
+        # their own session.
+        known = {e.slug for e in catalog.entries if e.available()}
+        chosen = [
+            slug
+            for slug in dict.fromkeys(str(value) for value in form.getlist("apps"))
+            if slug in known and slug not in ALWAYS_ON_TILES
+        ]
+        enable_for_child(session, child.id, chosen + [s for s in ALWAYS_ON_TILES if s in known])
         session.commit()
         return see_other("/wizard/6")
 
@@ -558,7 +568,7 @@ def _render_step(
         child = values["child"]
         age = child.age_on(dt.date.today()) if child else 6
         catalog = load_catalog(config=ctx.config)
-        values["catalog"] = catalog.entries
+        values["catalog"] = [e for e in catalog.entries if e.slug not in ALWAYS_ON_TILES]
         values["suggested"] = {e.slug for e in catalog.suggested_for_age(age)}
         values["installed"] = {e.slug for e in catalog.entries if e.available()}
 

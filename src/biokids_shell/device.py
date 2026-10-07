@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import shutil
 from collections.abc import Sequence
 
@@ -54,6 +55,54 @@ async def set_volume(percent: int) -> bool:
             return True
     log.info("no volume tool available; the slider is decorative on this machine")
     return False
+
+
+VOLUME_READERS: tuple[tuple[tuple[str, ...], re.Pattern[str], float], ...] = (
+    (
+        ("wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"),
+        re.compile(r"Volume:\s*([0-9.]+)"),
+        100.0,
+    ),
+    (("pactl", "get-sink-volume", "@DEFAULT_SINK@"), re.compile(r"(\d+)%"), 1.0),
+    (("amixer", "sget", "Master"), re.compile(r"\[(\d+)%\]"), 1.0),
+)
+"""Where the volume is read from, in `set_volume`'s order, and how to read it."""
+READ_TIMEOUT = 2.0
+"""Seconds a volume tool gets before the home screen gives up on it."""
+
+
+async def get_volume() -> int | None:
+    """The sink's volume as a percentage, so the slider starts where the sound is.
+
+    It started at 70 whatever the sound was: a child who had turned it down
+    and came back to the home screen moved the slider a little and got a blast.
+    None when no tool answers; the slider then keeps its default.
+    """
+    for argv, pattern, scale in VOLUME_READERS:
+        out = await _output(argv)
+        if out is None:
+            continue
+        match = pattern.search(out)
+        if match is not None:
+            return clamp(round(float(match.group(1)) * scale))
+    return None
+
+
+async def _output(argv: Sequence[str]) -> str | None:
+    if shutil.which(argv[0]) is None:
+        return None
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *argv,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        out, _ = await asyncio.wait_for(process.communicate(), READ_TIMEOUT)
+    except (OSError, TimeoutError):
+        return None
+    if process.returncode != 0:
+        return None
+    return out.decode("utf-8", "replace")
 
 
 async def set_brightness(percent: int) -> bool:

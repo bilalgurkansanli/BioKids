@@ -28,6 +28,7 @@ from typing import Any
 from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 
+from biokids_core.catalog import ALWAYS_ON_TILES
 from biokids_core.config import Config, get_config
 from biokids_panel.common import (
     Auth,
@@ -69,7 +70,7 @@ from biokids_panel.routes import (
     voices,
 )
 from biokids_panel.routes.audit import _utc_bounds_of_local_day
-from biokids_panel.routes.children import ALWAYS_ON_TILES, _assistant_status
+from biokids_panel.routes.children import _assistant_status
 from biokids_panel.routes.misc import SW_CACHE_NAME, static_fingerprint
 from biokids_panel.routes.requests import REQUEST_GRANT_CHOICES
 from biokids_panel.routes.today import MAX_GRANT_SECONDS, _action_notice, _event_stream

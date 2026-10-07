@@ -83,7 +83,7 @@
     <label class="slider">
       <span aria-hidden="true">🔊</span>
       <span class="visually-hidden">{{ _('shell.volume') }}</span>
-      <input type="range" id="volume" min="0" max="100" step="5" value="70">
+      <input type="range" id="volume" min="0" max="100" step="5" value="{{ volume|default(70) }}">
     </label>
 
     <label class="slider">

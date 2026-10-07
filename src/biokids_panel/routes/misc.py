@@ -7,7 +7,7 @@ import hashlib
 from pathlib import Path
 
 from fastapi import APIRouter, Request, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from biokids_panel.common import Ctx, Db
 from biokids_panel.context import (
@@ -49,6 +49,18 @@ def service_worker() -> Response:
         media_type="text/javascript",
         headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"},
     )
+
+
+@router.get("/offline", response_class=HTMLResponse)
+def offline(ctx: Ctx, session: Db, request: Request) -> HTMLResponse:
+    """The page the service worker keeps for when the panel cannot be reached.
+
+    Rendered without the session on purpose: it is cached on the phone, so it
+    carries no name, no token and no navigation (D-194).
+    """
+    tr = request_translator(request, session)
+    html = ctx.env.get_template("offline.html").render(_=tr, locale=tr.locale)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
 
 @router.get("/manifest.webmanifest")

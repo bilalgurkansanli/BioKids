@@ -21,6 +21,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from biokids_core import repo, security
+from biokids_core.catalog import load_catalog
 from biokids_core.config import Config
 from biokids_core.db import AuditLog, Database, Parent, Policy
 from biokids_core.db.models import utcnow
@@ -135,7 +136,7 @@ def test_the_wizard_refuses_to_run_twice(client: TestClient, family_ready: None)
 
 
 def test_the_whole_wizard_can_be_completed(
-    client: TestClient, db: Database, daemon: FakeDaemon
+    client: TestClient, db: Database, daemon: FakeDaemon, config: Config
 ) -> None:
     assert (
         client.post("/wizard/1", data={"lang": "tr"}, follow_redirects=False).status_code == 303
@@ -210,11 +211,16 @@ def test_the_whole_wizard_can_be_completed(
         policy = repo.get_or_create_policy(session, child.id)
         assert policy.weekday_quota_min == 45
         assert policy.windows["weekday"] == ["16:00-20:00"]
-        assert {
-            slug for _, app in repo.list_child_apps(session, child.id) for slug in [app.slug]
-        } == {
-            "tuxpaint",
-            "gcompris",
+        # What was ticked and can start here, and always the three built-ins:
+        # the step listed shutdown as a box a parent could untick (D-164).
+        installed = {e.slug for e in load_catalog(config=config).entries if e.available()}
+        enabled = {
+            app.slug for link, app in repo.list_child_apps(session, child.id) if link.enabled
+        }
+        assert enabled == ({"tuxpaint", "gcompris"} & installed) | {
+            "volume",
+            "brightness",
+            "shutdown",
         }
 
     assert daemon.ran("reload"), "the daemon is told to pick up the new policy"
@@ -2232,3 +2238,34 @@ def test_a_limit_that_is_not_a_number_is_refused(
     assert response.status_code == 400
     with db.session() as session:
         assert repo.load_category_limits(session, 1) == {}
+
+
+# --------------------------------------------------------- small fixes (D-194)
+
+
+def test_the_offline_page_carries_nothing_about_the_family(
+    client: TestClient, family_ready: None
+) -> None:
+    """It is cached on the phone: no name, no token, no navigation."""
+    login(client)
+    page = client.get("/offline")
+    assert page.status_code == 200
+    assert "Bağlantı yok" in page.text
+    assert "csrf_token" not in page.text
+    assert "Elif" not in page.text
+    worker = client.get("/sw.js").text
+    assert '"/offline"' in worker
+    assert 'caches.match("/static/panel.css")' not in worker, "the stylesheet as a page"
+
+
+def test_saving_the_assistant_without_its_speech_model_keeps_the_voice_setting(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    with db.session() as session:
+        policy = repo.get_or_create_policy(session, 1)
+        policy.assistant_enabled = True
+        policy.assistant_voice = True
+        session.commit()
+    login(client)
+    page = client.get("/children/1/assistant").text
+    assert 'type="hidden" name="assistant_voice" value="on"' in page

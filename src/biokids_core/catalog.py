@@ -252,6 +252,11 @@ def sync_catalog(session: Session, catalog: Catalog | None = None) -> tuple[int,
     return added, updated, gone
 
 
+ALWAYS_ON_TILES: tuple[str, ...] = ("volume", "brightness", "shutdown")
+"""Built-in tiles every child keeps whatever the apps screen says (D-164). The
+shutdown tile is how a child ends their own session properly."""
+
+
 def enable_for_child(
     session: Session, child_id: int, slugs: list[str], *, replace: bool = True
 ) -> None:

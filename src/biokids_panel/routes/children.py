@@ -13,7 +13,7 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from biokids_core import repo
-from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
+from biokids_core.catalog import ALWAYS_ON_TILES, enable_for_child, load_catalog, sync_catalog
 from biokids_core.db.models import CategoryLimit, Child, Policy
 from biokids_core.errors import IpcError
 from biokids_core.ipc import Op
@@ -36,10 +36,6 @@ log = logging.getLogger(__name__)
 INDICATORS = ("badge", "small", "hidden")
 """How the launcher shows that the family can see the time and the sites (D-76).
 Never covert: `hidden` keeps the first-run explanation."""
-
-ALWAYS_ON_TILES = ("volume", "brightness", "shutdown")
-"""Built-in tiles every child keeps whatever the apps screen says (D-164). The
-shutdown tile is how a child ends their own session properly."""
 
 router = APIRouter()
 

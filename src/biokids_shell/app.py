@@ -120,6 +120,8 @@ the first thing they see on their own screen, so it has to be the one they chose
 rather than a default square."""
 
 BUILTIN_TILES = {"volume", "brightness", "shutdown"}
+DEFAULT_VOLUME = 70
+"""Where the volume slider starts when the sound's own level cannot be read."""
 """Drawn by the launcher and handled in the browser; they start no process."""
 
 
@@ -314,7 +316,14 @@ def register_routes(app: FastAPI) -> None:
         screen = _screen_for(data)
         if screen is not None:
             return await render(shell, request, screen, data)
-        return await render(shell, request, "home.html", data)
+        volume = await device.get_volume()
+        return await render(
+            shell,
+            request,
+            "home.html",
+            data,
+            volume=DEFAULT_VOLUME if volume is None else volume,
+        )
 
     @app.get("/first-run", response_class=HTMLResponse)
     async def first_run(request: Request, shell: Shell) -> Response:

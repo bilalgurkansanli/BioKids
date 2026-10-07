@@ -50,6 +50,11 @@
       <input type="checkbox" id="assistant_voice" name="assistant_voice"
              {% if policy.assistant_voice %}checked{% endif %}
              {% if not status.voice %}disabled{% endif %}>
+      {# A disabled box is not sent. Without this, saving while the speech model
+         is missing turned the voice off for good. #}
+      {% if not status.voice and policy.assistant_voice %}
+        <input type="hidden" name="assistant_voice" value="on">
+      {% endif %}
       <label for="assistant_voice">
         {{ _('assistant.panel.voice') }}
         <span class="help">{{ _('assistant.panel.voice.help') }}</span>

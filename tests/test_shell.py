@@ -1125,3 +1125,36 @@ def test_another_extension_or_a_site_cannot_report_visits(
         )
         assert response.status_code == 403
     assert daemon.visits == []
+
+
+@pytest.mark.parametrize(
+    ("tool", "output", "expected"),
+    [
+        ("wpctl", "Volume: 0.40\n", 40),
+        ("wpctl", "Volume: 0.35 [MUTED]\n", 35),
+        ("pactl", "Volume: front-left: 26214 /  40% / -23.88 dB", 40),
+        ("amixer", "  Front Left: Playback 26 [41%] [-23.25dB] [on]", 41),
+    ],
+)
+def test_the_volume_slider_starts_where_the_sound_is(
+    monkeypatch: pytest.MonkeyPatch, tool: str, output: str, expected: int
+) -> None:
+    from biokids_shell import device
+
+    async def fake_output(argv: Any) -> str | None:
+        return output if argv[0] == tool else None
+
+    monkeypatch.setattr(device, "_output", fake_output)
+    assert asyncio.run(device.get_volume()) == expected
+
+
+def test_without_a_volume_tool_the_slider_keeps_its_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from biokids_shell import device
+
+    async def nothing(argv: Any) -> str | None:
+        return None
+
+    monkeypatch.setattr(device, "_output", nothing)
+    assert asyncio.run(device.get_volume()) is None

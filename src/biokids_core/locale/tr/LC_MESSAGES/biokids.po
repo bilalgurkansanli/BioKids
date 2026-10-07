@@ -1565,3 +1565,13 @@ msgstr "Bunun bugünlük süresi bitti"
 
 msgid "shell.blocked.category.body"
 msgstr "Bu tür uygulamalar için bugünkü süren doldu. Ana ekrandan başka bir şey seçebilirsin."
+
+# The panel's offline page (D-194)
+msgid "panel.offline.title"
+msgstr "Bağlantı yok"
+
+msgid "panel.offline.body"
+msgstr "BioKids şu an açılamadı. Telefonunuz internete bağlı mı, bilgisayar açık mı? Bağlantı gelince yeniden deneyin."
+
+msgid "panel.offline.retry"
+msgstr "Yeniden dene"
