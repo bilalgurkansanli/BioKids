@@ -86,9 +86,12 @@ def no_real_system_commands(monkeypatch: pytest.MonkeyPatch) -> None:
 def every_app_is_installed(monkeypatch: pytest.MonkeyPatch) -> None:
     """The launcher draws only apps whose program exists (D-164); the machine
     running the suite has none of them. A test about a missing app says so."""
+    import biokids_core.catalog
     import biokids_shell.app
 
     monkeypatch.setattr(biokids_shell.app, "program_installed", lambda _program: True)
+    # The panel's apps screen and the wizard save only what can start (D-164, D-194).
+    monkeypatch.setattr(biokids_core.catalog, "program_installed", lambda _program: True)
 
 
 @pytest.fixture

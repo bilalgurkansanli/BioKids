@@ -889,6 +889,7 @@ def test_games_are_found_where_debian_puts_them(monkeypatch: pytest.MonkeyPatch)
     """A systemd service's PATH has no /usr/games; the panel thought every game missing."""
     from biokids_core import catalog
 
+    monkeypatch.undo()  # the suite pretends every program is installed
     seen: list[str] = []
     monkeypatch.setattr(
         catalog.shutil, "which", lambda _p, path=None: seen.append(path or "") or None
