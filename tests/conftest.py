@@ -61,9 +61,9 @@ def no_real_system_commands(monkeypatch: pytest.MonkeyPatch) -> None:
         return real_load_domains(lists_dir, categories)
 
     monkeypatch.setattr(dnsfilter, "load_domains", small_lists)
-    from biokids_daemon import supervisor
+    from biokids_daemon import filtering
 
-    monkeypatch.setattr(supervisor, "FILTER_SETTLE_PAUSE", 0.0)
+    monkeypatch.setattr(filtering, "FILTER_SETTLE_PAUSE", 0.0)
 
     # The lockdown's own checks (D-172) ask the real logind about a session id
     # and the real biokids-child group. On a machine with BioKids installed

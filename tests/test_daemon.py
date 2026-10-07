@@ -1886,7 +1886,7 @@ async def test_a_tick_that_never_returns_is_a_failed_tick(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A wedged D-Bus call held the loop forever, and the daemon looked alive."""
-    from biokids_daemon import supervisor as module
+    from biokids_daemon import loop as module
 
     await supervisor.start()
     source.log_in("elif")
