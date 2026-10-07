@@ -1,0 +1,42 @@
+[Unit]
+Description=BioKids offline Wikipedia for children (kiwix-serve)
+Documentation=https://github.com/bilalgurkansanli/BioKids
+# Started by biokids-wiki.path once a parent has downloaded the encyclopedia
+# (D-190). A child opens it from the Vikipedi tile, if a parent enabled it.
+ConditionPathExistsGlob=/var/lib/biokids-ai/models/wikipedia_*.zim
+
+[Service]
+Type=simple
+# The same files the assistant reads, served on loopback only. The glob needs a
+# shell; exec replaces it, so systemd supervises kiwix-serve itself.
+ExecStart=/bin/sh -c 'exec kiwix-serve --address=127.0.0.1 --port=7877 /var/lib/biokids-ai/models/wikipedia_*.zim'
+Restart=on-failure
+RestartSec=5s
+User=biokids-ai
+Group=biokids-ai
+Nice=10
+
+# Nothing to reach but the children's browsers on this machine.
+IPAddressDeny=any
+IPAddressAllow=localhost
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadOnlyPaths=/var/lib/biokids-ai
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+# No [Install]: biokids-wiki.path starts it when there is something to serve.

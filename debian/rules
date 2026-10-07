@@ -187,6 +187,7 @@ override_dh_installsystemd:
 	dh_installsystemd -pbiokids-panel biokids-panel.service
 	dh_installsystemd -pbiokids-ai --name=biokids-ai-setup --no-enable --no-start
 	dh_installsystemd -pbiokids-ai biokids-ai.service
+	dh_installsystemd -pbiokids-ai --name=biokids-wiki
 	dh_installsystemd --remaining-packages
 
 # The shell and the voice service belong to a child's session and are enabled

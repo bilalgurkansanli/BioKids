@@ -466,3 +466,26 @@ min_age = 4
 max_age = 10
 description_tr = "Bilgisayarı kapatır. Önce sorar."
 description_en = "Shuts the computer down. It asks first."
+
+[[app]]
+# The offline Wikipedia the assistant checks itself against (D-178), opened for
+# a child to read (D-190). Served on this machine by biokids-wiki.service once a
+# parent has downloaded it; the tile is not drawn until then. Not suggested: the
+# most-read articles include grown-up subjects, so a parent ticks it on purpose,
+# and the panel says so.
+slug = "vikipedi"
+name_tr = "Vikipedi"
+name_en = "Wikipedia"
+exec = []
+url = "http://127.0.0.1:7877/"
+package = ""
+kind = "web"
+icon = "book"
+default_category = "learning"
+min_age = 8
+max_age = 10
+suggest = false
+allow = ["127.0.0.1:7877"]
+description_tr = "Çevrimdışı ansiklopedi: en çok okunan maddelerin özetleri. Yetişkin konular da içerir; 8 yaş ve üstü için."
+description_en = "An offline encyclopedia: summaries of the most-read articles. Includes grown-up subjects; for 8 and up."
+

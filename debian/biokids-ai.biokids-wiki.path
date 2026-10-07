@@ -1,0 +1,9 @@
+[Unit]
+Description=Start the offline Wikipedia once it has been downloaded
+
+[Path]
+PathExistsGlob=/var/lib/biokids-ai/models/wikipedia_*.zim
+Unit=biokids-wiki.service
+
+[Install]
+WantedBy=multi-user.target

@@ -138,9 +138,9 @@ code is right, and a review will ask what happens if the call inside it never re
 **Not bricking the machine.** Anything that can lock a parent out of their own computer
 — a GRUB password, recovery mode, an nftables ruleset, a PAM or logind change — is
 opt-in, undone by the same tool that did it, and documented with a recovery path that
-works from a live USB (principle 4). `biokids-harden` has `--check`, `--apply` and
-`--undo` for exactly that reason; new work in that territory arrives with the same trio
-or it does not arrive.
+works from a live USB (principle 4). BioKids does not touch the bootloader or the
+firmware at all (D-184); SECURITY.md section 6 tells a family how to, by hand. New work
+in that territory arrives with a way to check, apply and undo it, or it does not arrive.
 
 **Packaging.** Maintainer scripts run more than once — on upgrade, on reinstall, and
 after one that failed halfway. Every one of them has to be safe to re-run, and must not

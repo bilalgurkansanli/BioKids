@@ -15,24 +15,25 @@ do not chat. The assistant (D-165) is a separate tile that a parent switches on:
 reads its answers aloud through the `say` operation below, and its push-to-talk
 button (D-166) is the only place in BioKids that uses the microphone.
 
-Optionally, a family records their own voices and Zio and Sio speak in them. That is
-the emotional core of the whole product: a 6-year-old hearing "on dakika kaldı yavrum"
-in their actual mother's voice is a different experience from hearing a robot.
+A parent can record the lines themselves (D-174, section 4) and Zio or Sio speaks
+them in that voice. That is the emotional core of the whole product: a 6-year-old
+hearing "on dakika kaldı yavrum" in their actual mother's voice is a different
+experience from hearing a robot.
 
 ---
 
 ## 2. Voice stack
 
 ```
-line text (i18n)
+line (event)
      │
-     ├── Piper  (tr_TR / en_US, ONNX, CPU, offline)      ← best, rarely present
-     │        │
-     │        └── OpenVoice V2 tone-color conversion      ← only if a cloned profile exists
+     ├── the parent's own recording of it (D-174)         ← when they made one
+     │
+     ├── Piper  (ONNX, CPU, offline)                      ← when a family installed it
      │
      ├── espeak-ng  (tr, in Debian main, offline)        ← the default in practice
      │
-     └── ElevenLabs API                                    ← optional, opt-in, cloud
+     └── the character card alone                          ← nothing could speak
 ```
 
 > **Corrected 2026-09-20.** This diagram called Piper "always available". It is
@@ -53,19 +54,11 @@ line text (i18n)
   against a four-year-old being shown a card they cannot read yet. Where a family
   installs `mbrola-tr1` and `mbrola-tr2`, Zio and Sio speak with those instead (§3); they
   are a `Suggests`, because the voices are non-free and `mbrola` is in contrib.
-- **OpenVoice V2** is **MIT** and performs timbre conversion on existing TTS audio, so
-  it layers onto Piper cleanly and inherits Piper's Turkish.
-- **XTTS-v2 is deliberately not used.** It is the obvious choice for cloning and it
-  works well, but its CPML license prohibits commercial use, which is incompatible with
-  an MIT project that other people may build on. It may be documented as something a
-  user can install themselves; it is never bundled and never a dependency.
-- **ElevenLabs** is supported because it is genuinely better, and some parents will want
-  it. It is the single feature in BioKids that sends data off the device, so it is off
-  by default, requires the parent's own API key, and is labelled in the UI with an
-  explicit warning. Selecting "strict offline" in the wizard removes the option entirely.
-
-**Validate the Piper → OpenVoice V2 path on Turkish early in Phase 2a.** If quality is
-poor, evaluate F5-TTS (MIT) next. Do not reach for a non-permissive model.
+- **A parent's own recordings** (D-174) replaced voice cloning (D-181). Cloning needed
+  ninety seconds of audio, OpenVoice, a GPU and a month, and most of what a child would
+  hear in it is seven sentences a parent can simply say. The cloud backend that was
+  planned beside it (ElevenLabs) is gone too: it was the one place audio would have
+  left the machine, against principle 1.
 
 ---
 
@@ -103,30 +96,23 @@ downloaded at first run either: espeak-ng is already there.
 
 ---
 
-## 4. Voice cloning flow
+## 4. A parent's own voice (D-174)
 
-In the panel, under **Sesler / Voices**:
+In the panel, under **Ayarlar → Kendi sesiniz**:
 
-1. Choose which persona to record: Zio or Sio.
-2. Read 8 short sentences aloud. About 90 seconds total. The sentences are chosen to
-   cover Turkish phoneme coverage and are shown one at a time with a large record
-   button, a level meter, and per-sentence re-record.
-3. Recording happens **in the browser** (MediaRecorder) and is uploaded to the panel
-   over localhost or the tailnet. Nothing goes to a third party.
-4. The panel runs the extraction locally, produces a speaker embedding, and stores it in
-   `/var/lib/biokids/voices/<persona>/`.
-5. A preview plays immediately: "Merhaba, ben Zio." The parent keeps it or re-records.
-
-Requirements and guards:
-
-- Minimum 60 s of usable audio; reject and explain if the level is too low or clipping.
-- Raw recordings are deleted after the embedding is produced, unless the parent ticks
-  "keep my recordings" (off by default).
-- Only a parent authenticated with the **passphrase**, not just the PIN, can record or
-  delete a voice. It is biometric-adjacent data and deserves the stronger gate.
-- "Delete my voice" is a single button and it removes the embedding and any cached
-  audio.
-- The privacy policy says plainly: voice data never leaves the device.
+1. Say which character the voice belongs to: the mother's (Zio is shown) or the
+   father's (Sio).
+2. For each of the seven lines - welcome, 10, 5 and 1 minute left, time is up, yes and
+   not now to a request - read the suggested sentence (or one of your own) and press
+   Record, then Stop.
+3. The page records a mono 16-bit WAV in the browser itself and sends it to the panel,
+   over localhost or the tailnet. The panel keeps it only if it is PCM, mono, 8-48 kHz
+   and 0.5-15 seconds long.
+4. It is stored in `/var/lib/biokids-voices/<locale>/<event>.wav` with the sentence in
+   `<event>.txt`: world-readable, because the voice service is the child's process, and
+   outside the family's 0700 data directory. Nothing in it ever leaves the machine.
+5. Each line can be played back and deleted. A line nobody recorded is spoken by the
+   computer, as before.
 
 ---
 
@@ -167,10 +153,10 @@ Default is `alternate`, so the child hears both.
 - **Duck, don't mute.** Lower other audio to 30% via PipeWire for the duration, then
   restore. Muting a child's video abruptly is jarring.
 - **Respect quiet hours.** A parent-set window where the character card appears silently.
-- **Cache aggressively.** Key on `sha256(text + persona + voice_profile_id)`, store WAV
+- **Cache aggressively.** Key on `sha256(text + persona + voice id)`, store WAV
   in `/var/lib/biokids/voice-cache/`, LRU capped at 200 MB. Most lines are identical
   every day; after the first day almost nothing is synthesised live.
-- **Fallback chain:** cloned → stock Piper → espeak-ng → on-screen banner only. Never
+- **Fallback chain:** the parent's recording → Piper → espeak-ng → on-screen card only. Never
   silent failure with no visual. Each engine caches into its own directory, because the
   cache key names the sentence and the voice and never the engine — one shared directory
   would leave a family who installed Piper on Tuesday hearing Monday's robot for every
@@ -214,10 +200,10 @@ Voice always has a visual companion (D-93).
 ```
 
 The service runs as the child. Nothing it reads may live under `/var/lib/biokids`,
-which is 0700 root: the cache is the child's own (`CacheDirectory=`), and the
-configured cloned-voice and model directories, which are under it, are treated as
-absent when they cannot be read (D-160). Before cloning ships they have to move
-somewhere a child's session may read.
+which is 0700 root: the cache is the child's own (`CacheDirectory=`), and a parent's
+recordings and any Piper voices a family adds live in `/var/lib/biokids-voices`,
+which the child's session may read. A directory it cannot read is treated as absent
+(D-160).
 
 The daemon never calls this socket: the launcher's relay forwards each SPEAK
 (`biokids_shell/relay.py`), and keeps the reply, so the screen shows the sentence the
@@ -226,8 +212,8 @@ service actually chose and the character actually speaking.
 Response is immediate (`queued`), with a follow-up event when playback finishes so the
 shell can dismiss the card.
 
-`{"op": "preview", "text": "...", "persona": "zio"}` is used by the panel for the
-voice-recording preview and for the line editor.
+`{"op": "preview", "text": "...", "persona": "zio"}` speaks any short text at once,
+for testing a voice.
 
 `{"op": "say", "text": "...", "locale": "tr", "persona": "zio"}` reads out the
 assistant's answer (D-165). An ordinary line in the queue, so a time warning still
@@ -241,7 +227,7 @@ goes first; cut after a whole sentence at 1,500 characters.
 - Queueing: three simultaneous requests play in priority order, none is lost, none
   overlaps.
 - Cache hit rate above 90% on the second simulated day.
-- Fallback: with the cloned model file deleted mid-run, the next line still speaks in
-  the stock voice and logs a warning.
+- A parent's recording is played instead of any synthesiser, with their sentence on
+  the card; a recording that is not a short mono WAV is refused.
 - Ducking restores the previous volume even if playback is killed.
 - Card renders and dismisses correctly with audio disabled entirely.

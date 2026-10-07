@@ -1,11 +1,19 @@
 # AI-LAYER.md
 
-Spec for `biokids-ai`, the optional on-device supervision worker, and since D-165
-the home of the child's assistant (section 12).
+Spec for `biokids-ai`: the child's assistant, "Sor Bana" (section 12), with the
+encyclopedia it checks itself against (D-178) and the offline Wikipedia a parent may
+open to a child (D-190).
 
 **Status: optional package, default off, `Suggests:` never `Depends:`.**
 Everything in BioKids works without it. If this component is absent, broken, or
 disabled, the rest of the system behaves exactly as if it had never existed.
+
+> **Sections 1–11 are not in v1 (D-180).** They describe the screen watcher - a
+> screenshot, OCR and vision-model pipeline that scored what a child was looking at.
+> It was never built, it is the heaviest and the most privacy-sensitive idea in the
+> project, and the assistant took its place. The design is kept as a record of the
+> idea for a later version; nothing in v1 captures the screen, and the fields and
+> the policy step it would have needed were removed. **What ships is section 12.**
 
 ---
 

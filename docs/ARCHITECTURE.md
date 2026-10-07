@@ -100,21 +100,26 @@ attributed to a category.
 
 ### `biokids-voice` (child user, user service)
 
-Receives `speak(text, persona, priority)` over a unix socket. Renders with Piper,
-optionally converts timbre with OpenVoice V2, caches by hash, plays through PipeWire,
-and tells the shell to show the character card. See `docs/VOICE.md`.
+Receives `speak(event, persona, priority)` over a unix socket. Plays a parent's own
+recording of the line when there is one (D-174), otherwise renders it with Piper or
+espeak-ng, caches by hash, plays through PipeWire, and tells the shell to show the
+character card. See `docs/VOICE.md`.
 
 ### `biokids-ai` (dedicated user, optional)
 
-Subscribes to trigger events, captures the screen, runs the pipeline, emits a risk
-score. Never enforces anything itself. See `docs/AI-LAYER.md`.
+Answers the child's questions with a local model, checked against a local
+encyclopedia (D-165, D-178); the daemon decides who may ask and records alerts. It
+never captures the screen: the screen watcher is not in v1 (D-180). See
+`docs/AI-LAYER.md`.
 
 ### Chromium extension (`extension/`)
 
-Force-installed via managed policy. Reports `{child, url, title, timestamp}` for every
-committed navigation to the daemon over `127.0.0.1` with a per-install token. This is
-far more reliable than parsing window titles, and it is how the daemon knows a new
-domain was visited (an AI trigger) and how per-domain reporting works.
+Force-installed via managed policy from a CRX packed and signed on the machine
+(D-187). When a page is blocked it sends the tab to the launcher's block page, where a
+child can ask a parent; and it reports the host name - never the path, title or
+content - of each page a child opens to the child's own launcher, for the history
+screen. It finds its launcher by probing the launcher ports, of which nftables lets
+it reach only its own (D-188).
 
 ---
 
@@ -271,7 +276,6 @@ usage_tick(child_id, day, category, seconds)            -- rolled up nightly
 usage_event(id, child_id, ts_wall, ts_boot, kind, payload_json)
 ai_alert(id, child_id, ts, score, category, reason, evidence_path, notified)
 audit_log(id, ts, actor, action, target, detail_json)
-voice_profile(id, persona /* zio|sio */, kind /* stock|cloned */, model_path)
 setting(key, value)
 ```
 

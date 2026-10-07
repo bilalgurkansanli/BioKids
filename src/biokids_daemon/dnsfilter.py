@@ -262,13 +262,22 @@ def render_conf(
         "",
         "# The tiles a parent enabled are never blocked, whatever a list says.",
     ]
-    lines += [f"server=/{host}/#" for host in sorted(set(allowed_hosts)) if host]
+    lines += [f"server=/{host}/#" for host in sorted(set(allowed_hosts)) if _is_name(host)]
     lines += ["", "# SafeSearch: these names answer with the vendors' safe addresses."]
     for target, (names, _fallback) in SAFE_SEARCH.items():
         addresses = safe_search.get(target) or SAFE_SEARCH[target][1]
         lines.append(f"host-record={target},{','.join(addresses)}")
         lines.append(f"cname={','.join(names)},{target}")
     return "\n".join(lines) + "\n"
+
+
+def _is_name(host: str) -> bool:
+    """A DNS name dnsmasq can take in `server=/…/#`. A tile on this machine
+    (`127.0.0.1:7877`, D-190) has no name to resolve, and one bad line stops
+    dnsmasq - and with it every child's internet."""
+    if not host or ":" in host or "/" in host:
+        return False
+    return not host.replace(".", "").isdigit()
 
 
 def render_nft(child_uids: Sequence[int], panel_port: int = PANEL_PORT) -> str:

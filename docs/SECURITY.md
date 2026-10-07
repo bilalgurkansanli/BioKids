@@ -36,9 +36,8 @@ parental-control tool that implies more protection than it provides is worse tha
 
 These are stated plainly in the README:
 
-1. **Booting from a USB stick or another OS.** Firmware territory. `biokids-harden`
-   can set a GRUB password and disable recovery mode; BIOS/UEFI passwords and boot
-   order are the parent's job and we document how.
+1. **Booting from a USB stick or another OS.** Firmware territory. A UEFI/BIOS
+   password and a GRUB password are the parent's job; section 6 says how, by hand.
 2. **Editing the kernel command line** (`init=/bin/bash`). Mitigated only by a GRUB
    password, which is opt-in because it locks out parents too.
 3. **Removing the drive**, or mounting it from another machine. Full-disk encryption
@@ -62,6 +61,7 @@ Never add a claim to marketing copy that contradicts this list.
 | `biokids-shell` | child | runs in the child session; no privilege. Reaches the daemon only over `/run/biokids/shell.sock`, where every operation is scoped to the calling uid's own child (D-123) |
 | `biokids-voice` | child | audio only |
 | `biokids-ai` | `biokids-ai` system user | runs the local models for the assistant (D-165); no network, no home, no devices |
+| `biokids-wiki` | `biokids-ai` system user | serves the offline Wikipedia on `127.0.0.1:7877` once a parent downloaded it (D-190); no capabilities, `IPAddressDeny=any` except localhost |
 | `biokids-dns` | started as root, `dnsmasq` drops to its own user | the children's DNS filter, on loopback port 5354 only (D-167) |
 | `biokids-remote-setup` | root, oneshot, only when the parent asks | installs Tailscale and signs it in for phone access (D-169); apt needs root |
 
@@ -91,8 +91,8 @@ On top of that block, each root unit names the little of root it keeps (D-171):
 
 | Unit | `CapabilityBoundingSet=` | `RestrictAddressFamilies=` | `ReadWritePaths=` |
 |---|---|---|---|
-| `biokids-daemon` | `CAP_NET_ADMIN` (nft), `CAP_CHOWN` (its socket) | unix, netlink, inet, inet6 | `/var/lib/biokids /var/log/biokids /run/biokids /etc/chromium/policies/managed` |
-| `biokids-panel` | none | unix, inet, inet6 | `/var/lib/biokids /var/log/biokids /run/biokids` |
+| `biokids-daemon` | `CAP_NET_ADMIN` (nft), `CAP_CHOWN` (its socket) | unix, netlink, inet, inet6 | `/var/lib/biokids /run/biokids /etc/chromium/policies/managed` |
+| `biokids-panel` | none | unix, inet, inet6 | `/var/lib/biokids /run/biokids /var/lib/biokids-voices` |
 
 The panel is root by uid only: the one root process a phone can reach holds no
 capability a bug in it could use.
@@ -112,9 +112,8 @@ against its pinned SHA-256 (D-165).
 | Parent PIN | argon2id hash, `m=64MiB, t=3, p=4` |
 | Parent passphrase | argon2id, same parameters |
 | Recovery code | argon2id of the normalised 8-word phrase |
-| SMTP password | encrypted with a key in `/etc/biokids/secret.key` (0600 root) |
-| ElevenLabs API key | same |
-| Extension ↔ daemon token | generated at install, `/etc/biokids/ext.token`, 0640 |
+| SMTP password | encrypted with a key in `/etc/biokids/secret.key` (0600 root), with the rest of the mail settings (D-177) |
+| Browser extension signing key | generated on the machine at install, `/var/lib/biokids/extension-key.pem`, 0600; never in the repository (D-187) |
 | APT repo signing key | GitHub Secrets only. Never in the repo, never on the device |
 
 No secret is ever logged, echoed in an error message, or included in a data export.
@@ -140,7 +139,6 @@ entry in `DECISIONS.md` and a note in the README.**
 | `log.tailscale.com` | Tailscale's own client logs | **turned off**: the runbook starts `tailscaled` with `--no-logs-no-support` (D-157) |
 | Hugging Face | one-time download of the assistant's models | yes: only with the AI package, only when the parent presses the button (D-165) |
 | `download.kiwix.org` and the mirror it redirects to | one-time download of the encyclopedia the assistant checks itself against, pinned by SHA-256 | yes: the same button, the same package (D-178) |
-| ElevenLabs | cloud TTS | yes, opt-in, off by default, clearly labelled |
 
 Zero telemetry. No crash reporting. No version ping. No analytics.
 
@@ -254,23 +252,25 @@ possible failure in this project.
 
 ---
 
-## 6. `biokids-harden`
+## 6. Locking the machine itself (by hand)
 
-Opt-in, reversible, never run automatically.
+BioKids does not change the bootloader or the firmware (D-184): a tool that sets a
+GRUB password can lock a parent out of their own computer, and principle 4 comes
+first. A family that wants the out-of-scope attacks of section 1 harder can do it
+themselves, knowing how to undo it:
 
-```
-biokids-harden --check     # report current state, change nothing
-biokids-harden --apply     # set GRUB password, disable recovery, disable TTY switch
-biokids-harden --undo      # revert everything it did
-```
+- **Firmware:** set a UEFI/BIOS administrator password and put the internal disk
+  first in the boot order. Write the password down; a forgotten one may need the
+  manufacturer.
+- **GRUB:** `grub-mkpasswd-pbkdf2`, then a `password_pbkdf2` line and
+  `set superusers` in `/etc/grub.d/40_custom`, and `update-grub`. Recovery entries
+  can be hidden with `GRUB_DISABLE_RECOVERY=true` in `/etc/default/grub`. To undo:
+  remove the lines and run `update-grub` again, from a live USB if need be.
+- **Disk encryption** is chosen when Debian is installed, not afterwards.
 
-`--apply` prints, before doing anything:
-
-- the exact changes it will make
-- the GRUB password it generated (once, for the parent to write down)
-- the exact commands to undo them from a live USB if something goes wrong
-
-If the parent cannot confirm they have recorded the password, it refuses to proceed.
+The virtual-terminal guards BioKids does ship (D-136) are packaged defaults in
+`/usr/lib/systemd/logind.conf.d/` and `/usr/share/X11/xorg.conf.d/` and go away with
+the package.
 
 ---
 

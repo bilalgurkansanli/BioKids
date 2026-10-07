@@ -26,9 +26,11 @@ import json
 import logging
 import math
 import shlex
+import socket
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Annotated, Any
+from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, Form, Request, Response
 from fastapi.responses import (
@@ -574,10 +576,25 @@ def tile_can_start(tile: dict[str, Any]) -> bool:
     The catalog promised this from the start and the launcher never checked:
     on a machine without GCompris the tile was there and did nothing at all.
     """
+    if tile.get("kind") == "web":
+        return local_service_up(str(tile.get("url", "")))
     if tile.get("kind") != "app":
         return True
     argv = shlex.split(str(tile.get("exec", "")))
     return bool(argv) and program_installed(argv[0])
+
+
+def local_service_up(url: str) -> bool:
+    """A web tile on this machine (the offline Wikipedia, D-190) is drawn only
+    while something answers there; any other web tile always is."""
+    parts = urlsplit(url)
+    if parts.hostname not in {"127.0.0.1", "localhost"} or parts.port is None:
+        return True
+    try:
+        with socket.create_connection((parts.hostname, parts.port), timeout=0.2):
+            return True
+    except OSError:
+        return False
 
 
 MAX_RECORDING_BYTES = 16_000 * 2 * 16 + 1024
