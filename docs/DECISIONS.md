@@ -19,10 +19,11 @@ search for `D-<n>` lands on the entry. Gaps in the numbering were never used.
 - A new decision takes the next free number, at the end. When it replaces an older
   one, cut the older one down and point it at the new one.
 
-Replaced in full or in part: D-16 → D-185 · D-32 → D-129 · D-55 → D-184 ·
-D-57 → D-171 · D-59, D-61, D-62 → D-167 · D-70, D-72–D-75, D-77–D-80 → D-180 ·
-D-86 → D-174, D-181 · D-87, D-88 → D-137 · D-89, D-90 → D-181 · D-92 → D-165, D-166 ·
-D-149 → D-151. Completed by a later entry: D-38 → D-177 · D-65 → D-173.
+Replaced in full or in part: D-14 → D-188 · D-16 → D-185 · D-32 → D-129 ·
+D-53 → D-189 · D-55 → D-184 · D-57 → D-171 · D-59, D-61, D-62 → D-167 ·
+D-70, D-72–D-75, D-77–D-80 → D-180 · D-86 → D-174, D-181 · D-87, D-88 → D-137 ·
+D-89, D-90 → D-181 · D-92 → D-165, D-166 · D-149 → D-151. Completed by a later entry:
+D-38 → D-177 · D-44 → D-193 · D-64 → D-187 · D-65 → D-173.
 
 ## Scope
 
@@ -72,6 +73,7 @@ kids distros (Qimo, DoudouLinux, LinuxKidX) burned their energy.
 `--kiosk --app=` and its own `--user-data-dir`. The owner iterates far faster in HTML
 and CSS, and the launcher shares templates and i18n with the panel; cost ~250 MB RAM.
 Escape is prevented by a managed Chromium policy (D-149, D-151, D-156, D-167, D-171).
+*The single port is revised by D-188: one launcher port per child.*
 
 **D-15 [owner] Minimum hardware: 4 GB RAM.** Idle footprint under 1.2 GB with shell,
 daemon and panel; 2 GB is unsupported; disk 25 GB. The optional assistant needs 7 GB or
@@ -202,7 +204,8 @@ corner, green → amber → red, with the minutes in it (D-162).
 **D-44 [claude] Per-category limits, not per-app limits.**
 **Oyun / Games**, **Eğitim / Learning**, **İnternet / Web**, **Serbest / Free**, a
 default per catalog app that the parent can change. Four sliders are usable, thirty are
-not; per-app overrides go under Advanced. Not built in Phase 0 (D-132).
+not; per-app overrides go under Advanced. Not built in Phase 0 (D-132). *Completed by
+D-193* for the four limits; per-app overrides are still not built.
 
 **D-45 [owner] Earned time.**
 Time in **Eğitim** earns **Oyun** time at a parent-set ratio (default 1:1) up to a daily
@@ -225,7 +228,7 @@ needs the longer passphrase from the wizard, itself rate limited (D-171).
 
 **D-49 [claude] Setup wizard on first run.** Language, parent, PIN and passphrase,
 recovery code, children, apps, quota, filter mode, Tailscale and extras; under five
-minutes, every step skippable with a sane default. *Stub steps removed by D-182.*
+minutes, every step skippable with a sane default. *Its email step removed by D-182.*
 
 **D-50 [claude] PIN recovery: two paths.** An 8-word recovery code shown once during
 setup, and `sudo biokids-admin reset-pin` (D-131). Both are audited loudly. No email
@@ -238,7 +241,8 @@ destructive action regardless of session age. The idle timer slides (D-150).
 
 **D-53 [claude] Append-only audit log**, shown in the panel with filters: every policy
 change, PIN attempt, override, alert and daemon restart. Never truncated by the app;
-rotated by size with the oldest archived, not deleted.
+rotated by size with the oldest archived, not deleted. *Partly superseded by D-189:*
+nothing edits an entry, but entries older than `audit_days` (a year) are deleted.
 
 **D-54 [owner] The child gets no terminal.** No terminal emulator; VT switching off via
 `logind.conf` and X11 `DontVTSwitch` (shipped by D-136). Defeatable by a determined
@@ -259,7 +263,7 @@ D-171: nftables closes the port to the children.*
 
 **D-58 [owner] DNS-level filtering plus a managed Chromium extension. No MITM proxy.**
 A MITM proxy means our own CA in the child's trust store, broken pinned apps, and an
-interception point that is itself a risk. The extension is not built yet (D-173).
+interception point that is itself a risk. The extension is D-187.
 
 **D-59 [claude] Local `dnsmasq` as the resolver, with a configurable upstream.** Local
 so it works offline; Cloudflare for Families upstream; nftables redirecting ports 53 and
@@ -282,8 +286,8 @@ by Chromium's `ForceGoogleSafeSearch` and `ForceYouTubeRestrict: 2`. The youtube
 block for 4–7 was not built; YouTube Kids is a catalog tile (D-164).
 
 **D-64 [owner] A child-friendly block page.** Local, with a Zio/Sio character, one
-sentence at the age band's reading level and an ask-a-parent button (D-135). Blocked
-domains still end on Chromium's own error page until the extension exists.
+sentence at the age band's reading level and an ask-a-parent button (D-135). *Completed
+by D-187:* the extension sends a page the filter closed to it, not to Chromium's error.
 
 **D-65 [owner] Access requests.** The block page's button files a request the parent
 answers in one tap: a wall becomes a conversation. *Completed by D-173.*
@@ -322,8 +326,8 @@ only, kept in an evidence directory. *Superseded by D-180: no screenshots at all
 screen, which would make this surveillance software.
 
 **D-76 [owner] The supervision indicator is configurable, visible by default.** A small
-Zio/Sio badge in the launcher; a parent may shrink it, but the child's first-run
-explanation (D-111) always runs.
+Zio/Sio badge in the launcher; a parent may shrink it (on the child's edit screen,
+D-191), but the child's first-run explanation (D-111) always runs.
 
 **D-77 [claude] The VLM sees the whole screen, but only on a trigger.**
 *Superseded by D-180.*
@@ -409,7 +413,8 @@ session**, and the clipboard is not shared with the parent's session.
 
 **D-102 [owner] Offline educational content is bundled** where licensing allows (Kiwix,
 Blockly games): the machine stays useful with no internet. The Turkish children's
-Wikipedia it named does not exist (D-164); Kiwix packs now serve the assistant (D-178).
+Wikipedia it named does not exist (D-164); Kiwix packs now serve the assistant (D-178)
+and, as a tile a parent opts in to, the child (D-190).
 
 ## Threat model, privacy, legal
 
@@ -786,7 +791,8 @@ parent chooses. Overrides D-61 and D-62 and replaces D-59's design.
   no internet, never unfiltered internet. The rules load at boot before the display
   manager; removing BioKids deletes them.
 - One browser policy per machine, so with two children on different settings the
-  stricter applies to both. A blocked site shows Chromium's error page, not D-64's.
+  stricter applies to both. A blocked site showed Chromium's error page, not D-64's,
+  until the extension (D-187).
 
 **D-168 [owner] The child's browser speaks the family's language.** `chromium-l10n` is
 a Depends of biokids-shell, and the launcher sets the child's profile to
@@ -901,10 +907,12 @@ removed. The parent's own recordings (D-174) give a child their parent's voice f
 lines that matter, with no GPU and no model; ElevenLabs would send a family's sentences
 off the machine, which principle 1 does not allow.
 
-**D-182 [owner] The wizard's stub steps are removed.** (2026-10-07)
-The setup wizard's two stub steps, which asked nothing real, are removed (D-49): the
-wizard asks only what it uses. Mail (D-177) and the assistant (D-165) are set up in the
-panel.
+**D-182 [owner] The wizard's stub step is removed.** (2026-10-07)
+One step went: the email step (step 9 of ten), which asked nothing real (D-49). The
+wizard now has nine steps and a closing screen (`/wizard/10`), and mail (D-177) is set
+up under **Ayarlar → E-posta bildirimleri**, where it can be tested. The extras step
+stays as step 9; its assistant line is still shown disabled, and the assistant (D-165)
+is switched on per child under **Çocuklar → Asistan**.
 
 **D-183 [owner] Logs go to the journal.** (2026-10-07)
 `/var/log/biokids` and its logrotate file are removed; every BioKids service logs to the
@@ -925,3 +933,93 @@ supersedes D-16; D-17 and D-28 apply when it ships.
 **D-186 [owner] The code was split for maintainability.** (2026-10-07)
 The panel's routes and the daemon's supervisor were each split into modules, with no
 change in behaviour.
+
+## Built for v1.0
+
+Settled on the owner's behalf while finishing the release, the same day.
+
+**D-187 [claude] The browser extension is built, and packed on the machine.** (2026-10-07)
+A Manifest V3 extension in plain JavaScript (`extension/manifest.json`,
+`extension/background.js`) does two things. A top-level navigation the policy or the
+DNS filter closed (`ERR_BLOCKED_BY_ADMINISTRATOR`, `ERR_NAME_NOT_RESOLVED`) goes to the
+child's launcher's `/blocked` page with its "ask a grown-up" button (D-64, D-173). And
+the host name of each page a child opens, never the path, title or content, goes to the
+launcher's `POST /visit`; the daemon records it as a `usage_event` of kind `visit`, the
+same host at most once per ten minutes (`VISIT_REPEAT_SECONDS`). It talks to nothing
+but 127.0.0.1, and the child is told on the first-run screen (`shell.firstrun.p5`,
+D-111). biokids-shell ships the source; its postinst runs `biokids-admin
+pack-extension` (`biokids_core.extension_pack`), which signs a CRX3 with a key made on
+the machine (`/var/lib/biokids/extension-key.pem`, 0600) and writes `biokids.crx`,
+`updates.xml` and `extension-id` to `/var/lib/biokids-ext`. The daemon force-installs
+it with `ExtensionInstallForcelist` (`biokids_core.browser_policy`). No key is in the
+repository or the package, so nothing off the machine can sign an update. A failed pack
+is not fatal: blocked pages show Chromium's error and no visits are listed.
+
+**D-188 [claude] One launcher port per child.** (2026-10-07)
+Two children logged in at once (fast user switching) shared the one launcher port. A
+child's launcher now listens on `shell.port + uid % 100` (`ShellConfig.launcher_port`,
+7879–7978), and the kiosk policy lists every child's launcher origin. Because a
+launcher acts as its child on the daemon's socket (D-123), an nftables chain
+`launchers` (`dnsfilter.render_nft`) rejects a connection to a child's port from any
+other uid: a sibling, the parent, a page in either browser. The extension finds its
+launcher by probing the range. Two children whose uids differ by a multiple of 100
+would get the same port; that is not handled.
+
+**D-189 [claude] Records are kept for a set time, then deleted.** (2026-10-07)
+`ARCHITECTURE.md` promised retention and nothing deleted anything: the machine was
+building the very dataset principle 1 says should not exist. `[retention]` in
+`/etc/biokids/config.toml`: `activity_days = 30` (usage events, the visited sites among
+them, and the assistant's alerts: the most personal go first), `usage_days = 400`
+(`usage_tick`, `ledger_day`), `audit_days = 365`, `requests_days = 90`. The daemon
+prunes once a day (`housekeeping`, first five minutes after it starts) in one
+transaction, and a failure is retried the next day. Panel sessions a day past their
+idle timeout go too, and only the 20 newest boot epochs are kept.
+`biokids_core.retention`. Partly supersedes D-53.
+
+**D-190 [claude] Offline Wikipedia, for a child to read.** (2026-10-07)
+A `vikipedi` web tile (8–10, `suggest = false`: the most-read articles include grown-up
+subjects, so a parent ticks it on purpose) opens `http://127.0.0.1:7877/`, where
+`kiwix-serve` serves the `wikipedia_*.zim` files the assistant's download already
+fetches (D-178) into `/var/lib/biokids-ai/models`. `biokids-wiki.path` starts
+`biokids-wiki.service` when one appears; both ship in biokids-ai. kiwix-serve (GPL-3,
+kiwix-tools) is a separate process (D-30), run as `biokids-ai` on loopback with no
+capabilities. The launcher does not draw a web tile on this machine whose port is
+closed, so the tile appears only once there is something behind it.
+
+**D-191 [claude] A child's details can be changed, and a child removed.** (2026-10-07)
+`/children/{id}/edit` changes name, birth year, picture and language, and under
+**Gelişmiş** the supervision indicator (`badge`, `small`, `hidden`; D-76). A new name or
+picture is provisioned again, so the login screen shows it (D-170). Removing a child is
+behind the passphrase, refused while the child is at the machine or the daemon cannot
+say, and done by `biokids-unprovision@.service` (`biokids-admin unprovision-child`), for
+the reason D-142 gives: the account leaves `biokids-child` and gets
+`/usr/sbin/nologin`, so AccountsService and LightDM leave it off the login screen, and
+only session files still byte-identical to what BioKids wrote are removed. The account
+and its home stay (D-130). If the account cannot be changed, the row stays and the
+parent is told: a passwordless account in the login group with nothing supervising it
+is worse than a child not removed. Otherwise the row goes, with everything recorded for
+the child but the audit log. Adding the child back restores `/bin/bash`.
+
+**D-192 [claude] A history screen.** (2026-10-07)
+`/history`: fourteen days of minutes as bars against each day's quota, each a link to
+its day; for that day the apps by time, the sites the extension reported (D-187), one
+line per host with its first and last time, and the child's requests. Plain HTML, no
+script, no chart library (D-129). It shows only what retention already keeps (D-189)
+and stores nothing of its own. Part of D-37; the week is in the Sunday mail (D-177).
+
+**D-193 [claude] Limits per kind of app can be set.** (2026-10-07)
+The policy engine has enforced category limits since Phase 0 (D-44) and nothing could
+set them. The time screen's **Gelişmiş** section takes minutes a day for games,
+learning, web and free; empty is no limit of its own, and the day's time still applies.
+With a Games limit set, earned time follows the parent's setting (D-132). When a kind is
+used up, the child's blocked page says so and offers no "ask a grown-up": granted
+minutes raise the day (D-124), not the category, so a yes would not let them back in.
+
+**D-194 [claude] Four small fixes before the release.** (2026-10-07)
+The panel's service worker served the stylesheet as the page when the network was
+gone; it now keeps `/offline`, rendered without the session so the cached copy holds no
+name and no token. The wizard's apps step always keeps volume, brightness and shutdown,
+as the apps screen does (D-164). The assistant's voice box, disabled while the speech
+model is missing, no longer turns the voice off when the page is saved, since a
+disabled box is not sent. The launcher's volume slider reads the real level (`wpctl`,
+`pactl` or `amixer`) instead of starting at 70.

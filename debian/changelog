@@ -1,3 +1,38 @@
+biokids (0.1.0-2) trixie; urgency=medium
+
+  * Release candidate for v1.0: the packages, from the project's own APT
+    repository. The ISO moves to v1.1 (D-185).
+  * biokids-shell ships the BioKids browser extension's source; its
+    postinst packs and signs it with a key made on the machine
+    (biokids-admin pack-extension), and the daemon force-installs it. A
+    blocked site opens the launcher's own page, and visited sites are
+    recorded by host name only (D-187).
+  * One launcher port per child, 7879 + uid % 100, closed to every other
+    uid by nftables (D-188).
+  * Records are deleted on a schedule set in [retention] of
+    /etc/biokids/config.toml (D-189).
+  * biokids-ai: biokids-wiki.service and biokids-wiki.path serve the
+    offline Wikipedia on 127.0.0.1:7877 once it is downloaded (D-190);
+    purge deletes the downloaded models.
+  * biokids-panel: biokids-unprovision@.service removes a child from
+    BioKids and leaves the account and its home (D-191); a history screen
+    (D-192); limits per kind of app (D-193).
+  * The AI screen watcher, voice cloning and ElevenLabs are cut (D-180,
+    D-181); migration c41d8e0f5a92 drops their columns and table.
+  * Logs go to the journal: /var/log/biokids and
+    /etc/logrotate.d/biokids-core are removed (D-183).
+  * The virtual-terminal guards move to /usr/lib/systemd/logind.conf.d/
+    and /usr/share/X11/xorg.conf.d/; the old conffiles in /etc are removed
+    on upgrade.
+  * The browser policy is removed on "remove", not only on purge.
+  * Security fixes from the 2026-10-06 review (D-171), and a daemon
+    watchdog, filter checks and verified locks (D-172).
+  * Requests answered from the panel, the parent's own recorded voice,
+    read-aloud for pre-readers, day schedules, mail to the parent and an
+    encyclopedia for the assistant (D-173 to D-178).
+
+ -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Wed, 07 Oct 2026 12:00:00 +0300
+
 biokids (0.1.0-1) trixie; urgency=medium
 
   * Initial packaging of BioGuard: biokids-core, biokids-daemon,

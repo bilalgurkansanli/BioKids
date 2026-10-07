@@ -19,7 +19,9 @@ parental-control tool that implies more protection than it provides is worse tha
 | Changing the system clock to get more time | `CLOCK_BOOTTIME` accounting (D-41) |
 | Closing or minimising the launcher | Chromium kiosk, no WM decorations, hotkeys suppressed |
 | Opening a terminal | no terminal emulator installed, TTY switching disabled |
-| Typing a blocked URL | Chromium policy + the children's DNS filter (D-167); the block page of D-64 is not built yet |
+| Typing a blocked URL | Chromium policy + the children's DNS filter (D-167); the extension turns the error into the launcher's block page (D-187) |
+| Removing or switching off the BioKids extension | force-installed by policy, `chrome://extensions` closed, every other extension blocked (D-187) |
+| Opening a sibling's launcher, or posting to it | the `launchers` nftables chain: a launcher port accepts only its own child's uid (D-188) |
 | Changing the DNS server in settings | settings app hidden; nftables sends the children's port 53 to the filter whatever server is set |
 | Using a DoH-capable site or app | `DnsOverHttpsMode: off`; DoH hosts in the blocklist; the children's DoT and HTTPS to known DoH resolvers rejected |
 | Asking the assistant something harmful | word list, classifier and a checked answer; a fixed refusal, and the parent is told (D-165) |
@@ -29,7 +31,7 @@ parental-control tool that implies more protection than it provides is worse tha
 | Unplugging the network to escape the filter | fails closed: no DNS means no browsing |
 | Creating a new user account | no sudo, `useradd` unavailable |
 | Reading the parent's files | standard Unix permissions, separate home |
-| Finding the parent panel | PIN gate plus URL blocked in the child profile |
+| Finding the parent panel | PIN gate; nftables rejects the children's connections to the panel's port and the tailnet (D-171) |
 | Guessing the PIN | argon2id, 5 attempts then 15-minute lockout, audited |
 
 ### Out of scope — document, do not pretend
@@ -64,6 +66,9 @@ Never add a claim to marketing copy that contradicts this list.
 | `biokids-wiki` | `biokids-ai` system user | serves the offline Wikipedia on `127.0.0.1:7877` once a parent downloaded it (D-190); no capabilities, `IPAddressDeny=any` except localhost |
 | `biokids-dns` | started as root, `dnsmasq` drops to its own user | the children's DNS filter, on loopback port 5354 only (D-167) |
 | `biokids-remote-setup` | root, oneshot, only when the parent asks | installs Tailscale and signs it in for phone access (D-169); apt needs root |
+| `biokids-provision@` | root, oneshot, one instance per child added | creates the child's account and session files: one fixed command, `biokids-admin provision-child %I`, because the panel's sandbox cannot write `/etc` or `/home` (D-142) |
+| `biokids-unprovision@` | root, oneshot, one instance per child removed | the reverse, `biokids-admin unprovision-child %I`: out of `biokids-child`, a `nologin` shell, only BioKids' own unchanged session files removed; the account and its home stay (D-191) |
+| the BioKids extension | inside Chromium, every profile on the machine | `webNavigation` and `storage`, host permission `http://127.0.0.1/*` only; no content scripts, no `tabs` (D-187) |
 
 Root services run with systemd hardening:
 
@@ -142,11 +147,34 @@ entry in `DECISIONS.md` and a note in the README.**
 
 Zero telemetry. No crash reporting. No version ping. No analytics.
 
+The browser extension (D-187) adds no row. It connects only to the child's own launcher
+on `127.0.0.1`, its update manifest is a `file://` path on the machine, and the host
+names it reports go into the family's database and nowhere else. The offline Wikipedia
+(D-190) adds none either: `biokids-wiki` serves the files the assistant's download
+already fetched, on loopback, under `IPAddressDeny=any`.
+
 Remote access has two costs worth naming, both from Tailscale rather than BioKids
 (D-157). Its client uploads diagnostic logs by default, which is why the runbook
 turns that off. And `tailscale serve` needs HTTPS certificates enabled on the
 tailnet, which puts the machine's `*.ts.net` name in the public Certificate
 Transparency logs: the name becomes public, the panel does not.
+
+### What stays on the machine, and for how long
+
+Nothing leaving the device is half of principle 1; the other half is not keeping more
+than the family needs. The daemon deletes what is past its window once a day (D-189),
+from `[retention]` in `/etc/biokids/config.toml`:
+
+| Records | Key | Default |
+|---|---|---|
+| usage events, which include the sites visited, and the assistant's alerts | `activity_days` | 30 days |
+| minutes per day and per app (`usage_tick`, `ledger_day`) | `usage_days` | 400 days |
+| the audit log | `audit_days` | 365 days |
+| the children's requests | `requests_days` | 90 days |
+
+Panel sessions are deleted a day after their idle timeout, and only the 20 newest boot
+epochs are kept. Removing a child deletes everything recorded for them except the audit
+log (D-191); purging `biokids-core` deletes the database, if the parent says yes.
 
 ---
 
@@ -179,8 +207,22 @@ table inet biokids {
     meta skuid @children ip daddr 100.64.0.0/10 reject   # the tailnet
     meta skuid @children ip6 daddr fd7a:115c:a1e0::/48 reject
   }
+
+  chain launchers {
+    type filter hook output priority 0; policy accept;
+    ip daddr 127.0.0.1 tcp dport 7880 meta skuid != 1001 reject   # 7879 + 1001 % 100
+    ip6 daddr ::1 tcp dport 7880 meta skuid != 1001 reject
+    ip daddr 127.0.0.1 tcp dport 7881 meta skuid != 1002 reject
+    ip6 daddr ::1 tcp dport 7881 meta skuid != 1002 reject
+  }
 }
 ```
+
+Each child's launcher listens on a port of its own, `shell.port + uid % 100` (D-188),
+and answers as that child on the daemon's socket. The `launchers` chain lets nobody
+else connect to it: not a sibling logged in at the same time, not the parent, not a
+page in anyone's browser. The extension, which the machine-wide policy installs in the
+parent's Chromium too, finds no launcher there and does nothing.
 
 The panel is closed here, by uid, rather than in the browser (D-171). A URL list
 closes the spellings it names: `127.0.0.1.nip.io:7878`, the machine's tailnet
@@ -215,9 +257,9 @@ per machine, so the strictest child's mode applies; the parent's panel is not in
 ```json
 {
   "URLBlocklist": ["*", "file://*", "javascript://*", "chrome://settings", "..."],
-  "URLAllowlist": ["127.0.0.1:7879", "eba.gov.tr", "trtcocuk.net.tr"],
+  "URLAllowlist": ["127.0.0.1:7880", "127.0.0.1:7881", "eba.gov.tr", "trtcocuk.net.tr"],
   "AudioCaptureAllowed": false,
-  "AudioCaptureAllowedUrls": ["http://127.0.0.1:7879"],
+  "AudioCaptureAllowedUrls": ["http://127.0.0.1:7880", "http://127.0.0.1:7881"],
   "VideoCaptureAllowed": false,
   "DnsOverHttpsMode": "off",
   "ForceGoogleSafeSearch": true,
@@ -225,7 +267,7 @@ per machine, so the strictest child's mode applies; the parent's panel is not in
   "IncognitoModeAvailability": 1,
   "DeveloperToolsAvailability": 2,
   "ExtensionInstallBlocklist": ["*"],
-  "ExtensionInstallForcelist": ["<biokids-extension-id>;file:///usr/share/biokids/ext/update.xml"],
+  "ExtensionInstallForcelist": ["<extension-id>;file:///var/lib/biokids-ext/updates.xml"],
   "BrowserSignin": 0,
   "SyncDisabled": true,
   "PasswordManagerEnabled": false,
@@ -235,9 +277,27 @@ per machine, so the strictest child's mode applies; the parent's panel is not in
 }
 ```
 
-Note `DownloadRestrictions: 3` (block all downloads) for the 4–7 band; 8–10 gets `2`
-(block dangerous). `ExtensionInstallBlocklist: ["*"]` combined with the forcelist means
+`DownloadRestrictions: 3` blocks every download, for every child: there is one policy
+for the machine. `ExtensionInstallBlocklist: ["*"]` combined with the forcelist means
 our extension is the only one that can exist.
+
+### The extension
+
+`ExtensionInstallForcelist` names the BioKids extension (D-187) only once it has been
+packed. biokids-shell's postinst runs `biokids-admin pack-extension`, which signs it as
+a CRX3 with a key made on this machine, `/var/lib/biokids/extension-key.pem` (0600, in
+the 0700 data directory, never in the repository or a package), and writes
+`biokids.crx`, `updates.xml` and `extension-id` into `/var/lib/biokids-ext` (0755, so
+the child's Chromium can read them). The id comes from the key, so nothing off the
+machine can sign an update Chromium would accept.
+
+What it can see is the address of each top-level navigation in a tab's main frame,
+through `webNavigation`. What it sends is the host name, `{"host": "…"}`, to the
+child's own launcher at `POST /visit`, at most once per host per ten minutes; the
+launcher accepts a host name and nothing else, and passes it to the daemon over
+`shell.sock`. A navigation closed by the policy or the DNS filter is sent to the
+launcher's `/blocked` page. It has no content scripts and no `tabs` permission, so it
+cannot read a page, a title or a form, and it never reports an address on the machine.
 
 ### Config regeneration must be atomic
 
@@ -292,6 +352,9 @@ We do not build, and will not accept contributions for:
   saved or sent. Background listening, wake words and keeping audio stay out
   of scope.
 - live screen mirroring of a child's session
+- a record of the pages a child reads: the extension reports a site's host name,
+  never its path, query, title or contents, and the child is told on their first
+  run (D-187)
 - location tracking
 - reading the contents of private messages
 

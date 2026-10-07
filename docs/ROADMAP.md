@@ -1,30 +1,51 @@
 # ROADMAP.md
 
-Phases are ordered by risk, not by excitement. Each has an exit criterion that can be
-demonstrated. Do not start a phase before the previous one meets its criterion.
+Releases are ordered by risk, not by excitement. Each has an exit criterion that can
+be demonstrated. Do not start a release's work before the previous one meets its
+criterion.
 
 There is no deadline. The effort estimates assume roughly one focused day per week.
 
+Two releases, decided by the owner on 2026-10-07 (D-185): **v1.0 is the packages**,
+installed from the project's APT repository on an existing Debian 13; **v1.1 is the
+ISO**. What did not make v1 is listed under *Cut from v1*, with its decision.
+
 ---
 
-## Phase 0 — BioGuard MVP  *(current — code complete, not yet released)*
+## v1.0 — the packages  *(release candidate: 0.1.0-2)*
 
-**Goal:** a parent can install a `.deb` on stock Debian 13, set a daily limit, and the
-child's session enforces it with spoken warnings, manageable from a phone.
+**Goal:** a family installs BioKids on stock Debian 13 with apt, from the project's own
+repository (D-27), sets a daily limit, and the child's session enforces it with spoken
+warnings, manageable from a phone.
 
-Scope:
+### What is built
 
-- `biokids-core`: config, SQLite schema + Alembic, i18n scaffold, policy engine
-- `biokids-daemon`: logind session watcher, BOOTTIME ledger, enforcer, IPC socket
-- `biokids-panel`: setup wizard, Today dashboard, per-child quota editor, PIN auth,
-  audit log
-- `biokids-voice`: Piper with stock Turkish voices, warning lines only
-- `biokids-shell`: minimal launcher — app tiles, countdown ring, banners
-- one `.deb` per component, installable and removable cleanly
-- Tailscale `serve` integration and documentation
-- pytest suite for the ledger and the policy engine
+Every item below is written, tested, and in the `0.1.0-2` packages.
 
-Out of scope: filtering, AI, voice cloning, rewards, categories, ISO.
+- **Time.** `CLOCK_BOOTTIME` accounting that a changed clock cannot cheat (D-40,
+  D-172); daily quotas, time windows and per-weekday schedules (D-176); forced breaks
+  and earned time; limits per kind of app (D-193); the end sequence of lock, countdown
+  and shutdown, scoped to whoever is at the machine (D-138); warnings at 10, 5 and 1
+  minute, spoken by espeak-ng, MBROLA or Piper and shown over the child's app (D-137,
+  D-160, D-161), in the parent's own recorded voice where they made one (D-174).
+- **The child.** A full-screen launcher for two age bands, a time ring with the minutes
+  (D-162), login by picture at a BioKids login screen (D-155, D-170), read-aloud for
+  children who cannot read yet (D-175), a big close button on every app (D-163), the
+  "Sor Bana" assistant when a parent switches it on (D-165, D-166), and offline
+  Wikipedia as a tile a parent opts in to (D-190).
+- **Filtering.** The children's DNS through dnsmasq and nftables, harmful categories
+  always closed, the open internet or only chosen sites (D-167); a machine-wide
+  Chromium policy (D-171); the BioKids extension, which turns a closed site into the
+  launcher's block page and reports host names for the history (D-187).
+- **Asking.** "Büyüğüme sor" for more time, a site or an app, answered in one tap
+  (D-173).
+- **The parent.** The setup wizard (D-182); Today, Children, History (D-192), the audit
+  log and Settings; editing and removing a child (D-191); mail through the parent's own
+  server (D-177); phone access over Tailscale with one button (D-169).
+- **The machine.** A daemon that locks the children when it, the filter or a lock fails
+  (D-139, D-172); one launcher port per child, closed to everyone else (D-188); records
+  deleted on a schedule (D-189); clean upgrade, remove and purge (T8.5); CI that
+  installs, upgrades and purges on a clean trixie.
 
 **Exit criterion.** On a fresh Debian 13 VM: `apt install biokids` → wizard → phone
 reaches the panel over Tailscale → set a 20-minute quota → log in as the child → the
@@ -34,121 +55,85 @@ Change the system clock forward 3 hours; nothing changes.
 
 ### Where it stands
 
-Every component is written and tested. `tests/test_acceptance.py` runs the criterion
-above end to end in one process — the real wizard, policy engine, ledger, daemon loop,
-launcher and both sockets' handlers — with only logind, `systemctl` and the socket
-transport faked.
+`tests/test_acceptance.py` runs the criterion above end to end in one process. On a
+Debian 13 VM, `docs/VM-RUNBOOK.md` §0–§6 have passed: the packages build, pass lintian
+and install, the wizard completes, a child logs in by their picture, the panel opens on
+a phone over Tailscale, upgrade, remove and purge behave, and the virtual-terminal
+guards hold.
 
-**Two things are still open, and both of them are the VM:**
+**What is left before v1.0 is tagged:**
 
-1. **Nothing has been built or installed as a `.deb`.** `debian/` is complete and
-   written against Debian policy, but `dpkg-buildpackage` has never run — the
-   development host is Windows, and `debian/README.source` §7 lists exactly what that
-   leaves unverified.
-2. **The criterion has not been run on a machine.** A passing test says the pieces
-   agree with each other, not that Chromium starts, that logind answers, or that the
-   sandboxed panel can reach systemd. T9 still ends with a screen recording.
+1. `docs/VM-RUNBOOK.md` §7 — the criterion on a fresh VM, recorded — and §8, the
+   checks for what 0.1.0-2 added.
+2. The archive key. `biokids-archive-keyring` cannot be built until
+   `debian/biokids-archive-keyring.asc` is committed (`debian/README.source`), and its
+   fingerprint belongs in the README. Until then the release workflow cannot publish
+   the APT repository.
+3. The two contact placeholders: the security address in `SECURITY.md` and the
+   enforcement address in `CODE_OF_CONDUCT.md`.
+4. The version. `release.yml` publishes only a tag that matches the upstream version
+   in `debian/changelog`, so a `v1.0.0` tag needs a `1.0.0-1` entry (and
+   `pyproject.toml` and `biokids_core.__version__` to match); `0.1.0-2` itself could
+   only be tagged `v0.1.0`.
 
-`docs/VM-RUNBOOK.md` is both of those as a sequence: build, install, wizard, child
-session, the T8.5 dpkg matrix, the virtual-terminal guards, and the exit criterion.
-Every command in it is checked against this repository, and each step says what a pass
-looks like and which item of `debian/README.source` §7 it closes.
-
-**The voice was a third blocker and is now closed** (D-137). The licences were checked,
-and the answer was no: `tr_TR-dfki-medium`'s dataset is CC-BY-NC-SA, `fahrettin` and
-`fettah` were withdrawn from the Piper catalogue at their contributors' request, and
-`piper-tts` is not in Debian 13 at all. So there is nothing to bundle and nothing worth
-downloading at first run. espeak-ng speaks the warnings — in Debian main, GPL-3+,
-Turkish, no model file — and Piper is still preferred wherever a family installs it.
-
-*Estimate: 1–2 sessions on a VM. Every task group is written and tested.*
+The voice question is closed (D-137): no Turkish Piper voice may be redistributed and
+`piper-tts` is not in Debian 13, so espeak-ng speaks and Piper is used wherever a family
+installs it.
 
 ---
 
-## Phase 1 — Filtering and the full child experience
+## v1.1 — the ISO
 
-**Goal:** the machine is genuinely safe to hand to a 5-year-old.
+**Goal:** a stranger downloads the ISO, writes it to a USB stick, installs it on an old
+laptop, and has a working supervised machine in under 20 minutes without reading
+documentation.
 
-- dnsmasq resolver, blocklist ingestion, SafeSearch and YouTube enforcement
-- nftables DNS redirect and DoH blocking
-- Chromium managed policies, per-child, allowlist and blocklist modes
-- the Chromium extension and navigation reporting
-- the block page, the "ask a parent" flow, the request queue in the panel
-- the full launcher: age bands, catalog curation, character cards, brightness and
-  volume tiles, shutdown tile
-- LightDM avatar greeter and theming
-- category limits, forced breaks, earned time
-- history and reports, email digests
+- built with `live-build` under `iso/`: package lists, branding, Plymouth theme, the
+  BioKids packages from our own APT repository (`docs/PACKAGING.md` §3)
+- installed by Debian's own installer, **preseeded** — not Calamares (D-185)
+- the setup wizard on first boot
+- boots in VirtualBox (BIOS, then UEFI) and from a USB stick on at least two real
+  machines
+- Secure Boot through Debian's signed shim, verified on real hardware before it is
+  claimed (D-17)
+- hosted on archive.org, mirrored on GitHub Releases when under 2 GB (D-28)
 
-**Exit criterion.** In allowlist mode a 4-year-old profile can reach exactly four
-approved sites and nothing else; typing another address shows the block page; pressing
-"ask a parent" produces a request on the phone; approving it makes the site work within
-five seconds. Thirty minutes in an educational app grants thirty bonus minutes of games.
-
-*Estimate: 10–14 sessions.*
-
----
-
-## Phase 2 — Voices and AI
-
-Order matters: voices first, because they are self-contained and delightful; AI second,
-because it is the part most likely to eat a month.
-
-**2a — Zio & Sio**
-- guided voice recording in the panel
-- Piper → OpenVoice V2 cloning pipeline, validated on Turkish
-- per-event speech toggles, editable voice lines
-- character card animations and expressions
-- optional ElevenLabs backend behind an explicit warning
-
-**2b — AI supervision**
-- trigger plumbing and the event contract
-- layer 1 (lists) and layer 2 (OCR keyword) scoring
-- llama.cpp packaging, model downloader, hardware tiering
-- the VLM prompt, structured output, risk scoring, age-band thresholds
-- evidence storage, retention pruning, the parent's alert view
-- the supervision indicator and the child explanation screen
-
-**Exit criterion.** A parent records 90 seconds of audio and the 10-minute warning is
-spoken in a recognisable version of their own voice. Separately: opening an unapproved
-site produces a scored alert on the parent's phone within 10 seconds, with the reason,
-and no screenshot is written to disk for a benign page.
-
-*Estimate: 12–16 sessions. The cloning pipeline and the Blackwell CUDA build are the
-two things most likely to go long.*
-
----
-
-## Phase 3 — The ISO
-
-**3a — live image**
-- `live-build` config, package lists, preseed, branding, Plymouth theme
-- BioKids packages preinstalled from our own APT repo
-- first-boot wizard
-- boots in VirtualBox and from a USB stick on at least two real machines
-
-**3b — installer**
-- Calamares with a simplified, child-distro-appropriate flow
-- partitioning, user creation wired into the BioKids wizard
-- Secure Boot verification on real hardware
-
-**Exit criterion.** A stranger downloads the ISO, writes it to a USB stick, installs it
-on an old laptop, and has a working supervised machine in under 20 minutes without
-reading documentation.
+Do not start before v1.0 is released: the APT repository is what the image installs
+from, and every `lb build` is 20–40 minutes (`iso/README.md`).
 
 *Estimate: 10–15 sessions, most of it on real hardware.*
 
 ---
 
-## Phase 4 — Hardening and polish
+## Cut from v1
 
-- per-application network control via nftables cgroups
-- `biokids-harden` script with check/apply/undo
-- multi-child scheduling conflicts, shared-machine edge cases
-- accessibility: contrast, font scaling, dyslexia-friendly font option
-- Kiwix offline content packaging
-- documentation site, screenshots, a short demo video
+Decided by the owner on 2026-10-07. Not "later in v1": out, each with its reason.
+
+| Cut | Decision |
+|---|---|
+| The AI screen watcher: event-triggered screenshots, OCR, a local VLM, risk scores. The assistant stays. | D-180 |
+| Voice cloning (OpenVoice) and the ElevenLabs cloud backend. The parent's own recordings replace both. | D-181 |
+| The wizard's email step, which asked nothing. Mail is set up under Settings. | D-182 |
+| `/var/log/biokids` and its logrotate file. Everything logs to the journal. | D-183 |
+| `biokids-harden` (GRUB password, recovery mode, USB boot). `docs/SECURITY.md` §6 says how to do it by hand. | D-184 |
+
+---
+
+## Later
+
+Ideas that are still worth having, in no order. None is promised.
+
+- per-application network control via nftables cgroups (D-66)
+- per-app category overrides under Advanced (D-44)
+- an opt-in extra blocklist for ads and tracking (D-62)
+- weekly reports in the panel, not only in the Sunday mail (D-37, D-177)
+- launcher ports that cannot collide: two children whose uids differ by a multiple of
+  100 share one today (D-188)
+- accessibility: contrast, font scaling, a dyslexia-friendly font (`docs/UX.md` §5)
+- a documentation site, screenshots of the launcher, a short demo video
 - translation infrastructure so other languages can be contributed
+- the screen watcher, only if it can be built without breaking principles 1 and 2
+  (`docs/AI-LAYER.md`)
 
 ---
 
@@ -158,8 +143,8 @@ Do not start these. They are recorded so they stop being distractions.
 
 | Idea | Why later |
 |---|---|
-| ARM64 / Raspberry Pi image | doubles the test matrix; no GPU for the AI layer |
-| Wayland support | rewrites screenshot, focus tracking and kiosk. v2 |
+| ARM64 / Raspberry Pi image | doubles the test matrix (D-11) |
+| Wayland support | rewrites focus tracking, window raising and the kiosk (D-12). v2 |
 | Android companion app | the PWA covers it |
 | Cloud sync / family accounts | directly contradicts the privacy promise |
 | ~~A chat interface for the child~~ | built as the assistant at the owner's request (D-165); Zio and Sio stay one-way |
@@ -171,10 +156,9 @@ Do not start these. They are recorded so they stop being distractions.
 
 ## Milestones worth announcing publicly
 
-1. First working `.deb` (end of Phase 0) — a post with a screen recording
-2. Filtering + launcher (end of Phase 1) — the first real portfolio entry
-3. Voice cloning demo (2a) — the most shareable moment in the project
-4. First ISO (3a) — a Reddit r/linux post and a DistroWatch submission
+1. v1.0 on the APT repository — a post with the screen recording of
+   `docs/VM-RUNBOOK.md` §7.5
+2. First ISO (v1.1) — a Reddit r/linux post and a DistroWatch submission
 
-Do not submit to DistroWatch before Phase 3b. They do not list unfinished projects and
-a rejection is hard to undo.
+Do not submit to DistroWatch before the ISO installs on real hardware. They do not list
+unfinished projects and a rejection is hard to undo.
