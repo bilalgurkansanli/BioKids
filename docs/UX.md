@@ -113,6 +113,9 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
   64-pixel title bar, always in that same place. No app starts full screen, because
   full screen hides the title bar and the button with it. The launcher itself has no
   title bar; it is never closed, only covered.
+- **A tile that cannot work is not drawn.** An app whose program is not installed
+  (D-164), or a site served on this machine with nothing behind it yet, such as
+  Vikipedi before the encyclopedia is downloaded (D-190).
 - `prefers-reduced-motion` is respected everywhere.
 - High contrast mode and a font-scale slider live in the parent panel, not the child UI.
 
@@ -120,9 +123,16 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
 
 1. **Home** — the tile grid.
 2. **Launching** — big icon, app name, a progress bar.
-3. **Blocked** — Zio or Sio looking concerned, one sentence, and a large
-   **"Anneme sor" / "Babama sor"** button. Never a URL, never an error code, never the
-   word "forbidden".
+3. **Blocked** — Zio or Sio looking concerned, one sentence ("Burası senin için
+   değil"), and a large **"Büyüğüme sor"** button: it names no parent, because the
+   request goes to whoever holds the one parent account (D-135). Never a URL, never an
+   error code, never the word "forbidden". A site the policy or the DNS filter closed
+   lands here too: the extension sends the tab to it instead of Chromium's error page
+   (D-187).
+   **The kind of app is used up** (D-193) is a second form of the same screen: "Bunun
+   bugünlük süresi bitti", a line telling the child to pick something else from the
+   home screen, and only a way back — no ask button, because minutes a parent grants
+   go to the day, not to games, and a "yes" would not open the app.
 4. **Break** — a calm full-screen timer, a suggestion ("gözlerini dinlendir"), no
    dismiss button.
 5. **Time up** — friendly, a countdown, a note that unsaved work should be saved.
@@ -131,9 +141,11 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
    sentence actually being said in a bubble, the ring underneath. Seven seconds,
    then the app comes back. Chosen by the owner over a corner card, which an app
    window simply covered.
-6. **First run** — the supervision explanation, age-appropriate, spoken for 4–7.
-7. **Earned** — a brief celebration when bonus minutes arrive. Keep it to 2 seconds.
-8. **Sor Bana** (D-165), when a parent has switched it on — a big text box and a
+7. **First run** — the supervision explanation, age-appropriate, spoken for 4–7. It
+   says the family can see which sites the child opens, the site's name and not its
+   pages (D-187).
+8. **Earned** — a brief celebration when bonus minutes arrive. Keep it to 2 seconds.
+9. **Sor Bana** (D-165), when a parent has switched it on — a big text box and a
    send button, and with voice on (D-166) a round microphone button the child holds
    while speaking, which says "Dinliyorum…" while it listens. Under the box, always:
    "Sorduğun bazı soruları ailen görebilir." The answer appears in a bubble and Zio
@@ -147,16 +159,22 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
 
 ### 3.1 Information architecture
 
+The menu has five entries (`templates/base.html`):
+
 ```
-Bugün / Today          ← default, the only screen most parents open
-Çocuklar / Children    → per child: time, apps and sites (D-164), internet (D-167),
-                         assistant (D-165), voice
-İstekler / Requests    ← badge when pending; this must be reachable in one tap
-Geçmiş / History       → usage charts, sites, alerts
-Sesler / Voices        → Zio & Sio, recording
-Ayarlar / Settings     → PIN, email, Tailscale, language, updates, data
+Bugün / Today          ← default, the only screen most parents open; a badge
+                         counts pending requests, and the banner opens İstekler
+Çocuklar / Children    → per child: Süre kuralları (time), Uygulamalar ve siteler
+                         (D-164), İnternet (D-167), Asistan (D-165), Düzenle (D-191)
+Geçmiş / History       → fourteen days of minutes, and one day's apps, sites and
+                         requests (D-192)
 Kayıtlar / Audit log
+Ayarlar / Settings     → PIN, passphrase, email, phone access, language, and the
+                         parent's own voice (Sesler, D-174)
 ```
+
+**İstekler / Requests** is not in the menu: it is one tap from Today, where the badge
+and the banner are, because a child is waiting at the computer.
 
 ### 3.2 The Today screen
 
@@ -198,24 +216,26 @@ listed with the child's words and the reason, and can be marked as seen.
 
 ### 3.4 The setup wizard
 
-Ten steps, each skippable with a sane default, under five minutes total.
+Nine steps, each skippable with a sane default, under five minutes total.
 
 1. Language
 2. Parent account and PIN
 3. Passphrase and the 8-word recovery code (shown once, with a "I wrote it down" check)
 4. Add a child: name, birth year, avatar
-5. Choose apps from the catalog (pre-selected by age)
-6. Daily quota and time window (pre-filled by age: 1 h for 4–7, 2 h for 8–10)
-7. Filter mode (pre-selected by age: allowlist for 4–7, blocklist for 8–10) and the
-   optional recommended blocklist
+5. Choose apps from the catalog (pre-selected by age). Volume, brightness and
+   shutdown are not offered as boxes: every child has them (D-194).
+6. Daily quota and time window (pre-filled by age)
+7. Internet: **Açık internet, zararlı siteler kapalı** (the default, D-167) or
+   **Sadece seçtiğim siteler**
 8. Phone access — one button: BioKids installs Tailscale if needed, shows its
    sign-in page as a button and a QR code, then the panel's address and its QR
    code (D-169)
-9. Email notifications — SMTP, with a Gmail app-password walkthrough
-10. Optional extras: voices, AI supervision. Both explained honestly, both default off
-    for AI and on for stock voices.
+9. Extras: Zio and Sio's voices, on by default. The assistant is shown, disabled; it
+   is switched on per child under **Çocuklar → Asistan** (D-165).
 
-Ends with a summary card and a "test it now" button that starts a 2-minute demo session.
+Email is not a step: it is set up under **Ayarlar**, where it can be tested (D-182).
+The wizard ends on a closing screen with the child's picture and "Panele git", which
+asks for one restart so the login screen shows the child (D-155).
 
 The parent rarely has to find the panel: until setup is complete, the wizard opens
 by itself in the browser of whoever logs in, and afterwards "BioKids Ebeveyn
@@ -225,8 +245,40 @@ their own picture and name, over Zio and Sio, never the operating system's logo.
 ### 3.5 PWA
 
 `manifest.json`, maskable icon, `display: standalone`, a service worker caching the
-shell so the app opens instantly and shows the last known state when the tailnet is
-briefly unreachable. Never cache live data.
+shell so the app opens instantly. Never cache live data: with the tailnet unreachable
+the parent sees `/offline`, one sentence saying the panel could not be reached,
+rendered without the session so the cached copy holds no name and no token (D-194).
+
+### 3.6 A child's details
+
+**Çocuklar → Düzenle** (`/children/{id}/edit`, D-191): name, birth year, picture and
+language, and under **Gelişmiş** the supervision indicator — shown, a small icon, or
+hidden (the first-run explanation still runs, D-76). The account name is shown, not
+editable. Saving a new name or picture updates the login screen.
+
+At the bottom, closed by default, **"Elif adlı çocuğu BioKids'ten kaldır"**: red, behind the
+passphrase, and saying plainly what it does — times, apps, requests and history are
+deleted and nobody can log in to the account any more — and what it does not: the
+account and its files (pictures, drawings) stay, with the command an administrator
+would use to delete them too. It is refused while the child is at the computer.
+
+### 3.7 History
+
+**Geçmiş** (`/history`, D-192) answers "what did you do on the computer today?". For one
+child at a time (a button per child when there are several): fourteen bars, one per
+day, each a link to that day and coloured when the day went over its quota. Under them,
+for the chosen day: the apps by time, the sites opened (one line per site, with the
+first and last time), and the child's requests with their answers. A note under the
+sites says that only the site's name is kept, that the child was told, and that it is
+deleted after 30 days. No chart library and no script; a tap is a link.
+
+### 3.8 Limits per kind of app
+
+The time screen (**Süre kuralları**) keeps them under **Gelişmiş** (D-193): minutes a
+day for Oyun, Eğitim, İnternet and Serbest, with one line of help ("for example, at
+most 30 minutes a day of games"). An empty field is no limit of its own; the day's time
+still applies. The child sees a used-up kind as the second form of the Blocked screen
+(§2.5).
 
 ---
 

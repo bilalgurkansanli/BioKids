@@ -5,19 +5,166 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/),
 and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-Versions stay in `0.x` until Phase 1 is complete (`docs/PACKAGING.md` §1). Until then a
-minor bump may change the database schema, the config file format or the IPC vocabulary;
-each such change is listed here with what it means for an existing installation.
-`1.0.0` is the point where a stranger can install the ISO and expect to be supported
-afterwards.
+Versions stay in `0.x` until v1.0, the packages from the project's APT repository; the
+ISO is v1.1 (D-185, `docs/PACKAGING.md` §1). Until then a release may change the
+database schema, the config file format or the IPC vocabulary; each such change is
+listed here with what it means for an existing installation. The headings carry the
+Debian version, because that is what `apt policy biokids` shows.
 
 ## [Unreleased]
 
-Phase 0 — the BioGuard MVP — is in progress. Nothing has been released or tagged yet;
-the exit criterion is in `docs/ROADMAP.md` and `v0.1.0` is tagged when it is met
-(`docs/TASKS-PHASE0.md` T9). `pyproject.toml` already carries `0.1.0`: that is the
-version being built towards, not one that has shipped. What follows is what has landed
-so far.
+Nothing yet.
+
+## [0.1.0-2] - 2026-10-07
+
+The v1.0 release candidate. Not published: the APT repository waits for its archive
+key (`docs/ROADMAP.md`). Decisions D-171 to D-194; read them in `docs/DECISIONS.md`.
+An upgrade from 0.1.0-1 runs whichever of the migrations `3e8b51c0d2a7` (request
+kinds), `9a4f2c7e1b36` (day schedules) and `c41d8e0f5a92` (the cuts) the database has
+not seen, after `biokids-admin backup-db` has copied it; it moves the virtual-terminal
+guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
+`/etc/biokids/ext.token`.
+
+### Added
+
+- **The browser extension** (D-187). A site the filter closed opens the launcher's own
+  page with "Büyüğüme sor" instead of Chromium's error, and each site a child opens is
+  recorded by its host name only, never the page; the child is told on their first
+  run. It is packed and signed on the machine by biokids-shell's postinst, with a key
+  made there, and force-installed by the browser policy.
+- **History** (D-192): two weeks of minutes, and for any day the apps, the sites opened
+  and the requests.
+- **Editing and removing a child** (D-191): name, birth year, picture, language and the
+  supervision indicator; removal is behind the passphrase, never while the child is at
+  the computer, and leaves the account and its files in place.
+- **Limits per kind of app** (D-193) under the time screen's Gelişmiş: minutes a day
+  for games, learning, web and other apps.
+- **Offline Wikipedia for children** (D-190): a Vikipedi tile a parent opts in to,
+  served on the machine by `kiwix-serve` once the encyclopedia is downloaded.
+- **Records are deleted on a schedule** (D-189): `[retention]` in `config.toml`, sites
+  and alerts after 30 days by default, requests after 90, the audit log after a year,
+  daily minutes after 400.
+- **"Anneme sor" answered** (D-173): requests carry a kind (time, site, app), an
+  İstekler screen answers them in one tap, the launcher offers "Biraz daha süre iste"
+  in the last fifteen minutes, the child is told the answer on screen and by voice, and
+  Today gains "Kilidi aç" and +30.
+- **The parent's own voice** (D-174) for the seven spoken lines, recorded on the phone.
+- **For a child who cannot read yet** (D-175): tiles and screens read themselves in the
+  4–7 band, and a sun sets along the time ring.
+- **Hours are picked, not typed** (D-176): two ranges per kind of day with the
+  browser's time picker, and any weekday with its own minutes and hours.
+- **Mail to the parent** (D-177) through their own SMTP server: alerts and requests
+  within a minute, the week on Sunday evening, retried when offline.
+- **A local encyclopedia for the assistant** (D-178): Kiwix's Wikipedia summaries,
+  searched by `kiwix-serve` inside the assistant's own network namespace. The
+  self-harm answer names 183 and 112.
+- **CI** shellchecks the maintainer scripts, installs, upgrades and purges the packages
+  on a clean trixie, checks every migration against the models and back, and a release
+  runs the suite before it publishes.
+
+### Changed
+
+- **One launcher port per child** (D-188), `7879 + uid % 100`, so two children logged
+  in at once each have their own; every child's launcher is in the browser policy.
+- **The setup wizard has nine steps** (D-182). Its email step asked nothing and is
+  gone; mail is set up under Ayarlar.
+- **The panel's menu** is Bugün, Çocuklar, Geçmiş, Kayıtlar, Ayarlar; İstekler is one
+  tap from Today, Sesler from Ayarlar.
+- **Logs go to the journal** (D-183).
+- **The virtual-terminal guards** are packaged defaults in
+  `/usr/lib/systemd/logind.conf.d/` and `/usr/share/X11/xorg.conf.d/`, so "apt remove"
+  takes them away; the old `/etc` copies are removed on upgrade.
+- **The browser policy goes on "apt remove"**, not only on purge, so a parent's own
+  Chromium is not left locked down. Purging `biokids-ai` deletes the downloaded models.
+- **Configuration**: keys earlier versions had are ignored with a warning instead of
+  stopping the daemon; the shipped `config.toml` documents every default, commented
+  out. Tailscale's key goes to `/etc/apt/keyrings`.
+- **The code was split** (D-186): the panel's routes into one module per area, the
+  daemon's supervisor into one module per concern, with no change in behaviour.
+- **The release scope** (D-185): v1.0 is the packages; the ISO is v1.1, built with
+  `live-build` and a preseeded installer. `docs/DECISIONS.md` is compacted; the full
+  original wording is `git show 435a526:docs/DECISIONS.md`.
+
+### Removed
+
+- **The AI screen watcher** (D-180), never built: its policy switches, the screenshot
+  columns of `ai_alert` and `evidence_dir` (migration `c41d8e0f5a92`). The assistant
+  stays.
+- **Voice cloning and the ElevenLabs backend** (D-181), with the `voice_profile` table.
+- **`/var/log/biokids` and its logrotate file** (D-183).
+- **`biokids-harden`** (D-184), which was never built; `docs/SECURITY.md` §6 says how to
+  lock the bootloader and firmware by hand.
+- **The extension token** in `/etc/biokids`: the extension talks to the child's own
+  launcher, not to the daemon.
+
+### Fixed
+
+- **Two children logged in at once shared one launcher port** (D-188).
+- **What the live VM run found** (D-179): the lockdown waits up to twenty seconds for
+  light-locker before ending a session; the first filter check waits thirty seconds,
+  and a repair waits for dnsmasq to answer; the encyclopedia looks a subject up as a
+  title first.
+- **Fail-safe that is checked, not assumed** (D-172): a systemd watchdog, command and
+  tick timeouts, a once-a-minute outside check of the DNS filter, locks verified from
+  logind, a wall clock guarded against date changes, and a lockdown that works without
+  the database.
+- **The panel's offline page** (D-194) was the stylesheet; it is now `/offline`, which
+  carries nothing about the family.
+- **The wizard's apps step** let a parent untick volume, brightness and shutdown
+  (D-194).
+- **Saving the assistant's page turned its voice off** while the speech model was
+  missing (D-194).
+- **The launcher's volume slider** started at 70 whatever the sound was (D-194).
+- **Alembic's logging configuration silenced the existing loggers** during a migration.
+
+### Security
+
+- **The review's findings** (D-171). Provisioning no longer follows symlinks in a
+  child's home as root. The launcher refuses requests from other sites and rebound
+  names. The panel is closed to the children by nftables (and no longer by the
+  machine-wide browser policy, so the parent's Chromium can open it). The browser
+  policy closes `file://` and certificate click-through. The recovery code and the
+  passphrase gate are validated and rate-limited. `biokids-ai` leaves the `biokids`
+  group. A database backup runs before every migration. The daemon and panel units
+  drop to two capabilities and none.
+- **A launcher answers only its own child** (D-188): an nftables chain rejects every
+  other uid on its port.
+- **No signing key leaves the machine or enters the repository** (D-187): each machine
+  makes the key its extension is signed with.
+- **Nothing is kept for ever** (D-189); the visited sites, the most personal record, go
+  first.
+
+### Known gaps
+
+Stated here rather than discovered later:
+
+- **No Piper voice is bundled, and none will be** (D-137). No Turkish Piper voice may be
+  redistributed and `piper-tts` is not in Debian 13. **espeak-ng** speaks the warnings,
+  through the MBROLA Turkish voices where a family installs them (D-161), and Piper
+  wherever a family installs it themselves. See `assets/voices/LICENSES.md`.
+- **The assistant gets an occasional fact wrong**, as a small local model does, and is
+  slow on the first question after it opens (up to three minutes on the development
+  VM, then 10 to 30 seconds an answer). It has not been measured on real hardware. It
+  needs `llama.cpp-tools` and `whisper.cpp-tools` newer than Debian 13 has; until
+  trixie-backports has them, the BioKids repository has to carry rebuilds.
+- **Two children whose uids differ by a multiple of 100 share a launcher port** (D-188),
+  and that is not handled.
+- **The exit criterion has not been run end to end on one machine.**
+  `docs/VM-RUNBOOK.md` §0–§6 have passed on a Debian 13 VM, the phone over Tailscale
+  included; §7 (the spoken warnings, the shutdown, the reboot and the clock, recorded)
+  and §8 (what this version added) are still ahead.
+- **The repository is not published**: the archive key does not exist yet, and the
+  security contact in `SECURITY.md` and the enforcement contact in
+  `CODE_OF_CONDUCT.md` are still placeholders.
+
+No telemetry, analytics, crash reporting or version ping has been added, and none will
+be. The complete inventory of outbound connections is `docs/SECURITY.md` §4.
+
+## [0.1.0-1]
+
+Phase 0, the BioGuard MVP: everything built as `0.1.0-1`, the first version in
+`debian/changelog`. Built, installed and run on a Debian 13 VM; never published or
+tagged.
 
 ### Added
 
@@ -234,73 +381,5 @@ Found on the first Debian 13 VM (`docs/VM-RUNBOOK.md`), none of it visible from 
   assistant's switches and the alert text.
 - **The ring shows the minutes left, at every age** (D-162), in the corner and in the
   full-screen time warning.
-
-### Added (review follow-ups)
-
-- **D-176, hours are picked, not typed.** Two ranges per kind of day with the
-  browser's time picker, and any weekday with its own minutes and hours.
-- **D-177, mail to the parent** through their own SMTP server: alerts and requests
-  within a minute, the week on Sunday evening, retried when offline.
-- **D-178, a local encyclopedia for the assistant.** Kiwix's Wikipedia summaries,
-  searched by `kiwix-serve` inside the assistant's own network namespace, given to
-  the model as the facts to prefer. The self-harm answer names 183 and 112.
-- **D-174, the parent's own voice** for the seven spoken lines, recorded on the phone.
-- **D-175, for a child who cannot read yet**: tiles and screens read themselves in
-  the 4-7 band, and a sun sets along the time ring.
-- **CI** shellchecks the maintainer scripts, installs, upgrades and purges the
-  packages on a clean trixie, checks the migrations against the models, and a
-  release runs the suite before it publishes.
-
-- **D-173, "Anneme sor" answered.** A requests screen in the panel (more time with
-  +15/+30/+60, sites and apps with yes/not now), a "Biraz daha süre iste" button in
-  the launcher's last fifteen minutes, the answer shown and spoken on the child's
-  screen, "Kilidi aç" on Today, and grants of +10 and +30.
-- **D-172, fail-safe that is checked.** A systemd watchdog, command and tick
-  timeouts, a once-a-minute outside check of the DNS filter, verified locks, a
-  wall clock the daemon guards against date changes, and a lockdown that works
-  without the database.
-
-### Security
-
-- **D-171, the review's security findings.** Provisioning no longer follows symlinks
-  in a child's home as root. The launcher refuses requests from other sites and
-  rebound names. The panel is closed to the children by nftables (and no longer by
-  the machine-wide browser policy, so the parent's Chromium can open it). The browser
-  policy closes `file://` and certificate click-through. The recovery code and the
-  passphrase gate are validated and rate-limited. `biokids-ai` leaves the `biokids`
-  group. A database backup runs before every migration. The daemon and panel units
-  drop to two capabilities and none.
-
-### Known gaps
-
-Stated here rather than discovered later:
-
-- **No Piper voice is bundled, and none will be** (T6.1). The licences were checked as
-  `docs/VOICE.md` §3 requires, and the answer was no: `tr_TR-dfki-medium`'s dataset is
-  CC-BY-NC-SA, and `fahrettin` and `fettah` were withdrawn from the Piper catalogue at
-  their contributors' request. `piper-tts` is not in Debian 13 either. The warnings are
-  spoken by **espeak-ng** instead — Debian main, GPL-3+, Turkish, no model file and no
-  download — through the MBROLA Turkish voices where a family installs them (D-161), and
-  Piper is used wherever a family installs it themselves. See D-137 and
-  `assets/voices/LICENSES.md`.
-- **A blocked site shows Chromium's "This site can't be reached"**, not the block page
-  of D-64.
-- **The assistant gets an occasional fact wrong**, as a small local model does, and
-  is slow on the first question after it opens (up to three minutes on the
-  development VM, then 10 to 30 seconds an answer). It has not been measured on real
-  hardware. It needs `llama.cpp-tools`
-  and `whisper.cpp-tools` newer than Debian 13 has; until trixie-backports has them,
-  the BioKids repository has to carry rebuilds.
-- **The exit criterion has not been run end to end.** The packages now build, install
-  and pass lintian on a Debian 13 VM, the wizard completes there and a child logs in to
-  the launcher; the spoken warnings, the phone over Tailscale and the reboot and clock
-  checks are still ahead. `docs/VM-RUNBOOK.md` is that work as a sequence, and
-  `debian/README.source` §7 what it leaves unverified.
-
-No telemetry, analytics, crash reporting or version ping has been added, and none will
-be. The complete inventory of outbound connections is `docs/SECURITY.md` §4.
-
-Two placeholders are outstanding before the repository can be made public: the security
-contact in `SECURITY.md` and the enforcement contact in `CODE_OF_CONDUCT.md`.
 
 [Unreleased]: https://github.com/bilalgurkansanli/BioKids/commits/main

@@ -1,45 +1,83 @@
 # BioKids
 
-**A Debian-based Linux system for children aged 4–10, with parental controls that run
-entirely on your own machine.**
+**Parental controls for Debian, for children aged 4–10, that run entirely on your own
+machine.**
 
-*Çocuklar için, tamamen kendi bilgisayarınızda çalışan ebeveyn kontrollü Linux sistemi.*
+*Çocuklar için, tamamen kendi bilgisayarınızda çalışan ebeveyn denetimi.*
 
-> ⚠️ **Early development — Phase 0.** The daemon, the parent panel, the child
-> launcher and the voice service are built and tested — 541 tests, `mypy --strict`,
-> and an acceptance test that runs the exit criterion end to end in one process.
-> But **nothing has ever been built as a `.deb` or installed on any machine**: the
-> development host is Windows, so `dpkg-buildpackage` has never run. There is no
-> release and no tag. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for what is done,
-> and [`docs/VM-RUNBOOK.md`](docs/VM-RUNBOOK.md) for exactly what is left.
+BioKids turns a Debian 13 computer into one a young child can use on their own: they
+log in by choosing their picture, land in a launcher of big tiles instead of a desktop,
+and are told — out loud — when their time is nearly up. The parent sets the rules from
+a panel on the same computer or on their phone. Time is counted in a way a changed
+clock cannot cheat, harmful sites are closed for the children's accounts only, and
+nothing about the family leaves the machine. It ships as Debian packages; the control
+part is called BioGuard in the documentation.
+
+> **v1.0 release candidate (0.1.0-2).** The packages build, pass lintian, install,
+> upgrade and purge on a Debian 13 VM, and the setup wizard, login by picture and phone
+> access have been run there. The full exit criterion — a 20-minute quota set from a
+> phone, spoken warnings, shutdown, reboot and a moved clock — is the last run before
+> the release ([`docs/ROADMAP.md`](docs/ROADMAP.md)). The APT repository is not
+> published yet; see [Install](#install).
+
+---
+
+## Principles
+
+- **Nothing leaves the device.** No telemetry, analytics, crash reporting or account.
+- **The child knows.** Supervision is visible, and the child is told what their family
+  can see. Never covert.
+- **Fail safe, not silent.** If the daemon, the filter or a lock fails, the child's
+  session locks and the parent is told.
+- **Never brick the machine.** BioKids changes nothing that could lock a parent out of
+  their own computer; the bootloader and the firmware are left to them.
+- **Offline first.** Everything core works with the network cable unplugged.
+- **A parent can understand it** without knowing what DNS is.
+
+The full text is in [`CLAUDE.md`](CLAUDE.md) §2.
 
 ---
 
 ## What it does
 
-- **Time limits** that a child cannot cheat by changing the clock. Daily quotas, time
-  windows, separate weekday and weekend rules, spoken warnings before the machine
-  shuts down.
-- **Content filtering.** The internet is open with adult, gambling and harmful sites
-  always closed, by a DNS filter on the machine that applies to the children's
-  accounts only; a parent can switch a child to "only the sites I choose" instead.
-  SafeSearch is forced on Google, YouTube, Bing and DuckDuckGo.
-- **"Sor Bana", a question box for the child**, answered by a language model running
-  on the machine, for the child's age. It refuses what a child should not be asking
-  and tells the parent; the child is told that on the screen. Off by default; the
-  child can also ask aloud, by holding a button, if the parent allows it.
-- **A child launcher** instead of a desktop. Big tiles, no file system, no settings, no
-  terminal. The interface adapts to the child's age.
-- **Earned time.** Time spent in educational applications turns into extra playtime, at
-  a ratio the parent sets.
-- **Zio and Sio**, two voice companions who announce warnings and rewards. Optionally,
-  they speak in the parents' own recorded voices, cloned locally.
-- **Optional AI supervision** that looks at the screen when something new happens,
-  scores how appropriate it is for the child's age, and tells the parent. The model
-  runs on your GPU; no screenshot ever leaves the machine.
-- **A parent panel** in the computer's applications menu, and on your phone over your
-  own private network: one button installs and signs in Tailscale for you. No
+- **Time limits** that a child cannot cheat by changing the clock: daily quotas,
+  allowed hours, separate weekday and weekend rules, and any day of the week with its
+  own. Warnings at 10, 5 and 1 minute are **spoken** by Zio and Sio — espeak-ng out of
+  the box, MBROLA's Turkish voices or Piper where a family installs them — and shown in
+  front of whatever app is open. Then the screen locks, counts down, and the computer
+  shuts down (or only locks, or logs out: the parent chooses).
+- **Breaks and earned time.** Optional forced breaks; time in learning apps can earn
+  extra game time, at a ratio the parent sets.
+- **Limits per kind of app**: at most so many minutes of games, learning, web or other
+  apps a day, inside the day's time.
+- **A child launcher** instead of a desktop: big tiles for the apps and sites the parent
+  chose, a ring with the minutes left, one big close button on every app, no desktop,
+  no settings, no terminal. Two age bands; for children who cannot read yet,
+  tiles and screens read themselves aloud.
+- **Login by picture.** Each child is their own picture on a BioKids login screen; no
+  password to remember.
+- **Filtering.** The internet is open with adult, gambling, malware and scam sites
+  always closed — by a DNS filter on the machine (dnsmasq and nftables) that applies to
+  the children's accounts only — or a child can be switched to "only the sites I
+  choose". SafeSearch is forced. A managed Chromium policy closes what a browser could
+  open around it, and the BioKids browser extension turns a closed site into a friendly
+  page with a **"Büyüğüme sor" (ask a grown-up)** button.
+- **Ask a grown-up.** More time, a site or an app: the request reaches the parent's
+  phone and is answered in one tap, and the child is told the answer.
+- **A parent panel** in the computer's applications menu, and on the parent's phone
+  over their own private network: one button installs and signs in Tailscale. No
   BioKids account, no cloud, no port forwarding.
+- **History**: two weeks of minutes, and for any day the apps, the sites opened (by
+  name only) and the requests. Plus an **audit log** of every rule change, PIN attempt,
+  grant and clock change.
+- **Recorded parent voices.** A parent can record the seven spoken lines on their phone,
+  and the child hears them in that voice.
+- **Optional: "Sor Bana", a local assistant.** A child types or, if allowed, says a
+  question and gets an answer for their age from a language model running on the
+  machine, checked against an offline encyclopedia. It refuses what a child should not
+  ask, and the parent sees what it refused. Off by default.
+- **Optional: offline Wikipedia** as a tile for 8–10 year olds, once the parent has
+  downloaded it with the assistant.
 
 ### The parent panel
 
@@ -53,25 +91,86 @@ of state, and **+10 dk**, **Kilitle**, **Kapat**. Everything else is one level d
 ![The time rules for one child: weekday and weekend quotas, allowed hours, and what
 happens when the time runs out](assets/screenshots/panel-child-time.png)
 
-Five visible controls. Forced breaks and earned time live behind *Gelişmiş*, because
-most parents never touch them and a screen of thirty inputs is a screen nobody
-finishes.
+A few visible controls. Breaks, earned time, different days and limits per kind of app
+live behind *Gelişmiş*, because most parents never touch them and a screen of thirty
+inputs is a screen nobody finishes.
 
 ![The audit log, filtered by child, action and date](assets/screenshots/panel-audit.png)
 
 Every rule change, every PIN attempt, every warning spoken and every time the system
-clock moved. Append-only; the application never deletes from it.
+clock moved. Nothing edits an entry; entries older than a year are deleted.
+
+---
+
+## Requirements
+
+- **Debian 13 "trixie", amd64.**
+- **An X11 session.** Wayland is not supported (D-12). `biokids-desktop` brings Xfce
+  and LightDM, which is the tested setup.
+- **4 GB of memory** and about 25 GB of disk. The optional assistant needs 7 GB or more.
+- A network connection only to install. Afterwards everything core works offline.
+
+---
+
+## Install
+
+> **Not published yet.** Releases go to the project's own APT repository,
+> `https://apt.biokids.bilalgurkansanli.com`, built by the release workflow and signed
+> with a key that exists only in GitHub Secrets. That key has not been generated yet,
+> so there is no repository to add and no fingerprint to check; both arrive with the
+> v1.0 release, and the fingerprint will be printed here. Until then the packages are
+> built from this repository: [`docs/VM-RUNBOOK.md`](docs/VM-RUNBOOK.md) §1.
+
+Once it is published, on an existing Debian 13 system:
+
+```bash
+curl -fsSL https://apt.biokids.bilalgurkansanli.com/KEY.gpg \
+  | sudo tee /usr/share/keyrings/biokids-archive-keyring.gpg > /dev/null
+
+echo "deb [signed-by=/usr/share/keyrings/biokids-archive-keyring.gpg] \
+https://apt.biokids.bilalgurkansanli.com trixie main" \
+  | sudo tee /etc/apt/sources.list.d/biokids.list
+
+sudo apt update && sudo apt install biokids-desktop
+```
+
+`biokids-desktop` is the whole child setup: BioKids, Xfce, LightDM and the application
+catalogue. `biokids` alone installs BioKids on a desktop you already have. The
+assistant is a separate package, `biokids-ai`, never installed by default. `biokids`
+recommends `biokids-archive-keyring`, the package that ships the same key file.
+
+A bootable ISO with everything preinstalled is v1.1 ([`iso/README.md`](iso/README.md)).
+
+## First steps
+
+1. **The setup wizard** opens by itself at the first login after installing, or at
+   `http://127.0.0.1:7878` on the computer. Nine steps, each skippable: language, your
+   PIN, a passphrase and recovery code, the first child, their apps, their time, their
+   internet, phone access, and Zio and Sio.
+2. **Restart once**, so the login screen shows the child's picture.
+3. **The child logs in** by choosing their picture. The first time, the launcher
+   explains — in words and out loud for the youngest — what Zio and Sio do and what the
+   family can see.
+4. **The panel** is "BioKids Ebeveyn Paneli" in the applications menu, and on your phone
+   once phone access is on (**Ayarlar**). Mail notifications are set up there too.
 
 ---
 
 ## Privacy
 
 **Nothing leaves your device.** No telemetry, no analytics, no crash reporting, no
-account. Screenshots are analysed in memory on your own GPU and discarded. Voice
-recordings never leave the computer.
+account. The list of outbound connections BioKids makes is short, most of it optional,
+and complete in [`docs/SECURITY.md`](docs/SECURITY.md#4-outbound-network-inventory):
+Debian and BioKids updates, DNS, and only what the parent switches on — their own mail
+server, Tailscale, and the assistant's one-time download.
 
-The complete list of outbound connections BioKids makes — and there are only eight, most
-of them optional — is in [`docs/SECURITY.md`](docs/SECURITY.md#4-outbound-network-inventory).
+- The browser extension tells the child's own launcher the **name** of each site
+  opened — never the page, the search, or anything typed — and the child is told so.
+- Voice recordings and the assistant's models stay on the computer; an ordinary
+  question to the assistant is answered and forgotten.
+- Records are deleted on a schedule: sites and alerts after 30 days, requests after
+  90, the audit log after a year, daily minutes after 400 days
+  (`/etc/biokids/config.toml`, `[retention]`).
 
 ---
 
@@ -100,11 +199,12 @@ the limits than let a parent feel safer than they are.
                                                     · BOOTTIME ledger
                                                     · policy engine
                                                     · logind watcher
-                                                    · enforcer
+                                                    · DNS filter, browser policy
                                                           ▲
-                                          127.0.0.1:7879  │  /run/biokids/shell.sock
+                                    127.0.0.1:7879+uid%100 │  /run/biokids/shell.sock
   the child      ──────────────────────▶  biokids-shell  ─┘   (authorised by peer uid)
                     kiosk Chromium        biokids-voice
+                    + BioKids extension
 ```
 
 The daemon is the only component allowed to change system state; everything else asks
@@ -129,29 +229,10 @@ Three things carry most of the correctness:
 
 ---
 
-## Install
+## Development
 
-> Not yet. There is no APT repository and no release. This is what installing will look
-> like, and it is what `docs/PACKAGING.md` is written against.
-
-On an existing Debian 13 system:
-
-```bash
-curl -fsSL https://apt.biokids.bilalgurkansanli.com/KEY.gpg \
-  | sudo tee /usr/share/keyrings/biokids-archive-keyring.gpg > /dev/null
-
-echo "deb [signed-by=/usr/share/keyrings/biokids-archive-keyring.gpg] \
-https://apt.biokids.bilalgurkansanli.com trixie main" \
-  | sudo tee /etc/apt/sources.list.d/biokids.list
-
-sudo apt update && sudo apt install biokids
-```
-
-Then open `http://127.0.0.1:7878` and follow the wizard.
-
-A bootable ISO with everything preinstalled will come later.
-
-## Running it from a checkout
+Python 3.13, FastAPI, SQLite; Jinja2 and hand-written CSS with no build step. Run it
+from a checkout:
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
@@ -162,9 +243,10 @@ python -m biokids_daemon           # as root, or --no-logind to develop without 
 python -m biokids_panel            # http://127.0.0.1:7878
 ```
 
-`dev/fakeclock.py` drives the ledger with an injected clock, so a three-hour session
-takes three seconds and the whole end-of-time sequence is visible in one screen of
-output:
+`pytest` runs the suite; `ruff` and `mypy --strict` (core and daemon) are what CI
+checks. `dev/fakeclock.py` drives the ledger with an injected clock, so a three-hour
+session takes three seconds and the whole end-of-time sequence is visible in one screen
+of output:
 
 ```
          sim     wall     used     left  what  reason             note
@@ -174,33 +256,28 @@ output:
 !! + 0:14:10 16:14:10  0:12:00  0:00:00  END   quota.exhausted    countdown expired -> poweroff
 ```
 
-`CONTRIBUTING.md` has the VM workflow, which is how anything touching boot, PAM,
-nftables or GRUB should be developed.
-
----
-
-## Documentation
+Anything touching boot, PAM, nftables or GRUB is developed in a Debian 13 VM;
+[`CONTRIBUTING.md`](CONTRIBUTING.md) has the workflow and
+[`docs/VM-RUNBOOK.md`](docs/VM-RUNBOOK.md) builds, installs and checks the packages
+step by step.
 
 | | |
 |---|---|
 | [`CLAUDE.md`](CLAUDE.md) | project constitution and conventions |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | components, time engine, policy engine, data model |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | every design decision and why |
-| [`docs/ROADMAP.md`](docs/ROADMAP.md) | phases and what is deliberately deferred |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | v1.0, v1.1, and what was cut |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | threat model, privileges, filtering internals |
-| [`docs/AI-LAYER.md`](docs/AI-LAYER.md) | the optional on-device supervision worker |
-| [`docs/VOICE.md`](docs/VOICE.md) | Zio and Sio |
 | [`docs/UX.md`](docs/UX.md) | design tokens and interface rules |
-| [`docs/PACKAGING.md`](docs/PACKAGING.md) | packages, APT repo, ISO, CI |
+| [`docs/VOICE.md`](docs/VOICE.md) | Zio and Sio |
+| [`docs/AI-LAYER.md`](docs/AI-LAYER.md) | the optional assistant |
+| [`docs/PACKAGING.md`](docs/PACKAGING.md) | packages, APT repository, ISO, CI |
+| [`docs/VM-RUNBOOK.md`](docs/VM-RUNBOOK.md) | building and checking the packages on a VM |
+| [`CHANGELOG.md`](CHANGELOG.md) | what changed, release by release |
 
----
-
-## Contributing
-
-Contributions are welcome. Please read
-[`CONTRIBUTING.md`](CONTRIBUTING.md) first — it includes the list of features this
-project will **not** accept, such as covert monitoring, keystroke logging, and live
-screen mirroring of a child's session.
+Contributions are welcome. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) first — it
+includes the list of features this project will **not** accept, such as covert
+monitoring, keystroke logging, and live screen mirroring of a child's session.
 
 ---
 

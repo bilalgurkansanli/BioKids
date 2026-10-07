@@ -198,7 +198,8 @@ copy the results onto the host:
 git clone /media/sf_BioKids ~/src/BioKids && cd ~/src/BioKids
 sudo apt-get install -y --no-install-recommends build-essential devscripts debhelper dh-python gnupg po-debconf pybuild-plugin-pyproject python3-all python3-setuptools lintian
 chmod +x debian/rules && dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring
-mkdir -p "$D/v1" && cp ../biokids*_0.1.0-1_* "$D/v1/"
+V1=$(dpkg-parsechangelog -SVersion)     # 0.1.0-2, the top of debian/changelog
+mkdir -p "$D/v1" && cp ../biokids*_${V1}_* "$D/v1/"
 ```
 
 The clone is of what is **committed**; edits on the host that are not committed
@@ -263,7 +264,7 @@ on a rolled-back machine that has no build tools at all:
 
 ```bash
 dch --no-auto-nmu -i "Test upgrade" && dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring
-V=$(dpkg-parsechangelog -SVersion)      # 0.1.0-2
+V=$(dpkg-parsechangelog -SVersion)      # one revision above $V1: 0.1.0-3
 mkdir -p "$D/v2" && cp ../biokids*_${V}_* "$D/v2/"
 ls "$D/v1" "$D/v2"                      # the same eight packages, two versions
 ```
@@ -271,8 +272,13 @@ ls "$D/v1" "$D/v2"                      # the same eight packages, two versions
 `dch` edits `debian/changelog` in the clone, never in the repository on the host
 — one more reason the build does not happen in the shared folder.
 `--no-auto-nmu` because otherwise `dch` notices you are not the `Maintainer` and
-makes a non-maintainer upload, `0.1.0-1.1`. That upgrades just as well, but the
+makes a non-maintainer upload, `0.1.0-2.1`. That upgrades just as well, but the
 version is then not the one written above.
+
+An upgrade from `0.1.0-1` is the one that moves the virtual-terminal guards out of
+`/etc` (`debian/biokids-shell.maintscript`, `rm_conffile … 0.1.0-2~`). To see that
+too, build `v1` from the commit before 0.1.0-2 (`git checkout 435a526` in the clone)
+and `v2` from the tip, instead of the `dch` above.
 
 ---
 
@@ -345,7 +351,7 @@ answers both.
 
 ## 3. The wizard
 
-Open `http://127.0.0.1:7878` on the VM and work through all ten steps. If the
+Open `http://127.0.0.1:7878` on the VM and work through all nine steps. If the
 VM's own desktop is slow, forward the port and use a browser on the host instead
 — the panel only ever listens on loopback, and this keeps it that way:
 
@@ -473,21 +479,22 @@ broken.
 **Pass:** step 8 shows a QR code and a `https://<host>.<tailnet>.ts.net` URL, and
 opening that URL on your phone **reaches the wizard's language step**.
 
-Not the login screen — setup is not complete until step 10, and while it is
+Not the login screen — setup is not complete until step 9, and while it is
 incomplete every route including `/login` redirects to `/wizard/1`. Seeing the
 Turkish language step on the phone is the pass. **Do not tap through it on the
 phone**: the wizard is unauthenticated by design and a second run from another
 device would overwrite the pending child.
 
-### 3.4 Step 11
+### 3.4 The closing screen
 
-Press **Bitir** on step 10.
+Press **Bitir** on step 9. Since D-182 there is no email step; mail is set up
+later under **Ayarlar**.
 
-**Pass:** the "Hazır — Kurulum tamam" screen with the child's avatar and a
-"Panele git" button — *not* a bare PIN prompt. That was broken until recently
-(D-150) and it is the last thing a parent sees. It asks for **one restart**:
-LightDM reads the login-by-picture setting (D-155) only when it starts. There is
-no "Adım 11 / 10" above it any more, and no promise of a trial run.
+**Pass:** the "Hazır — Kurulum tamam" screen (`/wizard/10`) with the child's
+avatar and a "Panele git" button — *not* a bare PIN prompt. That was broken until
+recently (D-150) and it is the last thing a parent sees. It asks for **one
+restart**: LightDM reads the login-by-picture setting (D-155) only when it starts.
+There is no "Adım 10 / 9" above it, and no promise of a trial run.
 
 ---
 
@@ -519,8 +526,8 @@ greeter.
    The screen may blank, but a key must bring the launcher back with **no lock
    screen**: an idle lock is one only a parent can lift (D-158).
 7. Install `biokids-desktop` **before** the wizard, as §2.1 does: the app step
-   offers only what is installed then, and the panel has no apps screen yet to add
-   the rest later (D-156).
+   offers only what is installed then. Anything installed later is ticked under
+   **Çocuklar → Uygulamalar ve siteler** (D-164).
 
 ### 4.1 The user units — `README.source` §7 item 8
 
@@ -543,10 +550,17 @@ are active. If the target is missing, the session configuration in
 
 In the child's Chromium (a web tile), open `chrome://policy`.
 
-**Pass:** `URLAllowlist`, `URLBlocklist`, `DeveloperToolsAvailability` and
-`DownloadRestrictions` are all listed, with `Source: Platform`. An **empty**
-policy page means the kiosk is an ordinary browser with an ordinary
-`Ctrl+Shift+I`.
+**Pass:** Chromium's own "blocked by your administrator" page. Since D-171 the
+policy closes `chrome://policy` itself, and in every profile on the machine, so a
+page that opens at all means the policy was not read: the kiosk is an ordinary
+browser with an ordinary `Ctrl+Shift+I`. Read the file instead:
+
+```bash
+sudo python3 -m json.tool /etc/chromium/policies/managed/biokids-kiosk.json | head -40
+```
+
+`URLAllowlist`, `URLBlocklist`, `DeveloperToolsAvailability` and
+`DownloadRestrictions` must all be there.
 
 ```bash
 sudo ls -l /etc/chromium/policies/managed/biokids-kiosk.json
@@ -740,10 +754,18 @@ Then install as in §2, **run the wizard and add Elif** — there is no child
 account on a rolled-back machine, and §0.2 forbids making one by hand.
 
 ```bash
-sudo ls -l /etc/systemd/logind.conf.d/biokids.conf
-sudo ls -l /etc/X11/xorg.conf.d/50-biokids-no-vt-switch.conf
+ls -l /usr/lib/systemd/logind.conf.d/biokids.conf
+ls -l /usr/share/X11/xorg.conf.d/50-biokids-no-vt-switch.conf
+ls /etc/systemd/logind.conf.d/biokids.conf /etc/X11/xorg.conf.d/50-biokids-no-vt-switch.conf   # gone
 sudo systemctl restart systemd-logind   # or reboot; logind drop-ins need it
 ```
+
+Since 0.1.0-2 the guards are packaged defaults in `/usr/lib` and `/usr/share`, not
+conffiles in `/etc`, so `apt remove biokids-shell` takes them away (principle 4)
+and an administrator can still override them from `/etc`. On a fresh install the
+`/etc` paths never existed; after an upgrade from 0.1.0-1 (§1.3) they must be gone
+too, removed by `debian/biokids-shell.maintscript` (a copy someone edited is kept as
+`.dpkg-bak`).
 
 Log in as the child and try, in the child's session:
 
@@ -857,32 +879,171 @@ warning, and the machine going down — not the wizard.
 
 ---
 
-## 8. After the run
+## 8. What 0.1.0-2 added
 
-Only once §1–§7 have all passed:
+D-187 to D-194, none of which §1–§7 exercises. Run it on the machine from §7, after
+the recording, with Elif set up and her quota raised so she is not locked out
+halfway. `curl` is used below: `sudo apt install -y curl` if §3.3's manual way did
+not already bring it.
 
-1. `docs/ROADMAP.md` — mark Phase 0 complete.
-2. `README.md` — add the recording from §7.5. The three panel screenshots in
-   `assets/screenshots/` are current; `dev/screenshots.py` also defines
-   `shell-home`, `shell-blocked` and `shell-first-run` against the launcher on
-   `:7879`, and those have never been captured. This VM is the first machine
-   where they can be.
-3. Tag `v0.1.0`.
-4. Open the pinned Roadmap issue.
-
-**Before any of that, the repository needs a remote.** As of this runbook nothing
-has been pushed anywhere, and the only branch is `master`:
+### 8.1 The extension is packed and in the policy
 
 ```bash
-git log --oneline | wc -l     # read what you are about to publish
-git branch -M main            # CLAUDE.md §6 says PRs go into `main`
-git remote add origin git@github.com:bilalgurkansanli/BioKids.git
-git push -u origin main
+ls -l /var/lib/biokids-ext/                        # biokids.crx, updates.xml, extension-id
+sudo ls -l /var/lib/biokids/extension-key.pem      # -rw------- root root
+cat /var/lib/biokids-ext/extension-id; echo
+grep -A2 ExtensionInstallForcelist /etc/chromium/policies/managed/biokids-kiosk.json
 ```
+
+**Pass:** the three files exist, the key is 0600 root, and the forcelist holds one
+entry, `"<id>;file:///var/lib/biokids-ext/updates.xml"`, whose id is the one in
+`extension-id`. No forcelist at all means the postinst could not pack it: run
+`sudo biokids-admin pack-extension`, read what it says, then
+`sudo systemctl restart biokids-daemon` so the policy is written again; the daemon's
+log says "the browser extension is not packed" until then.
+
+### 8.2 A blocked site shows the launcher's page
+
+As Elif, open the **İnternet** tile and type an address the filter closes: the DNS
+filter's own canary (`CANARY` in `src/biokids_daemon/dnsfilter.py`), or, with Elif
+switched to **Sadece seçtiğim siteler** under **Çocuklar → İnternet**, any site not on
+her list, such as `example.com`.
+
+**Pass:** the launcher's page — Zio, "Burası senin için değil" and **Büyüğüme sor** —
+not Chromium's "This site can't be reached" or "blocked by your administrator".
+Pressing the button puts a site request on Today. If Chromium's own page shows, close
+the window and open the tile again: Chromium installs a force-listed extension when
+it starts, and a window opened before §8.1 was fixed has none.
+
+### 8.3 The History screen lists the sites
+
+Still as Elif, open two or three sites (her web tiles will do), one of them twice.
+Then in the panel, **Geçmiş** → today:
+
+```bash
+sudo bkq "select ts_wall, payload_json from usage_event where kind='visit' order by id desc limit 10"
+```
+
+**Pass:** each site is one line under **Açılan siteler**, with a first and a last
+time. The rows hold `{"host": …}` and nothing else — no path, no query. The site
+opened twice within ten minutes has one row (D-187).
+
+### 8.4 Two children at once, two launcher ports
+
+Add a second child, **Ali**, from **Çocuklar → Çocuk ekle**. Log Elif in, then from
+ssh bring the greeter up beside her session and log Ali in there:
+
+```bash
+sudo XDG_SEAT_PATH=/org/freedesktop/DisplayManager/Seat0 dm-tool switch-to-greeter
+```
+
+If Elif's screen is locked when you come back to it, a grant from the panel brings
+it back, as in §4.3. With both logged in:
+
+```bash
+for u in elif ali; do echo "$u $((7879 + $(id -u $u) % 100))"; done
+sudo ss -ltnp | grep -E ':(7879|78[89][0-9]|79[0-7][0-9]) '
+sudo nft list chain inet biokids launchers
+PORT=$((7879 + $(id -u elif) % 100))
+curl -sS -m 3 http://127.0.0.1:$PORT/healthz; echo              # as you: refused
+sudo -u elif curl -sS -m 3 http://127.0.0.1:$PORT/healthz; echo # as Elif: JSON
+```
+
+**Pass:** two launchers, each listening on the port the first line computed for its
+child; two rules per child in the `launchers` chain; the parent's request to Elif's
+port is refused, and Elif's own gets `{"biokids":"launcher", …}` (D-188). Ali's port
+answers only Ali. If the two ports are the same, the uids are 100 apart: D-188 does
+not handle that — write it down rather than working around it.
+
+### 8.5 Editing a child updates the login screen
+
+**Çocuklar → Düzenle** for Elif: change her picture, and her name to "Elif Nur". Save.
+
+```bash
+getent passwd elif | cut -d: -f5        # Elif Nur
+ls -l /var/lib/AccountsService/icons/elif
+journalctl -u 'biokids-provision@*' -b --no-pager | tail -5
+```
+
+**Pass:** "Kaydedildi", a new GECOS name, a new icon file, and at the greeter
+(`dm-tool switch-to-greeter` as in §8.4) the new name under the new picture (D-191).
+`?error=provision` means the panel could not reach the provisioning unit; §3.1 is
+how to tell why.
+
+### 8.6 Removing a child hides it from the login screen
+
+With **Ali logged in**, open **Çocuklar → Düzenle** for Ali, press **"Ali adlı
+çocuğu BioKids'ten kaldır"** and give the passphrase.
+
+**Pass, first:** refused — "Çocuğunuz şu anda bilgisayarda…" — and nothing changed.
+Log Ali out and try again.
+
+```bash
+getent passwd ali | cut -d: -f7          # /usr/sbin/nologin
+id -nG ali                               # no biokids-child
+sudo ls -d /home/ali                     # still there
+journalctl -u 'biokids-unprovision@*' -b --no-pager
+sudo bkq "select count(*) from child where unix_user='ali'"   # 0
+```
+
+**Pass:** Ali is gone from **Çocuklar** and from the greeter, the account and the home
+stay, and **Kayıtlar** shows the removal. Adding Ali again with the same account name
+must give `/bin/bash` back and put Ali on the greeter again.
+
+### 8.7 A limit per kind of app
+
+Elif's **Süre kuralları** → **Gelişmiş**: set **Oyun** to `0` and save. As Elif, tap a
+game (Balonlar or SuperTux).
+
+**Pass:** the launcher's page saying "Bunun bugünlük süresi bitti", with a way back
+and **no** "Büyüğüme sor" (D-193). Her learning tiles still open. Empty the field and
+save; the game opens again.
+
+### 8.8 Offline Wikipedia only when there is one
+
+Tick **Vikipedi** for Elif under **Çocuklar → Uygulamalar ve siteler**.
+
+```bash
+ls /var/lib/biokids-ai/models/wikipedia_*.zim 2>/dev/null || echo "no encyclopedia"
+ss -ltn | grep ':7877 '
+```
+
+**Pass, without the encyclopedia:** nothing listens on 7877 and Elif's home screen has
+no Vikipedi tile (D-190).
+
+Then, if `biokids-ai` can be installed on this machine — it needs `llama.cpp-tools`
+newer than Debian 13's, from the BioKids repository — install it with `kiwix-tools`
+and download the models under **Çocuklar → Asistan**:
+
+```bash
+systemctl status biokids-wiki.path biokids-wiki.service --no-pager
+```
+
+**Pass, with it:** `biokids-wiki.service` active, `kiwix-serve` on `127.0.0.1:7877`,
+and the Vikipedi tile on Elif's home screen the next time it is drawn, opening the
+encyclopedia in her browser. If `biokids-ai` cannot be installed yet, record the first
+half as the pass and the second as not run.
 
 ---
 
-## 9. What to do with what you find
+## 9. After the run
+
+Only once §1–§8 have all passed:
+
+1. `docs/ROADMAP.md` — mark v1.0's exit criterion met.
+2. `README.md` — add the recording from §7.5. The three panel screenshots in
+   `assets/screenshots/` are current; `dev/screenshots.py` also defines
+   `shell-home`, `shell-blocked` and `shell-first-run`, taken against a launcher
+   given with `--shell`. Since D-188 that is the child's own port (§8.4), and only
+   the child's own processes may reach it. Those have never been captured.
+3. Tag the release: `release.yml` runs on a `v*` tag and publishes the APT
+   repository, once the archive key exists (`docs/ROADMAP.md`). The tag must match
+   the upstream version at the top of `debian/changelog` (`docs/PACKAGING.md` §1).
+4. Open the pinned Roadmap issue.
+
+---
+
+## 10. What to do with what you find
 
 Every step above exists because something could not be checked from Windows. When
 one fails:

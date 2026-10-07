@@ -32,15 +32,16 @@ time and policy engines actually work.
         ┌───────────────▼─┐ ┌───▼────────┐ │  ┌──────────────────┐
         │ biokids-shell   │ │ biokids-   │ └──┤ biokids-ai       │
         │ child launcher  │ │ voice      │    │ (optional)       │
-        │ :7879, kiosk    │ │ Zio & Sio  │    │ OCR → VLM        │
-        └───────┬─────────┘ └────────────┘    └──────────────────┘
-                │
-        ┌───────▼──────────────────────────┐
+        │ :7879+uid%100   │ │ Zio & Sio  │    │ the assistant    │
+        └───────▲─────────┘ └────────────┘    └──────────────────┘
+                │ POST /visit (host name), GET /blocked
+        ┌───────┴──────────────────────────┐
         │ Chromium (child profile)         │
-        │  managed policy + BioKids ext ───┼──→ reports navigations to daemon
+        │  managed policy + BioKids ext    │
         └──────────────────────────────────┘
 
    system level:  dnsmasq (127.0.0.1:5354, children only)   nftables   lightdm   systemd-logind
+                  kiwix-serve (127.0.0.1:7877, optional, biokids-wiki)
    storage:       /var/lib/biokids/biokids.db  (SQLite WAL, 0600 root)
 ```
 
@@ -62,7 +63,7 @@ The only component allowed to change system state. Everything else asks it.
   kill a process outside the catalog.
 - **FilterManager** renders `dnsmasq` config and Chromium policy from the DB, reloads
   services, and applies per-child allow/blocklists.
-- **EventBus** fans out events to the panel (SSE), the AI worker, the notifier, and
+- **EventBus** fans out events to the panel (SSE), the notifier, and
   each child's launcher over `/run/biokids/shell.sock`. The voice service hears them
   through the launcher: it runs as the child, who may not open the daemon's own
   socket (D-123), so `biokids_shell.relay` carries every SPEAK across (D-160).
@@ -89,14 +90,41 @@ child only. A uid that is not a managed child gets nothing.
 
 FastAPI on `127.0.0.1:7878`. Reads the DB directly for queries; every mutation goes
 through the daemon socket so the daemon stays the single writer of live policy.
-Server-sent events for live counters.
+Server-sent events for live counters. Routes live in `biokids_panel/routes/`, one
+module per area (D-186).
+
+**Adding, changing and removing a child.** The panel's sandbox cannot write `/etc` or
+`/home`, so the account work runs in two template units, each one fixed
+`biokids-admin` command started with `systemctl start --wait`:
+`biokids-provision@<user>.service` when a child is added, or when the edit screen
+(`/children/{id}/edit`, D-191) changes the name or picture the login screen shows, and
+`biokids-unprovision@<user>.service` when a child is removed. Removal takes the account
+out of `biokids-child` and gives it `/usr/sbin/nologin`, so it leaves the login screen,
+and removes only session files still byte-identical to what BioKids wrote; the account
+and its home stay. It needs the passphrase, is refused while the child is at the
+machine, and keeps the database row if the account could not be changed. Otherwise the
+row is deleted and everything recorded for the child with it (`ON DELETE CASCADE`);
+the audit log keeps the removal.
+
+**History** (`/history`, D-192) reads what retention already keeps (§5): fourteen days
+of `ledger_day` minutes as bars, and for one day the `usage_tick` seconds per app, the
+`visit` events as one line per host, and the day's `access_request` rows. Plain HTML,
+no script.
 
 ### `biokids-shell` (child user, user service)
 
-A small FastAPI app on `127.0.0.1:7879` serving the launcher UI, plus a supervisor that
-starts the kiosk Chromium. Launching an app is a POST to the shell, which asks the
-daemon for permission and then spawns the process in a tracked cgroup so usage can be
-attributed to a category.
+A small FastAPI app serving the launcher UI, plus a supervisor that starts the kiosk
+Chromium. Launching an app is a POST to the shell, which asks the daemon for permission
+and then spawns the process in a tracked cgroup so usage can be attributed to a
+category.
+
+**One port per child** (D-188). Each child's launcher listens on
+`127.0.0.1:(shell.port + uid % 100)`, 7879–7978 by default (`ShellConfig.launcher_port`),
+so two children logged in at once by fast user switching do not fight over one port.
+The daemon writes every child's launcher origin into the kiosk policy, and its
+nftables table carries a `launchers` chain that rejects a connection to a child's port
+from any other uid (`docs/SECURITY.md` §5): a launcher answers as its child on
+`shell.sock`, so only that child's own processes may reach it.
 
 ### `biokids-voice` (child user, user service)
 
@@ -120,6 +148,26 @@ child can ask a parent; and it reports the host name - never the path, title or
 content - of each page a child opens to the child's own launcher, for the history
 screen. It finds its launcher by probing the launcher ports, of which nftables lets
 it reach only its own (D-188).
+
+The visit path, end to end:
+
+```
+Chromium (webNavigation, main frame committed)
+  → extension: same host within 10 min? drop  (chrome.storage.session)
+  → POST http://127.0.0.1:<launcher>/visit  {"host": "www.example.com"}
+  → launcher: a host name and nothing else, or 400
+  → shell.sock REPORT_VISIT, authorised by peer uid (D-123)
+  → daemon record_visit: same host within VISIT_REPEAT_SECONDS (600)? drop
+  → usage_event(kind="visit", payload {"host": …})
+```
+
+Packing happens on the machine: biokids-shell ships the source in
+`/usr/share/biokids/extension`, and its postinst runs `biokids-admin pack-extension`
+(`biokids_core.extension_pack`), which signs a CRX3 with
+`/var/lib/biokids/extension-key.pem` and writes `biokids.crx`, `updates.xml` and
+`extension-id` into `/var/lib/biokids-ext`. The daemon reads `extension-id` when it
+writes the policy and adds the `ExtensionInstallForcelist` entry; with no packed
+extension the policy simply has none. `extension/README.md` has the details.
 
 ---
 
@@ -259,28 +307,48 @@ English honest.
 Core tables. Migrations with Alembic from the first commit.
 
 ```
-family(id, created_at, locale, timezone)
-parent(id, pin_hash, passphrase_hash, recovery_hash, email, smtp_json_encrypted)
+family(id, created_at, locale, timezone, setup_completed_at)
+parent(id, display_name, pin_hash, passphrase_hash, recovery_hash, email,
+       smtp_json_encrypted, pin_failures, pin_locked_until, pin_lockout_level)
+panel_session(id, token_hash, parent_id, created_at, last_seen_at, passphrase_ok_until)
 child(id, unix_user, display_name, birth_year, age_band, avatar, locale,
-      shell_mode, supervision_indicator)
-policy(child_id, weekday_quota_min, weekend_quota_min, windows_json,
-       end_action, break_enabled, break_work_min, break_rest_min,
-       earn_enabled, earn_ratio, earn_cap_min, filter_mode, ai_enabled,
-       ai_block_enabled, ai_timeout_min)
-category_limit(child_id, category, minutes)
-app(slug, name_tr, name_en, exec, icon, default_category, min_age, max_age)
-child_app(child_id, app_slug, enabled, category_override)
-filter_rule(child_id, kind /* allow|block */, pattern, source /* manual|list|request */)
-access_request(id, child_id, url, created_at, status, decided_at)
-usage_tick(child_id, day, category, seconds)            -- rolled up nightly
-usage_event(id, child_id, ts_wall, ts_boot, kind, payload_json)
-ai_alert(id, child_id, ts, score, category, reason, evidence_path, notified)
-audit_log(id, ts, actor, action, target, detail_json)
+      shell_mode, supervision_indicator, enabled, first_run_done)
+policy(child_id, weekday_quota_min, weekend_quota_min, windows_json, schedule_json,
+       end_action, break_*, earn_*, filter_mode, assistant_enabled, assistant_voice,
+       voice_enabled, voice_events_json)
+category_limit(child_id, category, minutes)              -- set on the time screen (D-193)
+app(slug, name_tr, name_en, exec_cmd, icon, default_category, min_age, max_age, kind, url)
+child_app(child_id, app_slug, enabled, category_override, position)
+filter_rule(id, child_id, kind /* allow|block */, pattern, source)
+access_request(id, child_id, kind, url, minutes, created_at, status, decided_at)
+boot_epoch(id, boot_id, first_seen_wall, last_seen_wall, last_boot_offset)
+ledger_day(child_id, day, general_s, earned_s, granted_s, penalty_remaining_s, ...)
+usage_tick(child_id, day, category, app_slug, seconds)
+usage_event(id, child_id, ts_wall, ts_boot, kind, payload_json)  -- "visit": {"host": …}
+ai_alert(id, child_id, ts, score, category, reason_key, text, notified, dismissed)
+audit_log(id, ts, actor, action, target, detail_json, severity)
+voice_line(id, event, locale, text, child_id)
 setting(key, value)
 ```
 
-Retention: `usage_tick` rolled up to daily aggregates after 14 days and kept for 1 year.
-`usage_event` kept 30 days. `ai_alert` evidence pruned per the retention setting.
+Every table that names a child deletes its rows with the child (`ON DELETE CASCADE`).
+
+### Retention
+
+Nothing is kept for ever (D-189). The daemon's `housekeeping` runs
+`biokids_core.retention.prune` five minutes after it starts and then once a day, in one
+transaction; a failure is logged and tried again the next day. The windows are
+`[retention]` in `/etc/biokids/config.toml`:
+
+| Key | Default | Deletes |
+|---|---|---|
+| `activity_days` | 30 | `usage_event` (visited sites, ledger gaps) and `ai_alert` |
+| `usage_days` | 400 | `usage_tick` and `ledger_day` |
+| `audit_days` | 365 | `audit_log` |
+| `requests_days` | 90 | `access_request` |
+
+It also deletes `panel_session` rows a day past the idle timeout, and keeps only the 20
+newest `boot_epoch` rows.
 
 ---
 
@@ -293,15 +361,20 @@ child types a URL
       │      ("only the sites I choose": URLBlocklist ["*"] + explicit allows;
       │       open, the default since D-167: no wildcard)
       │
-      ├─ BioKids extension reports the navigation to the daemon
+      │      blocked → ERR_BLOCKED_BY_ADMINISTRATOR → the extension opens the
+      │                launcher's /blocked page (D-187)
       │
       ├─ DNS resolution → nftables sends a child's :53 to dnsmasq on :5354
-      │      ├─ blocklist hit → NXDOMAIN (Chromium's "can't be reached"; D-64 not built)
+      │      ├─ blocklist hit → NXDOMAIN → ERR_NAME_NOT_RESOLVED → the launcher's
+      │      │                 /blocked page, by the extension (D-187)
       │      ├─ safesearch CNAME rewrites applied
       │      ├─ a site a parent enabled → upstream, never blocked
       │      └─ otherwise → the system's own resolvers
       │
-      └─ nftables: a child's :853 and HTTPS to known DoH resolvers rejected
+      ├─ nftables: a child's :853 and HTTPS to known DoH resolvers rejected
+      │
+      └─ the page opens → the extension reports its host name to the child's
+                          launcher, for the history (§2, D-187)
 ```
 
 Generated files, rendered by the daemon (`biokids_daemon/dnsfilter.py`, D-167) and
@@ -310,7 +383,11 @@ never hand-edited:
 - `/var/lib/biokids/dns/dnsmasq.conf` and `blocklist.conf`, read by `biokids-dns.service`
 - `/var/lib/biokids/dns/biokids.nft`, loaded with `nft -f`
 - `/etc/chromium/policies/managed/biokids-kiosk.json`, one for the machine (the
-  strictest child's mode)
+  strictest child's mode), naming every child's launcher origin and, once packed, the
+  extension
+
+The packed extension in `/var/lib/biokids-ext/` is not the daemon's: biokids-shell's
+postinst writes it (§2).
 
 Regeneration is atomic: write to a temp file, `fsync`, rename, reload the service, and
 verify. A failed verification triggers the lockdown path rather than leaving a partial
@@ -327,7 +404,7 @@ if allowed, the shell spawns the app via `systemd-run --user --scope
 - the active category is known from the focused window's cgroup, not a guess
 - category time is attributed correctly even with several apps open
 - killing an app at limit time is `systemctl --user stop`, clean and complete
-- Phase 4's per-app network rules attach to the same cgroups
+- per-app network rules, if they are ever built (D-66), attach to the same cgroups
 
 Focus tracking on X11: `_NET_ACTIVE_WINDOW` via python-xlib, mapped to a PID via
 `_NET_WM_PID`, mapped to a cgroup via `/proc/<pid>/cgroup`.
@@ -360,7 +437,7 @@ Focus tracking on X11: `_NET_ACTIVE_WINDOW` via python-xlib, mapped to a PID via
 | AI worker crashes | log, alert the parent, continue without AI. Never blocks the child |
 | voice service crashes | fall back to a plain on-screen banner |
 | DB corrupt | fail closed: lock the child session, show a recovery message to the parent |
-| disk full | stop writing evidence first, then ticks; alert the parent |
+| disk full | the tick cannot persist; three failed ticks lock every child session and the daemon exits for systemd (D-139) |
 | no network | everything works; mail to the parent is retried with a growing pause until it goes (D-177) |
 
 The rule: **enforcement failures lock; convenience failures degrade.**

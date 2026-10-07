@@ -14,10 +14,10 @@ How BioKids is built, signed, published and installed.
 | `biokids-core` | shared Python lib, DB schema, i18n, app catalog | python3, python3-sqlalchemy, alembic |
 | `biokids-daemon` | the enforcement daemon + systemd units, the children's DNS filter | biokids-core, systemd, dnsmasq-base (never `dnsmasq`, D-167), nftables |
 | `biokids-panel` | FastAPI panel, templates, static, PWA | biokids-core, python3-fastapi, uvicorn |
-| `biokids-shell` | child launcher + kiosk supervisor | biokids-core, chromium, chromium-l10n |
-| `biokids-voice` | Zio & Sio, Piper, stock voices | biokids-core, piper-tts, pipewire |
+| `biokids-shell` | child launcher + kiosk supervisor, the browser extension's source (packed on the machine, D-187), the VT guards, the login-by-picture PAM service | biokids-core, chromium, chromium-l10n, light-locker, devilspie2, xdotool |
+| `biokids-voice` | Zio & Sio: espeak-ng, MBROLA or Piper (D-137) | biokids-core, espeak-ng, pipewire; Suggests mbrola-tr1, mbrola-tr2 |
 | `biokids-desktop` | metapackage: XFCE config, theme, LightDM, app set | the above + xfce4 + the catalog apps |
-| `biokids-ai` | the assistant (D-165), later the VLM worker; setup tool | biokids-core, llama.cpp-tools; Recommends whisper.cpp-tools. **Suggests**, never Depends |
+| `biokids-ai` | the assistant (D-165), its setup tool, the offline Wikipedia service (D-190) | biokids-core, llama.cpp-tools; Recommends kiwix-tools, whisper.cpp-tools. **Suggests**, never Depends |
 | `biokids-archive-keyring` | our APT signing public key | — |
 | `biokids` | metapackage pulling core, daemon, panel, shell, voice | — |
 
@@ -29,7 +29,8 @@ Keep them minimal; every line is a chance to break someone's system.
 
 - `postinst`: create the `biokids` group and the `biokids-ai` user, create
   `/var/lib/biokids` with correct modes, run `alembic upgrade head`, enable and start
-  units, generate the extension token if missing.
+  units. biokids-shell's postinst packs and signs the browser extension with a key made
+  on the machine (`biokids-admin pack-extension`, D-187).
 - `prerm`: stop units.
 - `postrm purge`: remove `/var/lib/biokids` **only on purge**, and ask first via
   debconf. A `remove` must never destroy a family's history.
@@ -40,8 +41,11 @@ Keep them minimal; every line is a chance to break someone's system.
 
 ### Versioning
 
-Semantic versioning, `X.Y.Z`. Debian revision `-1`. Tags are `vX.Y.Z`.
-`0.x` until Phase 1 is complete; `1.0.0` when the ISO is installable by a stranger.
+Semantic versioning, `X.Y.Z`, with a Debian revision (`0.1.0-2` is the v1.0 release
+candidate). Tags are `vX.Y.Z`. v1.0 is the packages from the APT repository; the ISO
+is v1.1 (D-185). `release.yml` refuses a tag that does not match the upstream version
+at the top of `debian/changelog`: `0.1.0-2` can only be tagged `v0.1.0`, and a
+`v1.0.0` tag needs a `1.0.0-1` changelog entry first.
 
 ---
 
@@ -86,9 +90,10 @@ image.
 
 ## 3. ISO
 
-**Phase 3 only. Do not start this early.**
+**v1.1 only (D-185). Do not start this before v1.0 is released.**
 
-Built with Debian `live-build` under `iso/`:
+Built with Debian `live-build` under `iso/`, and installed with Debian's own installer,
+preseeded — not Calamares:
 
 ```
 iso/
@@ -103,8 +108,8 @@ iso/
 ```
 
 Key settings: `--distribution trixie`, `--architectures amd64`,
-`--debian-installer live` (Phase 3b), `--archive-areas "main contrib non-free-firmware"`
-(non-free-firmware is necessary for wifi on real hardware).
+`--debian-installer live` with a preseed file, `--archive-areas "main contrib
+non-free-firmware"` (non-free-firmware is necessary for wifi on real hardware).
 
 ### Practical notes
 
@@ -145,7 +150,7 @@ download link on the project's own domain is wanted.
 
 ## 5. CI
 
-GitHub Actions, four workflows.
+GitHub Actions: `ci.yml` and `release.yml` exist; `iso.yml` comes with v1.1.
 
 **`ci.yml`** — on every push and PR:
 `ruff check` → `ruff format --check` → `mypy --strict` on core and daemon → `pytest`
@@ -157,14 +162,12 @@ build → sign with the key from Secrets → `aptly publish` → push to the `gh
 branch → create the GitHub Release with the `.deb`, `SHA256SUMS` and the signature →
 generate release notes from Conventional Commits.
 
-**`iso.yml`** — manual dispatch and weekly on `main` (Phase 3 onwards):
+**`iso.yml`** — manual dispatch and weekly on `main` (v1.1 onwards; not written yet):
 `live-build` in a privileged container → smoke-test the boot with QEMU → upload as an
 artifact. Not attached to releases automatically; ISO publication is deliberate.
 
-**`ai-eval.yml`** — manual dispatch:
-run the risk-scorer fixture suite against the current model and fail if the
-false-positive budget from `docs/AI-LAYER.md` §11 is exceeded. Needs a self-hosted
-runner with a GPU, or is run locally and its report committed.
+**`ai-eval.yml`** — not built: the risk scorer it would have evaluated went with the
+screen watcher (D-180).
 
 ### Guards
 
