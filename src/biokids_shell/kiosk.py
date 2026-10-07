@@ -26,6 +26,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -52,6 +53,13 @@ KIOSK_WINDOW_CLASS = "biokids-kiosk"
 relay finds the launcher among the app windows to bring a warning to the front
 (D-160)."""
 
+
+def launcher_port(config: Config) -> int:
+    """This child's launcher port: `shell.port + uid % 100` (D-188)."""
+    getuid = getattr(os, "getuid", None)
+    return config.shell.launcher_port(getuid() if getuid is not None else 0)
+
+
 RESTART_BACKOFF_MAX = 30.0
 """If Chromium is crash-looping, back off rather than spinning the CPU. The
 child still sees a locked screen, because the session is the desktop and the
@@ -73,11 +81,11 @@ class KioskSupervisor:
 
     @property
     def url(self) -> str:
-        return f"http://{self.config.shell.host}:{self.config.shell.port}/"
+        return f"http://{self.origin}/"
 
     @property
     def origin(self) -> str:
-        return f"{self.config.shell.host}:{self.config.shell.port}"
+        return f"{self.config.shell.host}:{launcher_port(self.config)}"
 
     def profile(self) -> Path:
         return self.profile_dir or (Path.home() / ".config" / "biokids" / "kiosk")

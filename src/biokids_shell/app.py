@@ -25,6 +25,7 @@ import hashlib
 import json
 import logging
 import math
+import re
 import shlex
 import socket
 from collections.abc import AsyncIterator
@@ -43,6 +44,7 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from jinja2 import ChainableUndefined, Environment, FileSystemLoader, select_autoescape
 
+from biokids_core.browser_policy import packed_extension
 from biokids_core.catalog import program_installed
 from biokids_core.config import Config, get_config
 from biokids_core.errors import IpcError
@@ -542,7 +544,28 @@ def register_routes(app: FastAPI) -> None:
 
     @app.get("/healthz")
     async def healthz(shell: Shell) -> JSONResponse:
-        return JSONResponse({"ok": True, "daemon": await shell.client.available()})
+        # `biokids: launcher` is how the extension recognises its own launcher
+        # among the launcher ports (D-187); nftables refuses it the others.
+        return JSONResponse(
+            {"biokids": "launcher", "ok": True, "daemon": await shell.client.available()}
+        )
+
+    @app.post("/visit")
+    async def visit(request: Request, shell: Shell) -> Response:
+        """A host the child opened, from the extension: the name, never the page.
+
+        Only the extension and the launcher's own pages may post here (the
+        middleware), and only a host name is accepted.
+        """
+        try:
+            body = json.loads(await request.body() or b"{}")
+        except ValueError:
+            return JSONResponse({"ok": False}, status_code=400)
+        host = str(body.get("host", "") if isinstance(body, dict) else "").strip().lower()
+        if not _HOSTNAME.fullmatch(host):
+            return JSONResponse({"ok": False}, status_code=400)
+        await shell.client.report_visit(host)
+        return Response(status_code=204)
 
     # ------------------------------------------------------------- device
 
@@ -602,6 +625,17 @@ MAX_RECORDING_BYTES = 16_000 * 2 * 16 + 1024
 
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+_LABEL = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
+_HOSTNAME = re.compile(rf"(?=.{{1,253}}$){_LABEL}(?:\.{_LABEL})*")
+
+
+def _extension_origin(request: Request) -> str | None:
+    """`chrome-extension://<id>` of the extension packed on this machine."""
+    shell: ShellState = request.app.state.shell
+    found = packed_extension(shell.config.paths.extension_dir)
+    return f"chrome-extension://{found[0]}" if found else None
+
+
 LOOPBACK_NAMES = frozenset({"127.0.0.1", "localhost", "[::1]"})
 
 
@@ -619,10 +653,13 @@ def _same_origin(request: Request) -> bool:
     with neither did not come from a browser, and the child has no other program
     that could send one.
     """
+    origin = request.headers.get("origin")
+    if origin is not None and origin == _extension_origin(request):
+        # The BioKids extension (D-187), which is cross-site by nature.
+        return True
     site = request.headers.get("sec-fetch-site")
     if site is not None and site not in {"same-origin", "none"}:
         return False
-    origin = request.headers.get("origin")
     if origin is None:
         return True
     host = request.headers.get("host", "")

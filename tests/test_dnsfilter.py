@@ -41,7 +41,8 @@ def test_only_the_children_are_redirected() -> None:
     assert "elements = { 1001, 1002 }" in rules
     assert f"meta skuid @children udp dport 53 redirect to :{DNS_PORT}" in rules
     assert f"meta skuid @children tcp dport 53 redirect to :{DNS_PORT}" in rules
-    for line in rules.splitlines():
+    filtering = rules.split("chain launchers", 1)[0]
+    for line in filtering.splitlines():
         if "redirect to" in line or line.rstrip().endswith("reject"):
             assert "@children" in line, f"a rule that is not about children: {line}"
 
@@ -170,3 +171,10 @@ def test_the_redirect_is_back_before_the_login_screen() -> None:
     files = FilterFiles(Path("/var/lib/biokids/dns"))
     assert parser["Service"]["ExecStartPre"] == f"+/usr/sbin/nft -f {files.nft.as_posix()}"
     assert parser["Unit"]["ConditionPathExists"] == files.conf.as_posix()
+
+
+def test_each_launcher_answers_only_its_own_child() -> None:
+    """D-188: a launcher acts as its child; a sibling's browser must not reach it."""
+    rules = render_nft([1001, 1002], launcher_base=7879)
+    assert "ip daddr 127.0.0.1 tcp dport 7880 meta skuid != 1001 reject" in rules
+    assert "ip6 daddr ::1 tcp dport 7881 meta skuid != 1002 reject" in rules

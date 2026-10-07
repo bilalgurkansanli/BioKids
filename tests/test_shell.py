@@ -97,6 +97,7 @@ class FakeShellDaemon:
         self.shutdown_calls = 0
         self.asked: list[str] = []
         self.asked_kinds: list[str] = []
+        self.visits: list[str] = []
         self.shutdown_ok = True
 
     async def available(self) -> bool:
@@ -120,6 +121,9 @@ class FakeShellDaemon:
     async def request_shutdown(self) -> bool:
         self.shutdown_calls += 1
         return self.shutdown_ok
+
+    async def report_visit(self, host: str) -> None:
+        self.visits.append(host)
 
     async def ask_a_parent(self, url: str, kind: str = "site") -> tuple[bool, str]:
         self.asked.append(url)
@@ -1039,3 +1043,75 @@ def test_the_older_band_keeps_the_plain_ring(config: Config, daemon: FakeShellDa
 
 def test_a_screen_with_a_sentence_says_it_for_the_young_band(client: TestClient) -> None:
     assert "data-speak-on-load" in client.get("/blocked").text
+
+
+# --------------------------------------------- D-187, D-188 extension and ports
+
+
+def test_each_child_has_a_launcher_port_of_their_own(config: Config) -> None:
+    assert config.shell.launcher_port(1001) == 7880
+    assert config.shell.launcher_port(1002) == 7881
+    assert config.shell.launcher_origin(1001) == "127.0.0.1:7880"
+
+
+def test_the_policy_names_every_launcher_and_forces_the_extension() -> None:
+    ext = ("a" * 32, "file:///var/lib/biokids-ext/updates.xml")
+    policy = kiosk_policy(["127.0.0.1:7880", "127.0.0.1:7881"], extension=ext)
+    allowed = policy["URLAllowlist"]
+    assert isinstance(allowed, list)
+    assert "127.0.0.1:7880" in allowed and "127.0.0.1:7881" in allowed
+    assert policy["AudioCaptureAllowedUrls"] == [
+        "http://127.0.0.1:7880",
+        "http://127.0.0.1:7881",
+    ]
+    assert policy["ExtensionInstallForcelist"] == [f"{'a' * 32};{ext[1]}"]
+
+
+def test_the_extension_finds_its_launcher_by_healthz(client: TestClient) -> None:
+    assert client.get("/healthz").json()["biokids"] == "launcher"
+
+
+def write_extension_id(config: Config, ext_id: str = "b" * 32) -> str:
+    directory = config.paths.extension_dir
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "extension-id").write_text(ext_id, encoding="ascii")
+    return ext_id
+
+
+def test_the_extension_reports_a_host(
+    client: TestClient, daemon: FakeShellDaemon, config: Config
+) -> None:
+    ext_id = write_extension_id(config)
+    response = client.post(
+        "/visit",
+        json={"host": "www.eba.gov.tr"},
+        headers={"origin": f"chrome-extension://{ext_id}", "sec-fetch-site": "none"},
+    )
+    assert response.status_code == 204
+    assert daemon.visits == ["www.eba.gov.tr"]
+
+
+def test_only_a_host_name_is_ever_accepted(
+    client: TestClient, daemon: FakeShellDaemon, config: Config
+) -> None:
+    ext_id = write_extension_id(config)
+    for host in ("eba.gov.tr/ders?id=5", "http://x.com", "a b"):
+        response = client.post(
+            "/visit", json={"host": host}, headers={"origin": f"chrome-extension://{ext_id}"}
+        )
+        assert response.status_code == 400
+    assert daemon.visits == []
+
+
+def test_another_extension_or_a_site_cannot_report_visits(
+    client: TestClient, daemon: FakeShellDaemon, config: Config
+) -> None:
+    write_extension_id(config)
+    for origin in (f"chrome-extension://{'c' * 32}", "https://example.com"):
+        response = client.post(
+            "/visit",
+            json={"host": "example.com"},
+            headers={"origin": origin, "sec-fetch-site": "cross-site"},
+        )
+        assert response.status_code == 403
+    assert daemon.visits == []

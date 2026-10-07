@@ -56,6 +56,12 @@ class ShellClient:
             return False, response.error or "error.unknown"
         return bool(response.data.get("allow")), str(response.data.get("reason_code", ""))
 
+    async def report_visit(self, host: str) -> None:
+        try:
+            await self._client.call(ShellOp.REPORT_VISIT, host=host)
+        except (IpcError, OSError):
+            return
+
     async def report_activity(self, app_slug: str, app_name: str, category: str) -> None:
         try:
             await self._client.call(

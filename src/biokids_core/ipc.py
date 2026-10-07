@@ -87,6 +87,8 @@ class ShellOp(StrEnum):
     """Identity, tiles and remaining time, for the child that is calling."""
     LAUNCH = "launch"
     REPORT_ACTIVITY = "report_activity"
+    REPORT_VISIT = "report_visit"
+    """A site the child opened, by host name only, from the extension (D-187)."""
     FIRST_RUN_DONE = "first_run_done"
     REQUEST_SHUTDOWN = "request_shutdown"
     """The child pressed the shutdown tile (D-100). The daemon decides."""

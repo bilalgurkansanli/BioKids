@@ -1468,3 +1468,7 @@ msgstr "Email notifications turned off"
 # D-178
 msgid "assistant.knowledge.on"
 msgstr "It checks its answers against Wikipedia summaries kept on this computer; it does not go online."
+
+# D-187: the child is told about the visited-sites list
+msgid "shell.firstrun.p5"
+msgstr "Your family can see which websites you visit: only the site's name, not the pages."

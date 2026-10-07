@@ -137,6 +137,8 @@ CANARY: Final = "pornhub.com"
 answer that is not NXDOMAIN means the children's DNS is not being filtered."""
 
 PANEL_PORT: Final = 7878
+LAUNCHER_BASE: Final = 7879
+"""`shell.port`: a child's launcher listens on LAUNCHER_BASE + uid % 100."""
 TAILNET4: Final = "100.64.0.0/10"
 TAILNET6: Final = "fd7a:115c:a1e0::/48"
 """Tailscale's address ranges. The panel is published there (D-33); a child has
@@ -280,7 +282,11 @@ def _is_name(host: str) -> bool:
     return not host.replace(".", "").isdigit()
 
 
-def render_nft(child_uids: Sequence[int], panel_port: int = PANEL_PORT) -> str:
+def render_nft(
+    child_uids: Sequence[int],
+    panel_port: int = PANEL_PORT,
+    launcher_base: int = LAUNCHER_BASE,
+) -> str:
     """The children's redirect, the DoH/DoT refusals and the closed panel, as one
     atomic nft file.
 
@@ -292,6 +298,16 @@ def render_nft(child_uids: Sequence[int], panel_port: int = PANEL_PORT) -> str:
     touched.
     """
     uids = ", ".join(str(uid) for uid in sorted(set(child_uids)))
+    # Each child's launcher answers as that child on the daemon's socket, so
+    # only that child's own processes may connect to it (D-188): not a
+    # sibling's browser, not the parent's, not a page in either.
+    launchers = "".join(
+        f"\t\tip daddr 127.0.0.1 tcp dport {launcher_base + uid % 100} "
+        f"meta skuid != {uid} reject\n"
+        f"\t\tip6 daddr ::1 tcp dport {launcher_base + uid % 100} "
+        f"meta skuid != {uid} reject\n"
+        for uid in sorted(set(child_uids))
+    )
     elements = f"\n\t\telements = {{ {uids} }}" if uids else ""
     doh4 = ", ".join(DOH_ADDRESSES)
     doh6 = ", ".join(DOH_ADDRESSES6)
@@ -320,6 +336,10 @@ table inet {NFT_TABLE} {{
 \t\tmeta skuid @children ip daddr {TAILNET4} reject
 \t\tmeta skuid @children ip6 daddr {TAILNET6} reject
 \t}}
+
+\tchain launchers {{
+\t\ttype filter hook output priority 0; policy accept;
+{launchers}\t}}
 }}
 """
 

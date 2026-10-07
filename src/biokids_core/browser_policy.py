@@ -57,8 +57,26 @@ BLOCKED_SCHEMES = ("file://*", "javascript://*")
 address bar. Neither has anything for a child; both are ways around the rest."""
 
 
+EXTENSION_ID_FILE = "extension-id"
+UPDATES_FILE = "updates.xml"
+
+
+def packed_extension(extension_dir: Path) -> tuple[str, str] | None:
+    """(id, update URL) of the extension packed on this machine, or None (D-187)."""
+    try:
+        ext_id = (extension_dir / EXTENSION_ID_FILE).read_text(encoding="ascii").strip()
+    except OSError:
+        return None
+    if len(ext_id) != 32 or not all("a" <= ch <= "p" for ch in ext_id):
+        return None
+    return ext_id, (extension_dir / UPDATES_FILE).as_uri()
+
+
 def kiosk_policy(
-    origin: str, web_hosts: Sequence[str] = (), mode: str = "allowlist"
+    origin: str | Sequence[str],
+    web_hosts: Sequence[str] = (),
+    mode: str = "allowlist",
+    extension: tuple[str, str] | None = None,
 ) -> dict[str, object]:
     """The managed policy for the kiosk, and for the child's browsing window.
 
@@ -75,7 +93,10 @@ def kiosk_policy(
     is what a site that sends you from `eba.gov.tr` to `giris.eba.gov.tr` needs.
     "Type another address" still has nowhere to go.
     """
-    allowed = [origin, *sorted({host for host in web_hosts if host and host != origin})]
+    # One origin per child's launcher (D-188), each reachable only by its own
+    # child's processes (nftables).
+    origins = [origin] if isinstance(origin, str) else list(origin)
+    allowed = [*origins, *sorted({h for h in web_hosts if h and h not in origins})]
     # In "open internet" mode (D-167) there is no wildcard: harmful sites are
     # stopped by the children's DNS filter, and the browser keeps only what
     # must never open for a child - the disk, typed script, and Chromium's own
@@ -116,6 +137,14 @@ def kiosk_policy(
         # speak, and only while the child holds the button (D-166) - and no
         # site, app page or extension may. No prompt either way.
         "AudioCaptureAllowed": False,
-        "AudioCaptureAllowedUrls": [f"http://{origin}"],
+        "AudioCaptureAllowedUrls": [f"http://{o}" for o in origins],
         "VideoCaptureAllowed": False,
+        # The BioKids extension (D-187): block page and visited hosts. Force-
+        # installed, so it is exempt from the blocklist above and cannot be
+        # turned off.
+        **(
+            {"ExtensionInstallForcelist": [f"{extension[0]};{extension[1]}"]}
+            if extension
+            else {}
+        ),
     }

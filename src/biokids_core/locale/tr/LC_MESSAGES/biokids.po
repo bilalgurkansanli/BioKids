@@ -1468,3 +1468,7 @@ msgstr "E-posta bildirimleri kapatıldı"
 # D-178
 msgid "assistant.knowledge.on"
 msgstr "Cevaplarını bu bilgisayardaki Vikipedi özetleriyle kontrol ediyor; internete bağlanmıyor."
+
+# D-187: the child is told about the visited-sites list
+msgid "shell.firstrun.p5"
+msgstr "Ailen, internette hangi sitelere girdiğini görebilir: sadece sitenin adını, sayfaları değil."

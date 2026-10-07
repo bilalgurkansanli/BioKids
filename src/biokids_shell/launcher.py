@@ -244,7 +244,9 @@ class AppLauncher:
         a wall of Google suggestions, so the launcher serves a start page of the
         child's own allowed sites instead.
         """
-        return f"http://{self.config.shell.host}:{self.config.shell.port}/start"
+        from biokids_shell.kiosk import launcher_port
+
+        return f"http://{self.config.shell.host}:{launcher_port(self.config)}/start"
 
     def kiosk_profile(self) -> Path:
         return Path.home() / ".config" / "biokids" / "kiosk"
