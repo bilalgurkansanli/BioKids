@@ -53,7 +53,7 @@ from biokids_panel.context import PanelContext
 
 log = logging.getLogger(__name__)
 
-TOTAL_STEPS = 10
+TOTAL_STEPS = 9
 UNIX_USER_RE = re.compile(r"^[a-z][a-z0-9_-]{1,31}$")
 
 SETTING_PENDING_CHILD = "wizard.child_id"
@@ -100,12 +100,9 @@ def register_wizard(app: FastAPI) -> None:
     ) -> Response:
         step = max(1, min(step, TOTAL_STEPS + 1))
         if repo.setup_complete(session) and step <= TOTAL_STEPS:
-            # The gate that stops a configured machine being re-set-up (D-128),
-            # but it caught the confirmation screen too: step 10 redirects to
-            # /wizard/11 and setup is complete by then, so the parent pressed
-            # "Bitir" at the end of ten steps and landed on a bare PIN prompt
-            # with nothing saying the setup had worked or the child been
-            # created. Step 11 renders nothing a parent can change.
+            # The gate that stops a configured machine being re-set-up (D-128).
+            # The confirmation screen after the last step is past it on
+            # purpose: setup is complete by then, and it changes nothing.
             return see_other("/login")
         return _render_step(ctx, request, session, state, tr, step)
 
@@ -366,11 +363,9 @@ def register_wizard(app: FastAPI) -> None:
         _ = state
         return see_other("/wizard/9")
 
+    # Mail to the parent is set up under Ayarlar, where it can be tested; the
+    # wizard's step for it asked nothing (D-182).
     @app.post("/wizard/9", dependencies=[Open])
-    def step_email() -> Response:
-        return see_other("/wizard/10")
-
-    @app.post("/wizard/10", dependencies=[Open])
     def step_extras(
         ctx: Ctx,
         session: Db,
@@ -400,7 +395,7 @@ def register_wizard(app: FastAPI) -> None:
         )
         session.commit()
         _call_daemon(ctx, Op.RELOAD)
-        return see_other("/wizard/11")
+        return see_other("/wizard/10")
 
 
 def provision_child(session: Session, child: Child) -> ProvisionResult:

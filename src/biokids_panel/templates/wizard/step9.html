@@ -1,20 +1,32 @@
 {% extends "wizard/_base.html" %}
-{% block step_title %}{{ _('wizard.email.title') }}{% endblock %}
+{% block step_title %}{{ _('wizard.extras.title') }}{% endblock %}
 
-{#
-  Phase 0 stub. BioKids runs no mail service of its own (D-38) — a parent enters
-  their own SMTP details and the walkthrough for a Gmail app password lands with
-  the rest of the notification work.
-#}
 {% block step %}
-  <div class="notice notice--warn">
-    <div class="notice__title">{{ _('common.coming_soon') }}</div>
-    <p class="small">{{ _('common.coming_soon.help') }}</p>
-  </div>
-
-  <form method="post" action="/wizard/9">
-    <div class="wizard-actions">
-      <button class="btn btn--primary" type="submit">{{ _('common.next') }}</button>
+  <form class="card" method="post" action="/wizard/9">
+    <div class="checkline">
+      <input type="checkbox" id="voices" name="voices" checked>
+      <label for="voices">
+        {{ _('nav.voices') }}
+        <span class="help">{{ _('shell.supervision.badge') }}</span>
+      </label>
     </div>
+
+    {# The AI layer is a separate optional package, default off, and is not even
+       installed in Phase 0 (D-82). It is shown so the flow is honest about what
+       exists, not offered as something that can be turned on today. #}
+    <div class="checkline">
+      <input type="checkbox" id="ai" disabled>
+      <label for="ai">
+        {{ _('wizard.extras.title') }}
+        <span class="help">{{ _('common.coming_soon.help') }}</span>
+      </label>
+    </div>
+
+    <div class="notice">
+      <div class="notice__title">{{ _('disclaimer.headline') }}</div>
+      <p class="small">{{ _('disclaimer.body') }}</p>
+    </div>
+
+    <button class="btn btn--primary" type="submit">{{ _('common.finish') }}</button>
   </form>
 {% endblock %}

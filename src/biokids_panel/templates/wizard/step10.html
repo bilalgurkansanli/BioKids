@@ -1,32 +1,25 @@
 {% extends "wizard/_base.html" %}
-{% block step_title %}{{ _('wizard.extras.title') }}{% endblock %}
+{% block step_title %}{{ _('wizard.done.title') }}{% endblock %}
 
 {% block step %}
-  <form class="card" method="post" action="/wizard/10">
-    <div class="checkline">
-      <input type="checkbox" id="voices" name="voices" checked>
-      <label for="voices">
-        {{ _('nav.voices') }}
-        <span class="help">{{ _('shell.supervision.badge') }}</span>
-      </label>
-    </div>
+  <div class="card">
+    <p>{{ _('wizard.done.help') }}</p>
 
-    {# The AI layer is a separate optional package, default off, and is not even
-       installed in Phase 0 (D-82). It is shown so the flow is honest about what
-       exists, not offered as something that can be turned on today. #}
-    <div class="checkline">
-      <input type="checkbox" id="ai" disabled>
-      <label for="ai">
-        {{ _('wizard.extras.title') }}
-        <span class="help">{{ _('common.coming_soon.help') }}</span>
-      </label>
-    </div>
+    {% if child %}
+      <div class="child-card__head">
+        <span class="avatar" aria-hidden="true">{{ child.avatar|avatar }}</span>
+        <span class="child-card__name">{{ child.display_name }}</span>
+        <span class="muted small">{{ _('age_band.' ~ child.age_band) }}</span>
+      </div>
+    {% endif %}
 
-    <div class="notice">
-      <div class="notice__title">{{ _('disclaimer.headline') }}</div>
-      <p class="small">{{ _('disclaimer.body') }}</p>
+    <div class="wizard-actions">
+      <a class="btn btn--primary" href="/login">{{ _('wizard.done.go_panel') }}</a>
     </div>
+  </div>
 
-    <button class="btn btn--primary" type="submit">{{ _('common.finish') }}</button>
-  </form>
+  <div class="notice">
+    <div class="notice__title">{{ _('privacy.headline') }}</div>
+    <p class="small">{{ _('privacy.body') }}</p>
+  </div>
 {% endblock %}

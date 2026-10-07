@@ -234,8 +234,7 @@ def complete_the_wizard(panel: TestClient, quota_minutes: int) -> None:
     )
     panel.post("/wizard/7", data={"mode": "allowlist"})
     panel.post("/wizard/8", data={"enable": ""})
-    panel.post("/wizard/9")
-    panel.post("/wizard/10", data={"voices": "on"})
+    panel.post("/wizard/9", data={"voices": "on"})
 
 
 # --------------------------------------------------------------- the criterion

@@ -192,8 +192,7 @@ def test_the_whole_wizard_can_be_completed(
     )
     client.post("/wizard/7", data={"mode": "allowlist"}, follow_redirects=False)
     client.post("/wizard/8", data={"enable": ""}, follow_redirects=False)
-    client.post("/wizard/9", follow_redirects=False)
-    done = client.post("/wizard/10", data={"voices": "on"}, follow_redirects=False)
+    done = client.post("/wizard/9", data={"voices": "on"}, follow_redirects=False)
     assert done.status_code == 303
 
     # The closing screen, as the VM showed it: "Adım 11 / 10", and a two-minute
@@ -846,7 +845,7 @@ def test_the_wizard_cannot_be_re_run_to_take_over_the_panel(
         assert parent.pin_locked_until is not None, "and the lockout still stands"
 
 
-@pytest.mark.parametrize("step", range(1, 11))
+@pytest.mark.parametrize("step", range(1, 10))
 def test_no_wizard_step_does_anything_once_setup_is_finished(
     client: TestClient, family_ready: None, db: Database, step: int
 ) -> None:
@@ -880,7 +879,7 @@ def test_setup_cannot_finish_without_a_passphrase(client: TestClient, db: Databa
     client.post("/wizard/1", data={"lang": "tr"})
     client.post("/wizard/2", data={"name": "Anne", "pin": PIN, "pin_again": PIN})
 
-    response = client.post("/wizard/10", data={"voices": "on"}, follow_redirects=False)
+    response = client.post("/wizard/9", data={"voices": "on"}, follow_redirects=False)
 
     assert response.headers["location"].startswith("/wizard/3")
     with db.session() as session:
