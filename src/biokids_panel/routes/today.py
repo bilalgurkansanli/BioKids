@@ -1,0 +1,208 @@
+"""The Today screen, its live counters, and the buttons on each child's card."""
+
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import json
+import logging
+from collections.abc import AsyncIterator, Sequence
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Form, Request, Response
+from fastapi.responses import HTMLResponse, StreamingResponse
+
+from biokids_core import repo
+from biokids_core.errors import IpcError
+from biokids_core.i18n import Translator
+from biokids_core.ipc import AsyncDaemonClient, Op
+from biokids_panel.common import View, _call_daemon, _daemon_status, see_other
+from biokids_panel.context import PanelContext
+
+log = logging.getLogger(__name__)
+
+MAX_GRANT_SECONDS = 4 * 3600
+"""A sanity bound on "+10 dk". A typo in a form field should not hand a child
+the rest of the week."""
+
+router = APIRouter()
+
+
+@router.get("/today", response_class=HTMLResponse)
+def today(view: View) -> Response:
+    if blocked := view.guard():
+        return blocked
+    status, reachable = _daemon_status(view.ctx, view.session)
+    children = status.get("children", [])
+    return view.render(
+        "today.html",
+        children=children,
+        daemon_up=reachable,
+        notice=_action_notice(view.request, view.tr, children),
+        # Questions the assistant refused and the parent has not seen (D-165):
+        # above the cards, like a pending request, because they are why a
+        # parent might want to talk to their child today.
+        assistant_alerts=[
+            {"child": child, "count": count}
+            for child_id, count in sorted(repo.unseen_assistant_alerts(view.session).items())
+            if (child := repo.get_child(view.session, child_id)) is not None
+        ],
+    )
+
+
+@router.get("/today/cards", response_class=HTMLResponse)
+def today_cards(view: View) -> Response:
+    """The card list on its own, for a client that polls instead of streaming."""
+    if blocked := view.guard():
+        return blocked
+    status, reachable = _daemon_status(view.ctx, view.session)
+    return view.render(
+        "partials/child_cards.html",
+        children=status.get("children", []),
+        daemon_up=reachable,
+    )
+
+
+@router.get("/events")
+async def events(view: View) -> Response:
+    """Server-sent events, relayed from the daemon (T4.4).
+
+    The panel does not invent events; it forwards the daemon's. If the
+    daemon is unreachable the stream still opens and says so, because a
+    Today screen that silently stops updating is indistinguishable from a
+    child who stopped using the computer.
+    """
+    if not view.state.authenticated:
+        return Response(status_code=401)
+    return StreamingResponse(
+        _event_stream(view.ctx, view.request),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+# ------------------------------------------------------------ parent actions
+
+
+@router.post("/children/{child_id}/grant")
+def grant(
+    view: View,
+    child_id: int,
+    minutes: Annotated[int, Form()] = 10,
+    csrf_token: Annotated[str, Form()] = "",
+) -> Response:
+    if blocked := view.guard_form(csrf_token, "/today?error=csrf"):
+        return blocked
+    minutes = max(1, min(minutes, MAX_GRANT_SECONDS // 60))
+    ok = _call_daemon(
+        view.ctx, Op.GRANT_TIME, child_id=child_id, seconds=minutes * 60, actor=view.actor
+    )
+    return see_other(
+        f"/today?granted={child_id}&minutes={minutes}" if ok else "/today?error=daemon"
+    )
+
+
+@router.post("/children/{child_id}/unlock")
+def unlock_now(view: View, child_id: int, csrf_token: Annotated[str, Form()] = "") -> Response:
+    """Back in, without adding time (D-173). "Kilitle" had no way back but "+10 dk"."""
+    if blocked := view.guard_form(csrf_token, "/today?error=csrf"):
+        return blocked
+    ok = _call_daemon(view.ctx, Op.UNLOCK_NOW, child_id=child_id, actor=view.actor)
+    return see_other(f"/today?unlocked={child_id}" if ok else "/today?error=daemon")
+
+
+@router.post("/children/{child_id}/lock")
+def lock_now(view: View, child_id: int, csrf_token: Annotated[str, Form()] = "") -> Response:
+    if blocked := view.guard_form(csrf_token, "/today?error=csrf"):
+        return blocked
+    ok = _call_daemon(view.ctx, Op.LOCK_NOW, child_id=child_id, actor=view.actor)
+    return see_other(f"/today?locked={child_id}" if ok else "/today?error=daemon")
+
+
+@router.post("/children/{child_id}/poweroff")
+def poweroff(
+    view: View,
+    child_id: int,
+    csrf_token: Annotated[str, Form()] = "",
+    confirm: Annotated[str, Form()] = "",
+) -> Response:
+    if blocked := view.guard_form(csrf_token, "/today?error=csrf"):
+        return blocked
+    if confirm != "yes":
+        # Reachable with JavaScript off, where the onsubmit confirm() never
+        # runs and a mis-tap on "Kapat" - which sits beside "Kilitle" in the
+        # same row of three - would otherwise power the machine off under a
+        # child with no chance to cancel.
+        return see_other(f"/today?confirm=poweroff&child={child_id}")
+    ok = _call_daemon(view.ctx, Op.POWEROFF_NOW, actor=view.actor)
+    return see_other("/today?poweroff=1" if ok else "/today?error=daemon")
+
+
+# ------------------------------------------------------------------- helpers
+
+
+def _action_notice(
+    request: Request, tr: Translator, children: Sequence[dict[str, Any]]
+) -> dict[str, str] | None:
+    """What to tell the parent about the button they just pressed.
+
+    The three actions redirect here with their outcome in the query string, and
+    for a long time nothing read it: the page reloaded and said nothing, so a
+    grant that never reached a stopped daemon was indistinguishable from one
+    that worked. The sentence is assembled here rather than in the template
+    because it needs the child's name and a translation, and templates are a bad
+    place to keep either.
+    """
+    query = request.query_params
+
+    failure = query.get("error", "")
+    if failure:
+        key = "error.daemon_unreachable" if failure == "daemon" else "error.save_failed"
+        return {"tone": "danger", "text": tr(key)}
+
+    def name_of(raw: str) -> str:
+        try:
+            wanted = int(raw)
+        except ValueError:
+            return ""
+        for child in children:
+            if int(child.get("child_id", 0)) == wanted:
+                return str(child.get("display_name", ""))
+        return ""
+
+    minutes = query.get("minutes", "10")
+    for flag, key in (
+        ("granted", "today.grant.done"),
+        ("locked", "today.lock.done"),
+        ("unlocked", "today.unlock.done"),
+    ):
+        raw = query.get(flag, "")
+        if raw:
+            return {"tone": "ok", "text": tr(key, name=name_of(raw), minutes=minutes)}
+
+    if query.get("poweroff"):
+        return {"tone": "ok", "text": tr("today.poweroff.done")}
+    return None
+
+
+async def _event_stream(ctx: PanelContext, request: Request) -> AsyncIterator[bytes]:
+    """Relay daemon events as SSE, reconnecting quietly when the daemon restarts."""
+    client = AsyncDaemonClient(ctx.config.paths.daemon_socket)
+    while not await request.is_disconnected():
+        try:
+            async for event in client.stream_events():
+                if await request.is_disconnected():
+                    return
+                payload = json.dumps(
+                    {"child_id": event.child_id, **event.payload}, ensure_ascii=False
+                )
+                yield f"event: {event.kind}\ndata: {payload}\n\n".encode()
+        except (IpcError, OSError) as exc:
+            log.debug("event stream dropped: %s", exc)
+            yield b'event: daemon_state\ndata: {"state":"unreachable"}\n\n'
+        with contextlib.suppress(asyncio.CancelledError):
+            await asyncio.sleep(3)
