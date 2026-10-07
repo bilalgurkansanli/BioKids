@@ -1,66 +1,109 @@
 {#
-  Phone access: what the settings screen and wizard step 8 both show (D-169).
-  Each page adds its own buttons under it. Needs the values of
-  biokids_panel.phone.view().
+  Phone access as four numbered steps (D-169, D-195): what the settings' phone
+  page and wizard step 8 both show, each adding its own button under it. Each
+  step says when it is done, so a parent sees where they are rather than
+  reading a paragraph. Needs the values of biokids_panel.phone.view().
 #}
-<p class="status {% if tailscale.ready %}status--online{% endif %}">
+{% set connected = tailscale.ready %}
+{% set published = tailscale.serves(panel_port) %}
+{% set phone_joined = tailscale.phones|length > 0 %}
+
+<p class="status {% if connected %}status--online{% endif %}">
   {{ _(tailscale.status_key) }}
 </p>
-
-{% if setup_state == 'running' %}
-  {# The setup unit installs Tailscale, then waits for the parent to sign in.
-     The page refreshes itself (see the head block) until it is done. #}
-  <div class="notice" role="status">
-    {% if tailscale.auth_url %}
-      <div class="notice__title">{{ _('remote.setup.login.title') }}</div>
-      <p><a class="btn btn--primary" href="{{ tailscale.auth_url }}" target="_blank" rel="noopener noreferrer">{{ _('remote.setup.login.open') }}</a></p>
-      {% if auth_qr %}<div class="qr">{{ auth_qr|safe }}</div>{% endif %}
-      <p class="muted small">{{ _('remote.setup.login.help') }}</p>
-    {% else %}
-      <div class="notice__title">{{ _('remote.setup.installing.title') }}</div>
-      <p class="muted small">{{ _('remote.setup.installing') }}</p>
-    {% endif %}
-  </div>
-{% elif setup_state == 'failed' and not tailscale.serves(panel_port) %}
-  <div class="notice notice--danger" role="alert">
-    <div class="notice__title">{{ _('remote.setup.failed') }}</div>
-  </div>
-{% endif %}
 
 {% if tailscale.public %}
   <div class="notice notice--danger" role="alert">
     <div class="notice__title">{{ _('remote.funnel_warning') }}</div>
-    {# The alarm is about Funnel, so the advice has to be about Funnel. It
-       used to say "do not forward ports on your modem", which the parent
-       has not done - they go and look at their router, find nothing, and
-       conclude the warning is spurious. #}
+    {# The alarm is about Funnel, so the advice has to be about Funnel. #}
     <p class="small">{{ _('remote.funnel_warning.help') }}</p>
     <p class="small"><code>sudo tailscale funnel off</code></p>
   </div>
 {% endif %}
 
-{% if approval_url and not tailscale.serves(panel_port) %}
-  {# D-157: every new tailnet has Serve switched off, and turning it on is a
-     page only the tailnet's owner can visit. #}
-  <div class="notice" role="status">
-    <div class="notice__title">{{ _('remote.needs_approval') }}</div>
-    <p><a class="btn btn--primary" href="{{ approval_url }}" target="_blank" rel="noopener noreferrer">{{ _('remote.approval.open') }}</a></p>
-    <p class="muted small">{{ _('remote.approval.note') }}</p>
-  </div>
-{% endif %}
+<ol class="guide">
+  {# 1. This computer joins the family's tailnet. #}
+  <li class="guide__step {% if connected %}is-done{% else %}is-now{% endif %}">
+    <h3 class="guide__title">{{ _('remote.guide.1.title') }}</h3>
+    {% if connected %}
+      <p class="muted small">{{ _('remote.guide.1.done') }}</p>
+    {% elif setup_state == 'running' %}
+      {# The setup unit installs Tailscale, then waits for the parent to sign
+         in. The page refreshes itself until it is done. #}
+      <div class="notice" role="status">
+        {% if tailscale.auth_url %}
+          <div class="notice__title">{{ _('remote.setup.login.title') }}</div>
+          <p><a class="btn btn--primary" href="{{ tailscale.auth_url }}" target="_blank" rel="noopener noreferrer">{{ _('remote.setup.login.open') }}</a></p>
+          {% if auth_qr %}<div class="qr">{{ auth_qr|safe }}</div>{% endif %}
+          <p class="muted small">{{ _('remote.setup.login.help') }}</p>
+        {% else %}
+          <div class="notice__title">{{ _('remote.setup.installing.title') }}</div>
+          <p class="muted small">{{ _('remote.setup.installing') }}</p>
+        {% endif %}
+      </div>
+    {% else %}
+      <p class="small">{{ _('remote.guide.1.body') }}</p>
+      {% if setup_state == 'failed' %}
+        <div class="notice notice--danger" role="alert">
+          <div class="notice__title">{{ _('remote.setup.failed') }}</div>
+        </div>
+      {% endif %}
+    {% endif %}
+  </li>
 
-{% if panel_url and tailscale.serves(panel_port) %}
-  <p><strong>{{ _('remote.url') }}:</strong> <code>{{ panel_url }}</code></p>
-  {% if qr %}
-    <div class="qr">{{ qr|safe }}</div>
-    <p class="muted small">{{ _('remote.qr.help') }}</p>
-  {% endif %}
-  <p class="muted small">{{ _('remote.only_tailnet') }}</p>
-{% elif setup_state != 'running' %}
-  <p class="muted">{{ _('remote.localhost_only') }}</p>
-  {% if tailscale.state != 'running' %}
-    <p class="muted small">{{ _('remote.install.help') }}</p>
-  {% endif %}
-{% endif %}
+  {# 2. The panel is published to the tailnet, after Tailscale's one approval. #}
+  <li class="guide__step {% if published %}is-done{% elif connected %}is-now{% endif %}">
+    <h3 class="guide__title">{{ _('remote.guide.2.title') }}</h3>
+    {% if published %}
+      <p class="muted small">{{ _('remote.guide.2.done') }}</p>
+    {% elif approval_url %}
+      {# D-157: every new tailnet has Serve switched off, and turning it on is
+         a page only the tailnet's owner can visit. #}
+      <div class="notice" role="status">
+        <div class="notice__title">{{ _('remote.needs_approval') }}</div>
+        <p><a class="btn btn--primary" href="{{ approval_url }}" target="_blank" rel="noopener noreferrer">{{ _('remote.approval.open') }}</a></p>
+        <p class="muted small">{{ _('remote.approval.note') }}</p>
+      </div>
+    {% else %}
+      <p class="muted small">{{ _('remote.guide.2.body') }}</p>
+    {% endif %}
+  </li>
+
+  {# 3. The parent's phone joins the same tailnet. Done when Tailscale lists a
+     phone or a tablet among this computer's peers. #}
+  <li class="guide__step {% if phone_joined %}is-done{% elif published %}is-now{% endif %}">
+    <h3 class="guide__title">{{ _('remote.guide.3.title') }}</h3>
+    {% if phone_joined %}
+      <p class="muted small">{{ _('remote.guide.3.done', names=tailscale.phones|join(', ')) }}</p>
+    {% else %}
+      <p class="small">{{ _('remote.guide.3.body') }}</p>
+      <div class="stores">
+        {% for store in stores %}
+          <a class="store" href="{{ store.url }}" target="_blank" rel="noopener noreferrer">
+            <span class="qr qr--small">{{ store.qr|safe }}</span>
+            <span class="small">{{ store.name }}</span>
+          </a>
+        {% endfor %}
+      </div>
+      <p class="muted small">{{ _('remote.guide.3.vpn') }}</p>
+    {% endif %}
+  </li>
+
+  {# 4. The panel on the phone. #}
+  <li class="guide__step {% if published and phone_joined %}is-now{% endif %}">
+    <h3 class="guide__title">{{ _('remote.guide.4.title') }}</h3>
+    {% if panel_url and published %}
+      <p><strong>{{ _('remote.url') }}:</strong> <code>{{ panel_url }}</code></p>
+      {% if qr %}
+        <div class="qr">{{ qr|safe }}</div>
+        <p class="muted small">{{ _('remote.qr.help') }}</p>
+      {% endif %}
+      <p class="small">{{ _('remote.guide.4.body') }}</p>
+      <p class="muted small">{{ _('remote.only_tailnet') }}</p>
+    {% else %}
+      <p class="muted small">{{ _('remote.guide.4.waiting') }}</p>
+    {% endif %}
+  </li>
+</ol>
 
 <p class="muted small">{{ _('remote.no_port_forward') }}</p>

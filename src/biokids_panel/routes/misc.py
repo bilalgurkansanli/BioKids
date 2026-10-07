@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from biokids_panel.common import Ctx, Db
+from biokids_panel.common import Ctx, Db, View
 from biokids_panel.context import (
     SHARED_STATIC_DIR,
     STATIC_DIR,
@@ -49,6 +49,21 @@ def service_worker() -> Response:
         media_type="text/javascript",
         headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"},
     )
+
+
+HELP_TOPICS = ("time", "locked", "phone", "site", "login", "pin", "off", "remove")
+"""The help page's questions, in the order a parent meets them (D-195)."""
+
+HELP_COMMANDS = {
+    "pin": "sudo biokids-admin reset-pin",
+    "remove": "sudo apt remove biokids-core",
+}
+
+
+@router.get("/help", response_class=HTMLResponse)
+def help_page(view: View) -> Response:
+    """Open without signing in: "I forgot my PIN" is one of the questions."""
+    return view.render("help.html", topics=HELP_TOPICS, commands=HELP_COMMANDS)
 
 
 @router.get("/offline", response_class=HTMLResponse)

@@ -174,6 +174,16 @@ class OperationsMixin(EndSequenceMixin):
         self.ledger.persist()
         return await self.enforcer.poweroff()
 
+    async def reboot_now(self, actor: str = "parent") -> bool:
+        """Restart the machine, which LightDM needs once after BioKids is
+        installed before a child can log in by their picture (D-155, D-195)."""
+        for runtime in self.children.values():
+            await self.enforcer.stop_all_apps(runtime.unix_user)
+        repo.audit(self.session, actor=actor, action="reboot", severity="warning")
+        self.session.commit()
+        self.ledger.persist()
+        return await self.enforcer.reboot()
+
     def start_timeout(self, child_id: int, minutes: int, actor: str = "parent") -> None:
         self._require(child_id)
         self.ledger.start_penalty(child_id, minutes * 60)

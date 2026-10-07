@@ -1,6 +1,11 @@
 {% extends "wizard/_base.html" %}
 {% block step_title %}{{ _('wizard.done.title') }}{% endblock %}
 
+{#
+  The closing screen (D-195): not "done" and nothing else, but the three things
+  a parent still has to do or know - the restart LightDM needs (D-155), how
+  the child gets in, and every way back to this panel.
+#}
 {% block step %}
   <div class="card">
     <p>{{ _('wizard.done.help') }}</p>
@@ -13,8 +18,24 @@
       </div>
     {% endif %}
 
+    <ol class="guide">
+      <li class="guide__step is-now">
+        <h3 class="guide__title">{{ _('wizard.done.next.restart.title') }}</h3>
+        <p class="small">{{ _('wizard.done.next.restart') }}</p>
+      </li>
+      <li class="guide__step">
+        <h3 class="guide__title">{{ _('wizard.done.next.child.title') }}</h3>
+        <p class="small">{{ _('wizard.done.next.child') }}</p>
+      </li>
+      <li class="guide__step">
+        <h3 class="guide__title">{{ _('wizard.done.next.panel.title') }}</h3>
+        <p class="small">{{ _('wizard.done.next.panel') }}</p>
+      </li>
+    </ol>
+
     <div class="wizard-actions">
       <a class="btn btn--primary" href="/login">{{ _('wizard.done.go_panel') }}</a>
+      <a class="btn btn--quiet" href="/help">{{ _('help.title') }}</a>
     </div>
   </div>
 

@@ -12,6 +12,21 @@
       {{ notice.text }}
     </div>
   {% endif %}
+  {% if restart_needed %}
+    {# D-195: LightDM reads the login-by-picture setting only when it starts
+       (D-155), so a fresh install needs one restart before a child can log in. #}
+    <div class="notice notice--warn" role="status">
+      <div class="notice__title">{{ _('restart.title') }}</div>
+      <p class="small">{{ _('restart.body') }}</p>
+      <form method="post" action="/system/reboot"
+            data-confirm="{{ _('restart.confirm') }}"
+            onsubmit="return confirm(this.dataset.confirm)">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <input type="hidden" name="confirm" value="yes">
+        <button class="btn btn--primary" type="submit">{{ _('restart.button') }}</button>
+      </form>
+    </div>
+  {% endif %}
   {% for item in assistant_alerts %}
     <a class="notice notice--warn notice--link" href="/children/{{ item.child.id }}/assistant">
       <span aria-hidden="true">💬</span>

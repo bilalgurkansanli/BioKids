@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 
 from biokids_core import repo, security
 from biokids_core.catalog import ALWAYS_ON_TILES, enable_for_child, load_catalog, sync_catalog
+from biokids_core.clock import read_boot_id
 from biokids_core.config import Config
 from biokids_core.db.models import Child, Parent, utcnow
 from biokids_core.i18n import Translator
@@ -58,6 +59,10 @@ TOTAL_STEPS = 9
 UNIX_USER_RE = re.compile(r"^[a-z][a-z0-9_-]{1,31}$")
 
 SETTING_PENDING_CHILD = "wizard.child_id"
+SETTING_RESTART_BOOT = "setup.restart_boot_id"
+"""The boot during which setup finished. LightDM reads the login-by-picture
+setting only when it starts (D-155), so until the machine has restarted once
+the Today screen says so, with a button (D-195)."""
 """Which child the later steps are configuring. Kept in `setting` rather than a
 cookie so that a parent who closes the tab and comes back does not start again."""
 
@@ -398,6 +403,7 @@ def register_wizard(app: FastAPI) -> None:
 
         family = repo.get_or_create_family(session)
         family.setup_completed_at = utcnow()
+        repo.set_setting(session, SETTING_RESTART_BOOT, read_boot_id() or "")
         repo.audit(
             session,
             actor="system",

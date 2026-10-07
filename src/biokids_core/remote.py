@@ -248,6 +248,9 @@ class RemoteStatus:
     auth_url: str = ""
     """While signed out after `tailscale up`: the page that signs this machine in
     to the parent's tailnet (D-169). Only ever a login.tailscale.com address."""
+    phones: tuple[str, ...] = ()
+    """Names of the phones and tablets in the same tailnet, so the guide can say
+    that step three is done (D-195)."""
 
     @property
     def status_key(self) -> str:
@@ -370,6 +373,7 @@ class TailscaleRemote:
                 served_ports=serve.ports,
                 funnel_ports=serve.funnel_ports,
                 detail="no usable MagicDNS name in status output",
+                phones=_phones(payload),
             )
         serving = self.port in serve.ports
         return RemoteStatus(
@@ -379,6 +383,7 @@ class TailscaleRemote:
             tailnet=tailnet,
             served_ports=serve.ports,
             funnel_ports=serve.funnel_ports,
+            phones=_phones(payload),
         )
 
     def panel_url(self) -> str | None:
@@ -632,6 +637,23 @@ def _load_json(text: str) -> Mapping[str, Any] | None:
 
 def _text(value: Any) -> str:
     return value.strip() if isinstance(value, str) else ""
+
+
+PHONE_SYSTEMS: Final = frozenset({"ios", "android"})
+"""`OS` values of a peer that is a phone or a tablet, lower-cased."""
+
+
+def _phones(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    """The phones and tablets in this tailnet, by the name Tailscale shows."""
+    peers = payload.get("Peer")
+    if not isinstance(peers, Mapping):
+        return ()
+    names = {
+        _text(peer.get("HostName")) or _text(peer.get("DNSName")).split(".")[0]
+        for peer in peers.values()
+        if isinstance(peer, Mapping) and _text(peer.get("OS")).lower() in PHONE_SYSTEMS
+    }
+    return tuple(sorted(name for name in names if name))
 
 
 def _dns_name(payload: Mapping[str, Any]) -> str:

@@ -1,0 +1,68 @@
+#!/bin/sh
+# biokids-panel postinst.
+#
+# After the debhelper snippet below has started the panel: the parent who just
+# installed BioKids should not have to log out, or know an address, to find the
+# setup wizard (D-195). So the wizard is opened in every desktop session that is
+# already open - the same script /etc/xdg/autostart runs at the next login, run
+# inside that user's own systemd manager, which has their display. It does
+# nothing in a child's session or once setup is complete, and failing here
+# fails nothing: the next login opens it anyway.
+
+set -e
+
+#DEBHELPER#
+
+open_setup_in_open_sessions() {
+    [ -d /run/systemd/system ] || return 0
+    command -v loginctl >/dev/null 2>&1 || return 0
+    command -v systemd-run >/dev/null 2>&1 || return 0
+    for session in $(loginctl list-sessions --no-legend 2>/dev/null | awk '{print $1}'); do
+        [ "$(loginctl show-session "$session" -p Class --value 2>/dev/null)" = user ] || continue
+        case "$(loginctl show-session "$session" -p Type --value 2>/dev/null)" in
+            x11|wayland) ;;
+            *) continue ;;
+        esac
+        user=$(loginctl show-session "$session" -p Name --value 2>/dev/null)
+        [ -n "$user" ] || continue
+        # The display, in case the session never told its manager (Debian's
+        # Xsession usually does).
+        display=$(loginctl show-session "$session" -p Display --value 2>/dev/null)
+        home=$(getent passwd "$user" | cut -d: -f6)
+        set -- --setenv=DISPLAY="${display:-:0}"
+        if [ -n "$home" ] && [ -f "$home/.Xauthority" ]; then
+            set -- "$@" --setenv=XAUTHORITY="$home/.Xauthority"
+        fi
+        timeout 10 systemd-run --user --machine="$user@.host" --quiet --collect "$@" \
+            /usr/lib/biokids/biokids-open-setup >/dev/null 2>&1 || true
+    done
+}
+
+case "$1" in
+    configure)
+        open_setup_in_open_sessions
+        if [ -z "$2" ]; then
+            cat <<'EOF'
+
+BioKids is installed. The setup wizard opens in your browser; if it does not,
+choose "BioKids Parent Panel" in the applications menu, or open
+http://127.0.0.1:7878 on this computer.
+
+BioKids kuruldu. Kurulum sihirbazı tarayıcınızda açılıyor; açılmazsa
+Uygulamalar menüsünden "BioKids Ebeveyn Paneli"ni seçin ya da bu bilgisayarda
+http://127.0.0.1:7878 adresini açın.
+
+EOF
+        fi
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

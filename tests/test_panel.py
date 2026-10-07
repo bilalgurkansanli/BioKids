@@ -13,6 +13,7 @@ The daemon is faked at the client boundary, so none of this needs a socket.
 from __future__ import annotations
 
 import datetime as dt
+import html
 import re
 from typing import Any
 
@@ -2316,3 +2317,108 @@ def test_the_last_wizard_step_offers_nothing_that_was_cut(client: TestClient) ->
     page = client.get("/wizard/9").text
     assert 'action="/wizard/9"' in page, "the step itself, not a redirect"
     assert 'id="ai"' not in page
+
+
+# ------------------------------------------------------- guided first run (D-195)
+
+
+def test_the_phone_guide_shows_four_steps_and_the_app_stores(
+    client: TestClient, family_ready: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from biokids_core import remote
+
+    absent = remote.RemoteStatus(state=remote.RemoteState.ABSENT)
+    monkeypatch.setattr(remote, "detect", lambda config=None: absent)
+    login(client)
+    page = client.get("/settings/phone").text
+    assert page.count('class="guide__step') == 4
+    assert "apps.apple.com/app/tailscale" in page
+    assert "play.google.com/store/apps/details?id=com.tailscale.ipn" in page
+    assert "Telefonunuza Tailscale'i kurun" in html.unescape(page)
+
+
+def test_a_joined_phone_marks_its_step_done(
+    client: TestClient, family_ready: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from biokids_core import remote
+
+    serving = remote.RemoteStatus(
+        state=remote.RemoteState.SERVING,
+        url="https://biokids.tail1a2b3c.ts.net",
+        served_ports=(7878,),
+        phones=("annes-iphone",),
+    )
+    monkeypatch.setattr(remote, "detect", lambda config=None: serving)
+    login(client)
+    page = client.get("/settings/phone").text
+    assert "Telefonunuz bağlı: annes-iphone" in page
+    assert page.count("is-done") == 3
+    assert "https://biokids.tail1a2b3c.ts.net" in page
+
+
+def test_the_today_screen_asks_for_the_one_restart_setup_needs(
+    client: TestClient, family_ready: None, db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from biokids_panel.routes import today
+
+    with db.session() as session:
+        repo.set_setting(session, wizard.SETTING_RESTART_BOOT, "boot-a")
+        session.commit()
+    login(client)
+
+    monkeypatch.setattr(today, "read_boot_id", lambda: "boot-a")
+    assert 'action="/system/reboot"' in client.get("/today").text
+    monkeypatch.setattr(today, "read_boot_id", lambda: "boot-b")
+    assert 'action="/system/reboot"' not in client.get("/today").text, "restarted since"
+
+
+def test_the_restart_needs_its_confirmation(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    login(client)
+    response = client.post(
+        "/system/reboot", data={"csrf_token": csrf_of(client)}, follow_redirects=False
+    )
+    assert response.headers["location"] == "/today"
+    assert not daemon.ran("reboot_now")
+
+    response = client.post(
+        "/system/reboot",
+        data={"csrf_token": csrf_of(client), "confirm": "yes"},
+        follow_redirects=False,
+    )
+    assert response.headers["location"] == "/today?rebooting=1"
+    assert daemon.ran("reboot_now")
+
+
+def test_finishing_setup_remembers_the_boot_it_finished_in(
+    client: TestClient, db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(wizard, "read_boot_id", lambda: "boot-of-setup")
+    client.post("/wizard/1", data={"lang": "tr"})
+    client.post("/wizard/2", data={"name": "Anne", "pin": PIN, "pin_again": PIN})
+    page = client.get("/wizard/3").text
+    marker = 'name="recovery" value="'
+    start = page.index(marker) + len(marker)
+    recovery = page[start : page.index('"', start)]
+    client.post(
+        "/wizard/3", data={"passphrase": PASSPHRASE, "recovery": recovery, "written_down": "on"}
+    )
+    done = client.post("/wizard/9", data={"voices": "on"}, follow_redirects=False)
+    assert done.headers["location"] == "/wizard/10"
+    closing = client.get("/wizard/10").text
+    assert "Bilgisayarı bir kez yeniden başlatın" in closing
+    assert 'href="/help"' in closing
+    with db.session() as session:
+        assert repo.get_setting(session, wizard.SETTING_RESTART_BOOT) == "boot-of-setup"
+
+
+def test_the_help_page_is_open_before_signing_in(
+    client: TestClient, family_ready: None
+) -> None:
+    """ "I forgot my PIN" is one of its questions."""
+    page = client.get("/help")
+    assert page.status_code == 200
+    assert "PIN'imi unuttum." in html.unescape(page.text)
+    assert "sudo biokids-admin reset-pin" in page.text
+    assert 'href="/help"' in client.get("/login").text

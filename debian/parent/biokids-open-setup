@@ -1,14 +1,42 @@
 #!/bin/sh
-# Open the BioKids setup wizard at login, until setup is complete (D-170).
+# BioKids at a parent's login (D-170, D-195).
 #
-# Run from /etc/xdg/autostart in every desktop session. It does nothing for a
-# child (their session is the launcher), and nothing once the panel stops
-# sending "/" to the wizard, which it does for as long as setup is incomplete.
+# Run from /etc/xdg/autostart in every desktop session, and by biokids-panel's
+# postinst in the sessions already open when BioKids is installed. It does
+# nothing for a child (their session is the launcher). For anyone else it:
+#
+#   * puts a "BioKids Parent Panel" shortcut on their desktop, once - deleted,
+#     it stays deleted;
+#   * opens the setup wizard in their browser, for as long as setup is not
+#     complete, which the panel says by sending "/" to the wizard.
 set -u
 
 case " $(id -nG 2>/dev/null) " in
     *" biokids-child "*) exit 0 ;;
 esac
+
+# --------------------------------------------------------- desktop shortcut
+
+ENTRY=/usr/share/applications/biokids-panel.desktop
+MARKER="${XDG_CONFIG_HOME:-$HOME/.config}/biokids/desktop-shortcut"
+
+if [ -r "$ENTRY" ] && [ ! -e "$MARKER" ]; then
+    desktop=$(xdg-user-dir DESKTOP 2>/dev/null || true)
+    if [ -n "$desktop" ] && [ "$desktop" != "$HOME" ] && [ -d "$desktop" ]; then
+        shortcut="$desktop/biokids-panel.desktop"
+        if cp "$ENTRY" "$shortcut" 2>/dev/null; then
+            chmod 0755 "$shortcut"
+            # Xfce 4.18 and later run a desktop launcher without asking only
+            # when its checksum is recorded; GNOME asks for the trusted flag.
+            sum=$(sha256sum "$shortcut" | cut -d' ' -f1)
+            gio set "$shortcut" metadata::xfce-exe-checksum "$sum" 2>/dev/null || true
+            gio set "$shortcut" metadata::trusted true 2>/dev/null || true
+        fi
+    fi
+    mkdir -p "$(dirname "$MARKER")" && : > "$MARKER"
+fi
+
+# ------------------------------------------------------------- setup wizard
 
 # The panel starts at boot; give it a moment if this login was quicker.
 python3 - <<'PY' || exit 0

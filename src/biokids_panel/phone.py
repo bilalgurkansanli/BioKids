@@ -10,6 +10,7 @@ once, as before.
 
 from __future__ import annotations
 
+import functools
 import logging
 from typing import Any, Literal
 
@@ -23,6 +24,13 @@ from biokids_panel.context import PanelContext
 log = logging.getLogger(__name__)
 
 Outcome = Literal["on", "setup", "approval", "error"]
+
+APP_STORES: tuple[tuple[str, str], ...] = (
+    ("iPhone · iPad", "https://apps.apple.com/app/tailscale/id1470499037"),
+    ("Android", "https://play.google.com/store/apps/details?id=com.tailscale.ipn"),
+)
+"""Where the parent's phone gets the Tailscale app (D-195). Links the parent's
+own phone opens; BioKids itself never fetches them."""
 
 NEEDS_SETUP = frozenset(
     {remote.RemoteState.ABSENT, remote.RemoteState.LOGGED_OUT, remote.RemoteState.STOPPED}
@@ -42,7 +50,16 @@ def view(ctx: PanelContext, session: Session) -> dict[str, Any]:
         "approval_url": remote.approval_url_in(
             repo.get_setting(session, remote.SETTING_APPROVAL_URL)
         ),
+        "stores": store_links(),
     }
+
+
+@functools.cache
+def store_links() -> tuple[dict[str, str], ...]:
+    """The app stores with a QR code each, drawn once per process."""
+    return tuple(
+        {"name": name, "url": url, "qr": remote.qr_svg(url)} for name, url in APP_STORES
+    )
 
 
 def turn_on(ctx: PanelContext, session: Session, actor: str) -> Outcome:

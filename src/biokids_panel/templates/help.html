@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ _('help.title') }} · {{ _('panel.title') }}{% endblock %}
+
+{#
+  D-195. The questions a parent asks in the first weeks, each answered in the
+  words the screens use. Open without signing in: "I forgot my PIN" is one of
+  them. Plain <details>, no script.
+#}
+{% block content %}
+  <h1>{{ _('help.title') }}</h1>
+  <p class="muted">{{ _('help.intro') }}</p>
+
+  {% for topic in topics %}
+    <details class="card help">
+      <summary><strong>{{ _('help.' ~ topic ~ '.q') }}</strong></summary>
+      <p>{{ _('help.' ~ topic ~ '.a') }}</p>
+      {% if topic == 'pin' or topic == 'remove' %}
+        <p><code>{{ commands[topic] }}</code></p>
+      {% endif %}
+    </details>
+  {% endfor %}
+
+  <p class="muted small">{{ _('help.more') }}</p>
+  <p>
+    {% if auth.authenticated %}
+      <a class="btn btn--quiet" href="/today">{{ _('nav.today') }}</a>
+    {% else %}
+      <a class="btn btn--quiet" href="/login">{{ _('common.back') }}</a>
+    {% endif %}
+  </p>
+{% endblock %}

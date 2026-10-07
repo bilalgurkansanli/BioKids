@@ -70,7 +70,11 @@ class FilteringMixin(SupervisorBase):
             temp.write_text(
                 json.dumps(
                     kiosk_policy(
-                        origins, self._web_tile_hosts(), self._browser_mode(), extension
+                        origins,
+                        self._web_tile_hosts(),
+                        self._browser_mode(),
+                        extension,
+                        panel=self._panel_origins(),
                     ),
                     indent=2,
                     ensure_ascii=False,
@@ -95,6 +99,11 @@ class FilteringMixin(SupervisorBase):
                 "the browser extension is not packed (biokids-admin pack-extension); "
                 "blocked pages show Chromium's own error and visits are not reported"
             )
+
+    def _panel_origins(self) -> list[str]:
+        """The parent's panel, as the menu entry and the shortcut open it (D-195)."""
+        port = self.config.panel.port
+        return [f"{self.config.panel.host}:{port}", f"localhost:{port}"]
 
     def _launcher_origins(self) -> list[str]:
         """Every managed child's launcher, each on a port of its own (D-188)."""

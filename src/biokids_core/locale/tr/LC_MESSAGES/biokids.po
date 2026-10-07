@@ -776,7 +776,7 @@ msgid "wizard.remote.title"
 msgstr "Telefondan erişim"
 
 msgid "wizard.remote.help"
-msgstr "Paneli telefonunuzdan açmak için Tailscale kullanıyoruz. Dışarıya hiçbir port açılmaz."
+msgstr "Paneli evin dışından, telefonunuzdan da açabilmek için ücretsiz Tailscale uygulamasını kullanıyoruz. Tailscale, telefonunuzla bu bilgisayar arasında yalnızca sizin kullanabildiğiniz şifreli bir bağlantı kurar; internete hiçbir kapı açılmaz. Aşağıdaki dört adım yaklaşık beş dakika sürer. İsterseniz şimdilik geçip sonra Ayarlar'dan yapabilirsiniz."
 
 msgid "wizard.email.title"
 msgstr "E-posta bildirimleri"
@@ -788,7 +788,7 @@ msgid "wizard.done.title"
 msgstr "Hazır"
 
 msgid "wizard.done.help"
-msgstr "Kurulum tamam. Bilgisayarı bir kez yeniden başlatın; ardından çocuğunuz giriş ekranında resmini seçerek girebilir."
+msgstr "Kurulum tamam! Geriye üç küçük şey kaldı:"
 
 msgid "wizard.done.try"
 msgstr "Şimdi dene"
@@ -1585,3 +1585,140 @@ msgstr "Çocuk BioKids'ten kaldırıldı"
 
 msgid "audit.action.child_remove_failed"
 msgstr "Çocuk kaldırılamadı"
+
+# The guided first run, the restart banner and the help page (D-195)
+msgid "remote.guide.1.title"
+msgstr "Bu bilgisayarı bağlayın"
+
+msgid "remote.guide.1.body"
+msgstr "Aşağıdaki \"Telefondan erişimi aç\" düğmesine basın. BioKids, Tailscale'i bu bilgisayara kurar ve sizden bir kez giriş yapmanızı ister. Google, Apple ya da Microsoft hesabınızla girebilirsiniz; hesabınız yoksa ücretsiz açılır."
+
+msgid "remote.guide.1.done"
+msgstr "Bu bilgisayar Tailscale'e bağlı."
+
+msgid "remote.guide.2.title"
+msgstr "Telefondan erişime izin verin"
+
+msgid "remote.guide.2.body"
+msgstr "Bilgisayar bağlanınca BioKids paneli telefonunuza açar. Tailscale ilk seferde sizden bir onay isterse burada bir düğme çıkar."
+
+msgid "remote.guide.2.done"
+msgstr "Panel, Tailscale ağınızdaki cihazlara açık."
+
+msgid "remote.guide.3.title"
+msgstr "Telefonunuza Tailscale'i kurun"
+
+msgid "remote.guide.3.body"
+msgstr "Telefonunuzun kamerasıyla kendi mağazanızın kodunu okutun, Tailscale uygulamasını kurun ve bilgisayarda kullandığınız hesapla giriş yapın."
+
+msgid "remote.guide.3.vpn"
+msgstr "Telefon \"VPN bağlantısı ekle\" izni ister; izin verin. Bu yalnızca Tailscale'in kendi bağlantısıdır, diğer internet kullanımınız değişmez."
+
+msgid "remote.guide.3.done"
+msgstr "Telefonunuz bağlı: {names}"
+
+msgid "remote.guide.4.title"
+msgstr "Paneli telefonda açın"
+
+msgid "remote.guide.4.body"
+msgstr "Telefonunuzun kamerasıyla bu kodu okutun ve PIN'inizi girin. Tarayıcının menüsünden \"Ana ekrana ekle\"yi seçerseniz BioKids telefonunuzda bir uygulama gibi durur."
+
+msgid "remote.guide.4.waiting"
+msgstr "Önceki adımlar bitince panelin telefon adresi ve kodu burada görünecek."
+
+msgid "wizard.done.next.restart.title"
+msgstr "Bilgisayarı bir kez yeniden başlatın"
+
+msgid "wizard.done.next.restart"
+msgstr "Çocuğunuz ancak bundan sonra giriş ekranında resmine tıklayarak girebilir. Panele girdiğinizde ilk sayfada bunun için bir düğme bulacaksınız."
+
+msgid "wizard.done.next.child.title"
+msgstr "Çocuğunuz resmine tıklayarak girer"
+
+msgid "wizard.done.next.child"
+msgstr "Giriş ekranında kendi resmine tıklar; şifre gerekmez. İlk girişte Zio ve Sio ona BioKids'i anlatır."
+
+msgid "wizard.done.next.panel.title"
+msgstr "Panele her zaman buradan ulaşırsınız"
+
+msgid "wizard.done.next.panel"
+msgstr "Masaüstündeki \"BioKids Ebeveyn Paneli\" simgesi, Uygulamalar menüsü ya da telefonunuz (Ayarlar → Telefondan erişim). Takıldığınızda paneldeki \"Yardım\" sayfasına bakın."
+
+msgid "restart.title"
+msgstr "Kurulumu bitirmek için bilgisayarı bir kez yeniden başlatın"
+
+msgid "restart.body"
+msgstr "Çocuğunuzun giriş ekranında resmine tıklayarak girebilmesi için bu gerekli. Önce açık belgelerinizi kaydedin."
+
+msgid "restart.button"
+msgstr "Şimdi yeniden başlat"
+
+msgid "restart.confirm"
+msgstr "Bilgisayar şimdi yeniden başlatılsın mı?"
+
+msgid "restart.done"
+msgstr "Bilgisayar yeniden başlatılıyor…"
+
+msgid "audit.action.reboot"
+msgstr "Bilgisayar yeniden başlatıldı"
+
+msgid "help.title"
+msgstr "Yardım"
+
+msgid "help.intro"
+msgstr "En sık sorulanlar. Bir soruya dokunun, cevabı açılsın."
+
+msgid "help.time.q"
+msgstr "Çocuğuma nasıl ek süre veririm?"
+
+msgid "help.time.a"
+msgstr "Bugün ekranında çocuğunuzun kartındaki \"+10 dk\" düğmesine basın. Çocuğunuz ekranından süre isterse istek Bugün ekranının üstünde ve İstekler'de görünür; oradan da verebilirsiniz."
+
+msgid "help.locked.q"
+msgstr "Çocuğumun ekranı kilitlendi. Ne yapmalıyım?"
+
+msgid "help.locked.a"
+msgstr "Günlük süre bitince ya da izin verilen saatlerin dışında ekran kilitlenir. Bugün ekranından ek süre verirseniz kilit kendiliğinden açılır."
+
+msgid "help.phone.q"
+msgstr "Paneli telefonumdan nasıl açarım?"
+
+msgid "help.phone.a"
+msgstr "Ayarlar → Telefondan erişim. Dört adımı sırayla izleyin; yaklaşık beş dakika sürer ve modeminizde hiçbir ayar gerekmez."
+
+msgid "help.site.q"
+msgstr "Bir siteye nasıl izin veririm?"
+
+msgid "help.site.a"
+msgstr "Çocuğunuz kapalı bir sitede \"Büyüğüme sor\"a basınca istek İstekler'e düşer; \"İzin ver\" o siteyi açar. Çocuklara uygun siteler Çocuklar → Uygulamalar ekranında hazır bekler."
+
+msgid "help.login.q"
+msgstr "Çocuğum giriş ekranında görünmüyor."
+
+msgid "help.login.a"
+msgstr "BioKids kurulduktan sonra bilgisayarın bir kez yeniden başlatılması gerekir. Yine görünmüyorsa Çocuklar ekranında çocuğunuzun ekli olduğuna bakın."
+
+msgid "help.pin.q"
+msgstr "PIN'imi unuttum."
+
+msgid "help.pin.a"
+msgstr "Giriş sayfasında \"PIN'imi unuttum\"a basın ve kurulumda kâğıda yazdığınız kurtarma kodunu girin. Kod da kaybolduysa bu bilgisayarda bir uçbirim açıp şunu yazın:"
+
+msgid "help.off.q"
+msgstr "BioKids'i bir süreliğine kapatabilir miyim?"
+
+msgid "help.off.a"
+msgstr "Çocuklar → Süre ekranındaki \"BioKids bu çocuğu yönetsin\" kutusunu kaldırın; parolanız sorulur. Kutuyu yeniden işaretleyince koruma geri gelir."
+
+msgid "help.remove.q"
+msgstr "BioKids'i bilgisayardan nasıl kaldırırım?"
+
+msgid "help.remove.a"
+msgstr "Bir uçbirimde aşağıdakini yazın. Ailenizin kayıtları, siz silinmesini seçmedikçe bilgisayarda kalır."
+
+msgid "help.more"
+msgstr "Daha ayrıntılı bilgi: github.com/bilalgurkansanli/BioKids"
+
+# Phone access from the settings (D-195)
+msgid "remote.intro"
+msgstr "Paneli evin dışından, telefonunuzdan da açabilmek için ücretsiz Tailscale uygulamasını kullanıyoruz. Tailscale, telefonunuzla bu bilgisayar arasında yalnızca sizin kullanabildiğiniz şifreli bir bağlantı kurar; internete hiçbir kapı açılmaz. Aşağıdaki dört adım yaklaşık beş dakika sürer."

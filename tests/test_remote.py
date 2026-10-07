@@ -625,3 +625,25 @@ def test_every_state_and_error_key_exists_in_both_catalogs() -> None:
         catalog = load_catalog(locale)
         missing = [key for key in keys if not catalog.has(key)]
         assert missing == [], f"{locale} is missing {missing}"
+
+
+def test_the_phones_in_the_tailnet_are_named() -> None:
+    """Step three of the phone guide is done when a phone has joined (D-195)."""
+    payload = json.loads(status_json())
+    payload["Peer"] = {
+        "nodekey:a": {"HostName": "annes-iphone", "OS": "iOS"},
+        "nodekey:b": {"HostName": "", "DNSName": "pixel-7.tail1a2b3c.ts.net.", "OS": "android"},
+        "nodekey:c": {"HostName": "work-laptop", "OS": "windows"},
+        "nodekey:d": "not a peer",
+    }
+    fake = FakeTailscale(
+        status=CommandResult(stdout=json.dumps(payload)), served_port=PANEL_PORT
+    )
+
+    status = remote(fake).detect()
+
+    assert status.phones == ("annes-iphone", "pixel-7")
+
+
+def test_no_peers_means_no_phones() -> None:
+    assert remote(FakeTailscale()).detect().phones == ()

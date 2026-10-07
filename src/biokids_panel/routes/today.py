@@ -13,6 +13,7 @@ from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 
 from biokids_core import repo
+from biokids_core.clock import read_boot_id
 from biokids_core.errors import IpcError
 from biokids_core.i18n import Translator
 from biokids_core.ipc import AsyncDaemonClient, Op
@@ -47,7 +48,32 @@ def today(view: View) -> Response:
             for child_id, count in sorted(repo.unseen_assistant_alerts(view.session).items())
             if (child := repo.get_child(view.session, child_id)) is not None
         ],
+        restart_needed=restart_needed(view),
     )
+
+
+def restart_needed(view: View) -> bool:
+    """True until the machine has restarted once since setup finished (D-195)."""
+    from biokids_panel.wizard import SETTING_RESTART_BOOT
+
+    finished_in = repo.get_setting(view.session, SETTING_RESTART_BOOT)
+    return bool(finished_in) and finished_in == read_boot_id()
+
+
+@router.post("/system/reboot")
+def reboot(
+    view: View,
+    csrf_token: Annotated[str, Form()] = "",
+    confirm: Annotated[str, Form()] = "",
+) -> Response:
+    """The one restart a fresh install needs (D-155, D-195), from the banner."""
+    if blocked := view.guard_form(csrf_token, "/today?error=csrf"):
+        return blocked
+    if confirm != "yes":
+        # As for "Kapat": with JavaScript off the confirm() never runs.
+        return see_other("/today")
+    ok = _call_daemon(view.ctx, Op.REBOOT_NOW, actor=view.actor)
+    return see_other("/today?rebooting=1" if ok else "/today?error=daemon")
 
 
 @router.get("/today/cards", response_class=HTMLResponse)
@@ -186,6 +212,8 @@ def _action_notice(
 
     if query.get("poweroff"):
         return {"tone": "ok", "text": tr("today.poweroff.done")}
+    if query.get("rebooting"):
+        return {"tone": "ok", "text": tr("restart.done")}
     return None
 
 

@@ -29,10 +29,13 @@
     <a class="brand" href="/today">
       {{ _('panel.title') }} <small>{{ _('panel.subtitle') }}</small>
     </a>
-    <form method="post" action="/logout">
-      <input type="hidden" name="csrf_token" value="{{ csrf }}">
-      <button class="btn btn--quiet" type="submit">{{ _('nav.logout') }}</button>
-    </form>
+    <div class="row">
+      <a class="btn btn--quiet" href="/help">{{ _('help.title') }}</a>
+      <form method="post" action="/logout">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button class="btn btn--quiet" type="submit">{{ _('nav.logout') }}</button>
+      </form>
+    </div>
   </header>
 
   <nav class="nav" aria-label="{{ _('panel.subtitle') }}">

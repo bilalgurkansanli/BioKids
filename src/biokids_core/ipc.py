@@ -47,6 +47,7 @@ class Op(StrEnum):
     GRANT_TIME = "grant_time"
     LOCK_NOW = "lock_now"
     POWEROFF_NOW = "poweroff_now"
+    REBOOT_NOW = "reboot_now"
     LOGOUT_NOW = "logout_now"
     START_TIMEOUT = "start_timeout"
     CLEAR_TIMEOUT = "clear_timeout"

@@ -706,3 +706,77 @@ footer.legal {
 
 td.num { white-space: nowrap; font-variant-numeric: tabular-nums; }
 
+/* ------------------------------------------------------------------- guide */
+/* D-195: numbered steps that say when they are done - the phone-access card
+ * and the wizard's closing screen. The number is drawn, not written, so the
+ * catalogue strings stay sentences. */
+
+.guide {
+  list-style: none;
+  counter-reset: guide;
+  margin: var(--sp-3) 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.guide__step {
+  counter-increment: guide;
+  position: relative;
+  padding-left: 44px;
+  min-width: 0;
+}
+
+.guide__step::before {
+  content: counter(guide);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: var(--line);
+  color: var(--ink-soft);
+}
+
+.guide__step.is-now::before { background: var(--bio-indigo); color: #fff; }
+.guide__step.is-done::before { content: "✓"; background: var(--ok); color: #fff; }
+
+.guide__title {
+  font-size: 1rem;
+  margin: 4px 0 var(--sp-1);
+}
+
+.guide__step.is-done .guide__title { color: var(--ink-soft); }
+
+.stores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin: var(--sp-2) 0;
+}
+
+.store {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.qr.qr--small {
+  width: 136px;
+  height: 136px;
+  margin: 0;
+  padding: var(--sp-1);
+}
+
+.qr--small svg { display: block; width: 100%; height: 100%; }
+
+.help summary { cursor: pointer; }
+.help p { margin-bottom: 0; }

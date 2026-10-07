@@ -2003,3 +2003,16 @@ async def test_unlock_lets_the_child_back_in_without_adding_time(
     assert await supervisor.unlock_now(1)
     assert runner.ran("loginctl", "unlock-session", logged_in.session_id)
     assert supervisor.status()["children"][0]["remaining_seconds"] == before
+
+
+async def test_the_restart_a_fresh_install_needs_is_a_clean_one(
+    supervisor: Supervisor, runner: RecordingRunner, db: Database
+) -> None:
+    """D-195: the ledger is written and the audit log says who."""
+    await supervisor.start()
+    assert await supervisor.reboot_now("parent:1")
+    assert runner.ran("systemctl", "reboot")
+    with db.session() as session:
+        from biokids_core import repo
+
+        assert repo.recent_audit(session, limit=1)[0].action == "reboot"

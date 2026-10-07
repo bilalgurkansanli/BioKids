@@ -776,7 +776,7 @@ msgid "wizard.remote.title"
 msgstr "Access from your phone"
 
 msgid "wizard.remote.help"
-msgstr "We use Tailscale to open the panel on your phone. No port is opened to the internet."
+msgstr "To open the panel on your phone, away from home too, we use the free Tailscale app. Tailscale makes a private, encrypted link between your phone and this computer that only you can use; nothing is opened to the internet. The four steps below take about five minutes. You can skip this for now and do it later in Settings."
 
 msgid "wizard.email.title"
 msgstr "Email notifications"
@@ -788,7 +788,7 @@ msgid "wizard.done.title"
 msgstr "Ready"
 
 msgid "wizard.done.help"
-msgstr "Setup is done. Restart the computer once, and your child can then log in by choosing their picture."
+msgstr "Setup is done! Three small things are left:"
 
 msgid "wizard.done.try"
 msgstr "Try it now"
@@ -1585,3 +1585,140 @@ msgstr "Child removed from BioKids"
 
 msgid "audit.action.child_remove_failed"
 msgstr "Child could not be removed"
+
+# The guided first run, the restart banner and the help page (D-195)
+msgid "remote.guide.1.title"
+msgstr "Connect this computer"
+
+msgid "remote.guide.1.body"
+msgstr "Press \"Open phone access\" below. BioKids installs Tailscale on this computer and asks you to sign in once. You can use your Google, Apple or Microsoft account; if you have none, a free one is made."
+
+msgid "remote.guide.1.done"
+msgstr "This computer is connected to Tailscale."
+
+msgid "remote.guide.2.title"
+msgstr "Allow phone access"
+
+msgid "remote.guide.2.body"
+msgstr "Once the computer is connected, BioKids opens the panel to your phone. If Tailscale asks you to approve this the first time, a button appears here."
+
+msgid "remote.guide.2.done"
+msgstr "The panel is open to the devices in your Tailscale network."
+
+msgid "remote.guide.3.title"
+msgstr "Install Tailscale on your phone"
+
+msgid "remote.guide.3.body"
+msgstr "Scan your store's code with your phone's camera, install the Tailscale app, and sign in with the same account you used on the computer."
+
+msgid "remote.guide.3.vpn"
+msgstr "Your phone asks to \"add a VPN connection\": allow it. It is only Tailscale's own link; the rest of your internet use does not change."
+
+msgid "remote.guide.3.done"
+msgstr "Your phone is connected: {names}"
+
+msgid "remote.guide.4.title"
+msgstr "Open the panel on your phone"
+
+msgid "remote.guide.4.body"
+msgstr "Scan this code with your phone's camera and enter your PIN. Choose \"Add to Home Screen\" in the browser's menu and BioKids sits on your phone like an app."
+
+msgid "remote.guide.4.waiting"
+msgstr "When the steps above are done, the panel's phone address and its code appear here."
+
+msgid "wizard.done.next.restart.title"
+msgstr "Restart the computer once"
+
+msgid "wizard.done.next.restart"
+msgstr "Only then can your child log in by tapping their picture. When you sign in to the panel, its first page has a button for it."
+
+msgid "wizard.done.next.child.title"
+msgstr "Your child taps their picture"
+
+msgid "wizard.done.next.child"
+msgstr "On the login screen they tap their own picture; no password is needed. On the first login Zio and Sio explain BioKids to them."
+
+msgid "wizard.done.next.panel.title"
+msgstr "This is how you get back to the panel"
+
+msgid "wizard.done.next.panel"
+msgstr "The \"BioKids Parent Panel\" icon on the desktop, the applications menu, or your phone (Settings → Phone access). If you get stuck, see the panel's \"Help\" page."
+
+msgid "restart.title"
+msgstr "Restart the computer once to finish setup"
+
+msgid "restart.body"
+msgstr "Your child can only log in by tapping their picture after this. Save any open documents first."
+
+msgid "restart.button"
+msgstr "Restart now"
+
+msgid "restart.confirm"
+msgstr "Restart the computer now?"
+
+msgid "restart.done"
+msgstr "The computer is restarting…"
+
+msgid "audit.action.reboot"
+msgstr "Computer restarted"
+
+msgid "help.title"
+msgstr "Help"
+
+msgid "help.intro"
+msgstr "The questions asked most. Tap one to see the answer."
+
+msgid "help.time.q"
+msgstr "How do I give my child more time?"
+
+msgid "help.time.a"
+msgstr "On the Today screen, press \"+10 min\" on your child's card. If your child asks for time from their screen, the request shows on Today and under Requests, and you can give it there."
+
+msgid "help.locked.q"
+msgstr "My child's screen is locked. What do I do?"
+
+msgid "help.locked.a"
+msgstr "The screen locks when the day's time is used up or outside the allowed hours. Give more time on the Today screen and it unlocks by itself."
+
+msgid "help.phone.q"
+msgstr "How do I open the panel on my phone?"
+
+msgid "help.phone.a"
+msgstr "Settings → Phone access. Follow the four steps; it takes about five minutes and needs no change on your router."
+
+msgid "help.site.q"
+msgstr "How do I allow a website?"
+
+msgid "help.site.a"
+msgstr "When your child presses \"Ask a grown-up\" on a closed site, the request comes to Requests; \"Allow\" opens that site. Child-friendly sites are ready under Children → Apps."
+
+msgid "help.login.q"
+msgstr "My child is not on the login screen."
+
+msgid "help.login.a"
+msgstr "The computer needs one restart after BioKids is installed. If they are still missing, check that your child is listed on the Children screen."
+
+msgid "help.pin.q"
+msgstr "I forgot my PIN."
+
+msgid "help.pin.a"
+msgstr "On the sign-in page, press \"Forgot my PIN\" and enter the recovery code you wrote down during setup. If the code is lost too, open a terminal on this computer and type:"
+
+msgid "help.off.q"
+msgstr "Can I turn BioKids off for a while?"
+
+msgid "help.off.a"
+msgstr "Untick \"Let BioKids manage this child\" on Children → Time; your passphrase is asked. Tick it again and protection is back."
+
+msgid "help.remove.q"
+msgstr "How do I remove BioKids from the computer?"
+
+msgid "help.remove.a"
+msgstr "Type the line below in a terminal. Your family's records stay on the computer unless you choose to delete them."
+
+msgid "help.more"
+msgstr "More detail: github.com/bilalgurkansanli/BioKids"
+
+# Phone access from the settings (D-195)
+msgid "remote.intro"
+msgstr "To open the panel on your phone, away from home too, we use the free Tailscale app. Tailscale makes a private, encrypted link between your phone and this computer that only you can use; nothing is opened to the internet. The four steps below take about five minutes."

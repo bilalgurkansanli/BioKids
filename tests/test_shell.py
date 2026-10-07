@@ -1159,3 +1159,19 @@ def test_without_a_volume_tool_the_slider_keeps_its_default(
 
     monkeypatch.setattr(device, "_output", nothing)
     assert asyncio.run(device.get_volume()) is None
+
+
+def test_the_parents_panel_opens_in_the_parents_chromium() -> None:
+    """One policy for the whole machine: "selected sites only" closed the panel
+    the menu and the desktop shortcut open (D-195). Children are refused the
+    port by nftables, not by this list."""
+    policy = kiosk_policy(
+        ["127.0.0.1:7880"],
+        ["eba.gov.tr"],
+        mode="allowlist",
+        panel=["127.0.0.1:7878", "localhost:7878"],
+    )
+    allowed = policy["URLAllowlist"]
+    assert isinstance(allowed, list)
+    assert "127.0.0.1:7878" in allowed and "localhost:7878" in allowed
+    assert policy["URLBlocklist"][0] == "*"  # type: ignore[index]

@@ -206,6 +206,11 @@ class Enforcer:
         result = await self._run(["systemctl", "poweroff"])
         return result.ok
 
+    async def reboot(self) -> bool:
+        """Clean restart, for the one a fresh install needs (D-195)."""
+        result = await self._run(["systemctl", "reboot"])
+        return result.ok
+
     async def apply_end_action(
         self, action: EndAction, unix_user: str, session_ids: Sequence[str] = ()
     ) -> bool:

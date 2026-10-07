@@ -6,10 +6,11 @@ daemon is the process that runs as root and may write
 `biokids-shell`. It used to import this from the launcher's package and failed
 to start on a machine that had the one without the other.
 
-The parent's panel is not in it. Chromium reads one policy for the whole
-machine, so every address a child must not open was closed in the parent's own
-Chromium too - including the panel the applications menu opens (D-170). The
-panel is closed to the children's accounts by nftables instead, by uid
+The parent's panel is allowed in it. Chromium reads one policy for the whole
+machine, so what the policy closes it closes in the parent's own Chromium too:
+with any child on "selected sites only" its `*` closed the panel the
+applications menu and the desktop shortcut open (D-170, D-195). The panel is
+closed to the children's accounts by nftables instead, by uid
 (`biokids_daemon.dnsfilter.render_nft`), which also covers every spelling a
 URL list misses: `127.0.0.1.nip.io:7878`, a tailnet address, a rebound name.
 """
@@ -77,6 +78,7 @@ def kiosk_policy(
     web_hosts: Sequence[str] = (),
     mode: str = "allowlist",
     extension: tuple[str, str] | None = None,
+    panel: Sequence[str] = (),
 ) -> dict[str, object]:
     """The managed policy for the kiosk, and for the child's browsing window.
 
@@ -97,6 +99,9 @@ def kiosk_policy(
     # child's processes (nftables).
     origins = [origin] if isinstance(origin, str) else list(origin)
     allowed = [*origins, *sorted({h for h in web_hosts if h and h not in origins})]
+    # The parent's panel, for the parent's own Chromium (see the module's
+    # docstring). A child's process never reaches it: nftables refuses the port.
+    allowed += [p for p in panel if p not in allowed]
     # In "open internet" mode (D-167) there is no wildcard: harmful sites are
     # stopped by the children's DNS filter, and the browser keeps only what
     # must never open for a child - the disk, typed script, and Chromium's own
