@@ -1496,7 +1496,7 @@ msgid "child.remove.title"
 msgstr "Remove {name} from BioKids"
 
 msgid "child.remove.body"
-msgstr "{name}'s times, apps, requests and history are deleted. Their picture leaves the login screen, and nobody can log in to the account any more."
+msgstr "{name}'s times, apps, requests and history are deleted. Nobody can log in to the account any more, and its picture is gone from the login screen the next time it starts (after a restart, say)."
 
 msgid "child.remove.kept"
 msgstr "The account ({user}) and its files (pictures, drawings) stay on the computer. To delete them too, an administrator can run: sudo deluser --remove-home {user}"

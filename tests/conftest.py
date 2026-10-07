@@ -40,6 +40,9 @@ def no_real_system_commands(monkeypatch: pytest.MonkeyPatch) -> None:
     test_provision.py and test_remote.py do.
     """
     monkeypatch.setattr(provision, "_find", lambda _program: None)
+    # Nor AccountsService's key files (D-191): a machine without them is one
+    # where hiding an account from the login screen has nothing to write.
+    monkeypatch.setattr(provision, "ACCOUNTS_USERS_DIR", Path("/nonexistent/biokids-tests"))
     # The DNS filter loads nftables rules and restarts dnsmasq (D-167): on a
     # developer's machine, as root, that would filter their own DNS.
     from biokids_daemon import dnsfilter

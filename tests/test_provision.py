@@ -692,7 +692,24 @@ def test_a_removed_child_leaves_the_login_screen_but_keeps_their_files(
     drawing = home / "Resimler" / "kedi.png"
     drawing.parent.mkdir()
     drawing.write_bytes(b"png")
+    accounts = home.parent / "AccountsService"
+    accounts.mkdir()
+    (accounts / "ayse").write_text(
+        "[User]\nIcon=/var/lib/AccountsService/icons/ayse\nSystemAccount=false\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(prov, "ACCOUNTS_USERS_DIR", accounts)
     ran = fake_commands(monkeypatch, groups="ayse users biokids-child", status=None)
+    hidden_when_usermod_ran: list[bool] = []
+    recording = prov._run
+
+    def run(argv: list[str]) -> tuple[bool, str]:
+        if argv[0] == "usermod":
+            text = (accounts / "ayse").read_text(encoding="utf-8")
+            hidden_when_usermod_ran.append("SystemAccount=true" in text)
+        return recording(argv)
+
+    monkeypatch.setattr(prov, "_run", run)
 
     result = prov.unprovision("ayse", config)
 
@@ -701,6 +718,10 @@ def test_a_removed_child_leaves_the_login_screen_but_keeps_their_files(
         ["gpasswd", "--delete", "ayse", prov.CHILD_GROUP],
         ["usermod", "--shell", prov.HIDDEN_SHELL, "ayse"],
     ]
+    # AccountsService reads its key file again when usermod changes /etc/passwd.
+    assert hidden_when_usermod_ran == [True]
+    keyfile = (accounts / "ayse").read_text(encoding="utf-8")
+    assert "Icon=/var/lib/AccountsService/icons/ayse" in keyfile, "the picture was lost"
     assert not (home / prov.AUTOSTART_DIR / "biokids-shell.desktop").exists()
     assert not (home / prov.XFCE_CHANNEL_DIR / "xfwm4.xml").exists()
     assert drawing.read_bytes() == b"png", "a child's drawing was deleted"
@@ -791,3 +812,39 @@ def test_only_a_hidden_human_account_counts_as_a_removed_child(
     assert not prov.is_removed_child_account("messagebus")
     assert not prov.is_removed_child_account("anne")
     assert not prov.is_removed_child_account("nobody-here")
+
+
+def test_the_launchers_autostart_entry_goes_whatever_an_older_version_wrote(
+    with_user: Any, share: Path, home: Path, config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Found on the VM: 0.1.0-1's entry differed from 0.1.0-2's and was left."""
+    prov.install_session_files("ayse", config)
+    entry = home / prov.AUTOSTART_DIR / "biokids-shell.desktop"
+    entry.write_text("[Desktop Entry]\nExec=old\n", encoding="utf-8")
+    fake_commands(monkeypatch, groups="ayse users", status=None)
+
+    result = prov.unprovision("ayse", config)
+
+    assert result.ok
+    assert not entry.exists()
+
+
+def test_hiding_from_the_login_screen_creates_or_keeps_the_key_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(prov, "ACCOUNTS_USERS_DIR", tmp_path)
+
+    assert prov.set_hidden_from_greeter("elif", hidden=True) == (True, "")
+    assert "SystemAccount=true" in (tmp_path / "elif").read_text(encoding="utf-8")
+    assert prov.set_hidden_from_greeter("elif", hidden=False) == (True, "")
+    text = (tmp_path / "elif").read_text(encoding="utf-8")
+    assert "[User]" in text and "SystemAccount=false" in text
+    assert not list(tmp_path.glob(".*")), "the temporary file was left behind"
+
+
+def test_without_accountsservice_there_is_nothing_to_hide(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(prov, "ACCOUNTS_USERS_DIR", tmp_path / "absent")
+    assert prov.set_hidden_from_greeter("elif", hidden=True) == (True, "")
+    assert not (tmp_path / "absent").exists()

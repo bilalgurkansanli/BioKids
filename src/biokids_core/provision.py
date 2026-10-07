@@ -20,6 +20,7 @@ remove their drawings.
 
 from __future__ import annotations
 
+import configparser
 import contextlib
 import errno
 import logging
@@ -625,9 +626,12 @@ UNPROVISION_UNIT = "biokids-unprovision@{user}.service"
 """The unit that does this on a packaged machine, as PROVISION_UNIT for adding."""
 
 HIDDEN_SHELL = "/usr/sbin/nologin"
-"""A removed child's shell. AccountsService counts an account with a nologin
-shell as a system account and LightDM leaves it off the login screen, so a
-removed child's picture is not left there leading nowhere (D-191)."""
+"""A removed child's shell: no way in, and LightDM's own user list (the one it
+reads from /etc/passwd when AccountsService is absent) hides nologin shells."""
+ACCOUNTS_USERS_DIR = Path("/var/lib/AccountsService/users")
+"""AccountsService's per-user key files. `SystemAccount=true` there is what
+takes an account off the login screen when AccountsService is present: the
+nologin shell alone did not, on the VM (D-191)."""
 NOLOGIN_SHELLS = frozenset(
     {"/usr/sbin/nologin", "/sbin/nologin", "/bin/false", "/usr/bin/false"}
 )
@@ -652,10 +656,44 @@ def is_removed_child_account(unix_user: str) -> bool:
 
 
 def restore_login_shell(unix_user: str) -> tuple[bool, str]:
-    """Undo `unprovision`'s HIDDEN_SHELL for a child added back (D-191)."""
+    """Undo `unprovision` for a child added back (D-191): on the login screen
+    again, with a shell to log in to."""
     if login_shell(unix_user) not in NOLOGIN_SHELLS:
         return True, ""
+    shown, problem = set_hidden_from_greeter(unix_user, hidden=False)
+    if not shown:
+        return False, problem
     return _run(["usermod", "--shell", CHILD_SHELL, unix_user])
+
+
+def set_hidden_from_greeter(unix_user: str, *, hidden: bool) -> tuple[bool, str]:
+    """Set AccountsService's `SystemAccount` for this account.
+
+    AccountsService has no D-Bus method for it, so its key file is edited, and
+    it reads the file again when /etc/passwd changes - which is why the callers
+    do this first and `usermod` second. Without AccountsService there is nothing
+    to do: LightDM then reads /etc/passwd and hides the nologin shell itself.
+    The login screen that is already showing keeps its list until it restarts.
+    """
+    if not ACCOUNTS_USERS_DIR.is_dir():
+        return True, ""
+    path = ACCOUNTS_USERS_DIR / unix_user
+    keyfile = configparser.ConfigParser(interpolation=None, delimiters=("=",))
+    keyfile.optionxform = str  # type: ignore[assignment,method-assign]
+    try:
+        if path.is_file():
+            keyfile.read(path, encoding="utf-8")
+        if not keyfile.has_section("User"):
+            keyfile.add_section("User")
+        keyfile.set("User", "SystemAccount", "true" if hidden else "false")
+        temp = path.with_name(f".{unix_user}.biokids")
+        with temp.open("w", encoding="utf-8") as out:
+            temp.chmod(0o600)
+            keyfile.write(out, space_around_delimiters=False)
+        temp.replace(path)
+    except (OSError, configparser.Error) as exc:
+        return False, f"{path}: {exc}"
+    return True, ""
 
 
 def remove_session_files(
@@ -663,9 +701,11 @@ def remove_session_files(
 ) -> tuple[list[str], list[str]]:
     """Remove the session files `install_session_files` put in the child's home.
 
-    Only a file that is still exactly what BioKids wrote: an account that was
-    somebody's before it was a child's may have had an xfwm4.xml of its own,
-    which provisioning left alone and this must leave alone too. Root works in
+    A file named for BioKids (the launcher's autostart entry) goes whatever
+    an older version wrote in it. Any other only while it is still exactly what
+    BioKids wrote: an account that was somebody's before it was a child's may
+    have had an xfwm4.xml of its own, which provisioning left alone and this
+    must leave alone too. Root works in
     a directory the child owns, so - as when writing - nothing here follows a
     link. Nothing else in the home is touched: a child's drawings stay theirs.
     """
@@ -682,18 +722,22 @@ def remove_session_files(
     ]
     for relative, original in shipped:
         try:
-            if _remove_from_home(home, relative, original.read_bytes()):
+            expected = None if relative.name.startswith("biokids") else original.read_bytes()
+            if _remove_from_home(home, relative, expected):
                 removed.append(str(home / relative))
         except OSError as exc:
             problems.append(f"{home / relative}: {exc}")
     return removed, problems
 
 
-def _remove_from_home(home: Path, relative: Path, expected: bytes) -> bool:
-    """Unlink `home/relative` if it is a regular file holding `expected`."""
+def _remove_from_home(home: Path, relative: Path, expected: bytes | None) -> bool:
+    """Unlink `home/relative` if it is a regular file holding `expected`, or
+    any regular file there when `expected` is None."""
     if not _SAFE_OPEN:
         target = home / relative
-        if target.is_symlink() or not target.is_file() or target.read_bytes() != expected:
+        if target.is_symlink() or not target.is_file():
+            return False
+        if expected is not None and target.read_bytes() != expected:
             return False
         target.unlink()
         return True
@@ -724,7 +768,7 @@ def _remove_from_home(home: Path, relative: Path, expected: bytes) -> bool:
         try:
             if not stat.S_ISREG(os.fstat(fd).st_mode):
                 return False
-            content = os.read(fd, len(expected) + 1)
+            content = os.read(fd, len(expected) + 1) if expected is not None else None
         finally:
             os.close(fd)
         if content != expected:
@@ -740,10 +784,10 @@ def unprovision(unix_user: str, config: Config | None = None) -> ProvisionResult
 
     The account and its home stay - removing a child from the panel must not
     delete their drawings - but an account BioKids made passwordless leaves
-    CHILD_GROUP, so no picture lets anyone in, and gets HIDDEN_SHELL, so the
-    picture is not on the login screen either. The session files go where they
-    are still BioKids' own. An account that kept its own password keeps
-    everything but those files.
+    CHILD_GROUP, so no picture lets anyone in, is marked a system account for
+    AccountsService and gets HIDDEN_SHELL, so the picture leaves the login
+    screen too. The session files go where they are still BioKids' own. An
+    account that kept its own password keeps everything but those files.
     """
     if not UNIX_USER_RE.match(unix_user):
         return ProvisionResult(
@@ -757,13 +801,17 @@ def unprovision(unix_user: str, config: Config | None = None) -> ProvisionResult
         result.problems.append(f"could not read the groups of {unix_user}")
         return result
     if CHILD_GROUP in groups:
-        for argv in (
-            ["gpasswd", "--delete", unix_user, CHILD_GROUP],
-            ["usermod", "--shell", HIDDEN_SHELL, unix_user],
-        ):
-            ok, problem = _run(argv)
-            if not ok:
-                result.problems.append(f"{argv[0]}: {problem}")
+        ok, problem = _run(["gpasswd", "--delete", unix_user, CHILD_GROUP])
+        if not ok:
+            result.problems.append(f"gpasswd: {problem}")
+        # The key file first: AccountsService reads it again when usermod
+        # changes /etc/passwd.
+        hidden, problem = set_hidden_from_greeter(unix_user, hidden=True)
+        if not hidden:
+            result.problems.append(problem)
+        ok, problem = _run(["usermod", "--shell", HIDDEN_SHELL, unix_user])
+        if not ok:
+            result.problems.append(f"usermod: {problem}")
     removed, problems = remove_session_files(unix_user, config)
     result.files_written = removed
     result.problems.extend(problems)

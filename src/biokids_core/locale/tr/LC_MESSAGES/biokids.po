@@ -1496,7 +1496,7 @@ msgid "child.remove.title"
 msgstr "{name} adlı çocuğu BioKids'ten kaldır"
 
 msgid "child.remove.body"
-msgstr "{name} için süreler, uygulamalar, istekler ve geçmiş silinir. Giriş ekranındaki resmi kaldırılır; bu hesapla artık kimse giriş yapamaz."
+msgstr "{name} için süreler, uygulamalar, istekler ve geçmiş silinir. Bu hesapla artık kimse giriş yapamaz; resmi, giriş ekranı bir sonraki açılışında (örneğin yeniden başlatınca) görünmez."
 
 msgid "child.remove.kept"
 msgstr "Hesap ({user}) ve içindeki dosyalar (resimler, çizimler) bilgisayarda kalır. Tamamen silmek için bir yöneticiye: sudo deluser --remove-home {user}"
