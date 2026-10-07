@@ -2,8 +2,9 @@
 # biokids-daemon postinst.
 #
 # Everything the units need is created by biokids-core's postinst; this script
-# only tidies what earlier versions left, and only after the debhelper snippet below has run
-# `systemctl daemon-reload` and restarted the daemon with its new unit.
+# only tidies what earlier versions left, and only after the debhelper snippet
+# below has run `systemctl daemon-reload` and restarted the daemon with its new
+# unit.
 #
 # Not earlier, and not in biokids-core: 0.1.0-1's units name /var/log/biokids
 # in ReadWritePaths= without a "-", and systemd keeps the old unit loaded until
