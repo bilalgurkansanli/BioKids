@@ -182,4 +182,12 @@ The voice question is closed (D-137): there is no Turkish Piper voice anyone may
 redistribute and `piper-tts` is not in Debian 13, so espeak-ng speaks the warnings and
 Piper is used only where a family installs it themselves.
 
-Nothing about the ISO belongs in Phase 0.
+**v1.0 release candidate (0.1.0-2).** On 2026-10-07 the owner cut v1 to what is built
+(D-180 to D-186: no screen watcher, no voice cloning, no wizard stubs, no
+/var/log/biokids, no biokids-harden, ISO moved to v1.1) and the rest was finished:
+the browser extension (D-187), one launcher port per child (D-188), retention (D-189),
+offline Wikipedia (D-190), editing and removing a child (D-191), history (D-192),
+limits per kind of app (D-193). What remains before release is the owner's own test,
+the §7 recording, and publishing the APT repository with the release key.
+
+Nothing about the ISO belongs in v1.0.
