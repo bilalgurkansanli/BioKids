@@ -143,16 +143,19 @@ A bootable ISO with everything preinstalled is v1.1 ([`iso/README.md`](iso/READM
 
 ## First steps
 
-1. **The setup wizard** opens by itself at the first login after installing, or at
-   `http://127.0.0.1:7878` on the computer. Nine steps, each skippable: language, your
-   PIN, a passphrase and recovery code, the first child, their apps, their time, their
-   internet, phone access, and Zio and Sio.
-2. **Restart once**, so the login screen shows the child's picture.
+1. **The setup wizard** opens by itself in your browser as soon as the packages are
+   installed, and again at each login until setup is complete. Nine steps, each
+   skippable: language, your PIN, a passphrase and recovery code, the first child,
+   their apps, their time, their internet, phone access (four guided steps with
+   QR codes), and Zio and Sio.
+2. **Restart once**, so the login screen shows the child's picture. The panel's first
+   page has a button for it until you do.
 3. **The child logs in** by choosing their picture. The first time, the launcher
    explains — in words and out loud for the youngest — what Zio and Sio do and what the
    family can see.
-4. **The panel** is "BioKids Ebeveyn Paneli" in the applications menu, and on your phone
-   once phone access is on (**Ayarlar**). Mail notifications are set up there too.
+4. **The panel** is the "BioKids Ebeveyn Paneli" icon on your desktop and in the
+   applications menu, and on your phone once phone access is on (**Ayarlar**). Mail
+   notifications are set up there too. **Yardım** answers the common questions.
 
 ---
 

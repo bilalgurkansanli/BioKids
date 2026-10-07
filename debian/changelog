@@ -30,6 +30,10 @@ biokids (0.1.0-2) trixie; urgency=medium
   * Requests answered from the panel, the parent's own recorded voice,
     read-aloud for pre-readers, day schedules, mail to the parent and an
     encyclopedia for the assistant (D-173 to D-178).
+  * A guided first run (D-195): the setup wizard opens as soon as the
+    packages are installed, a panel shortcut goes on the parent's desktop,
+    phone access is four numbered steps, Today offers the one restart setup
+    needs, and a help page answers the first questions.
 
  -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Wed, 07 Oct 2026 12:00:00 +0300
 

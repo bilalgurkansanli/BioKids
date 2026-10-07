@@ -1029,3 +1029,24 @@ as the apps screen does (D-164). The assistant's voice box, disabled while the s
 model is missing, no longer turns the voice off when the page is saved, since a
 disabled box is not sent. The launcher's volume slider reads the real level (`wpctl`,
 `pactl` or `amixer`) instead of starting at 70.
+
+**D-195 [owner] A guided first run.** (2026-10-07)
+A parent installing BioKids may have just installed Linux for the first time; nothing
+on the way to a working setup may ask them to know an address, log out, or read a
+paragraph about networking. So: biokids-panel's postinst opens the setup wizard at
+once in every desktop session already open, through the script `/etc/xdg/autostart`
+runs at the next login (`/usr/lib/biokids/biokids-open-setup`), started inside that
+user's own systemd manager with their display. The same script puts a "BioKids
+Ebeveyn Paneli" shortcut on a parent's desktop, once; deleted, it stays deleted. The
+children's Chromium policy is machine-wide, and with any child on "selected sites
+only" its `*` closed the panel in the parent's own Chromium: the panel's origin is
+allowed in it now, and nftables keeps every child off the port (D-171). Phone access
+is four numbered steps that each say when they are done - connect this computer,
+allow phone access, install Tailscale on the phone (App Store and Google Play as QR
+codes; done when a phone or tablet appears among the tailnet's peers), open the panel
+on the phone. The closing screen lists what is left; until the machine has restarted
+once after setup, Today shows a banner with a confirmed "Şimdi yeniden başlat" (daemon
+op `reboot_now`), because LightDM reads the login-by-picture setting only when it
+starts (D-155). A help page answers the questions parents ask first and is open
+before signing in, since "I forgot my PIN" is one of them.
+

@@ -27,6 +27,13 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
 
 ### Added
 
+- **A guided first run** (D-195). Installing the packages opens the setup wizard at
+  once in the open desktop; a "BioKids Ebeveyn Paneli" shortcut goes on the parent's
+  desktop; phone access is four numbered steps with App Store and Google Play QR
+  codes, each marked when done; the closing screen lists what is left, and Today
+  offers "Şimdi yeniden başlat" until the one restart is done; a help page answers
+  the first questions, open before signing in. The panel now opens in the parent's
+  own Chromium even when a child is on "selected sites only".
 - **The browser extension** (D-187). A site the filter closed opens the launcher's own
   page with "Büyüğüme sor" instead of Chromium's error, and each site a child opens is
   recorded by its host name only, never the page; the child is told on their first

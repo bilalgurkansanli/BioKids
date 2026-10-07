@@ -250,8 +250,10 @@ the table.
 "Only the sites I choose". The open mode is the same policy without the `*`:
 `file://`, typed `javascript:` and Chromium's own pages stay blocked in both, and
 certificate warnings cannot be clicked through. Chromium reads one managed policy
-per machine, so the strictest child's mode applies; the parent's panel is not in it
-(nftables closes it to the children, above). The policy is
+per machine, so the strictest child's mode applies, in the parent's Chromium too. The
+parent's panel (`127.0.0.1:7878`, `localhost:7878`) is therefore allowed in it
+(D-195): with only `*` it closed the panel the menu and the desktop shortcut open,
+and nftables already closes the port to every child (above). The policy is
 `biokids_core.browser_policy`.
 
 ```json

@@ -227,20 +227,31 @@ Nine steps, each skippable with a sane default, under five minutes total.
 6. Daily quota and time window (pre-filled by age)
 7. Internet: **Açık internet, zararlı siteler kapalı** (the default, D-167) or
    **Sadece seçtiğim siteler**
-8. Phone access — one button: BioKids installs Tailscale if needed, shows its
-   sign-in page as a button and a QR code, then the panel's address and its QR
-   code (D-169)
+8. Phone access — four numbered steps that each say when they are done (D-169,
+   D-195): connect this computer (one button installs Tailscale and shows its
+   sign-in page as a button and a QR code), allow phone access (Tailscale's one
+   approval, when it asks), install Tailscale on the phone (App Store and Google
+   Play as QR codes; done when a phone joins the tailnet), open the panel on the
+   phone (its address, a QR code, and "Ana ekrana ekle")
 9. Extras: Zio and Sio's voices, on by default. The assistant is shown, disabled; it
    is switched on per child under **Çocuklar → Asistan** (D-165).
 
 Email is not a step: it is set up under **Ayarlar**, where it can be tested (D-182).
-The wizard ends on a closing screen with the child's picture and "Panele git", which
-asks for one restart so the login screen shows the child (D-155).
+The wizard ends on a closing screen with the child's picture and what is left, as
+three numbered steps: restart once so the login screen shows the child (D-155), how
+the child logs in, and every way back to the panel. Until the machine has restarted,
+**Bugün** shows a banner with "Şimdi yeniden başlat" (D-195).
 
-The parent rarely has to find the panel: until setup is complete, the wizard opens
-by itself in the browser of whoever logs in, and afterwards "BioKids Ebeveyn
-Paneli" is in the applications menu (D-170). On the login screen each child is
-their own picture and name, over Zio and Sio, never the operating system's logo.
+The parent never has to find the panel (D-170, D-195): installing the package opens
+the wizard at once in the desktop that is open, and until setup is complete it opens
+again at every login; a "BioKids Ebeveyn Paneli" shortcut is put on the parent's
+desktop once, and the panel is in the applications menu. On the login screen each
+child is their own picture and name, over Zio and Sio, never the operating system's
+logo.
+
+**Yardım / Help** (`/help`) is in the top bar and on the sign-in page: the questions
+parents ask first, each answered in the words the screens use. It is open before
+signing in, because "PIN'imi unuttum" is one of them.
 
 ### 3.5 PWA
 
