@@ -771,3 +771,23 @@ def test_the_unprovision_unit_runs_one_fixed_command() -> None:
     assert "Type=oneshot" in unit
     rules = (root / "debian/rules").read_text(encoding="utf-8")
     assert "--name=biokids-unprovision@" in rules
+
+
+def test_only_a_hidden_human_account_counts_as_a_removed_child(
+    monkeypatch: pytest.MonkeyPatch, home: Path
+) -> None:
+    hidden = FakeEntry(home, uid=1001)
+    hidden.pw_shell = prov.HIDDEN_SHELL  # type: ignore[attr-defined]
+    system = FakeEntry(home, uid=110)
+    system.pw_shell = prov.HIDDEN_SHELL  # type: ignore[attr-defined]
+    ordinary = FakeEntry(home, uid=1002)
+    ordinary.pw_shell = "/bin/bash"  # type: ignore[attr-defined]
+    monkeypatch.setattr(
+        prov, "_pwd", FakePwd({"elif": hidden, "messagebus": system, "anne": ordinary})
+    )
+    monkeypatch.setattr(prov, "account_is_administrative", lambda _u: False)
+
+    assert prov.is_removed_child_account("elif")
+    assert not prov.is_removed_child_account("messagebus")
+    assert not prov.is_removed_child_account("anne")
+    assert not prov.is_removed_child_account("nobody-here")

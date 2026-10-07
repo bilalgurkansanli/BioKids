@@ -631,6 +631,8 @@ removed child's picture is not left there leading nowhere (D-191)."""
 NOLOGIN_SHELLS = frozenset(
     {"/usr/sbin/nologin", "/sbin/nologin", "/bin/false", "/usr/bin/false"}
 )
+FIRST_HUMAN_UID = 1000
+"""Debian's FIRST_UID: below it are system accounts, never a child's."""
 CHILD_SHELL = "/bin/bash"
 """What adduser gives a new account, and what a child added again gets back."""
 
@@ -638,6 +640,15 @@ CHILD_SHELL = "/bin/bash"
 def login_shell(unix_user: str) -> str:
     entry = _passwd_entry(unix_user)
     return str(getattr(entry, "pw_shell", "") or "") if entry is not None else ""
+
+
+def is_removed_child_account(unix_user: str) -> bool:
+    """An ordinary account `unprovision` hid: HIDDEN_SHELL and a human uid. A
+    child removed and added again gets it back, drawings and all (D-191)."""
+    entry = _passwd_entry(unix_user)
+    if entry is None or int(getattr(entry, "pw_uid", 0)) < FIRST_HUMAN_UID:
+        return False
+    return login_shell(unix_user) == HIDDEN_SHELL and not account_is_administrative(unix_user)
 
 
 def restore_login_shell(unix_user: str) -> tuple[bool, str]:

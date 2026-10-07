@@ -1453,6 +1453,22 @@ def test_a_suggested_name_reuses_a_childs_account_from_an_earlier_install(
         assert child.unix_user == "elif"
 
 
+def test_a_removed_child_added_back_gets_their_old_account(
+    db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Not `elif2`: the hidden account still holds Elif's drawings (D-191)."""
+    monkeypatch.setattr(wizard, "account_exists", lambda user: user == "elif")
+    monkeypatch.setattr(wizard, "is_child_account", lambda _user: False)
+    monkeypatch.setattr(wizard, "is_removed_child_account", lambda user: user == "elif")
+
+    with db.session() as session:
+        child, _error = wizard.create_child(
+            session, display_name="Elif", birth_year=dt.date.today().year - 6
+        )
+        assert child is not None
+        assert child.unix_user == "elif"
+
+
 # ------------------------------------------- Tailscale's approval page (D-157)
 
 APPROVAL = "https://login.tailscale.com/f/serve?node=nH6HrHEzpo11CNTRL"

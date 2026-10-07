@@ -35,6 +35,7 @@ from biokids_core.provision import (
     account_exists,
     account_is_administrative,
     is_child_account,
+    is_removed_child_account,
     provision,
     provision_via_systemd,
 )
@@ -636,8 +637,13 @@ def _free_user(session: Session, wanted: str) -> str:
 
 def _free_on_this_machine(unix_user: str) -> bool:
     """No such account yet - or one BioKids already made a child's, which a
-    reinstall after a purge finds again and should reuse, drawings and all."""
-    return not account_exists(unix_user) or is_child_account(unix_user)
+    reinstall after a purge finds again and should reuse, drawings and all, or
+    one whose child was removed from the panel and is being added back."""
+    return (
+        not account_exists(unix_user)
+        or is_child_account(unix_user)
+        or is_removed_child_account(unix_user)
+    )
 
 
 def _suggest_user(display_name: str) -> str:
