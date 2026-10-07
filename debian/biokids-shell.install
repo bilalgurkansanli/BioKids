@@ -18,4 +18,5 @@ debian/pam/50-biokids.conf usr/share/lightdm/lightdm.conf.d/
 # The login screen's look (D-170).
 debian/greeter/50-biokids.conf usr/share/lightdm/lightdm-gtk-greeter.conf.d/
 usr/share/biokids/greeter
+usr/share/biokids/extension
 usr/lib/biokids/biokids-child-login

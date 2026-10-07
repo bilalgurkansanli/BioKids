@@ -1,0 +1,35 @@
+#!/bin/sh
+# biokids-shell postinst.
+#
+# Packs and signs the browser extension (D-187) with a key made on this machine
+# - generated once, kept in the family's 0700 data directory, so the
+# extension's id survives upgrades - and asks the daemon to write it into the
+# children's Chromium policy. Every upgrade repacks it, so a new version of the
+# extension reaches the children's browsers.
+
+set -e
+
+case "$1" in
+    configure)
+        if ! biokids-admin pack-extension; then
+            # Not fatal: without it a blocked page shows Chromium's own error and
+            # visits are not listed, and everything else works. The daemon logs it.
+            echo "biokids-shell: the browser extension could not be packed" >&2
+        fi
+        if [ -d /run/systemd/system ]; then
+            deb-systemd-invoke try-restart biokids-daemon.service >/dev/null 2>&1 || true
+        fi
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0
