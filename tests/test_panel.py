@@ -2308,3 +2308,11 @@ def test_the_provision_unit_reads_a_committed_row(
         child.display_name = "Elif Nur"
         wizard.provision_child(session, child)
     assert seen == ["Elif Nur"]
+
+
+def test_the_last_wizard_step_offers_nothing_that_was_cut(client: TestClient) -> None:
+    """The screen watcher's "coming soon" box went with the watcher (D-180)."""
+    client.post("/wizard/1", data={"lang": "tr"})
+    page = client.get("/wizard/9").text
+    assert 'action="/wizard/9"' in page, "the step itself, not a redirect"
+    assert 'id="ai"' not in page

@@ -86,7 +86,7 @@
       {% else %}
         <p class="muted">{{ _('history.sites.none') }}</p>
       {% endif %}
-      <p class="muted small">{{ _('history.sites.help') }}</p>
+      <p class="muted small">{{ _('history.sites.help', days=kept_days) }}</p>
     </section>
 
     <section class="card">

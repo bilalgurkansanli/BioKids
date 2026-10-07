@@ -11,17 +11,8 @@
       </label>
     </div>
 
-    {# The AI layer is a separate optional package, default off, and is not even
-       installed in Phase 0 (D-82). It is shown so the flow is honest about what
-       exists, not offered as something that can be turned on today. #}
-    <div class="checkline">
-      <input type="checkbox" id="ai" disabled>
-      <label for="ai">
-        {{ _('wizard.extras.title') }}
-        <span class="help">{{ _('common.coming_soon.help') }}</span>
-      </label>
-    </div>
-
+    {# The screen watcher this step once showed as "coming soon" was cut from
+       v1 (D-180); the assistant is set up per child in the panel (D-165). #}
     <div class="notice">
       <div class="notice__title">{{ _('disclaimer.headline') }}</div>
       <p class="small">{{ _('disclaimer.body') }}</p>

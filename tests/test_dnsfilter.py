@@ -178,3 +178,10 @@ def test_each_launcher_answers_only_its_own_child() -> None:
     rules = render_nft([1001, 1002], launcher_base=7879)
     assert "ip daddr 127.0.0.1 tcp dport 7880 meta skuid != 1001 reject" in rules
     assert "ip6 daddr ::1 tcp dport 7881 meta skuid != 1002 reject" in rules
+
+
+def test_two_children_on_one_port_do_not_shut_each_other_out() -> None:
+    """uids 100 apart share a launcher port (D-188): one rule, both allowed."""
+    rules = render_nft([1001, 1101])
+    assert "tcp dport 7880 meta skuid != { 1001, 1101 } reject" in rules
+    assert "meta skuid != 1001 reject" not in rules

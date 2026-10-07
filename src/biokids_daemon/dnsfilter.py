@@ -301,13 +301,17 @@ def render_nft(
     # Each child's launcher answers as that child on the daemon's socket, so
     # only that child's own processes may connect to it (D-188): not a
     # sibling's browser, not the parent's, not a page in either.
-    launchers = "".join(
-        f"\t\tip daddr 127.0.0.1 tcp dport {launcher_base + uid % 100} "
-        f"meta skuid != {uid} reject\n"
-        f"\t\tip6 daddr ::1 tcp dport {launcher_base + uid % 100} "
-        f"meta skuid != {uid} reject\n"
-        for uid in sorted(set(child_uids))
-    )
+    # Two children whose uids are 100 apart share a port (D-188). Rare, and the
+    # daemon says so; here it must not become one rule each that refuses both.
+    owners: dict[int, list[int]] = {}
+    for uid in sorted(set(child_uids)):
+        owners.setdefault(launcher_base + uid % 100, []).append(uid)
+    rules: list[str] = []
+    for port, owned in sorted(owners.items()):
+        match = _uid_match(owned)
+        rules.append(f"\t\tip daddr 127.0.0.1 tcp dport {port} meta skuid != {match} reject\n")
+        rules.append(f"\t\tip6 daddr ::1 tcp dport {port} meta skuid != {match} reject\n")
+    launchers = "".join(rules)
     elements = f"\n\t\telements = {{ {uids} }}" if uids else ""
     doh4 = ", ".join(DOH_ADDRESSES)
     doh6 = ", ".join(DOH_ADDRESSES6)
@@ -342,6 +346,13 @@ table inet {NFT_TABLE} {{
 {launchers}\t}}
 }}
 """
+
+
+def _uid_match(uids: Sequence[int]) -> str:
+    """`1001`, or `{ 1001, 1101 }` for a port two children share."""
+    if len(uids) == 1:
+        return str(uids[0])
+    return "{ " + ", ".join(str(uid) for uid in uids) + " }"
 
 
 def uids_of(unix_users: Iterable[str]) -> list[int]:

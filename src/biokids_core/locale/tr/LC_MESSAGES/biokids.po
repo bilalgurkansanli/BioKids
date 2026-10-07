@@ -1542,7 +1542,7 @@ msgid "history.sites.none"
 msgstr "Bu gün site açılmamış."
 
 msgid "history.sites.help"
-msgstr "Yalnızca sitenin adı kaydedilir, sayfaların kendisi değil. Çocuğunuz bunu ilk açılışta öğrenir; kayıtlar 30 gün sonra silinir."
+msgstr "Yalnızca sitenin adı kaydedilir, sayfaların kendisi değil. Çocuğunuz bunu ilk açılışta öğrenir; kayıtlar {days} gün sonra silinir."
 
 msgid "history.requests.none"
 msgstr "Bu gün istek yok."

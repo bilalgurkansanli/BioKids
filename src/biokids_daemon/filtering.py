@@ -102,6 +102,17 @@ class FilteringMixin(SupervisorBase):
         uids = uids_of(users)
         if not uids:
             return [f"{self.config.shell.host}:{self.config.shell.port}"]
+        ports: dict[int, list[int]] = {}
+        for uid in uids:
+            ports.setdefault(self.config.shell.launcher_port(uid), []).append(uid)
+        for port, sharing in ports.items():
+            if len(sharing) > 1:
+                log.error(
+                    "children with uids %s share launcher port %d (uids 100 apart); only "
+                    "one of them can be logged in at a time",
+                    ", ".join(map(str, sharing)),
+                    port,
+                )
         return sorted({self.config.shell.launcher_origin(uid) for uid in uids})
 
     def _browser_mode(self) -> str:

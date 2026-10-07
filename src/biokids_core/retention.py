@@ -6,7 +6,8 @@ refused - with the child's own words - and every line of the audit log stayed
 for as long as the machine did. A parental-control product that keeps
 everything forever is building the dataset principle 1 says should not exist.
 
-The daemon runs `prune` once a day; `biokids-admin prune` runs it by hand.
+The daemon runs `prune` once a day, a few minutes after it starts and then
+every 24 hours (`Supervisor.housekeeping`).
 The windows are in `[retention]` of config.toml:
 
 * activity (usage events, which include the sites visited, and the assistant's

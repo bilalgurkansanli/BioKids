@@ -340,7 +340,7 @@ def register_wizard(app: FastAPI) -> None:
 
     @app.post("/wizard/7", dependencies=[Open])
     def step_filter(session: Db, mode: Annotated[str, Form()] = "") -> Response:
-        """A stub in Phase 0: the choice is recorded, the enforcement is Phase 1."""
+        """The internet choice (D-167); the daemon applies it on the next reload."""
         child = _pending_child(session)
         if child is not None and mode:
             policy = repo.get_or_create_policy(session, child.id)

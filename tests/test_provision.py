@@ -848,3 +848,42 @@ def test_without_accountsservice_there_is_nothing_to_hide(
     monkeypatch.setattr(prov, "ACCOUNTS_USERS_DIR", tmp_path / "absent")
     assert prov.set_hidden_from_greeter("elif", hidden=True) == (True, "")
     assert not (tmp_path / "absent").exists()
+
+
+def test_provisioning_waits_until_accountsservice_has_read_the_key_file(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Found on the VM: setting the picture at once saved the old SystemAccount."""
+    answers = iter(["b true\n", "b true\n", "b false\n"])
+    asked: list[str] = []
+
+    def output(argv: list[str]) -> str | None:
+        if argv[1] == "call":
+            return 'o "/org/freedesktop/Accounts/User1001"\n'
+        asked.append(argv[-1])
+        return next(answers)
+
+    monkeypatch.setattr(prov, "_output", output)
+    monkeypatch.setattr(prov.time, "sleep", lambda _s: None)
+
+    assert prov.await_accounts_service("elif", system_account=False)
+    assert asked == ["SystemAccount"] * 3
+
+
+def test_waiting_for_accountsservice_gives_up(monkeypatch: pytest.MonkeyPatch) -> None:
+    def output(argv: list[str]) -> str | None:
+        if argv[1] == "call":
+            return 'o "/org/freedesktop/Accounts/User1001"\n'
+        return "b true\n"
+
+    clock = iter(range(0, 100, 5))
+    monkeypatch.setattr(prov, "_output", output)
+    monkeypatch.setattr(prov.time, "sleep", lambda _s: None)
+    monkeypatch.setattr(prov.time, "monotonic", lambda: float(next(clock)))
+
+    assert not prov.await_accounts_service("elif", system_account=False)
+
+
+def test_without_accountsservice_nothing_is_awaited(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(prov, "_output", lambda _argv: None)
+    assert prov.await_accounts_service("elif", system_account=True)

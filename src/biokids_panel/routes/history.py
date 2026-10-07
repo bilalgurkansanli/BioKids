@@ -60,6 +60,7 @@ def history_view(
         apps=_apps(session, chosen.id, selected, locale),
         visits=_visits(session, chosen.id, selected),
         requests=_requests(session, chosen.id, selected, locale),
+        kept_days=view.ctx.config.retention.activity_days,
     )
 
 

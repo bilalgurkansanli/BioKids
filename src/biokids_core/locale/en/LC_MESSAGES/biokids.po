@@ -1542,7 +1542,7 @@ msgid "history.sites.none"
 msgstr "No sites were opened on this day."
 
 msgid "history.sites.help"
-msgstr "Only the site's name is kept, never the pages. Your child is told this on first run; the list is deleted after 30 days."
+msgstr "Only the site's name is kept, never the pages. Your child is told this on first run; the list is deleted after {days} days."
 
 msgid "history.requests.none"
 msgstr "No requests on this day."

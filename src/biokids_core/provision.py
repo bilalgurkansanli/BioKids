@@ -29,6 +29,7 @@ import re
 import shutil
 import stat
 import subprocess
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -663,7 +664,60 @@ def restore_login_shell(unix_user: str) -> tuple[bool, str]:
     shown, problem = set_hidden_from_greeter(unix_user, hidden=False)
     if not shown:
         return False, problem
-    return _run(["usermod", "--shell", CHILD_SHELL, unix_user])
+    ok, problem = _run(["usermod", "--shell", CHILD_SHELL, unix_user])
+    if ok:
+        await_accounts_service(unix_user, system_account=False)
+    return ok, problem
+
+
+ACCOUNTS_SERVICE_WAIT = 10.0
+"""Seconds to wait for AccountsService to read its key file again. On the VM it
+took about one."""
+
+
+def await_accounts_service(unix_user: str, *, system_account: bool) -> bool:
+    """Wait until AccountsService has read the key file `set_hidden_from_greeter`
+    wrote, which it does a moment after /etc/passwd changes.
+
+    Not waiting lost the change on the VM: provisioning set the child's picture
+    straight after, and AccountsService saved its key file from memory - with
+    the old SystemAccount - before it had read the new one. True when it agrees,
+    or when there is no AccountsService to ask.
+    """
+    found = _output(
+        [
+            "busctl",
+            "call",
+            ACCOUNTS_BUS,
+            "/org/freedesktop/Accounts",
+            ACCOUNTS_BUS,
+            "FindUserByName",
+            "s",
+            unix_user,
+        ]
+    )
+    match = _ACCOUNTS_USER_RE.search(found or "")
+    if match is None:
+        return True
+    want = "b true" if system_account else "b false"
+    deadline = time.monotonic() + ACCOUNTS_SERVICE_WAIT
+    while True:
+        value = _output(
+            [
+                "busctl",
+                "get-property",
+                ACCOUNTS_BUS,
+                match.group(1),
+                f"{ACCOUNTS_BUS}.User",
+                "SystemAccount",
+            ]
+        )
+        if value is not None and value.strip() == want:
+            return True
+        if time.monotonic() >= deadline:
+            log.warning("AccountsService did not take %s's SystemAccount=%s", unix_user, want)
+            return False
+        time.sleep(0.25)
 
 
 def set_hidden_from_greeter(unix_user: str, *, hidden: bool) -> tuple[bool, str]:
@@ -812,6 +866,8 @@ def unprovision(unix_user: str, config: Config | None = None) -> ProvisionResult
         ok, problem = _run(["usermod", "--shell", HIDDEN_SHELL, unix_user])
         if not ok:
             result.problems.append(f"usermod: {problem}")
+        elif hidden:
+            await_accounts_service(unix_user, system_account=True)
     removed, problems = remove_session_files(unix_user, config)
     result.files_written = removed
     result.problems.extend(problems)
