@@ -952,8 +952,9 @@ sudo -u elif curl -sS -m 3 http://127.0.0.1:$PORT/healthz; echo # as Elif: JSON
 **Pass:** two launchers, each listening on the port the first line computed for its
 child; two rules per child in the `launchers` chain; the parent's request to Elif's
 port is refused, and Elif's own gets `{"biokids":"launcher", …}` (D-188). Ali's port
-answers only Ali. If the two ports are the same, the uids are 100 apart: D-188 does
-not handle that — write it down rather than working around it.
+answers only Ali. If the two ports are the same, the uids are 100 apart: the chain
+lists both uids in one rule, the daemon logs the collision, and only one of the two can
+be logged in at a time (D-188) — write it down rather than working around it.
 
 ### 8.5 Editing a child updates the login screen
 
@@ -980,6 +981,7 @@ Log Ali out and try again.
 
 ```bash
 getent passwd ali | cut -d: -f7          # /usr/sbin/nologin
+sudo grep SystemAccount /var/lib/AccountsService/users/ali   # SystemAccount=true
 id -nG ali                               # no biokids-child
 sudo ls -d /home/ali                     # still there
 journalctl -u 'biokids-unprovision@*' -b --no-pager

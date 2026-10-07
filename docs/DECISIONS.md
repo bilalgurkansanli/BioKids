@@ -963,7 +963,8 @@ launcher acts as its child on the daemon's socket (D-123), an nftables chain
 `launchers` (`dnsfilter.render_nft`) rejects a connection to a child's port from any
 other uid: a sibling, the parent, a page in either browser. The extension finds its
 launcher by probing the range. Two children whose uids differ by a multiple of 100
-would get the same port; that is not handled.
+get the same port: the chain then allows both of them, the daemon logs the collision,
+and only one of the two can be logged in at a time.
 
 **D-189 [claude] Records are kept for a set time, then deleted.** (2026-10-07)
 `ARCHITECTURE.md` promised retention and nothing deleted anything: the machine was
@@ -992,13 +993,18 @@ closed, so the tile appears only once there is something behind it.
 picture is provisioned again, so the login screen shows it (D-170). Removing a child is
 behind the passphrase, refused while the child is at the machine or the daemon cannot
 say, and done by `biokids-unprovision@.service` (`biokids-admin unprovision-child`), for
-the reason D-142 gives: the account leaves `biokids-child` and gets
-`/usr/sbin/nologin`, so AccountsService and LightDM leave it off the login screen, and
-only session files still byte-identical to what BioKids wrote are removed. The account
+the reason D-142 gives: the account leaves `biokids-child`, its AccountsService key
+file gets `SystemAccount=true` and its shell becomes `/usr/sbin/nologin` - on the VM the
+shell alone did not take it off the greeter; AccountsService's own key did, read again
+when `/etc/passwd` changes, so the unit writes the key first and waits until
+AccountsService reports it. The greeter already showing keeps its list until it
+restarts. The launcher's autostart entry is removed, and any other session file only
+while it is still byte-identical to what BioKids wrote. The account
 and its home stay (D-130). If the account cannot be changed, the row stays and the
 parent is told: a passwordless account in the login group with nothing supervising it
 is worse than a child not removed. Otherwise the row goes, with everything recorded for
-the child but the audit log. Adding the child back restores `/bin/bash`.
+the child but the audit log. Adding the child back - even under a suggested name -
+reuses the hidden account, clears the key and restores `/bin/bash`.
 
 **D-192 [claude] A history screen.** (2026-10-07)
 `/history`: fourteen days of minutes as bars against each day's quota, each a link to

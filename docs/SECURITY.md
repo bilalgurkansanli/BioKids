@@ -67,7 +67,7 @@ Never add a claim to marketing copy that contradicts this list.
 | `biokids-dns` | started as root, `dnsmasq` drops to its own user | the children's DNS filter, on loopback port 5354 only (D-167) |
 | `biokids-remote-setup` | root, oneshot, only when the parent asks | installs Tailscale and signs it in for phone access (D-169); apt needs root |
 | `biokids-provision@` | root, oneshot, one instance per child added | creates the child's account and session files: one fixed command, `biokids-admin provision-child %I`, because the panel's sandbox cannot write `/etc` or `/home` (D-142) |
-| `biokids-unprovision@` | root, oneshot, one instance per child removed | the reverse, `biokids-admin unprovision-child %I`: out of `biokids-child`, a `nologin` shell, only BioKids' own unchanged session files removed; the account and its home stay (D-191) |
+| `biokids-unprovision@` | root, oneshot, one instance per child removed | the reverse, `biokids-admin unprovision-child %I`: out of `biokids-child`, `SystemAccount=true` for AccountsService and a `nologin` shell, only BioKids' own session files removed; the account and its home stay (D-191) |
 | the BioKids extension | inside Chromium, every profile on the machine | `webNavigation` and `storage`, host permission `http://127.0.0.1/*` only; no content scripts, no `tabs` (D-187) |
 
 Root services run with systemd hardening:

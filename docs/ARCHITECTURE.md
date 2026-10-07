@@ -99,9 +99,10 @@ module per area (D-186).
 `biokids-provision@<user>.service` when a child is added, or when the edit screen
 (`/children/{id}/edit`, D-191) changes the name or picture the login screen shows, and
 `biokids-unprovision@<user>.service` when a child is removed. Removal takes the account
-out of `biokids-child` and gives it `/usr/sbin/nologin`, so it leaves the login screen,
-and removes only session files still byte-identical to what BioKids wrote; the account
-and its home stay. It needs the passphrase, is refused while the child is at the
+out of `biokids-child`, sets `SystemAccount=true` in its AccountsService key file and
+gives it `/usr/sbin/nologin`, so it leaves the login screen the next time the greeter
+starts, and removes the launcher's autostart entry and any other session file still
+byte-identical to what BioKids wrote; the account and its home stay. It needs the passphrase, is refused while the child is at the
 machine, and keeps the database row if the account could not be changed. Otherwise the
 row is deleted and everything recorded for the child with it (`ON DELETE CASCADE`);
 the audit log keeps the removal.

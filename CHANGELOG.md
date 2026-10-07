@@ -147,8 +147,8 @@ Stated here rather than discovered later:
   VM, then 10 to 30 seconds an answer). It has not been measured on real hardware. It
   needs `llama.cpp-tools` and `whisper.cpp-tools` newer than Debian 13 has; until
   trixie-backports has them, the BioKids repository has to carry rebuilds.
-- **Two children whose uids differ by a multiple of 100 share a launcher port** (D-188),
-  and that is not handled.
+- **Two children whose uids differ by a multiple of 100 share a launcher port** (D-188):
+  only one of them can be logged in at a time, and the daemon logs it.
 - **The exit criterion has not been run end to end on one machine.**
   `docs/VM-RUNBOOK.md` §0–§6 have passed on a Debian 13 VM, the phone over Tailscale
   included; §7 (the spoken warnings, the shutdown, the reboot and the clock, recorded)
