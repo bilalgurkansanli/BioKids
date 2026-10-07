@@ -29,7 +29,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-from biokids_core import repo
+from biokids_core import repo, retention
 from biokids_core.clock import GuardedClock
 from biokids_core.ipc import EventKind
 from biokids_core.ledger import TickInput, TimeLedger
@@ -88,6 +88,9 @@ __all__ = [
 ]
 
 log = logging.getLogger(__name__)
+
+PRUNE_EVERY_SECONDS = 24 * 3600
+PRUNE_FIRST_AFTER_SECONDS = 300
 
 EARN_SPEECH_INTERVAL = 300
 """How rarely the earning celebration may fire - banner and spoken line
@@ -466,6 +469,23 @@ class Supervisor(
             )
 
     # ------------------------------------------------------- parent mail
+
+    async def housekeeping(self, now_boot: float) -> None:
+        """Once a day, delete what is past its retention window (D-189). The
+        first run is a few minutes after start, not during it."""
+        if self._pruned_at is None:
+            self._pruned_at = now_boot - PRUNE_EVERY_SECONDS + PRUNE_FIRST_AFTER_SECONDS
+            return
+        if now_boot - self._pruned_at < PRUNE_EVERY_SECONDS:
+            return
+        self._pruned_at = now_boot
+        try:
+            retention.prune(self.session, self.config)
+            self.session.commit()
+        except Exception:
+            log.exception("old records could not be deleted; trying again tomorrow")
+            with contextlib.suppress(Exception):
+                self.session.rollback()
 
     async def notify_parent(self, now_boot: float) -> None:
         """Mail what the parent should know, once a minute (D-177). Never raises:

@@ -18,6 +18,9 @@ from biokids_core.types import ActivityContext, Category, Decision
 from biokids_daemon.base import log
 from biokids_daemon.end_sequence import EndSequenceMixin
 
+VISIT_REPEAT_SECONDS = 600
+"""The same host again within ten minutes is the same visit."""
+
 
 class OperationsMixin(EndSequenceMixin):
     """The panel's and the launcher's operations, one method each."""
@@ -215,6 +218,20 @@ class OperationsMixin(EndSequenceMixin):
         except ValueError:
             runtime.category = None
         runtime.activity_reported_at = self.clock.read().boot
+
+    def record_visit(self, child_id: int, host: str) -> None:
+        """A site the child opened, by host name only (D-187). Kept for
+        `retention.activity_days` and shown to the parent in the history."""
+        runtime = self._require(child_id)
+        now = self.clock.read().boot
+        last = runtime.visits_seen.get(host)
+        if last is not None and now - last < VISIT_REPEAT_SECONDS:
+            return
+        runtime.visits_seen[host] = now
+        repo.record_event(
+            self.session, kind="visit", child_id=child_id, ts_boot=now, payload={"host": host}
+        )
+        self.session.commit()
 
     def request_launch(self, child_id: int, app_slug: str) -> Decision:
         """May this child start this application, right now?"""

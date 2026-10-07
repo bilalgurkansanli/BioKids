@@ -20,7 +20,7 @@ from biokids_core.db.models import FilterRule
 from biokids_core.errors import ConfigError
 from biokids_core.types import FilterMode
 from biokids_daemon.base import SupervisorBase, log
-from biokids_daemon.dnsfilter import DnsFilter
+from biokids_daemon.dnsfilter import DnsFilter, uids_of
 
 FILTER_CHECK_SECONDS = 60
 """How often the children's DNS filter is checked from the outside (D-172)."""
@@ -43,7 +43,9 @@ class FilteringMixin(SupervisorBase):
         """The children's DNS filter (D-167), its files under the data directory."""
         if self._dns_filter is None:
             self._dns_filter = DnsFilter(
-                self.config.paths.data_dir / "dns", panel_port=self.config.panel.port
+                self.config.paths.data_dir / "dns",
+                panel_port=self.config.panel.port,
+                launcher_base=self.config.shell.port,
             )
         return self._dns_filter
 
@@ -56,17 +58,20 @@ class FilteringMixin(SupervisorBase):
         machine-wide directory: the launcher's origin and the hosts of every web
         tile enabled for any child (D-156).
         """
-        from biokids_core.browser_policy import POLICY_FILENAME, kiosk_policy
+        from biokids_core.browser_policy import POLICY_FILENAME, kiosk_policy, packed_extension
 
         directory = self.config.paths.chromium_policy_dir
-        origin = f"{self.config.shell.host}:{self.config.shell.port}"
+        origins = self._launcher_origins()
+        extension = packed_extension(self.config.paths.extension_dir)
         path = directory / POLICY_FILENAME
         try:
             directory.mkdir(parents=True, exist_ok=True)
             temp = path.with_suffix(".json.tmp")
             temp.write_text(
                 json.dumps(
-                    kiosk_policy(origin, self._web_tile_hosts(), self._browser_mode()),
+                    kiosk_policy(
+                        origins, self._web_tile_hosts(), self._browser_mode(), extension
+                    ),
                     indent=2,
                     ensure_ascii=False,
                 ),
@@ -84,7 +89,20 @@ class FilteringMixin(SupervisorBase):
                 exc,
             )
             return
-        log.info("Chromium managed policy written to %s for %s", path, origin)
+        log.info("Chromium managed policy written to %s for %s", path, ", ".join(origins))
+        if extension is None:
+            log.warning(
+                "the browser extension is not packed (biokids-admin pack-extension); "
+                "blocked pages show Chromium's own error and visits are not reported"
+            )
+
+    def _launcher_origins(self) -> list[str]:
+        """Every managed child's launcher, each on a port of its own (D-188)."""
+        users = [r.unix_user for r in self.children.values() if r.policy is not None]
+        uids = uids_of(users)
+        if not uids:
+            return [f"{self.config.shell.host}:{self.config.shell.port}"]
+        return sorted({self.config.shell.launcher_origin(uid) for uid in uids})
 
     def _browser_mode(self) -> str:
         """`allowlist` if any managed child is on "selected sites only" (D-167).
@@ -101,8 +119,9 @@ class FilteringMixin(SupervisorBase):
     def _apply_dns_filter(self) -> None:
         """Every managed child's DNS through the filter (D-167)."""
         users = [r.unix_user for r in self.children.values() if r.policy is not None]
+        # A host with a port or an IP address (a launcher, the offline Wikipedia)
+        # has no name to resolve; the filter leaves those out itself.
         hosts = {pattern.split("/", 1)[0] for pattern in self._web_tile_hosts()}
-        hosts.discard(f"{self.config.shell.host}:{self.config.shell.port}")
         self.dns_filter.apply(users, sorted(hosts))
 
     def _web_tile_hosts(self) -> list[str]:

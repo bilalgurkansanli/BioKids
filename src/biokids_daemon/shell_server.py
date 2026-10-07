@@ -248,6 +248,7 @@ class ShellServer:
             ShellOp.GET_STATE: self._get_state,
             ShellOp.LAUNCH: self._launch,
             ShellOp.REPORT_ACTIVITY: self._report_activity,
+            ShellOp.REPORT_VISIT: self._report_visit,
             ShellOp.FIRST_RUN_DONE: self._first_run_done,
             ShellOp.REQUEST_SHUTDOWN: self._request_shutdown,
             ShellOp.ASK_A_PARENT: self._ask_a_parent,
@@ -276,6 +277,12 @@ class ShellServer:
                 "remaining_seconds": decision.remaining_seconds,
             },
         )
+
+    async def _report_visit(self, caller: ShellCaller, request: Request) -> Response:
+        host = str(request.args.get("host", "")).strip().lower()[:253]
+        if host:
+            self.supervisor.record_visit(caller.child_id, host)
+        return Response(id=request.id, ok=True)
 
     async def _report_activity(self, caller: ShellCaller, request: Request) -> Response:
         self.supervisor.report_activity(

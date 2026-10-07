@@ -74,6 +74,9 @@ class ChildRuntime:
 
     earned_pending_s: int = 0
     """Earned seconds not yet announced; the celebration is in whole minutes."""
+    visits_seen: dict[str, float] = field(default_factory=dict)
+    """Host -> BOOTTIME of its last recorded visit, so a site that is open all
+    afternoon is one line in the history, not one per page (D-187)."""
     earned_announced_at: float = 0.0
     """When the last celebration went out, in BOOTTIME seconds. Zero means never."""
 
@@ -107,6 +110,7 @@ class SupervisorBase:
     _filter_checked_at: float | None = None
     _notifier: Notifier | None = None
     _notified_at: float | None = None
+    _pruned_at: float | None = None
 
     @property
     def session(self) -> Session:

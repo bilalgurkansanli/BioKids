@@ -390,11 +390,16 @@ class DnsFilter:
     """
 
     def __init__(
-        self, directory: Path, lists_dir: Path = LISTS_DIR, panel_port: int = PANEL_PORT
+        self,
+        directory: Path,
+        lists_dir: Path = LISTS_DIR,
+        panel_port: int = PANEL_PORT,
+        launcher_base: int = LAUNCHER_BASE,
     ) -> None:
         self.files = FilterFiles(directory)
         self.lists_dir = lists_dir
         self.panel_port = panel_port
+        self.launcher_base = launcher_base
         self._blocklist: str | None = None
         self.last_error = ""
 
@@ -403,7 +408,7 @@ class DnsFilter:
         # DNS goes to the filter's port. If nothing answers there, they have no
         # internet; that is the fail-safe, never an unfiltered one (principle 3).
         try:
-            write_atomically(self.files.nft, render_nft(uids_of(child_users), self.panel_port))
+            write_atomically(self.files.nft, render_nft(uids_of(child_users), self.panel_port, self.launcher_base))
         except OSError as exc:
             self.last_error = f"files: {exc}"
             log.error("the children's DNS redirect could not be written: %s", exc)
