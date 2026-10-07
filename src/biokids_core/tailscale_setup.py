@@ -47,7 +47,9 @@ KEY_FINGERPRINT: Final = "2596A99EAAB33821893C0A79458CA832957F5868"
 """Tailscale Inc.'s package repository signing key, as fetched from
 pkgs.tailscale.com on 2026-10-06. A test checks the shipped file against it."""
 
-KEYRING: Final = Path("/usr/share/keyrings/tailscale-archive-keyring.gpg")
+KEYRING: Final = Path("/etc/apt/keyrings/tailscale-archive-keyring.gpg")
+"""Where an administrator's own repository keys go; /usr/share/keyrings belongs to
+packages, and dpkg knows nothing of this file."""
 SOURCES: Final = Path("/etc/apt/sources.list.d/tailscale.list")
 DEFAULTS: Final = Path("/etc/default/tailscaled")
 OS_RELEASE: Final = Path("/etc/os-release")

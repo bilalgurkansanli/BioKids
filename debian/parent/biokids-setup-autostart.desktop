@@ -6,6 +6,7 @@ Type=Application
 Name=BioKids setup
 Name[tr]=BioKids kurulumu
 Exec=/usr/lib/biokids/biokids-open-setup
+TryExec=/usr/lib/biokids/biokids-open-setup
 Terminal=false
 NoDisplay=true
 X-GNOME-Autostart-Delay=5

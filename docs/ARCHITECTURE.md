@@ -241,8 +241,7 @@ Precedence, highest first:
 5. category limit exhausted
 6. app not in the child's catalog
 7. URL blocked by filter
-8. AI risk above the block threshold
-9. allow
+8. allow
 
 `reason_code` is always an i18n key like `quota.exhausted` or `filter.blocked.category`.
 Never build a user-facing sentence in the engine. This is what keeps Turkish and

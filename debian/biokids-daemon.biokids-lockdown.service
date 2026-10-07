@@ -30,4 +30,4 @@ RestrictNamespaces=yes
 RestrictSUIDSGID=yes
 MemoryDenyWriteExecute=yes
 SystemCallFilter=@system-service
-ReadWritePaths=/var/lib/biokids /var/log/biokids -/run/biokids
+ReadWritePaths=/var/lib/biokids -/run/biokids

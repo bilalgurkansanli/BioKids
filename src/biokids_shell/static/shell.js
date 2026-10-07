@@ -442,14 +442,6 @@
       );
     });
 
-    var badge = document.getElementById("supervision");
-    source.addEventListener("ai_checked", function () {
-      if (!badge) return;
-      badge.classList.add("is-checking");
-      window.setTimeout(function () {
-        badge.classList.remove("is-checking");
-      }, 2600);
-    });
 
     source.onerror = function () {
       source.close();

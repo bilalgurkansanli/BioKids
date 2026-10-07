@@ -380,9 +380,6 @@ def register_wizard(app: FastAPI) -> None:
         if child is not None:
             policy = repo.get_or_create_policy(session, child.id)
             policy.voice_enabled = voices == "on"
-            # The AI layer stays off. It is an optional package that is not even
-            # installed in Phase 0, and D-82 says default off regardless.
-            policy.ai_enabled = False
 
         # D-49 makes every step skippable, and a secret is the one thing that
         # cannot have a sane default. Skipping step 3 used to leave both

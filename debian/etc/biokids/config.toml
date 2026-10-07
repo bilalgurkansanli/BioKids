@@ -1,140 +1,90 @@
 # /etc/biokids/config.toml - machine-level configuration for BioKids.
 #
-# This is a dpkg conffile. Your edits survive upgrades; if a future release
-# changes a value you have touched, dpkg will ask you what to do rather than
-# overwrite it.
+# Nothing about a family lives here. Children, quotas, time windows, the PIN,
+# mail settings and the audit log are in the database and are managed from the
+# parent panel. This file holds what a machine needs before it has a family:
+# paths, ports and timings.
 #
-# Nothing about a family lives here. Children, quotas, time windows, the PIN
-# and the audit log are in the database at /var/lib/biokids/biokids.db and are
-# managed from the parent panel. This file holds the things a machine needs
-# before it has a family: where the paths are, which ports to listen on, and
-# how often the daemon ticks.
-#
-# Every value below is the built-in default, so deleting a line changes
-# nothing and deleting the whole file is safe. An unknown key or a value of
-# the wrong type is refused at startup, on purpose: guessing at a
+# Every setting below is commented out and shows its built-in default. The
+# defaults live in the code, so an upgrade that changes one reaches you without
+# dpkg asking about this file. To change a value, uncomment its line. A key a
+# later version no longer uses is ignored with a warning; a misspelt key or a
+# value of the wrong type is refused at startup, because guessing at a
 # parental-control configuration is worse than refusing to start.
 
-# --- paths -------------------------------------------------------------------
-# The filesystem layout. Changing one of these moves the file; it does not
-# create the old one's contents somewhere new, so move the data yourself first.
-# Setting BIOKIDS_PREFIX in the environment re-roots all of them at once, which
-# is how the test suite and dev/reset.sh run unprivileged.
 [paths]
-config_dir = "/etc/biokids"
-data_dir = "/var/lib/biokids"
-db_path = "/var/lib/biokids/biokids.db"
-evidence_dir = "/var/lib/biokids/evidence"
-voice_profile_dir = "/var/lib/biokids/voices"
-voice_cache_dir = "/var/lib/biokids/voice-cache"
-model_dir = "/var/lib/biokids/models"
-log_dir = "/var/log/biokids"
-run_dir = "/run/biokids"
-daemon_socket = "/run/biokids/daemon.sock"
-# The child launcher's socket. World-connectable and authorised by the peer's
-# uid instead of by its file mode (D-123); relocate it with run_dir above.
-shell_socket = "/run/biokids/shell.sock"
-share_dir = "/usr/share/biokids"
-secret_key = "/etc/biokids/secret.key"
-ext_token = "/etc/biokids/ext.token"
-chromium_policy_dir = "/etc/chromium/policies/managed"
-dnsmasq_dir = "/etc/dnsmasq.d"
-nftables_dir = "/etc/nftables.d"
-# The assistant (biokids-ai, D-165): its runtime directory and the models a
-# parent downloaded for it.
-ai_run_dir = "/run/biokids-ai"
-ai_models_dir = "/var/lib/biokids-ai/models"
+# The filesystem layout. Changing one moves where BioKids looks; it does not
+# move the data. BIOKIDS_PREFIX in the environment re-roots all of them at once.
+# config_dir = "/etc/biokids"
+# data_dir = "/var/lib/biokids"
+# db_path = "/var/lib/biokids/biokids.db"
+# voice_cache_dir = "/var/lib/biokids/voice-cache"
+# model_dir = "/var/lib/biokids-voices/models"
+# run_dir = "/run/biokids"
+# daemon_socket = "/run/biokids/daemon.sock"
+# shell_socket = "/run/biokids/shell.sock"
+# share_dir = "/usr/share/biokids"
+# secret_key = "/etc/biokids/secret.key"
+# chromium_policy_dir = "/etc/chromium/policies/managed"
+# extension_dir = "/var/lib/biokids-ext"
+# extension_key = "/var/lib/biokids/extension-key.pem"
+# recorded_voice_dir = "/var/lib/biokids-voices"
+# ai_run_dir = "/run/biokids-ai"
+# ai_models_dir = "/var/lib/biokids-ai/models"
 
-# --- panel -------------------------------------------------------------------
-# The parent panel. It listens on the loopback address and is meant to stay
-# there: reaching it from a phone is done over the family's own private network
-# (Tailscale), never by forwarding a port. The lockout below is the answer to a
-# six-digit PIN being short: five wrong attempts cost fifteen minutes, and each
-# further trip doubles that up to a day.
 [panel]
-host = "127.0.0.1"
-port = 7878
-session_idle_minutes = 30
-pin_attempts = 5
-pin_lockout_minutes = 15
-pin_lockout_max_minutes = 1440
+# The parent panel. It listens on loopback only and refuses anything else;
+# a phone reaches it through Tailscale (D-33).
+# host = "127.0.0.1"
+# port = 7878
+# session_idle_minutes = 30
+# pin_attempts = 5
+# pin_lockout_minutes = 15
+# pin_lockout_max_minutes = 1440
 
-# --- shell -------------------------------------------------------------------
-# The child launcher, served inside the child's own session and shown in a
-# Chromium kiosk window. kiosk_restart_seconds is how long to wait before
-# bringing the window back when it exits, because a child who closes the
-# launcher should get it back, not a desktop.
 [shell]
-host = "127.0.0.1"
-port = 7879
-kiosk_command = "chromium"
-kiosk_restart_seconds = 2
+# The child's launcher. Each child's launcher listens on port + uid % 100.
+# host = "127.0.0.1"
+# port = 7879
+# kiosk_command = "chromium"
+# kiosk_restart_seconds = 2
 
-# --- daemon ------------------------------------------------------------------
-# The enforcement daemon. It accounts time in ticks and writes the running
-# total to the database every persist_seconds, so a power cut costs at most
-# that much of a child's day. clock_jump_threshold_seconds is how far the wall
-# clock may disagree with the boot clock before the difference is written to
-# the audit log; the discrepancy is recorded, never applied. socket_mode and
-# socket_group control who may talk to the daemon: members of the biokids
-# group, which is how the child's launcher reaches it without privileges.
 [daemon]
-tick_seconds = 10
-persist_seconds = 30
-clock_jump_threshold_seconds = 600
-socket_group = "biokids"
-socket_mode = 0o660
-lock_countdown_seconds = 120
-app_term_grace_seconds = 10
+# tick_seconds = 10
+# persist_seconds = 30
+# clock_jump_threshold_seconds = 600
+# socket_group = "biokids"
+# socket_mode = 0o660
+# lock_countdown_seconds = 120
+# app_term_grace_seconds = 10
 
-# --- voice -------------------------------------------------------------------
-# Zio and Sio. Speech is produced locally; no audio is recorded and no
-# microphone is opened. duck_percent is how far other sound is turned down
-# while a warning is spoken. quiet_hours is empty for "never quiet"; set a
-# window such as "21:00-08:00" to keep the house silent at night.
 [voice]
-enabled = true
-socket_name = "biokids-voice.sock"
-cache_max_mb = 200
-queue_depth = 3
-duck_percent = 30
-piper_binary = "piper"
-# The fallback engine, used whenever Piper is absent - which on a stock Debian
-# 13 machine it is: piper-tts is not in the archive and the one remaining
-# Turkish Piper voice is CC-BY-NC-SA. See assets/voices/LICENSES.md.
-espeak_binary = "espeak-ng"
-# Speaks for espeak-ng when the mbrola-tr1 and mbrola-tr2 voices are installed,
-# which sounds far less like a robot. They are in contrib and non-free, so a
-# family installs them; nothing changes when they are absent.
-mbrola_binary = "mbrola"
-quiet_hours = ""
+# enabled = true
+# socket_name = "biokids-voice.sock"
+# cache_max_mb = 200
+# queue_depth = 3
+# duck_percent = 30
+# piper_binary = "piper"
+# espeak_binary = "espeak-ng"
+# mbrola_binary = "mbrola"
+# quiet_hours = ""          # e.g. "21:00-08:00": the cards still show, nothing is spoken
 
-# --- ai ----------------------------------------------------------------------
-# The optional on-device screen watcher, off until a parent turns it on and
-# visible to the child when it is running. The three rate limits are a budget,
-# not a target: they bound how often the model may look at the screen at all.
-# A flagged frame is kept in evidence_dir and pruned after this many days.
 [ai]
-enabled = false
-socket_name = "biokids-ai.sock"
-max_per_20s = 1
-max_per_hour = 40
-max_per_day = 200
-evidence_retention_days = 7
-# The question-answering assistant (D-165), off until a parent turns it on for
-# a child. Models load when a question comes and unload after idle minutes.
-assistant_per_10min = 20
-llama_server_binary = "llama-server"
-whisper_server_binary = "whisper-server"
-idle_unload_minutes = 10
-# CPU threads for the models: 0 is half the logical CPUs, at most 8. More is
-# slower, not faster: the threads wait for each other (AI-LAYER.md section 12).
-threads = 0
+# The optional assistant (biokids-ai).
+# assistant_per_10min = 20
+# llama_server_binary = "llama-server"
+# whisper_server_binary = "whisper-server"
+# kiwix_serve_binary = "kiwix-serve"
+# idle_unload_minutes = 10
+# threads = 0               # 0: half the logical CPUs, at most 8
 
-# --- i18n --------------------------------------------------------------------
-# Interface language. Turkish is the product's first language and English is
-# the translation; default_locale decides which one a screen falls back to when
-# nobody has chosen.
+[retention]
+# How long records are kept, in days. Nothing is kept forever.
+# activity_days = 30        # apps used, sites visited, assistant alerts
+# usage_days = 400          # minutes per day, for the history screen
+# audit_days = 365
+# requests_days = 90
+
 [i18n]
-default_locale = "tr"
-available = ["tr", "en"]
+# default_locale = "tr"
+# available = ["tr", "en"]

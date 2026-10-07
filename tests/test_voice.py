@@ -461,7 +461,7 @@ def test_a_finished_line_leaves_nothing_half_written_behind(stub: Synthesizer) -
     assert list(stub.cache.directory.glob("*")) == [result.path]
 
 
-def test_re_recording_a_voice_invalidates_the_audio_cached_for_it(
+def test_a_new_piper_voice_invalidates_the_audio_cached_for_it(
     voice_config: Config,
 ) -> None:
     """VOICE.md §6 keys audio on the voice profile, so the profile has to move.
@@ -469,14 +469,14 @@ def test_re_recording_a_voice_invalidates_the_audio_cached_for_it(
     Without this a family who re-records Zio keeps hearing the voice they threw
     away: every sentence they hear every day is already in the cache.
     """
-    cloned = voice_config.paths.voice_profile_dir / "zio" / "tr.onnx"
-    cloned.parent.mkdir(parents=True, exist_ok=True)
-    cloned.write_bytes(b"the first recording")
+    model = voice_config.paths.model_dir / "piper" / "tr-zio.onnx"
+    model.parent.mkdir(parents=True, exist_ok=True)
+    model.write_bytes(b"the first voice")
 
     bank = VoiceBank(voice_config)
     before = cache_key("Merhaba, ben Zio.", bank.candidates("zio", "tr")[0])
 
-    cloned.write_bytes(b"a second recording, of a different length")
+    model.write_bytes(b"a second voice, of a different length")
     after = cache_key("Merhaba, ben Zio.", bank.candidates("zio", "tr")[0])
 
     assert before != after
@@ -527,36 +527,6 @@ def test_the_cache_evicts_least_recently_used_first(cache: VoiceCache) -> None:
 
 
 # ------------------------------------------------------------- the fallback
-
-
-def test_a_deleted_cloned_model_falls_back_to_the_stock_voice(
-    voice_config: Config, cache: VoiceCache, caplog: pytest.LogCaptureFixture
-) -> None:
-    """VOICE.md §9: delete the cloned model mid-run, still speak, and log it."""
-    cloned = voice_config.paths.voice_profile_dir / "zio" / "tr.onnx"
-    cloned.parent.mkdir(parents=True, exist_ok=True)
-    cloned.write_bytes(b"cloned-voice")
-    stock = voice_config.paths.model_dir / "piper" / "tr-zio.onnx"
-    stock.parent.mkdir(parents=True, exist_ok=True)
-    stock.write_bytes(b"stock-voice")
-
-    bank = VoiceBank(voice_config)
-    synth = Synthesizer(StubSynth(), cache)
-    assert [voice.kind for voice in bank.candidates("zio", "tr")] == ["cloned", "stock"]
-
-    before = synth.render("Merhaba, ben Zio.", bank.candidates("zio", "tr"))
-    assert before.voice is not None and before.voice.kind == "cloned"
-    assert before.degraded is False
-
-    cloned.unlink()
-
-    with caplog.at_level(logging.WARNING, logger="biokids_voice.synth"):
-        after = synth.render("Bugünlük bu kadar.", bank.candidates("zio", "tr"))
-
-    assert after.spoken, "the child must still hear the line"
-    assert after.voice is not None and after.voice.kind == "stock"
-    assert after.degraded is True
-    assert any("could not speak" in record.message for record in caplog.records)
 
 
 class BrokenSynth(StubSynth):
@@ -1065,38 +1035,6 @@ def test_espeak_writing_nothing_is_a_synth_error_not_an_empty_file(
         )
 
 
-def test_espeak_refuses_a_cloned_voice_instead_of_faking_it(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """espeak-ng cannot sound like a particular person, and must say so.
-
-    `Synthesizer.render` marks a result degraded only when a backend raises. A
-    backend that quietly spoke the stock robot for a cloned request would return
-    a result claiming the family's own voice had been used, and cache the robot
-    under that profile id. The chain is there so the system knows which rung it
-    is standing on.
-    """
-    monkeypatch.setattr(EspeakSynth, "available", lambda _self: True)
-    monkeypatch.setattr(
-        synth_module.subprocess,
-        "run",
-        lambda *_a, **_k: pytest.fail("espeak-ng was run for a cloned voice"),
-    )
-
-    with pytest.raises(SynthError, match="cloned"):
-        EspeakSynth().render(
-            "Merhaba.",
-            VoiceSpec(
-                persona="zio",
-                locale="tr",
-                kind="cloned",
-                profile_id="cloned:zio:tr:abc",
-                model_path=tmp_path / "zio.onnx",
-            ),
-            tmp_path / "out.wav",
-        )
-
-
 # ------------------------------------------- MBROLA, when a family adds it (D-161)
 
 
@@ -1304,32 +1242,6 @@ def test_installing_mbrola_means_the_robot_is_not_heard_again(
     assert chain.cache.directory == robot.parent
 
 
-def test_a_cloned_request_falls_through_to_stock_and_says_it_degraded(
-    voice_config: Config, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """The whole point of refusing: the next voice gets a turn, and it is flagged."""
-
-    class Finished:
-        returncode = 0
-        stdout = b"RIFF....WAVEfmt " + b"\x00" * 64
-        stderr = b""
-
-    monkeypatch.setattr(EspeakSynth, "available", lambda _self: True)
-    monkeypatch.setattr(synth_module.subprocess, "run", lambda *_a, **_k: Finished())
-
-    chain = Synthesizer(EspeakSynth(), VoiceCache.from_config(voice_config))
-    cloned = VoiceSpec(
-        persona="zio", locale="tr", kind="cloned", profile_id="cloned:zio:tr:abc"
-    )
-    stock = VoiceSpec(persona="zio", locale="tr", kind="stock", profile_id="stock:zio:tr")
-
-    result = chain.render("Beş dakika kaldı.", [cloned, stock])
-
-    assert result.voice is not None
-    assert result.voice.kind == "stock", "the robot answered for the family's own voice"
-    assert result.degraded is True, "a silent downgrade is the bug"
-
-
 def test_a_piper_with_no_model_hands_over_to_espeak(
     voice_config: Config, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1428,27 +1340,18 @@ def test_a_voice_directory_the_child_may_not_read_is_skipped_not_fatal(
     """
     from pathlib import Path
 
-    real_is_dir = Path.is_dir
     real_is_file = Path.is_file
-    guarded = voice_config.paths.voice_profile_dir
     models = voice_config.paths.model_dir
-
-    def is_dir(self: Path, *args: object, **kwargs: object) -> bool:
-        if self == guarded or guarded in self.parents:
-            raise PermissionError(13, "Permission denied", str(self))
-        return real_is_dir(self)
 
     def is_file(self: Path, *args: object, **kwargs: object) -> bool:
         if models in self.parents:
             raise PermissionError(13, "Permission denied", str(self))
         return real_is_file(self)
 
-    monkeypatch.setattr(Path, "is_dir", is_dir)
     monkeypatch.setattr(Path, "is_file", is_file)
 
     voices = VoiceBank(voice_config).candidates("zio", "tr")
 
-    assert all(voice.kind != "cloned" for voice in voices)
     assert all(voice.model_path is None for voice in voices)
     assert "cannot be read by this user" in caplog.text
 

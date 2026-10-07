@@ -24,8 +24,6 @@ CHILD_GROUP=biokids-child
 AI_USER=biokids-ai
 CONF_DIR=/etc/biokids
 DATA_DIR=/var/lib/biokids
-EVIDENCE_DIR=/var/lib/biokids/evidence
-LOG_DIR=/var/log/biokids
 RUN_DIR=/run/biokids
 ALEMBIC_INI=/usr/share/biokids/alembic.ini
 
@@ -70,35 +68,26 @@ case "$1" in
             *" $BIOKIDS_GROUP "*) gpasswd -d "$AI_USER" "$BIOKIDS_GROUP" >/dev/null || true ;;
         esac
 
-        # These three are created here instead of being shipped in the package
-        # because dpkg re-applies the recorded mode of a directory it owns on
-        # every unpack, and 0700 on a family's history is not something to leave
-        # to a recorded mode. install -d is idempotent and re-asserts the mode,
-        # which is the point: an upgrade should repair a loosened permission.
+        # Created here instead of being shipped in the package because dpkg
+        # re-applies the recorded mode of a directory it owns on every unpack,
+        # and 0700 on a family's history is not something to leave to a recorded
+        # mode. install -d is idempotent and re-asserts the mode, which is the
+        # point: an upgrade should repair a loosened permission.
         install -d -o root -g root -m 0700 "$DATA_DIR"
-        install -d -o root -g root -m 0700 "$EVIDENCE_DIR"
-        install -d -o root -g adm -m 0750 "$LOG_DIR"
-        # A parent's own recordings of the spoken lines (D-174). Readable by
-        # everyone, because the voice service that plays them is the child's
-        # process; written only by the panel.
+        # A parent's own recordings of the spoken lines (D-174), and Piper
+        # voices a family adds. Readable by everyone, because the voice service
+        # that plays them is the child's process; written only by root.
         install -d -o root -g root -m 0755 /var/lib/biokids-voices
+        # The packed browser extension (D-187), which the child's Chromium
+        # installs from here. Its signing key stays in the 0700 data directory.
+        install -d -o root -g root -m 0755 /var/lib/biokids-ext
         # /run is a tmpfs, so this covers the window between installing and the
         # first boot. After that the daemon unit's RuntimeDirectory= owns it.
         install -d -o root -g root -m 0755 "$RUN_DIR"
 
-        # The token the browser extension presents to the daemon. Readable by
-        # the biokids group, and written under a temporary name so a reader
-        # never sees a half-written file.
-        # Regenerating it would silently disconnect the extension, so it is
-        # generated once and then left alone.
-        if [ ! -e "$CONF_DIR/ext.token" ]; then
-            tmp="$(mktemp "$CONF_DIR/ext.token.XXXXXX")"
-            od -An -tx1 -N32 /dev/urandom | tr -d ' \n' > "$tmp"
-            printf '\n' >> "$tmp"
-            chown root:"$BIOKIDS_GROUP" "$tmp"
-            chmod 0640 "$tmp"
-            mv "$tmp" "$CONF_DIR/ext.token"
-        fi
+        # Earlier versions made a token for an extension that talked to the
+        # daemon; the extension talks to the child's own launcher instead.
+        rm -f "$CONF_DIR/ext.token"
 
         # The key that encrypts the SMTP password and anything else stored at
         # rest. A Fernet key has a shape, so it is made by the code that will

@@ -4,8 +4,11 @@ usr/share/biokids/characters
 usr/share/biokids/xfce
 usr/share/biokids/devilspie2
 usr/share/themes/BioKids/xfwm4
-debian/etc/systemd/logind.conf.d/biokids.conf etc/systemd/logind.conf.d/
-debian/etc/X11/xorg.conf.d/50-biokids-no-vt-switch.conf etc/X11/xorg.conf.d/
+# The virtual-terminal guards (D-136). In the packaged-defaults directories,
+# not /etc: "apt remove" must take them away (principle 4), and an
+# administrator can still override them from /etc.
+debian/etc/systemd/logind.conf.d/biokids.conf usr/lib/systemd/logind.conf.d/
+debian/etc/X11/xorg.conf.d/50-biokids-no-vt-switch.conf usr/share/X11/xorg.conf.d/
 
 # A child logs in at the LightDM greeter by choosing their picture (D-99,
 # D-155): a PAM service of our own, the helper it asks, and the one LightDM

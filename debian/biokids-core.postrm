@@ -38,10 +38,11 @@ case "$1" in
             rm -f "$CONF_DIR/ext.token" "$CONF_DIR/secret.key"
             rm -rf "$DATA_DIR"
             rm -rf /var/lib/biokids-voices
-            # The logs are part of the same record, so they follow the same
-            # answer rather than getting a second question.
+            # Earlier versions kept logs here; everything goes to the journal now.
             rm -rf "$LOG_DIR"
         fi
+        # Generated from the package on this machine, nothing of the family's.
+        rm -rf /var/lib/biokids-ext
 
         rmdir "$RUN_DIR" 2>/dev/null || true
         # Only if empty. A file an administrator put in /etc/biokids is theirs,

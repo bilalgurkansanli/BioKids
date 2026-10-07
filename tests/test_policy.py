@@ -131,54 +131,6 @@ def test_disallowed_app_beats_a_blocked_url() -> None:
     assert decision.reason_code == Reason.APP_NOT_ALLOWED
 
 
-def test_blocked_url_beats_an_ai_score() -> None:
-    policy = make_policy(ai_enabled=True)
-    decision = evaluate(
-        policy,
-        state(),
-        ActivityContext(url_blocked=True, ai_score=90, ai_block_threshold=65),
-        AFTERNOON,
-    )
-    assert decision.reason_code == Reason.FILTER_BLOCKED
-    assert decision.speak is not None
-    assert decision.speak.event == "blocked"
-
-
-def test_ai_score_blocks_without_a_timeout_by_default() -> None:
-    """D-80: the top band blocks, but the 30-minute timeout is opt-in."""
-    policy = make_policy(ai_enabled=True, ai_block_enabled=False)
-    decision = evaluate(
-        policy,
-        state(),
-        ActivityContext(ai_score=70, ai_block_threshold=65),
-        AFTERNOON,
-    )
-    assert decision.action is Action.BLOCK
-    assert decision.reason_code == Reason.AI_BLOCKED
-
-
-def test_ai_score_starts_a_timeout_when_the_parent_enabled_it() -> None:
-    policy = make_policy(ai_enabled=True, ai_block_enabled=True)
-    decision = evaluate(
-        policy,
-        state(),
-        ActivityContext(ai_score=70, ai_block_threshold=65),
-        AFTERNOON,
-    )
-    assert decision.action is Action.TIMEOUT
-
-
-def test_ai_score_is_ignored_when_the_layer_is_off() -> None:
-    policy = make_policy(ai_enabled=False)
-    decision = evaluate(
-        policy,
-        state(),
-        ActivityContext(ai_score=99, ai_block_threshold=65),
-        AFTERNOON,
-    )
-    assert decision.allow is True
-
-
 def test_everything_clear_allows() -> None:
     decision = evaluate(make_policy(), state(general_used_s=60), ActivityContext(), AFTERNOON)
     assert decision.allow is True

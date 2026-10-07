@@ -49,3 +49,6 @@ evidence/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Local tool state (agent worktrees and the like)
+.claude/

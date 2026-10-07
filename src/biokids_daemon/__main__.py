@@ -72,7 +72,7 @@ async def main_async(args: argparse.Namespace) -> int:
     config = Config.load(args.config)
     set_config(config)
 
-    for directory in (config.paths.data_dir, config.paths.log_dir, config.paths.run_dir):
+    for directory in (config.paths.data_dir, config.paths.run_dir):
         directory.mkdir(parents=True, exist_ok=True)
 
     database = Database(config)

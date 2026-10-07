@@ -2,11 +2,13 @@ Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: BioKids
 Upstream-Contact: Bilal Gurkan Sanli <bilalsanli129@gmail.com>
 Source: https://github.com/bilalgurkansanli/BioKids
-Comment: BioKids is MIT throughout, and deliberately so: a dependency whose
- licence would force this project to change its own is not accepted, which
- keeps the packaging free of per-file exceptions. Programs BioKids only
- invokes as separate processes - dnsmasq, Chromium, Piper - carry their own
- licences and are dependencies, not part of this source package.
+Comment: BioKids' own code, text and artwork are MIT. The source package also
+ carries third-party data, listed below with its own terms. Programs BioKids
+ only invokes as separate processes - dnsmasq, Chromium, espeak-ng, kiwix-serve,
+ llama.cpp, whisper.cpp, Tailscale - carry their own licences and are
+ dependencies, not part of this source package. Files a parent downloads at run
+ time (the assistant's models, the Wikipedia excerpts) are never part of a
+ package; their licences are recorded in src/biokids_ai/models.py.
 
 Files: *
 Copyright: 2026 Bilal Gurkan Sanli
@@ -15,6 +17,27 @@ License: MIT
 Files: debian/*
 Copyright: 2026 Bilal Gurkan Sanli
 License: MIT
+
+Files: src/biokids_core/data/blocklists/*.txt.gz
+Copyright: ShadowWhisperer and contributors (https://github.com/ShadowWhisperer/BlockLists)
+License: Unlicense
+Comment: Domain lists, snapshotted by dev/update_blocklists.py; the commit and
+ date are in src/biokids_core/data/blocklists/SOURCES.toml.
+
+Files: src/biokids_core/data/tailscale/tailscale-archive-keyring.gpg
+Copyright: Tailscale Inc.
+License: public-key
+ This is Tailscale Inc.'s public OpenPGP key for its package repository
+ (fingerprint 2596A99EAAB33821893C0A79458CA832957F5868), shipped unchanged so
+ that apt can verify packages from pkgs.tailscale.com. It is a public key and
+ carries no licence terms of its own.
+
+Files: src/biokids_core/data/avatars/*.png
+Copyright: 2026 Bilal Gurkan Sanli
+ 2013-2026 Google LLC (Noto Color Emoji artwork)
+License: Apache-2.0
+Comment: Drawn by dev/make_greeter_art.py: an emoji from Noto Color Emoji on a
+ coloured disc. The emoji images in Noto Color Emoji are Apache-2.0.
 
 License: MIT
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -34,3 +57,30 @@ License: MIT
  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
+
+License: Unlicense
+ This is free and unencumbered software released into the public domain.
+ .
+ Anyone is free to copy, modify, publish, use, compile, sell, or distribute
+ this software, either in source code form or as a compiled binary, for any
+ purpose, commercial or non-commercial, and by any means.
+ .
+ In jurisdictions that recognize copyright laws, the author or authors of this
+ software dedicate any and all copyright interest in the software to the public
+ domain. We make this dedication for the benefit of the public at large and to
+ the detriment of our heirs and successors. We intend this dedication to be an
+ overt act of relinquishment in perpetuity of all present and future rights to
+ this software under copyright law.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ .
+ For more information, please refer to <https://unlicense.org>
+
+License: Apache-2.0
+ On Debian systems, the complete text of the Apache License, Version 2.0 can
+ be found in "/usr/share/common-licenses/Apache-2.0".

@@ -12,6 +12,7 @@ its dependency list is `python3`, `python3-sqlalchemy` and `alembic`.
 
 from __future__ import annotations
 
+import logging
 import os
 import tomllib
 from collections.abc import Mapping
@@ -20,6 +21,8 @@ from pathlib import Path
 from typing import Any, Final, Self, get_args, get_origin, get_type_hints
 
 from biokids_core.errors import ConfigError
+
+log = logging.getLogger(__name__)
 
 DEFAULT_CONFIG_PATH: Final = Path("/etc/biokids/config.toml")
 ENV_CONFIG_PATH: Final = "BIOKIDS_CONFIG"
@@ -32,11 +35,10 @@ class PathsConfig:
     config_dir: Path = Path("/etc/biokids")
     data_dir: Path = Path("/var/lib/biokids")
     db_path: Path = Path("/var/lib/biokids/biokids.db")
-    evidence_dir: Path = Path("/var/lib/biokids/evidence")
-    voice_profile_dir: Path = Path("/var/lib/biokids/voices")
     voice_cache_dir: Path = Path("/var/lib/biokids/voice-cache")
-    model_dir: Path = Path("/var/lib/biokids/models")
-    log_dir: Path = Path("/var/log/biokids")
+    model_dir: Path = Path("/var/lib/biokids-voices/models")
+    """Piper voices a family installed themselves (D-137), under `piper/`. In the
+    world-readable voices directory because the voice service runs as the child."""
     run_dir: Path = Path("/run/biokids")
     daemon_socket: Path = Path("/run/biokids/daemon.sock")
     shell_socket: Path = Path("/run/biokids/shell.sock")
@@ -45,10 +47,12 @@ class PathsConfig:
     which the kernel supplies and nothing in a child's session can forge."""
     share_dir: Path = Path("/usr/share/biokids")
     secret_key: Path = Path("/etc/biokids/secret.key")
-    ext_token: Path = Path("/etc/biokids/ext.token")
     chromium_policy_dir: Path = Path("/etc/chromium/policies/managed")
-    dnsmasq_dir: Path = Path("/etc/dnsmasq.d")
-    nftables_dir: Path = Path("/etc/nftables.d")
+    extension_dir: Path = Path("/var/lib/biokids-ext")
+    """The packed browser extension, its update manifest and its id (D-187).
+    World-readable: the child's Chromium installs it from here."""
+    extension_key: Path = Path("/var/lib/biokids/extension-key.pem")
+    """The key the extension is signed with, made on this machine, never shipped."""
     ai_run_dir: Path = Path("/run/biokids-ai")
     """The assistant service's own runtime directory: its socket, and the socket
     of the language model it runs (D-165)."""
@@ -82,8 +86,17 @@ class PanelConfig:
 class ShellConfig:
     host: str = "127.0.0.1"
     port: int = 7879
+    """The first launcher port. Each child's launcher listens on
+    `port + uid % 100` (`launcher_port`), so two children logged in at once do
+    not fight over one port (D-188)."""
     kiosk_command: str = "chromium"
     kiosk_restart_seconds: int = 2
+
+    def launcher_port(self, uid: int) -> int:
+        return self.port + uid % LAUNCHER_PORTS
+
+    def launcher_origin(self, uid: int) -> str:
+        return f"{self.host}:{self.launcher_port(uid)}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,12 +130,6 @@ class VoiceConfig:
 
 @dataclass(frozen=True, slots=True)
 class AiConfig:
-    enabled: bool = False
-    socket_name: str = "biokids-ai.sock"
-    max_per_20s: int = 1
-    max_per_hour: int = 40
-    max_per_day: int = 200
-    evidence_retention_days: int = 7
     assistant_per_10min: int = 20
     """Questions a child may ask the assistant in ten minutes (D-165)."""
     llama_server_binary: str = "llama-server"
@@ -134,6 +141,21 @@ class AiConfig:
     memory back to the child's apps."""
     threads: int = 0
     """CPU threads for the models; 0 means half the logical CPUs, at most 8."""
+
+
+@dataclass(frozen=True, slots=True)
+class RetentionConfig:
+    """How long the family's records are kept (ARCHITECTURE.md section 5, D-189).
+
+    Nothing is kept forever. What a child asked the assistant and which sites
+    they visited are the most personal and go first."""
+
+    activity_days: int = 30
+    """Usage events: app focus, sites visited, the assistant's alerts."""
+    usage_days: int = 400
+    """Minutes per day and per app, for the history screen and its year."""
+    audit_days: int = 365
+    requests_days: int = 90
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,6 +172,7 @@ class Config:
     daemon: DaemonConfig = field(default_factory=DaemonConfig)
     voice: VoiceConfig = field(default_factory=VoiceConfig)
     ai: AiConfig = field(default_factory=AiConfig)
+    retention: RetentionConfig = field(default_factory=RetentionConfig)
     i18n: I18nConfig = field(default_factory=I18nConfig)
 
     @property
@@ -264,6 +287,13 @@ def _build_section(section: str, section_type: Any, raw: Mapping[str, Any]) -> A
         raise ConfigError(f"config section {section} is not a dataclass")
     hints = _hints(section_type)
     known = {f.name for f in fields(section_type)}
+    retired = sorted(set(raw) & RETIRED_KEYS.get(section, frozenset()))
+    if retired:
+        # An edited config.toml is a conffile dpkg keeps across upgrades, so a
+        # key a later version dropped must not stop the daemon - which would
+        # lock every child out. Said, and ignored.
+        log.warning("[%s]: ignoring retired key(s): %s", section, ", ".join(retired))
+        raw = {key: value for key, value in raw.items() if key not in retired}
     unknown = sorted(set(raw) - known)
     if unknown:
         raise ConfigError(
@@ -320,6 +350,33 @@ def _coerce(where: str, expected: Any, value: Any) -> Any:
 
     raise ConfigError(f"{where}: unsupported config type {expected!r}")  # pragma: no cover
 
+
+LAUNCHER_PORTS: Final = 100
+"""Launcher ports run from `shell.port` to `shell.port + 99`."""
+
+RETIRED_KEYS: Final[dict[str, frozenset[str]]] = {
+    "paths": frozenset(
+        {
+            "evidence_dir",
+            "voice_profile_dir",
+            "log_dir",
+            "ext_token",
+            "dnsmasq_dir",
+            "nftables_dir",
+        }
+    ),
+    "ai": frozenset(
+        {
+            "enabled",
+            "socket_name",
+            "max_per_20s",
+            "max_per_hour",
+            "max_per_day",
+            "evidence_retention_days",
+        }
+    ),
+}
+"""Keys earlier versions had (D-180, D-183). Tolerated, never used."""
 
 _CACHED: Config | None = None
 

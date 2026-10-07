@@ -41,9 +41,6 @@ msgstr "This app is not on your list"
 msgid "filter.blocked"
 msgstr "This page is not for you"
 
-msgid "ai.blocked"
-msgstr "This page does not look right for you"
-
 msgid "policy.missing"
 msgstr "No rules are set for this user"
 

@@ -84,7 +84,7 @@ RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6
 # kiosk policy with only a log line to say so. The DNS filter's files live under
 # /var/lib/biokids/dns (D-167), so /etc/dnsmasq.d and /etc/nftables.d are not
 # writable any more.
-ReadWritePaths=/var/lib/biokids /var/log/biokids /run/biokids -/etc/chromium/policies/managed
+ReadWritePaths=/var/lib/biokids /run/biokids -/etc/chromium/policies/managed
 
 [Install]
 WantedBy=multi-user.target

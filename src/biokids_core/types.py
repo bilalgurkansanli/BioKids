@@ -99,7 +99,6 @@ class Reason:
     CATEGORY_EXHAUSTED: Final = "category.exhausted"
     APP_NOT_ALLOWED: Final = "app.not_allowed"
     FILTER_BLOCKED: Final = "filter.blocked"
-    AI_BLOCKED: Final = "ai.blocked"
     NO_POLICY: Final = "policy.missing"
 
 
@@ -222,9 +221,6 @@ class ChildPolicy:
     the baby was asleep got the warnings spoken anyway."""
 
     filter_mode: FilterMode = FilterMode.ALLOWLIST
-    ai_enabled: bool = False
-    ai_block_enabled: bool = False
-    ai_timeout_min: int = 30
     assistant_enabled: bool = False
     assistant_voice: bool = False
 
@@ -324,8 +320,6 @@ class ActivityContext:
     app_allowed: bool = True
     url: str | None = None
     url_blocked: bool = False
-    ai_score: int = 0
-    ai_block_threshold: int = 101
     """101 means "no AI score can ever block", which is the default for Phase 0."""
 
     session_active: bool = True

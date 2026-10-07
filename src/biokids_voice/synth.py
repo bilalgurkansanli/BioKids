@@ -7,8 +7,7 @@ and forbids linking it, and calling `piper` over a pipe keeps us on the right
 side of that line permanently, whatever Piper's packaging does next.
 
 Nothing here touches the network. Piper is offline by design (VOICE.md §2) and
-`SECURITY.md` §4 lists no TTS destination except the opt-in ElevenLabs path,
-which Phase 0 does not implement.
+`SECURITY.md` §4 lists no TTS destination at all: cloud voices were cut (D-181).
 
 Three backends:
 
@@ -19,7 +18,7 @@ Three backends:
 * `StubSynth` writes silence of roughly the right length. It exists so that the
   service starts, the queue runs, and the whole test suite passes on a machine
   with no TTS installed and no sound card. It still honours a missing model
-  file, because otherwise the cloned → stock fallback would be untestable.
+  file, so the Piper → espeak-ng fallback can be tested without Piper.
 
 The cache is the reason this is cheap. A family hears the same handful of
 sentences every day; after the first afternoon almost nothing is synthesised
@@ -97,7 +96,8 @@ class VoiceSpec:
     """`zio` | `sio`."""
     locale: str
     kind: str = "stock"
-    """`stock` | `cloned`. The order of the fallback chain, in one word."""
+    """Always `stock` since voice cloning was cut (D-181); a parent's own voice
+    is a recording the service plays directly (D-174)."""
     profile_id: str = "stock"
     """Part of the cache key, so re-recording a voice invalidates its audio."""
     model_path: Path | None = None
@@ -116,43 +116,23 @@ def cache_key(text: str, voice: VoiceSpec) -> str:
 
 
 class VoiceBank:
-    """Which voices to try for a persona, best first.
-
-    A family's own recording always comes first; stock Piper is the permanent
-    floor underneath it. The cloned entry is offered whenever the persona has a
-    profile directory at all, *even when its model file has gone missing* —
-    that is what makes a deleted model produce a logged warning and a stock
-    voice instead of silently pretending the family never recorded anything.
-    """
+    """Which voices to try for a persona: the Piper voice a family installed,
+    if any. espeak-ng, further down the chain, needs no model."""
 
     def __init__(self, config: Config | None = None) -> None:
         self._config = config or get_config()
 
     def candidates(self, persona: str, locale: str) -> tuple[VoiceSpec, ...]:
-        found: list[VoiceSpec] = []
-        cloned_dir = self._config.paths.voice_profile_dir / persona
-        if _present(cloned_dir, directory=True):
-            cloned_model = cloned_dir / f"{locale}{MODEL_SUFFIX}"
-            found.append(
-                VoiceSpec(
-                    persona=persona,
-                    locale=locale,
-                    kind="cloned",
-                    profile_id=f"cloned:{persona}:{locale}:{_fingerprint(cloned_model)}",
-                    model_path=cloned_model,
-                )
-            )
         stock_model = self.stock_model(persona, locale)
-        found.append(
+        return (
             VoiceSpec(
                 persona=persona,
                 locale=locale,
                 kind="stock",
                 profile_id=f"stock:{persona}:{locale}:{_fingerprint(stock_model)}",
                 model_path=stock_model,
-            )
+            ),
         )
-        return tuple(found)
 
     def stock_model(self, persona: str, locale: str) -> Path | None:
         """`<model_dir>/piper/<locale>-<persona>.onnx`, or None when unbundled.
@@ -176,8 +156,9 @@ _UNREADABLE: set[Path] = set()
 def _present(path: Path, *, directory: bool = False) -> bool:
     """Is it there, as far as this process is allowed to know?
 
-    The voice service runs as the child, and the family's data directory -
-    where cloned voices and stock models are configured to live - is 0700 root.
+    The voice service runs as the child, and a model directory configured
+    somewhere the child cannot read - the family's 0700 data directory, say - is
+    not an error.
     Python 3.13's `is_dir()` raises `PermissionError` there instead of answering,
     so on the first real machine every line crashed the worker before espeak-ng
     was ever tried, and the child heard nothing at all (D-160). Not being
@@ -202,11 +183,9 @@ def _fingerprint(path: Path | None) -> str:
     """Enough of a model file's identity to notice that it changed.
 
     `profile_id` is part of the cache key (VOICE.md §6), and a family who
-    re-records Zio would otherwise keep hearing the voice they replaced: every
-    sentence they hear every day is already in the cache under the old audio,
-    and nothing about `cloned:zio:tr` moves when the file underneath it does.
-    Size and modification time move; hashing sixty megabytes of ONNX before
-    every "on dakikan kaldı" would not be a trade worth making.
+    installs a different Piper voice would otherwise keep hearing the old one:
+    every sentence is already in the cache. Size and modification time move;
+    hashing sixty megabytes of ONNX before every line would not be worth it.
     """
     try:
         stat = path.stat() if path is not None else None
@@ -359,15 +338,6 @@ class EspeakSynth:
     def render(self, text: str, voice: VoiceSpec, destination: Path) -> None:
         if not self.available():
             raise SynthError(f"{self._binary} is not installed")
-        if voice.kind == "cloned":
-            # Refused rather than approximated. espeak-ng cannot sound like a
-            # particular person, and `Synthesizer.render` marks the result
-            # degraded only when a backend says it could not do the job - so
-            # speaking the stock robot here would return a result claiming the
-            # family's own cloned voice had been used, and cache it under that
-            # profile id. The chain exists to know which rung it is on.
-            raise SynthError(f"{self._binary} cannot speak a cloned voice")
-
         destination.parent.mkdir(parents=True, exist_ok=True)
         # `tr` rather than `tr_TR`: espeak-ng names languages, not locales,
         # and an unknown name is a hard failure rather than a fallback.
@@ -527,7 +497,7 @@ class StubSynth:
 
     def render(self, text: str, voice: VoiceSpec, destination: Path) -> None:
         # A model path that was set and then removed still fails here, so the
-        # cloned → stock fallback can be tested without installing Piper.
+        # Piper → espeak-ng fallback can be tested without installing Piper.
         if voice.model_path is not None and not voice.model_path.is_file():
             raise SynthError(f"voice model {voice.model_path} is missing")
         self.calls += 1
@@ -715,7 +685,7 @@ class SynthResult:
 
 
 class Synthesizer:
-    """The cloned → stock → espeak → nothing chain of VOICE.md §6, cache in front.
+    """The Piper → espeak-ng → nothing chain of VOICE.md §6, cache in front.
 
     Holds *engines*, plural. Choosing one at construction is what made the chain
     not a chain: `which("piper")` says a binary exists, not that it can speak,
@@ -821,7 +791,7 @@ class Synthesizer:
         """Every voice, through every engine, until one of them speaks.
 
         Voice is the outer loop and engine the inner one, which is the order
-        VOICE.md §6 describes: the family's cloned Zio before the stock one,
+        VOICE.md §6 describes: the family's Piper voice before espeak-ng,
         and Piper before espeak-ng within each. Never raises; the worst case is
         no audio and a card that carries the line as text.
         """

@@ -172,10 +172,6 @@ class Policy(Base):
 
     filter_mode: Mapped[str] = mapped_column(String(16), default=FilterMode.ALLOWLIST.value)
 
-    ai_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
-    ai_block_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
-    ai_timeout_min: Mapped[int] = mapped_column(Integer, default=30)
-
     assistant_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     """The question-answering assistant (D-165). Off until a parent turns it on."""
     assistant_voice: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -462,14 +458,10 @@ class AiAlert(Base):
     score: Mapped[int] = mapped_column(Integer)
     category: Mapped[str] = mapped_column(String(32), default="unknown")
     reason_key: Mapped[str] = mapped_column(String(64), default="")
-    reason_tr: Mapped[str] = mapped_column(Text, default="")
-    reason_en: Mapped[str] = mapped_column(Text, default="")
     confidence: Mapped[float] = mapped_column(Float, default=0.0)
     band: Mapped[str] = mapped_column(String(16), default="log")
     """`log` | `notify` | `block` — the contract is the band, not the score."""
-    url: Mapped[str] = mapped_column(String(1024), default="")
     app: Mapped[str] = mapped_column(String(64), default="")
-    evidence_path: Mapped[str | None] = mapped_column(String(512), default=None)
     notified: Mapped[bool] = mapped_column(Boolean, default=False)
     dismissed: Mapped[bool] = mapped_column(Boolean, default=False)
     """Set when a parent marks an alert "this was fine" (AI-LAYER.md §7)."""
@@ -497,26 +489,6 @@ class AuditLog(Base):
     @property
     def detail(self) -> dict[str, Any]:
         return _as_dict(_load_json(self.detail_json, {}))
-
-
-class VoiceProfile(Base):
-    __tablename__ = "voice_profile"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    persona: Mapped[str] = mapped_column(String(8))
-    """`zio` | `sio`."""
-    kind: Mapped[str] = mapped_column(String(16), default="stock")
-    """`stock` | `cloned` | `elevenlabs`."""
-    locale: Mapped[str] = mapped_column(String(8), default="tr")
-    model_path: Mapped[str] = mapped_column(String(512), default="")
-    label: Mapped[str] = mapped_column(String(64), default="")
-    active: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
-
-    __table_args__ = (
-        UniqueConstraint("persona", "kind", "locale", name="uq_voice_profile"),
-        CheckConstraint("persona in ('zio','sio')", name="ck_voice_profile_persona"),
-    )
 
 
 class VoiceLine(Base):

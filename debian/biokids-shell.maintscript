@@ -1,0 +1,4 @@
+# Moved from /etc to the packaged defaults directories, so that "apt remove"
+# takes them away (principle 4); an administrator can still override from /etc.
+rm_conffile /etc/systemd/logind.conf.d/biokids.conf 0.1.0-2~
+rm_conffile /etc/X11/xorg.conf.d/50-biokids-no-vt-switch.conf 0.1.0-2~

@@ -41,9 +41,6 @@ msgstr "Bu uygulama senin listende yok"
 msgid "filter.blocked"
 msgstr "Bu sayfa senin için değil"
 
-msgid "ai.blocked"
-msgstr "Bu sayfa senin için uygun görünmüyor"
-
 msgid "policy.missing"
 msgstr "Bu kullanıcı için kural tanımlı değil"
 

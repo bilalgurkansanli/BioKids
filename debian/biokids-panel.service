@@ -60,7 +60,7 @@ RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 # what a parent changes lives in the database.
 # /var/lib/biokids-voices holds a parent's recordings of the spoken lines
 # (D-174), created by biokids-core's postinst.
-ReadWritePaths=/var/lib/biokids /var/log/biokids /run/biokids -/var/lib/biokids-voices
+ReadWritePaths=/var/lib/biokids /run/biokids -/var/lib/biokids-voices
 # No IPAddressDeny= here, tempting as it is. The panel sends the parent's
 # notification mail through their own SMTP server (SECURITY.md section 4), and
 # an address filter that silently swallows those would be a worse bug than the

@@ -14,8 +14,7 @@ Precedence is fixed by `ARCHITECTURE.md` §4 and the order is load-bearing:
     5. category limit exhausted
     6. app not in the child's catalog
     7. URL blocked by filter
-    8. AI risk above the block threshold
-    9. allow
+    8. allow
 
 What this engine does *not* do is run the end-of-time sequence. It reports
 `quota exhausted`; the daemon owns the 120-second countdown and the configured
@@ -172,23 +171,7 @@ def evaluate(
             remaining_seconds=remaining,
         )
 
-    # 8 — the AI layer scored this above the child's block threshold. Whether that
-    #     also starts a timeout is the parent's choice and defaults to off (D-80).
-    if policy.ai_enabled and ctx.ai_score >= ctx.ai_block_threshold:
-        return Decision(
-            allow=False,
-            action=Action.TIMEOUT if policy.ai_block_enabled else Action.BLOCK,
-            reason_code=Reason.AI_BLOCKED,
-            speak=SpeechRequest(
-                event="blocked",
-                vars={"name": policy.display_name},
-                priority="high",
-                expression="concerned",
-            ),
-            remaining_seconds=remaining,
-        )
-
-    # 9 — allowed. Possibly with a warning, if we have crossed 10, 5 or 1 minute.
+    # 8 — allowed. Possibly with a warning, if we have crossed 10, 5 or 1 minute.
     threshold = _warn_threshold(policy, remaining, ctx)
     if threshold is not None:
         return Decision(

@@ -50,7 +50,7 @@ def test_the_shipped_key_is_tailscales_repository_key() -> None:
 def test_the_repository_line_is_signed_by_that_key_only() -> None:
     line = tailscale_setup.sources_line("debian", "trixie")
     assert line == (
-        "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] "
+        "deb [signed-by=/etc/apt/keyrings/tailscale-archive-keyring.gpg] "
         "https://pkgs.tailscale.com/stable/debian trixie main\n"
     )
 

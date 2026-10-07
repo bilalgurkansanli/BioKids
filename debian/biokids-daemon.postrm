@@ -9,12 +9,17 @@
 # cleaned up here, or a purged system would keep filtering traffic on behalf of
 # software that is no longer installed.
 #
-# Only on purge. A "remove" leaves the filter in place, because removing the
-# daemon temporarily should not silently open the internet on a child's machine.
+# The browser policy goes on "remove" as well as on purge. It is machine-wide:
+# left behind, it kept the parent's own Chromium locked down after BioKids was
+# gone (principle 4). The DNS redirect goes in the prerm for the same reason.
 
 set -e
 
 case "$1" in
+    remove)
+        rm -f /etc/chromium/policies/managed/biokids-kiosk.json
+        ;;
+
     purge)
         rm -f /etc/dnsmasq.d/*biokids*
         rm -f /etc/chromium/policies/managed/*biokids*
@@ -26,7 +31,7 @@ case "$1" in
         rmdir /etc/chromium/policies 2>/dev/null || true
         ;;
 
-    remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+    upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
         ;;
 
     *)

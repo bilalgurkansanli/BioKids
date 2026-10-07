@@ -19,7 +19,7 @@ The pipeline is four steps, one module each:
                                                               quiet hours,
                                                               finished events
 
-Every step degrades rather than fails. No cloned voice falls back to stock Piper,
+Every step degrades rather than fails. A parent's recording comes first, then Piper,
 no Piper falls back to the card alone, and the card alone is still a success as
 far as the shell is concerned — VOICE.md §6 is explicit that a child must never
 be left with silence *and* no visual. One-way only, always: there is no

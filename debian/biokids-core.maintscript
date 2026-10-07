@@ -1,0 +1,2 @@
+# Files earlier versions installed and this one does not (D-183).
+rm_conffile /etc/logrotate.d/biokids-core 0.1.0-2~

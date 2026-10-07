@@ -22,7 +22,6 @@ from biokids_core.db.models import (
     UsageEvent,
     UsageTick,
     VoiceLine,
-    VoiceProfile,
     utcnow,
 )
 from biokids_core.db.session import Database, create_all, create_db_engine, session_scope
@@ -48,7 +47,6 @@ __all__ = [
     "UsageEvent",
     "UsageTick",
     "VoiceLine",
-    "VoiceProfile",
     "create_all",
     "create_db_engine",
     "session_scope",
