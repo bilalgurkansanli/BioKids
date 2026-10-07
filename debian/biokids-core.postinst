@@ -89,15 +89,6 @@ case "$1" in
         # daemon; the extension talks to the child's own launcher instead.
         rm -f "$CONF_DIR/ext.token"
 
-        # Earlier versions logged to /var/log/biokids; everything goes to the
-        # journal now (D-183) and nothing rotates the old files any more.
-        if [ -n "$2" ] && dpkg --compare-versions "$2" lt 0.1.0-2~; then
-            rm -f /var/log/biokids/*.log /var/log/biokids/*.log.[0-9]*
-            rmdir /var/log/biokids 2>/dev/null || true
-            # The screen watcher's evidence directory, cut with it (D-180). It
-            # never held anything in a release; only an empty one is removed.
-            rmdir "$DATA_DIR/evidence" 2>/dev/null || true
-        fi
 
         # The key that encrypts the SMTP password and anything else stored at
         # rest. A Fernet key has a shape, so it is made by the code that will

@@ -1,0 +1,40 @@
+#!/bin/sh
+# biokids-daemon postinst.
+#
+# Everything the units need is created by biokids-core's postinst; this script
+# only tidies what earlier versions left, and only after the debhelper snippet below has run
+# `systemctl daemon-reload` and restarted the daemon with its new unit.
+#
+# Not earlier, and not in biokids-core: 0.1.0-1's units name /var/log/biokids
+# in ReadWritePaths= without a "-", and systemd keeps the old unit loaded until
+# the reload. Found on the VM's upgrade: biokids-core removed the directory,
+# biokids-shell's postinst restarted the daemon under its old unit, and the
+# daemon - and the lockdown its failure starts - could not set up their mount
+# namespace.
+
+set -e
+
+#DEBHELPER#
+
+case "$1" in
+    configure)
+        if [ -n "$2" ] && dpkg --compare-versions "$2" lt 0.1.0-2~; then
+            # Logs go to the journal now (D-183), and nothing rotates these.
+            rm -f /var/log/biokids/*.log /var/log/biokids/*.log.[0-9]*
+            rmdir /var/log/biokids 2>/dev/null || true
+            # The screen watcher's evidence directory, cut with it (D-180). It
+            # never held anything in a release; only an empty one goes.
+            rmdir /var/lib/biokids/evidence 2>/dev/null || true
+        fi
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+exit 0
