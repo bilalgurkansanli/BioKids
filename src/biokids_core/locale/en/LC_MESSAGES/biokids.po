@@ -1575,3 +1575,13 @@ msgstr "BioKids could not be opened just now. Is your phone online, and is the c
 
 msgid "panel.offline.retry"
 msgstr "Try again"
+
+# Audit actions for editing and removing a child (D-191)
+msgid "audit.action.child_changed"
+msgstr "Child details changed"
+
+msgid "audit.action.child_removed"
+msgstr "Child removed from BioKids"
+
+msgid "audit.action.child_remove_failed"
+msgstr "Child could not be removed"

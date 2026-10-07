@@ -1575,3 +1575,13 @@ msgstr "BioKids şu an açılamadı. Telefonunuz internete bağlı mı, bilgisay
 
 msgid "panel.offline.retry"
 msgstr "Yeniden dene"
+
+# Audit actions for editing and removing a child (D-191)
+msgid "audit.action.child_changed"
+msgstr "Çocuğun bilgileri değiştirildi"
+
+msgid "audit.action.child_removed"
+msgstr "Çocuk BioKids'ten kaldırıldı"
+
+msgid "audit.action.child_remove_failed"
+msgstr "Çocuk kaldırılamadı"
