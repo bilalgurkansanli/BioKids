@@ -186,6 +186,23 @@
                  value="{{ policy.earn_cap_min }}">
         </div>
       </div>
+
+      {# D-44: a cap on one kind of app inside the day's time. Empty is no cap
+         of its own; the day's time still applies. #}
+      <fieldset>
+        <legend>{{ _('time.categories.title') }}</legend>
+        <span class="help">{{ _('time.categories.help') }}</span>
+        <div class="row row--wrap">
+          {% for category in categories %}
+            <div class="field grow">
+              <label for="limit-{{ category }}">{{ _('category.' ~ category) }} — {{ _('common.minutes') }}</label>
+              <input id="limit-{{ category }}" name="limit_{{ category }}" type="number"
+                     min="0" max="1440" step="5" inputmode="numeric"
+                     value="{{ category_limits.get(category, '') }}">
+            </div>
+          {% endfor %}
+        </div>
+      </fieldset>
     </details>
 
     <div class="wizard-actions">

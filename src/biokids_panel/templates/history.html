@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}{{ _('history.title') }} · {{ _('panel.title') }}{% endblock %}
+
+{#
+  D-192. Two weeks of minutes as bars - each a link to that day - and below
+  them one day: the apps, the sites and the requests. Plain links and a
+  plain form; no script, no chart library.
+#}
+{% block content %}
+  <h1>{{ _('history.title') }}</h1>
+
+  {% if not child %}
+    <div class="card card--flat"><p>{{ _('today.no_children') }}</p></div>
+  {% else %}
+    {% if children|length > 1 %}
+      <nav class="row row--wrap history-children" aria-label="{{ _('nav.children') }}">
+        {% for c in children %}
+          <a class="btn {% if c.id == child.id %}btn--primary{% else %}btn--quiet{% endif %}"
+             href="/history?child={{ c.id }}&day={{ day.isoformat() }}"
+             {% if c.id == child.id %}aria-current="page"{% endif %}>
+            <span aria-hidden="true">{{ c.avatar|avatar }}</span> {{ c.display_name }}
+          </a>
+        {% endfor %}
+      </nav>
+    {% endif %}
+
+    <section class="card">
+      <h2>{{ _('history.days', name=child.display_name) }}</h2>
+      <ol class="bars" aria-label="{{ _('history.days', name=child.display_name) }}">
+        {% for bar in bars %}
+          <li class="bars__day {% if bar.day == day %}is-selected{% endif %}">
+            <a href="/history?child={{ child.id }}&day={{ bar.day.isoformat() }}"
+               title="{{ bar.day.strftime('%d.%m') }} · {{ bar.seconds|duration(_) }}">
+              <span class="bars__track">
+                <span class="bars__fill {% if bar.over %}is-over{% endif %}"
+                      style="height: {{ bar.percent }}%"></span>
+              </span>
+              <span class="bars__label">{{ bar.day.strftime('%d') }}</span>
+              <span class="visually-hidden">{{ bar.day.strftime('%d.%m') }}: {{ bar.seconds|duration(_) }}</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ol>
+      <p class="muted small">{{ _('history.days.help') }}</p>
+    </section>
+
+    <h2>
+      {% if day == today %}{{ _('history.today') }}{% else %}{{ day.strftime('%d.%m.%Y') }}{% endif %}
+    </h2>
+
+    <section class="card">
+      <h3>{{ _('history.apps') }}</h3>
+      {% if apps %}
+        <div class="table-wrap">
+          <table>
+            <tbody>
+              {% for app in apps %}
+                <tr>
+                  <td>{{ app.name if app.slug else _('history.apps.home') }}</td>
+                  <td class="num">{{ app.seconds|duration(_) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted">{{ _('history.apps.none') }}</p>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <h3>{{ _('history.sites') }}</h3>
+      {% if visits %}
+        <div class="table-wrap">
+          <table>
+            <tbody>
+              {% for visit in visits %}
+                <tr>
+                  <td class="num">{{ visit.first|when }}{% if visit.times > 1 %}–{{ visit.last|when }}{% endif %}</td>
+                  <td><code>{{ visit.host }}</code></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted">{{ _('history.sites.none') }}</p>
+      {% endif %}
+      <p class="muted small">{{ _('history.sites.help') }}</p>
+    </section>
+
+    <section class="card">
+      <h3>{{ _('requests.title') }}</h3>
+      {% if requests %}
+        <ul>
+          {% for row in requests %}
+            <li>
+              {{ row.created_at|when }} ·
+              {{ _('requests.asks.' ~ row.kind, name=child.display_name) }}
+              {% if row.kind != 'time' and row.what %}({{ row.what }}){% endif %}
+              — <strong>{{ _('requests.status.' ~ row.status, minutes=row.minutes) }}</strong>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">{{ _('history.requests.none') }}</p>
+      {% endif %}
+    </section>
+  {% endif %}
+{% endblock %}

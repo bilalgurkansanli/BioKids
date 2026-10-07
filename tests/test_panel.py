@@ -2128,3 +2128,107 @@ def test_a_child_whose_account_could_not_be_changed_is_kept(
     with db.session() as session:
         assert repo.get_child(session, 1) is not None
         assert repo.recent_audit(session, limit=5)[0].action == "child_remove_failed"
+
+
+# ------------------------------------------------------------- history (D-192)
+
+
+def test_the_history_shows_a_days_minutes_apps_sites_and_requests(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    from biokids_core.db.models import AccessRequest, LedgerDay, UsageTick
+
+    today = dt.date.today()
+    with db.session() as session:
+        session.add(LedgerDay(child_id=1, day=today, general_s=1800))
+        session.add(LedgerDay(child_id=1, day=today - dt.timedelta(days=3), general_s=600))
+        session.add(
+            UsageTick(
+                child_id=1, day=today, category="games", app_slug="gcompris", seconds=1200
+            )
+        )
+        for host in ("www.trt.net.tr", "trt.net.tr", "tr.wikipedia.org"):
+            repo.record_event(session, kind="visit", child_id=1, payload={"host": host})
+        session.add(
+            AccessRequest(
+                child_id=1, url="https://youtube.com/watch", kind="site", status="denied"
+            )
+        )
+        session.commit()
+
+    login(client)
+    page = client.get("/history").text
+
+    assert page.count('class="bars__day') == 14
+    assert "gcompris" in page
+    assert "20 dk" in page
+    assert page.count("<code>trt.net.tr</code>") == 1, "one line per site, not per page"
+    assert "tr.wikipedia.org" in page
+    assert "youtube.com" in page
+
+
+def test_another_day_of_history_and_a_bad_day_both_render(
+    client: TestClient, family_ready: None
+) -> None:
+    login(client)
+    yesterday = (dt.date.today() - dt.timedelta(days=1)).isoformat()
+    assert client.get(f"/history?child=1&day={yesterday}").status_code == 200
+    assert client.get("/history?day=not-a-day&child=99").status_code == 200
+    assert client.get("/history?day=2999-01-01").status_code == 200
+
+
+# ---------------------------------------------------- limits by kind (D-193)
+
+
+def test_a_limit_per_kind_of_app_is_saved_and_cleared(
+    client: TestClient, family_ready: None, db: Database, daemon: FakeDaemon
+) -> None:
+    from biokids_core.types import Category
+
+    login(client)
+    form = {
+        "weekday_quota_min": 60,
+        "weekend_quota_min": 120,
+        "end_action": "lock",
+        "enabled": "on",
+        "limit_games": "30",
+        "limit_web": "  ",
+        "limit_learning": "9999",
+    }
+    response = client.post(
+        "/children/1/time", data={**form, "csrf_token": csrf_of(client)}, follow_redirects=False
+    )
+    assert response.status_code == 303
+    with db.session() as session:
+        assert repo.load_category_limits(session, 1) == {
+            Category.GAMES: 30,
+            Category.LEARNING: 24 * 60,
+        }
+        detail = repo.recent_audit(session, limit=5)[0].detail
+        assert detail["after"]["category_limits"] == {"games": 30, "learning": 1440}
+    assert 'name="limit_games"' in client.get("/children/1/time").text
+
+    client.post(
+        "/children/1/time",
+        data={**form, "limit_games": "", "limit_learning": "", "csrf_token": csrf_of(client)},
+    )
+    with db.session() as session:
+        assert repo.load_category_limits(session, 1) == {}
+
+
+def test_a_limit_that_is_not_a_number_is_refused(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    response = client.post(
+        "/children/1/time",
+        data={
+            "weekday_quota_min": 60,
+            "enabled": "on",
+            "limit_games": "otuz",
+            "csrf_token": csrf_of(client),
+        },
+    )
+    assert response.status_code == 400
+    with db.session() as session:
+        assert repo.load_category_limits(session, 1) == {}

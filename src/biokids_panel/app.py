@@ -57,7 +57,17 @@ from biokids_panel.forms import (
     _schedule_from_json,
     _windows_from_pickers,
 )
-from biokids_panel.routes import audit, children, login, misc, requests, settings, today, voices
+from biokids_panel.routes import (
+    audit,
+    children,
+    history,
+    login,
+    misc,
+    requests,
+    settings,
+    today,
+    voices,
+)
 from biokids_panel.routes.audit import _utc_bounds_of_local_day
 from biokids_panel.routes.children import ALWAYS_ON_TILES, _assistant_status
 from biokids_panel.routes.misc import SW_CACHE_NAME, static_fingerprint
@@ -72,6 +82,7 @@ ROUTERS = (
     voices.router,
     children.router,
     audit.router,
+    history.router,
     settings.router,
 )
 """Every screen but the wizard's, in the order they are matched."""

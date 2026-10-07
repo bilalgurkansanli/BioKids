@@ -1512,3 +1512,56 @@ msgstr "The child's account could not be changed, so nothing was deleted. The lo
 
 msgid "child.removed"
 msgstr "The child was removed from BioKids."
+
+# The history screen (D-192)
+msgid "history.title"
+msgstr "History"
+
+msgid "history.days"
+msgstr "{name}: the last 14 days"
+
+msgid "history.days.help"
+msgstr "Each bar is a day. An orange bar means that day went over its time (with minutes you added, say). Tap a day to see it below."
+
+msgid "history.today"
+msgstr "Today"
+
+msgid "history.apps"
+msgstr "Apps"
+
+msgid "history.apps.home"
+msgstr "Home screen"
+
+msgid "history.apps.none"
+msgstr "The computer was not used on this day."
+
+msgid "history.sites"
+msgstr "Sites opened"
+
+msgid "history.sites.none"
+msgstr "No sites were opened on this day."
+
+msgid "history.sites.help"
+msgstr "Only the site's name is kept, never the pages. Your child is told this on first run; the list is deleted after 30 days."
+
+msgid "history.requests.none"
+msgstr "No requests on this day."
+
+msgid "requests.status.pending"
+msgstr "waiting for an answer"
+
+msgid "requests.status.expired"
+msgstr "went unanswered"
+
+# Limits per kind of app (D-44, D-193)
+msgid "time.categories.title"
+msgstr "Daily time by kind of app"
+
+msgid "time.categories.help"
+msgstr "For example, at most 30 minutes a day of games. A kind left empty has no limit of its own; the daily time still applies."
+
+msgid "shell.blocked.category.title"
+msgstr "That's all of this for today"
+
+msgid "shell.blocked.category.body"
+msgstr "Your time for this kind of app is used up for today. You can pick something else on the home screen."

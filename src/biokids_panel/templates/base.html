@@ -43,6 +43,9 @@
     <a href="/children" {% if path.startswith('/children') %}aria-current="page"{% endif %}>
       <span class="icon" aria-hidden="true">👧</span>{{ _('nav.children') }}
     </a>
+    <a href="/history" {% if path.startswith('/history') %}aria-current="page"{% endif %}>
+      <span class="icon" aria-hidden="true">📊</span>{{ _('nav.history') }}
+    </a>
     <a href="/audit" {% if path.startswith('/audit') %}aria-current="page"{% endif %}>
       <span class="icon" aria-hidden="true">📋</span>{{ _('nav.audit') }}
     </a>

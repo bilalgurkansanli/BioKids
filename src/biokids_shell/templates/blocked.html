@@ -6,6 +6,13 @@
 {% block title %}{{ _('shell.blocked.title') }}{% endblock %}
 {% block inner %}
   {# Never the URL, never an error code, never the word "forbidden" (UX.md §2.5). #}
+  {% if reason == 'category.exhausted' %}
+  <h1>{{ _('shell.blocked.category.title') }}</h1>
+  <p>{{ _('shell.blocked.category.body') }}</p>
+  <div class="btn-row">
+    <a class="big-btn" href="/">{{ _('shell.blocked.back') }}</a>
+  </div>
+  {% else %}
   <h1>{{ _('shell.blocked.title') }}</h1>
   <p>{{ _('shell.blocked.body') }}</p>
 
@@ -19,4 +26,5 @@
     </form>
     <a class="big-btn big-btn--quiet" href="/">{{ _('shell.blocked.back') }}</a>
   </div>
+  {% endif %}
 {% endblock %}

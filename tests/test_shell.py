@@ -978,6 +978,16 @@ def test_out_of_minutes_asks_for_time(client: TestClient) -> None:
     assert 'name="kind" value="time"' in page
 
 
+def test_a_used_up_kind_of_app_offers_no_question_it_cannot_answer(
+    client: TestClient,
+) -> None:
+    """A granted ten minutes goes to the day, not to games: asking would be a
+    button that does nothing. The page says what happened instead (D-193)."""
+    page = client.get("/blocked?reason=category.exhausted&slug=supertux").text
+    assert "/ask-a-parent" not in page
+    assert "bugünkü süren doldu" in page
+
+
 def test_an_app_that_is_not_on_the_screen_asks_for_that_app(client: TestClient) -> None:
     page = client.get("/blocked?reason=app.not_allowed&slug=tuxpaint").text
     assert 'name="kind" value="app"' in page and 'value="tuxpaint"' in page

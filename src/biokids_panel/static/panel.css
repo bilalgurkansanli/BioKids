@@ -651,3 +651,58 @@ footer.legal {
   text-decoration: none;
 }
 
+/* ----------------------------------------------------------------- history */
+/* D-192: fourteen bars, each a link to its day. Height is minutes used, on a
+ * scale shared by the whole fortnight; a day over its quota is drawn warm. */
+
+.history-children { margin-bottom: var(--sp-3); }
+
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+  gap: 3px;
+  align-items: end;
+}
+
+.bars__day a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-decoration: none;
+  color: var(--ink-soft);
+}
+
+.bars__track {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  height: 96px;
+  border-radius: var(--r-sm);
+  background: rgba(75, 84, 200, .06);
+  overflow: hidden;
+}
+
+.bars__fill {
+  display: block;
+  width: 100%;
+  min-height: 2px;
+  background: var(--bio-indigo);
+}
+
+.bars__fill.is-over { background: var(--warn); }
+
+.bars__label { font-size: .7rem; }
+
+.bars__day.is-selected .bars__label {
+  color: var(--bio-indigo);
+  font-weight: 700;
+}
+
+.bars__day.is-selected .bars__track { outline: 2px solid var(--bio-indigo); }
+
+td.num { white-space: nowrap; font-variant-numeric: tabular-nums; }
+

@@ -1512,3 +1512,56 @@ msgstr "Çocuğun hesabı değiştirilemedi, bu yüzden hiçbir şey silinmedi. 
 
 msgid "child.removed"
 msgstr "Çocuk BioKids'ten kaldırıldı."
+
+# The history screen (D-192)
+msgid "history.title"
+msgstr "Geçmiş"
+
+msgid "history.days"
+msgstr "{name}: son 14 gün"
+
+msgid "history.days.help"
+msgstr "Her çubuk bir gün. Turuncu çubuk, o gün sürenin aşıldığını (örneğin sizin verdiğiniz ek süreyle) gösterir. Bir güne dokunun, ayrıntısı aşağıda görünsün."
+
+msgid "history.today"
+msgstr "Bugün"
+
+msgid "history.apps"
+msgstr "Uygulamalar"
+
+msgid "history.apps.home"
+msgstr "Ana ekran"
+
+msgid "history.apps.none"
+msgstr "Bu gün bilgisayar kullanılmamış."
+
+msgid "history.sites"
+msgstr "Açılan siteler"
+
+msgid "history.sites.none"
+msgstr "Bu gün site açılmamış."
+
+msgid "history.sites.help"
+msgstr "Yalnızca sitenin adı kaydedilir, sayfaların kendisi değil. Çocuğunuz bunu ilk açılışta öğrenir; kayıtlar 30 gün sonra silinir."
+
+msgid "history.requests.none"
+msgstr "Bu gün istek yok."
+
+msgid "requests.status.pending"
+msgstr "cevap bekliyor"
+
+msgid "requests.status.expired"
+msgstr "cevapsız kaldı"
+
+# Limits per kind of app (D-44, D-193)
+msgid "time.categories.title"
+msgstr "Türlere göre günlük süre"
+
+msgid "time.categories.help"
+msgstr "Örneğin oyunlara günde en fazla 30 dakika. Boş bırakılan tür için ayrı sınır yoktur; günlük süre yine geçerlidir."
+
+msgid "shell.blocked.category.title"
+msgstr "Bunun bugünlük süresi bitti"
+
+msgid "shell.blocked.category.body"
+msgstr "Bu tür uygulamalar için bugünkü süren doldu. Ana ekrandan başka bir şey seçebilirsin."

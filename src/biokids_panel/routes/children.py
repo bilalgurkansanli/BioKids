@@ -14,11 +14,11 @@ from sqlalchemy.orm import Session
 
 from biokids_core import repo
 from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
-from biokids_core.db.models import Child, Policy
+from biokids_core.db.models import CategoryLimit, Child, Policy
 from biokids_core.errors import IpcError
 from biokids_core.ipc import Op
 from biokids_core.provision import unprovision, unprovision_via_systemd
-from biokids_core.types import AgeBand, EndAction, FilterMode
+from biokids_core.types import AgeBand, Category, EndAction, FilterMode
 from biokids_panel import auth
 from biokids_panel.common import PanelView, View, _call_daemon, _daemon_status, see_other
 from biokids_panel.context import AVATARS, PanelContext
@@ -283,12 +283,22 @@ def time_save(
     earn_enabled: Annotated[str, Form()] = "",
     earn_ratio: Annotated[float, Form()] = 1.0,
     earn_cap_min: Annotated[int, Form()] = 60,
+    limit_games: Annotated[str, Form()] = "",
+    limit_learning: Annotated[str, Form()] = "",
+    limit_web: Annotated[str, Form()] = "",
+    limit_free: Annotated[str, Form()] = "",
     passphrase: Annotated[str, Form()] = "",
     csrf_token: Annotated[str, Form()] = "",
 ) -> Response:
     if blocked := view.guard():
         return blocked
     session, state = view.session, view.state
+    typed_limits = {
+        Category.GAMES: limit_games,
+        Category.LEARNING: limit_learning,
+        Category.WEB: limit_web,
+        Category.FREE: limit_free,
+    }
     child = repo.get_child(session, child_id)
     if child is None or not view.csrf_ok(csrf_token):
         return see_other("/children?error=1")
@@ -312,6 +322,7 @@ def time_save(
             if day_custom is not None or day_quota is not None
             else _schedule_from_json(schedule)
         )
+        limits = _category_limits_from_form(typed_limits)
     except ValueError:
         return _time_page(
             view,
@@ -353,6 +364,7 @@ def time_save(
                 "earn_enabled": earn_enabled,
                 "earn_ratio": earn_ratio,
                 "earn_cap_min": earn_cap_min,
+                **{f"limit_{cat.value}": typed for cat, typed in typed_limits.items()},
             },
             # An install that skipped the wizard's third step has no
             # passphrase. Ask for the PIN again rather than refusing
@@ -373,8 +385,12 @@ def time_save(
     policy.earn_enabled = earn_enabled == "on"
     policy.earn_ratio = max(0.0, min(earn_ratio, 5.0))
     policy.earn_cap_min = max(0, min(earn_cap_min, 480))
+    limits_before = _save_category_limits(session, child_id, limits)
 
     after = _policy_snapshot(policy)
+    if limits_before != limits:
+        before["category_limits"] = limits_before
+        after["category_limits"] = limits
     repo.audit(
         session,
         actor=view.actor,
@@ -636,8 +652,43 @@ def _time_page(
         windows=policy.windows,
         schedule=policy.schedule,
         end_actions=[e.value for e in EndAction],
+        categories=[c.value for c in Category],
+        category_limits={
+            c.value: m for c, m in repo.load_category_limits(view.session, child.id).items()
+        },
         **values,
     )
+
+
+def _category_limits_from_form(typed: dict[Category, str]) -> dict[str, int]:
+    """Minutes per category from the form: empty is no limit of its own (D-44)."""
+    limits: dict[str, int] = {}
+    for category, value in typed.items():
+        value = value.strip()
+        if not value:
+            continue
+        limits[category.value] = max(0, min(int(value), 24 * 60))
+    return limits
+
+
+def _save_category_limits(
+    session: Session, child_id: int, limits: dict[str, int]
+) -> dict[str, int]:
+    """Make the rows say `limits`; return what they said before."""
+    before = {c.value: m for c, m in repo.load_category_limits(session, child_id).items()}
+    for category in Category:
+        row = session.get(CategoryLimit, {"child_id": child_id, "category": category.value})
+        minutes = limits.get(category.value)
+        if minutes is None:
+            if row is not None:
+                session.delete(row)
+        elif row is None:
+            session.add(
+                CategoryLimit(child_id=child_id, category=category.value, minutes=minutes)
+            )
+        else:
+            row.minutes = minutes
+    return before
 
 
 def _applied(view: PanelView, page: str) -> RedirectResponse:
