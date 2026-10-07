@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "BioKids",
+  "version": "1.0.0",
+  "description": "Shows a friendly page when a site is closed, and tells the child's launcher which sites were visited (the name only).",
+  "minimum_chrome_version": "120",
+  "update_url": "file:///var/lib/biokids-ext/updates.xml",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["webNavigation", "storage"],
+  "host_permissions": ["http://127.0.0.1/*"]
+}

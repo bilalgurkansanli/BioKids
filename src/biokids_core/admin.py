@@ -79,6 +79,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "refresh-greeter": cmd_refresh_greeter,
         "remote-setup": cmd_remote_setup,
         "backup-db": cmd_backup_db,
+        "pack-extension": cmd_pack_extension,
         "version": cmd_version,
     }
     handler = handlers.get(args.command)
@@ -150,6 +151,18 @@ def build_parser() -> argparse.ArgumentParser:
     backup.add_argument("--keep", type=int, default=3, help="how many copies to keep")
     backup.add_argument(
         "--reason", default="manual", help="a word for the file name, such as 'upgrade'"
+    )
+
+    pack = sub.add_parser(
+        "pack-extension",
+        help="sign the browser extension with this machine's key, for the managed policy",
+    )
+    pack.add_argument(
+        "--source", type=Path, default=None, help="default: /usr/share/biokids/extension"
+    )
+    pack.add_argument("--out", type=Path, default=None, help="default: /var/lib/biokids-ext")
+    pack.add_argument(
+        "--key", type=Path, default=None, help="default: /var/lib/biokids/extension-key.pem"
     )
 
     reset = sub.add_parser("reset-pin", help="set a new parent PIN (D-50)")
@@ -448,6 +461,32 @@ def cmd_backup_db(args: argparse.Namespace, config: Config) -> int:
         log.info("no database at %s yet; nothing to back up", config.paths.db_path)
     else:
         log.info("database copied to %s", copy)
+    return 0
+
+
+# ----------------------------------------------------------- pack-extension
+
+
+def cmd_pack_extension(args: argparse.Namespace, _config: Config) -> int:
+    """Sign the browser extension and write its update manifest.
+
+    The key is made on this machine the first time and never leaves it, so the
+    extension id is per machine; `extension-id` in the output says what it is,
+    for the managed policy that force-installs it.
+    """
+    from biokids_core import extension_pack
+
+    out = args.out or extension_pack.DEFAULT_OUT
+    try:
+        ext_id, version = extension_pack.write_bundle(
+            args.source or extension_pack.DEFAULT_SOURCE,
+            out,
+            args.key or extension_pack.DEFAULT_KEY,
+        )
+    except (OSError, ValueError, TypeError) as exc:
+        log.error("could not pack the extension: %s", exc)
+        return 1
+    log.info("extension %s, version %s, written to %s", ext_id, version, out)
     return 0
 
 
