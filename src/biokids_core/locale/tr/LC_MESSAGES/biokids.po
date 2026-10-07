@@ -1472,3 +1472,43 @@ msgstr "Cevaplarını bu bilgisayardaki Vikipedi özetleriyle kontrol ediyor; in
 # D-187: the child is told about the visited-sites list
 msgid "shell.firstrun.p5"
 msgstr "Ailen, internette hangi sitelere girdiğini görebilir: sadece sitenin adını, sayfaları değil."
+
+# Editing and removing a child (D-191)
+msgid "child.edit.title"
+msgstr "Bilgiler"
+
+msgid "child.indicator"
+msgstr "Ekrandaki göz işareti"
+
+msgid "child.indicator.help"
+msgstr "Çocuğunuz, sürenin ve açtığı sitelerin ailesi tarafından görülebildiğini bilir. Bu işaret bunu hatırlatır."
+
+msgid "child.indicator.badge"
+msgstr "Göster (önerilen)"
+
+msgid "child.indicator.small"
+msgstr "Yalnızca küçük simge"
+
+msgid "child.indicator.hidden"
+msgstr "Gizle (ilk açılıştaki açıklama yine gösterilir)"
+
+msgid "child.remove.title"
+msgstr "{name} adlı çocuğu BioKids'ten kaldır"
+
+msgid "child.remove.body"
+msgstr "{name} için süreler, uygulamalar, istekler ve geçmiş silinir. Giriş ekranındaki resmi kaldırılır; bu hesapla artık kimse giriş yapamaz."
+
+msgid "child.remove.kept"
+msgstr "Hesap ({user}) ve içindeki dosyalar (resimler, çizimler) bilgisayarda kalır. Tamamen silmek için bir yöneticiye: sudo deluser --remove-home {user}"
+
+msgid "child.remove.confirm"
+msgstr "{name} adlı çocuğu kaldır"
+
+msgid "child.remove.logged_in"
+msgstr "Çocuğunuz şu anda bilgisayarda. Önce oturumunu kapatın, sonra tekrar deneyin."
+
+msgid "child.remove.failed"
+msgstr "Çocuğun hesabı değiştirilemedi, bu yüzden hiçbir şey silinmedi. Ayrıntılar kayıtta."
+
+msgid "child.removed"
+msgstr "Çocuk BioKids'ten kaldırıldı."

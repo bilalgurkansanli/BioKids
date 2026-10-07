@@ -1472,3 +1472,43 @@ msgstr "It checks its answers against Wikipedia summaries kept on this computer;
 # D-187: the child is told about the visited-sites list
 msgid "shell.firstrun.p5"
 msgstr "Your family can see which websites you visit: only the site's name, not the pages."
+
+# Editing and removing a child (D-191)
+msgid "child.edit.title"
+msgstr "Details"
+
+msgid "child.indicator"
+msgstr "The eyes on the screen"
+
+msgid "child.indicator.help"
+msgstr "Your child knows the family can see their time and the sites they open. This sign reminds them."
+
+msgid "child.indicator.badge"
+msgstr "Show it (recommended)"
+
+msgid "child.indicator.small"
+msgstr "Just a small icon"
+
+msgid "child.indicator.hidden"
+msgstr "Hide it (the first-run explanation is still shown)"
+
+msgid "child.remove.title"
+msgstr "Remove {name} from BioKids"
+
+msgid "child.remove.body"
+msgstr "{name}'s times, apps, requests and history are deleted. Their picture leaves the login screen, and nobody can log in to the account any more."
+
+msgid "child.remove.kept"
+msgstr "The account ({user}) and its files (pictures, drawings) stay on the computer. To delete them too, an administrator can run: sudo deluser --remove-home {user}"
+
+msgid "child.remove.confirm"
+msgstr "Remove {name}"
+
+msgid "child.remove.logged_in"
+msgstr "Your child is at the computer right now. End their session first, then try again."
+
+msgid "child.remove.failed"
+msgstr "The child's account could not be changed, so nothing was deleted. The log has the details."
+
+msgid "child.removed"
+msgstr "The child was removed from BioKids."

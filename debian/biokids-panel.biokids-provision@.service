@@ -24,6 +24,8 @@ After=biokids-daemon.service
 # failure must reach the parent through the panel's audit log, not through a
 # unit that hangs a boot.
 DefaultDependencies=no
+Conflicts=shutdown.target
+Before=shutdown.target
 
 [Service]
 Type=oneshot

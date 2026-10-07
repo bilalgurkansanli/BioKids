@@ -189,6 +189,7 @@ override_dh_installsystemd:
 	dh_installsystemd -pbiokids-daemon biokids-daemon.service
 	dh_installsystemd -pbiokids-daemon --name=biokids-dns
 	dh_installsystemd -pbiokids-panel --name=biokids-provision@ --no-enable --no-start
+	dh_installsystemd -pbiokids-panel --name=biokids-unprovision@ --no-enable --no-start
 	dh_installsystemd -pbiokids-panel --name=biokids-remote-setup --no-enable --no-start
 	dh_installsystemd -pbiokids-panel biokids-panel.service
 	dh_installsystemd -pbiokids-ai --name=biokids-ai-setup --no-enable --no-start

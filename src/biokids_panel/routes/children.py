@@ -9,6 +9,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Form, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from biokids_core import repo
@@ -16,10 +17,11 @@ from biokids_core.catalog import enable_for_child, load_catalog, sync_catalog
 from biokids_core.db.models import Child, Policy
 from biokids_core.errors import IpcError
 from biokids_core.ipc import Op
-from biokids_core.types import EndAction, FilterMode
+from biokids_core.provision import unprovision, unprovision_via_systemd
+from biokids_core.types import AgeBand, EndAction, FilterMode
 from biokids_panel import auth
 from biokids_panel.common import PanelView, View, _call_daemon, _daemon_status, see_other
-from biokids_panel.context import PanelContext
+from biokids_panel.context import AVATARS, PanelContext
 from biokids_panel.forms import (
     _one_of,
     _parse_window_list,
@@ -30,6 +32,10 @@ from biokids_panel.forms import (
 )
 
 log = logging.getLogger(__name__)
+
+INDICATORS = ("badge", "small", "hidden")
+"""How the launcher shows that the family can see the time and the sites (D-76).
+Never covert: `hidden` keeps the first-run explanation."""
 
 ALWAYS_ON_TILES = ("volume", "brightness", "shutdown")
 """Built-in tiles every child keeps whatever the apps screen says (D-164). The
@@ -99,6 +105,144 @@ def children_add(
         # later that their child never had a profile on the greeter.
         return see_other(f"/children/{child.id}/time?error=provision")
     return see_other(f"/children/{child.id}/time?saved=1")
+
+
+# ------------------------------------------------------- who they are (D-191)
+
+
+@router.get("/children/{child_id}/edit", response_class=HTMLResponse)
+def child_edit_form(view: View, child_id: int) -> Response:
+    if blocked := view.guard():
+        return blocked
+    child = repo.get_child(view.session, child_id)
+    if child is None:
+        return view.not_found()
+    return _edit_page(view, child)
+
+
+@router.post("/children/{child_id}/edit")
+def child_edit_save(
+    view: View,
+    child_id: int,
+    display_name: Annotated[str, Form()] = "",
+    birth_year: Annotated[int, Form()] = 0,
+    avatar: Annotated[str, Form()] = "",
+    locale: Annotated[str, Form()] = "",
+    supervision_indicator: Annotated[str, Form()] = "",
+    csrf_token: Annotated[str, Form()] = "",
+) -> Response:
+    page = f"/children/{child_id}/edit"
+    if blocked := view.guard_form(csrf_token, f"{page}?error=csrf"):
+        return blocked
+    session = view.session
+    child = repo.get_child(session, child_id)
+    if child is None:
+        return see_other("/children?error=1")
+    name = " ".join(display_name.split())[:64]
+    this_year = dt.date.today().year
+    if not name or not (this_year - 14 <= birth_year <= this_year):
+        return _edit_page(view, child, status_code=400, error=view.tr("error.invalid_input"))
+
+    before = _child_snapshot(child)
+    child.display_name = name
+    child.birth_year = birth_year
+    child.age_band = AgeBand.for_age(this_year - birth_year).value
+    if avatar in dict(AVATARS):
+        child.avatar = avatar
+    if locale in {"tr", "en"}:
+        child.locale = locale
+    if supervision_indicator in INDICATORS:
+        child.supervision_indicator = supervision_indicator
+    after = _child_snapshot(child)
+    if after == before:
+        return see_other(f"{page}?saved=1")
+    repo.audit(
+        session,
+        actor=view.actor,
+        action="child_changed",
+        target=f"child:{child_id}",
+        detail={"before": before, "after": after},
+    )
+    # The login screen shows the name and the picture (D-170).
+    shown = True
+    if (before["display_name"], before["avatar"]) != (after["display_name"], after["avatar"]):
+        from biokids_panel.wizard import provision_child
+
+        shown = provision_child(session, child).ok
+    session.commit()
+    if not shown:
+        return see_other(f"{page}?error=provision")
+    return _applied(view, page)
+
+
+@router.post("/children/{child_id}/delete")
+def child_delete(
+    view: View,
+    child_id: int,
+    passphrase: Annotated[str, Form()] = "",
+    csrf_token: Annotated[str, Form()] = "",
+) -> Response:
+    """Remove a child from BioKids (D-191): behind the passphrase, never while
+    they are at the machine, and never half-way."""
+    page = f"/children/{child_id}/edit"
+    if blocked := view.guard_form(csrf_token, f"{page}?error=csrf"):
+        return blocked
+    session, state = view.session, view.state
+    child = repo.get_child(session, child_id)
+    if child is None:
+        return see_other("/children?error=1")
+    if passphrase:
+        auth.confirm_passphrase(session, state, passphrase)
+    if not state.passphrase_fresh():
+        session.commit()
+        return see_other(f"{page}?error=passphrase")
+
+    # A child removed mid-session would carry on with nobody counting.
+    status, reachable = _daemon_status(view.ctx, session)
+    if not reachable:
+        return see_other(f"{page}?error=daemon")
+    if any(
+        entry.get("child_id") == child_id and (entry.get("present") or entry.get("online"))
+        for entry in status.get("children", [])
+    ):
+        return see_other(f"{page}?error=child.remove.logged_in")
+
+    result = unprovision_via_systemd(child.unix_user)
+    if result is None:
+        result = unprovision(child.unix_user, view.ctx.config)
+    if not result.ok:
+        # Still in the login group with no row to supervise it would be an
+        # account anyone could enter by picture, unsupervised. Keep the row.
+        repo.audit(
+            session,
+            actor=view.actor,
+            action="child_remove_failed",
+            target=f"child:{child_id}",
+            detail=result.as_detail(),
+            severity="warning",
+        )
+        session.commit()
+        log.warning("could not remove %s: %s", child.unix_user, "; ".join(result.problems))
+        return see_other(f"{page}?error=child.remove.failed")
+
+    repo.audit(
+        session,
+        actor=view.actor,
+        action="child_removed",
+        target=f"child:{child_id}",
+        detail={
+            "unix_user": child.unix_user,
+            "display_name": child.display_name,
+            "files": result.files_written,
+        },
+        severity="warning",
+    )
+    # Everything that belongs to the child goes with the row (ON DELETE CASCADE).
+    session.expunge(child)
+    session.execute(delete(Child).where(Child.id == child_id))
+    session.commit()
+    _call_daemon(view.ctx, Op.RELOAD)
+    return see_other("/children?saved=removed")
 
 
 # ---------------------------------------------------------------------- time
@@ -452,6 +596,32 @@ def alert_dismiss(
 
 
 # ------------------------------------------------------------------- helpers
+
+
+def _edit_page(
+    view: PanelView, child: Child, status_code: int = 200, **values: Any
+) -> HTMLResponse:
+    state = view.state
+    return view.render(
+        "child_edit.html",
+        status_code=status_code,
+        child=child,
+        this_year=dt.date.today().year,
+        indicators=INDICATORS,
+        passphrase_fresh=state.passphrase_fresh(),
+        no_passphrase=not (state.parent and state.parent.passphrase_hash),
+        **values,
+    )
+
+
+def _child_snapshot(child: Child) -> dict[str, Any]:
+    return {
+        "display_name": child.display_name,
+        "birth_year": child.birth_year,
+        "avatar": child.avatar,
+        "locale": child.locale,
+        "supervision_indicator": child.supervision_indicator,
+    }
 
 
 def _time_page(

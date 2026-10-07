@@ -218,6 +218,8 @@ def flash_for(request: Request, tr: Translator) -> dict[str, str] | None:
     saved = query.get("saved", "")
     if saved == "mail_sent":
         return {"tone": "ok", "text": tr("mail.panel.sent")}
+    if saved == "removed":
+        return {"tone": "ok", "text": tr("child.removed")}
     if saved == "download":
         # Started, not finished: it takes minutes, and the status card says when.
         return {"tone": "ok", "text": tr("assistant.panel.download.started")}

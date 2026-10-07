@@ -680,3 +680,94 @@ def test_without_accountsservice_the_child_keeps_a_name_and_can_still_log_in(
     shown, why = prov.set_greeter_identity("ahmet", "Ahmet", "turtle")
     assert not shown
     assert "AccountsService" in why
+
+
+# ------------------------------------------------------- removing a child (D-191)
+
+
+def test_a_removed_child_leaves_the_login_screen_but_keeps_their_files(
+    with_user: Any, share: Path, home: Path, config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prov.install_session_files("ayse", config)
+    drawing = home / "Resimler" / "kedi.png"
+    drawing.parent.mkdir()
+    drawing.write_bytes(b"png")
+    ran = fake_commands(monkeypatch, groups="ayse users biokids-child", status=None)
+
+    result = prov.unprovision("ayse", config)
+
+    assert result.ok, result.problems
+    assert ran == [
+        ["gpasswd", "--delete", "ayse", prov.CHILD_GROUP],
+        ["usermod", "--shell", prov.HIDDEN_SHELL, "ayse"],
+    ]
+    assert not (home / prov.AUTOSTART_DIR / "biokids-shell.desktop").exists()
+    assert not (home / prov.XFCE_CHANNEL_DIR / "xfwm4.xml").exists()
+    assert drawing.read_bytes() == b"png", "a child's drawing was deleted"
+
+
+def test_only_files_still_as_biokids_wrote_them_are_removed(
+    with_user: Any, share: Path, home: Path, config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An xfwm4.xml of the account's own was never ours to delete."""
+    prov.install_session_files("ayse", config)
+    own = home / prov.XFCE_CHANNEL_DIR / "xfwm4.xml"
+    own.write_text("<channel name='mine'/>", encoding="utf-8")
+    fake_commands(monkeypatch, groups="ayse users", status=None)
+
+    result = prov.unprovision("ayse", config)
+
+    assert result.ok
+    assert own.read_text(encoding="utf-8") == "<channel name='mine'/>"
+    assert str(own) not in result.files_written
+
+
+def test_an_account_with_its_own_password_keeps_its_login(
+    with_user: Any, share: Path, config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ran = fake_commands(monkeypatch, groups="ayse users", status=None)
+    assert prov.unprovision("ayse", config).ok
+    assert ran == []
+
+
+def test_unreadable_groups_stop_the_removal(
+    with_user: Any, share: Path, config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake_commands(monkeypatch, groups=None, status=None)
+    assert not prov.unprovision("ayse", config).ok
+
+
+@pytest.mark.parametrize("name", ["../../etc/passwd", "root; rm -rf /", ""])
+def test_unprovision_refuses_what_cannot_be_a_user(name: str) -> None:
+    assert not prov.unprovision(name).ok
+    result = prov.unprovision_via_systemd(name)
+    assert result is not None and not result.ok
+
+
+def test_a_child_added_again_comes_back_to_the_login_screen(
+    with_user: Any, share: Path, config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with_user.users["ayse"].pw_shell = prov.HIDDEN_SHELL
+    monkeypatch.setattr(prov, "grant_passwordless_login", lambda _u: (True, ""))
+    ran: list[list[str]] = []
+
+    def run(argv: list[str]) -> tuple[bool, str]:
+        ran.append(list(argv))
+        return True, ""
+
+    monkeypatch.setattr(prov, "_run", run)
+
+    assert prov.provision("ayse", "", config).ok
+    assert ["usermod", "--shell", prov.CHILD_SHELL, "ayse"] in ran
+
+
+def test_the_unprovision_unit_runs_one_fixed_command() -> None:
+    root = pathlib.Path(__file__).resolve().parent.parent
+    unit = (root / "debian/biokids-panel.biokids-unprovision@.service").read_text(
+        encoding="utf-8"
+    )
+    execs = [line for line in unit.splitlines() if line.startswith("ExecStart=")]
+    assert execs == ["ExecStart=/usr/bin/biokids-admin unprovision-child %I"], execs
+    assert "Type=oneshot" in unit
+    rules = (root / "debian/rules").read_text(encoding="utf-8")
+    assert "--name=biokids-unprovision@" in rules

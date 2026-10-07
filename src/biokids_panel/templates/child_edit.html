@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}{{ _('child.edit.title') }} · {{ child.display_name }}{% endblock %}
+
+{#
+  Who a child is: name, picture, birth year and language (D-191). The login
+  screen shows the name and picture, so saving them updates it too. Removing a
+  child is at the bottom, behind the passphrase, and says plainly what it does
+  and does not delete.
+#}
+{% block content %}
+  <h1>{{ child.display_name }} — {{ _('child.edit.title') }}</h1>
+
+  <form class="card" method="post" action="/children/{{ child.id }}/edit">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+
+    <div class="field">
+      <label for="name">{{ _('child.name') }}</label>
+      <input id="name" name="display_name" type="text" maxlength="64" required
+             value="{{ child.display_name }}">
+    </div>
+
+    <div class="field">
+      <label for="year">{{ _('child.birth_year') }}</label>
+      <input id="year" name="birth_year" type="number" inputmode="numeric" required
+             min="{{ this_year - 14 }}" max="{{ this_year }}" value="{{ child.birth_year }}">
+    </div>
+
+    <fieldset>
+      <legend>{{ _('child.avatar') }}</legend>
+      <div class="tile-grid">
+        {% for slug, glyph in avatars %}
+          <label class="tile-pick">
+            <input type="radio" name="avatar" value="{{ slug }}"
+                   {% if slug == child.avatar %}checked{% endif %}>
+            <span aria-hidden="true" style="font-size:1.6rem">{{ glyph }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <div class="field">
+      <label for="locale">{{ _('child.locale') }}</label>
+      <select id="locale" name="locale">
+        <option value="tr" {% if child.locale == 'tr' %}selected{% endif %}>Türkçe</option>
+        <option value="en" {% if child.locale == 'en' %}selected{% endif %}>English</option>
+      </select>
+    </div>
+
+    <p class="muted small">{{ _('child.unix_user') }}: <code>{{ child.unix_user }}</code></p>
+
+    <details class="advanced">
+      <summary>{{ _('common.advanced') }}</summary>
+      <fieldset>
+        <legend>{{ _('child.indicator') }}</legend>
+        <span class="help">{{ _('child.indicator.help') }}</span>
+        {% for value in indicators %}
+          <div class="checkline">
+            <input type="radio" id="ind-{{ value }}" name="supervision_indicator" value="{{ value }}"
+                   {% if value == child.supervision_indicator %}checked{% endif %}>
+            <label for="ind-{{ value }}">{{ _('child.indicator.' ~ value) }}</label>
+          </div>
+        {% endfor %}
+      </fieldset>
+    </details>
+
+    <div class="actions">
+      <button class="btn btn--primary" type="submit">{{ _('common.save') }}</button>
+      <a class="btn btn--quiet" href="/children">{{ _('common.back') }}</a>
+    </div>
+  </form>
+
+  <details class="card">
+    <summary><strong>{{ _('child.remove.title', name=child.display_name) }}</strong></summary>
+    <form method="post" action="/children/{{ child.id }}/delete">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <div class="notice notice--danger">
+        <p class="small">{{ _('child.remove.body', name=child.display_name) }}</p>
+        <p class="small">{{ _('child.remove.kept', user=child.unix_user) }}</p>
+      </div>
+      <div class="field">
+        <label for="pp">
+          {% if no_passphrase %}{{ _('login.pin') }}{% else %}{{ _('auth.passphrase.title') }}{% endif %}
+        </label>
+        <input id="pp" name="passphrase" type="password" autocomplete="current-password"
+               {% if not passphrase_fresh %}required{% endif %}>
+        <span class="help">
+          {% if no_passphrase %}{{ _('auth.passphrase.missing') }}{% else %}{{ _('auth.passphrase.help') }}{% endif %}
+        </span>
+      </div>
+      <button class="btn btn--danger" type="submit">{{ _('child.remove.confirm', name=child.display_name) }}</button>
+    </form>
+  </details>
+{% endblock %}

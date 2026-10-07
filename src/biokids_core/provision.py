@@ -21,6 +21,7 @@ remove their drawings.
 from __future__ import annotations
 
 import contextlib
+import errno
 import logging
 import os
 import re
@@ -591,7 +592,14 @@ def provision(
 
     granted, reason = grant_passwordless_login(unix_user)
     result.passwordless_login = granted
-    if not granted:
+    if granted:
+        # A child removed and added again (D-191).
+        restored, problem = restore_login_shell(unix_user)
+        if not restored:
+            result.problems.append(
+                f"{unix_user} is still hidden from the login screen: {problem}"
+            )
+    else:
         if result.account_created:
             # An account BioKids made has no password, so without this the child
             # has no way in at all.
@@ -609,3 +617,177 @@ def provision(
     result.files_written = written
     result.problems.extend(problems)
     return result
+
+
+# ------------------------------------------------------------ removing a child
+
+UNPROVISION_UNIT = "biokids-unprovision@{user}.service"
+"""The unit that does this on a packaged machine, as PROVISION_UNIT for adding."""
+
+HIDDEN_SHELL = "/usr/sbin/nologin"
+"""A removed child's shell. AccountsService counts an account with a nologin
+shell as a system account and LightDM leaves it off the login screen, so a
+removed child's picture is not left there leading nowhere (D-191)."""
+NOLOGIN_SHELLS = frozenset(
+    {"/usr/sbin/nologin", "/sbin/nologin", "/bin/false", "/usr/bin/false"}
+)
+CHILD_SHELL = "/bin/bash"
+"""What adduser gives a new account, and what a child added again gets back."""
+
+
+def login_shell(unix_user: str) -> str:
+    entry = _passwd_entry(unix_user)
+    return str(getattr(entry, "pw_shell", "") or "") if entry is not None else ""
+
+
+def restore_login_shell(unix_user: str) -> tuple[bool, str]:
+    """Undo `unprovision`'s HIDDEN_SHELL for a child added back (D-191)."""
+    if login_shell(unix_user) not in NOLOGIN_SHELLS:
+        return True, ""
+    return _run(["usermod", "--shell", CHILD_SHELL, unix_user])
+
+
+def remove_session_files(
+    unix_user: str, config: Config | None = None
+) -> tuple[list[str], list[str]]:
+    """Remove the session files `install_session_files` put in the child's home.
+
+    Only a file that is still exactly what BioKids wrote: an account that was
+    somebody's before it was a child's may have had an xfwm4.xml of its own,
+    which provisioning left alone and this must leave alone too. Root works in
+    a directory the child owns, so - as when writing - nothing here follows a
+    link. Nothing else in the home is touched: a child's drawings stay theirs.
+    """
+    config = config or get_config()
+    source = config.paths.share_dir / "xfce"
+    home = home_of(unix_user)
+    removed: list[str] = []
+    problems: list[str] = []
+    if home is None or not source.is_dir():
+        return removed, problems
+    shipped = [(XFCE_CHANNEL_DIR / xml.name, xml) for xml in sorted(source.glob("*.xml"))]
+    shipped += [
+        (AUTOSTART_DIR / entry.name, entry) for entry in sorted(source.glob("*.desktop"))
+    ]
+    for relative, original in shipped:
+        try:
+            if _remove_from_home(home, relative, original.read_bytes()):
+                removed.append(str(home / relative))
+        except OSError as exc:
+            problems.append(f"{home / relative}: {exc}")
+    return removed, problems
+
+
+def _remove_from_home(home: Path, relative: Path, expected: bytes) -> bool:
+    """Unlink `home/relative` if it is a regular file holding `expected`."""
+    if not _SAFE_OPEN:
+        target = home / relative
+        if target.is_symlink() or not target.is_file() or target.read_bytes() != expected:
+            return False
+        target.unlink()
+        return True
+    try:
+        directory = os.open(home, _DIR_FLAGS)
+    except FileNotFoundError:
+        return False
+    try:
+        for part in relative.parent.parts:
+            try:
+                inner = os.open(part, _DIR_FLAGS, dir_fd=directory)
+            except (FileNotFoundError, NotADirectoryError):
+                return False
+            os.close(directory)
+            directory = inner
+        try:
+            fd = os.open(
+                relative.name, os.O_RDONLY | _O_NOFOLLOW | _O_CLOEXEC, dir_fd=directory
+            )
+        except FileNotFoundError:
+            return False
+        except OSError as exc:
+            if exc.errno == errno.ELOOP:
+                # A link where our file was is the child's own doing, and with
+                # the account off the login screen it leads nowhere.
+                return False
+            raise
+        try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                return False
+            content = os.read(fd, len(expected) + 1)
+        finally:
+            os.close(fd)
+        if content != expected:
+            return False
+        os.unlink(relative.name, dir_fd=directory)
+        return True
+    finally:
+        os.close(directory)
+
+
+def unprovision(unix_user: str, config: Config | None = None) -> ProvisionResult:
+    """What removing a child from BioKids does to their account (D-191).
+
+    The account and its home stay - removing a child from the panel must not
+    delete their drawings - but an account BioKids made passwordless leaves
+    CHILD_GROUP, so no picture lets anyone in, and gets HIDDEN_SHELL, so the
+    picture is not on the login screen either. The session files go where they
+    are still BioKids' own. An account that kept its own password keeps
+    everything but those files.
+    """
+    if not UNIX_USER_RE.match(unix_user):
+        return ProvisionResult(
+            unix_user=unix_user, problems=[f"{unix_user!r} is not a valid user name"]
+        )
+    result = ProvisionResult(unix_user=unix_user, account_existed=account_exists(unix_user))
+    if not result.account_existed:
+        return result
+    groups = groups_of(unix_user)
+    if groups is None:
+        result.problems.append(f"could not read the groups of {unix_user}")
+        return result
+    if CHILD_GROUP in groups:
+        for argv in (
+            ["gpasswd", "--delete", unix_user, CHILD_GROUP],
+            ["usermod", "--shell", HIDDEN_SHELL, unix_user],
+        ):
+            ok, problem = _run(argv)
+            if not ok:
+                result.problems.append(f"{argv[0]}: {problem}")
+    removed, problems = remove_session_files(unix_user, config)
+    result.files_written = removed
+    result.problems.extend(problems)
+    if result.ok:
+        log.info("%s is no longer a BioKids child; the account and its home stay", unix_user)
+    return result
+
+
+def unprovision_via_systemd(
+    unix_user: str, *, timeout: float = 120.0
+) -> ProvisionResult | None:
+    """Ask `biokids-unprovision@<user>.service` to do it, or return None when
+    there is no systemd to ask - the same arrangement as `provision_via_systemd`."""
+    if not UNIX_USER_RE.match(unix_user):
+        return ProvisionResult(
+            unix_user=unix_user, problems=[f"{unix_user!r} is not a valid user name"]
+        )
+    systemctl = _find("systemctl")
+    if systemctl is None:
+        return None
+    unit = UNPROVISION_UNIT.format(user=systemd_escape(unix_user))
+    try:
+        finished = subprocess.run(
+            [systemctl, "start", "--wait", unit],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return ProvisionResult(unix_user=unix_user, problems=[f"{unit}: {exc}"])
+    if finished.returncode != 0:
+        detail = (finished.stderr or finished.stdout).strip()[:300]
+        return ProvisionResult(
+            unix_user=unix_user,
+            problems=[f"{unit} failed: {detail or f'exit {finished.returncode}'}"],
+        )
+    return ProvisionResult(unix_user=unix_user, account_existed=account_exists(unix_user))

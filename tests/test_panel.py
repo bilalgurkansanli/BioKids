@@ -1961,3 +1961,170 @@ def test_a_test_mail_says_whether_it_went(
         follow_redirects=False,
     )
     assert "error=mail.failed" in response.headers["location"]
+
+
+# ---------------------------------------------- editing and removing (D-191)
+
+
+def test_a_childs_details_can_be_changed(
+    client: TestClient,
+    family_ready: None,
+    db: Database,
+    daemon: FakeDaemon,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from biokids_core.provision import ProvisionResult
+
+    shown: list[str] = []
+
+    def fake_provision(_session: Session, child: Any) -> ProvisionResult:
+        shown.append(child.display_name)
+        return ProvisionResult(unix_user=child.unix_user)
+
+    monkeypatch.setattr(wizard, "provision_child", fake_provision)
+    login(client)
+    assert "Elif" in client.get("/children/1/edit").text
+
+    response = client.post(
+        "/children/1/edit",
+        data={
+            "display_name": "Elif  Nur",
+            "birth_year": dt.date.today().year - 9,
+            "avatar": "owl",
+            "locale": "en",
+            "supervision_indicator": "small",
+            "csrf_token": csrf_of(client),
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"].endswith("/children/1/edit?saved=1")
+    with db.session() as session:
+        child = repo.get_child(session, 1)
+        assert child is not None
+        assert (child.display_name, child.avatar, child.locale) == ("Elif Nur", "owl", "en")
+        assert child.supervision_indicator == "small"
+        assert child.age_band == "8-10"
+        assert repo.recent_audit(session, limit=5)[0].action == "child_changed"
+    assert shown == ["Elif Nur"], "the login screen keeps the old name and picture"
+    assert daemon.ran("reload")
+
+
+def test_an_unknown_indicator_or_avatar_is_ignored(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    client.post(
+        "/children/1/edit",
+        data={
+            "display_name": "Elif",
+            "birth_year": 2020,
+            "avatar": "../../etc/passwd",
+            "supervision_indicator": "covert",
+            "csrf_token": csrf_of(client),
+        },
+    )
+    with db.session() as session:
+        child = repo.get_child(session, 1)
+        assert child is not None
+        assert child.avatar == "fox"
+        assert child.supervision_indicator == "badge"
+
+
+def _fake_unprovision(monkeypatch: pytest.MonkeyPatch, problems: list[str]) -> list[str]:
+    from biokids_core.provision import ProvisionResult
+    from biokids_panel.routes import children
+
+    asked: list[str] = []
+
+    def fake(user: str, _config: Any = None) -> ProvisionResult:
+        asked.append(user)
+        return ProvisionResult(unix_user=user, account_existed=True, problems=list(problems))
+
+    monkeypatch.setattr(children, "unprovision", fake)
+    return asked
+
+
+def test_removing_a_child_needs_the_passphrase(
+    client: TestClient, family_ready: None, db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    asked = _fake_unprovision(monkeypatch, [])
+    login(client)
+    response = client.post(
+        "/children/1/delete", data={"csrf_token": csrf_of(client)}, follow_redirects=False
+    )
+    assert response.headers["location"].endswith("error=passphrase")
+    wrong = client.post(
+        "/children/1/delete",
+        data={"passphrase": "not it", "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    assert wrong.headers["location"].endswith("error=passphrase")
+    assert asked == []
+    with db.session() as session:
+        assert repo.get_child(session, 1) is not None
+
+
+def test_a_child_at_the_machine_is_not_removed(
+    client: TestClient,
+    family_ready: None,
+    db: Database,
+    daemon: FakeDaemon,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asked = _fake_unprovision(monkeypatch, [])
+    _one_child(daemon)
+    login(client)
+    response = client.post(
+        "/children/1/delete",
+        data={"passphrase": PASSPHRASE, "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    assert response.headers["location"].endswith("error=child.remove.logged_in")
+    assert asked == []
+    with db.session() as session:
+        assert repo.get_child(session, 1) is not None
+
+
+def test_removing_a_child_deletes_everything_that_was_theirs(
+    client: TestClient,
+    family_ready: None,
+    db: Database,
+    daemon: FakeDaemon,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asked = _fake_unprovision(monkeypatch, [])
+    login(client)
+    response = client.post(
+        "/children/1/delete",
+        data={"passphrase": PASSPHRASE, "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"].endswith("/children?saved=removed")
+    assert asked == ["elif"]
+    with db.session() as session:
+        assert repo.get_child(session, 1) is None
+        assert session.get(Policy, 1) is None, "the policy outlived its child"
+        entry = repo.recent_audit(session, limit=5)[0]
+        assert entry.action == "child_removed"
+    assert daemon.ran("reload")
+
+
+def test_a_child_whose_account_could_not_be_changed_is_kept(
+    client: TestClient, family_ready: None, db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Never half-way: an account still entered by picture, with no row to supervise it."""
+    _fake_unprovision(monkeypatch, ["gpasswd: permission denied"])
+    login(client)
+    response = client.post(
+        "/children/1/delete",
+        data={"passphrase": PASSPHRASE, "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    assert response.headers["location"].endswith("error=child.remove.failed")
+    with db.session() as session:
+        assert repo.get_child(session, 1) is not None
+        assert repo.recent_audit(session, limit=5)[0].action == "child_remove_failed"

@@ -48,6 +48,7 @@ from biokids_core.provision import (
     account_exists,
     provision,
     set_greeter_identity,
+    unprovision,
 )
 
 log = logging.getLogger("biokids.admin")
@@ -76,6 +77,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "reset-pin": cmd_reset_pin,
         "sync-catalog": cmd_sync_catalog,
         "provision-child": cmd_provision_child,
+        "unprovision-child": cmd_unprovision_child,
         "refresh-greeter": cmd_refresh_greeter,
         "remote-setup": cmd_remote_setup,
         "backup-db": cmd_backup_db,
@@ -175,6 +177,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="read the new PIN from standard input instead of prompting",
     )
+
+    unprovision = sub.add_parser(
+        "unprovision-child",
+        help="stop an account being a BioKids child; the account and its home stay",
+    )
+    unprovision.add_argument("unix_user", help="the child's Unix user name")
 
     provision = sub.add_parser(
         "provision-child",
@@ -643,6 +651,16 @@ def cmd_refresh_greeter(args: argparse.Namespace, config: Config) -> int:
         shown, why = set_greeter_identity(unix_user, display_name, avatar)
         print(f"{unix_user}: {'name and picture set' if shown else why}")
     return 0
+
+
+def cmd_unprovision_child(args: argparse.Namespace, config: Config) -> int:
+    """What the panel's "remove this child" runs, through biokids-unprovision@."""
+    result = unprovision(args.unix_user, config)
+    for removed in result.files_written:
+        print(f"removed {removed}")
+    for problem in result.problems:
+        print(f"problem: {problem}", file=sys.stderr)
+    return 0 if result.ok else 1
 
 
 def cmd_provision_child(args: argparse.Namespace, config: Config) -> int:

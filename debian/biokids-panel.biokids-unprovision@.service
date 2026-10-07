@@ -1,0 +1,23 @@
+[Unit]
+Description=Stop %I being a BioKids child (the account and its home stay)
+Documentation=man:biokids-admin(8)
+# The other half of biokids-provision@ (D-191): the panel's sandbox cannot
+# write /etc/group or the child's home, so removing a child asks this unit.
+After=biokids-daemon.service
+DefaultDependencies=no
+Conflicts=shutdown.target
+Before=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+ExecStart=/usr/bin/biokids-admin unprovision-child %I
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+MemoryDenyWriteExecute=yes
+TimeoutStartSec=120

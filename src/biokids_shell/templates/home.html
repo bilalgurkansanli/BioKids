@@ -17,7 +17,7 @@
     {% if state.supervision_indicator != 'hidden' %}
       <span class="badge-zio" id="supervision" title="{{ _('shell.supervision.badge') }}">
         <span aria-hidden="true">👀</span>
-        {% if not young %}{{ _('shell.supervision.badge') }}{% endif %}
+        {% if not young and state.supervision_indicator != 'small' %}{{ _('shell.supervision.badge') }}{% endif %}
       </span>
     {% endif %}
 
