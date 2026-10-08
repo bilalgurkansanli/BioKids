@@ -61,7 +61,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urlsplit
 
-from biokids_core.types import AgeBand
 from biokids_shell.kiosk import KIOSK_WINDOW_CLASS, launcher_port
 
 if TYPE_CHECKING:

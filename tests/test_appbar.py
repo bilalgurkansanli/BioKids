@@ -1296,8 +1296,8 @@ def test_an_app_with_no_sound_cannot_be_slid(
     bar.shutdown()
 
 
-@pytest.mark.parametrize(("band", "clock_shown"), [("8-10", True), ("4-7", False)])
-def test_the_bar_shows_the_minutes_left_and_for_8_to_10_the_clock(
+@pytest.mark.parametrize(("band", "clock_shown"), [("8-10", True), ("4-7", True)])
+def test_the_bar_shows_the_minutes_left_and_the_clock(
     fake_gtk: Any, monkeypatch: pytest.MonkeyPatch, band: str, clock_shown: bool
 ) -> None:
     fake_gtk.repo.Gtk.Label.side_effect = lambda *_a, **_k: mock.MagicMock()
