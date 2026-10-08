@@ -108,11 +108,14 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
 - Launching an app shows a full-screen loading state with the app's icon, not a spinner.
 - No modal that a child cannot dismiss. The only unskippable screen is the first-run
   explanation.
-- **Every app has a way out a child can find** (D-163). Each app window fills the
-  screen and has one button: a 64-pixel close button in the top right corner of a
-  64-pixel title bar, always in that same place. No app starts full screen, because
-  full screen hides the title bar and the button with it. The launcher itself has no
-  title bar; it is never closed, only covered.
+- **Every app has a way out a child can find** (D-163, D-197). Over every app
+  window the app bar (§2.6) holds a 64-pixel close button in the top right corner
+  of the screen, always in that same place, and it closes the app even when the
+  app will not close itself. Each app window fills the screen where it can, under
+  a 64-pixel title bar the bar sits in; one that cannot, such as a game with a
+  fixed size, opens in the middle. No app starts full screen. Whenever the bar is
+  not running, the title bar has the close button instead. The launcher itself has
+  no title bar and no bar over it; it is never closed, only covered.
 - **A tile that cannot work is not drawn.** An app whose program is not installed
   (D-164), or a site served on this machine with nothing behind it yet, such as
   Vikipedi before the encyclopedia is downloaded (D-190).
@@ -152,6 +155,35 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
    reads it aloud. A refusal is a kind fixed sentence in the same bubble, never an
    error. While the model loads, "Biraz bekle, aklımı topluyorum…", then
    "Düşünüyorum…", in words rather than a spinner.
+
+### 2.6 The app bar
+
+Asked for by the owner (D-197): next to the close button, a way to send an app to
+the background and the app's own volume.
+
+```
+                         ┌──────┬──────┬───────┬──────┬──────┐
+     … app title …       │  🏠  │  🔉  │ ▁▂▄▆█ │  🔊  │  ✕   │  ← top right of the screen
+                         └──────┴──────┴───────┴──────┴──────┘
+```
+
+- Shown whenever an app window is the active one, at the top right of the screen
+  that app is on; never over the launcher, its warnings or the screens that end the
+  day. It never takes the keyboard from the app.
+- Each button is 64 × 64 for the finger, a 56-pixel rounded square for the eye, in
+  the bar's off-white: the same size as the title bar it sits in, so over a
+  maximised app it covers only the title.
+- **🏠 Ana ekran** sends the app to the background and shows the launcher. The app
+  keeps running; its tile brings the same window back, not a second copy.
+- **🔉 / 🔊** turn this app's own sound down or up by a tenth, never the machine's,
+  so Zio and Sio stay as loud as they were. Five rising bars between them show the
+  level; both dim when the app makes no sound. The machine's volume is the
+  launcher's slider.
+- **✕ Kapat** closes the app. It asks first, so an app can ask "save your
+  drawing?"; an app still there after three seconds, or tapped a second time, is
+  stopped. Red, with a white cross, as the title bar's button was.
+- No words on the buttons; a screen reader hears "Ana ekran", "Sesi kıs", "Sesi
+  aç", "Kapat".
 
 ---
 

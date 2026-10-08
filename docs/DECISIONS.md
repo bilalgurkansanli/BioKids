@@ -22,8 +22,9 @@ search for `D-<n>` lands on the entry. Gaps in the numbering were never used.
 Replaced in full or in part: D-14 → D-188 · D-16 → D-185 · D-32 → D-129 ·
 D-53 → D-189 · D-55 → D-184 · D-57 → D-171 · D-59, D-61, D-62 → D-167 ·
 D-70, D-72–D-75, D-77–D-80 → D-180 · D-86 → D-174, D-181 · D-87, D-88 → D-137 ·
-D-89, D-90 → D-181 · D-92 → D-165, D-166 · D-149 → D-151. Completed by a later entry:
-D-38 → D-177 · D-44 → D-193 · D-64 → D-187 · D-65 → D-173.
+D-89, D-90 → D-181 · D-92 → D-165, D-166 · D-149 → D-151 · D-163 → D-197.
+Completed by a later entry: D-38 → D-177 · D-44 → D-193 · D-64 → D-187 ·
+D-65 → D-173.
 
 ## Scope
 
@@ -734,7 +735,9 @@ devilspie2 (GPL-3, a separate process; Debian 13's xdotool cannot maximise) maxi
 every ordinary app window, so it is always top right. Apps that start full screen are
 started windowed by their catalog `exec`, and the child's Chromium uses the window
 manager's title bar. The launcher applies the xfwm4 keys with `xfconf-query` every
-session, since provisioning never overwrites a child's files.
+session, since provisioning never overwrites a child's files. *Partly superseded by
+D-197:* the close button is the app bar's; the title bar keeps it only as the
+fallback.
 
 **D-164 [owner] Safe sites a parent can add, on a screen a parent can find.**
 Checked from Turkey on 2026-10-03 for ads, accounts and content: KÜRE Çocuk, Bilim
@@ -1049,4 +1052,51 @@ once after setup, Today shows a banner with a confirmed "Şimdi yeniden başlat"
 op `reboot_now`), because LightDM reads the login-by-picture setting only when it
 starts (D-155). A help page answers the questions parents ask first and is open
 before signing in, since "I forgot my PIN" is one of them.
+
+**D-197 [owner] The app bar: home, the app's own volume, and a close that works.** (2026-10-08)
+The owner asked for a "send to background" button and the app's volume beside every
+app's close button, and found that Frozen Bubble 2 would not close: its window has a
+fixed size, so devilspie2 cannot maximise it (D-163) - it floated mid-screen with the
+close button at its own corner and the launcher clickable around it - and a title
+bar's button only asks, so an app that ignores WM_DELETE_WINDOW could not be closed by
+a child at all. A title bar cannot hold a volume control. So the launcher, in kiosk
+mode, runs and restarts `python3 -m biokids_shell.appbar` (`windows.AppBar`): four
+64-pixel buttons at the top right of the screen the active app is on, shown while an
+app window is active and never while the launcher is (WM_CLASS `biokids-kiosk`), which
+raises itself for the warnings and the end of the day.
+- 🏠 minimises the app, its dialogs with it, and activates the launcher. The app keeps
+  running; its tile then runs the bar once with `--bring-back <unit>`, which shows the
+  topmost window of that scope again instead of starting a second copy. A scope with
+  no window is left 30 s to open one, then stopped and the app started afresh. Web
+  tiles open a window each time: all of them are one Chromium, in the scope of
+  whichever tile started it.
+- 🔉 and 🔊 step the app's own streams by ten percent, 0 to 100, never the machine's,
+  so Zio and Sio stay audible: `pactl -f json list sink-inputs` (its text form when
+  the JSON cannot be read; `pulseaudio-utils` talks to Debian 13's pipewire-pulse), the
+  streams whose `application.process.id` is in the window's `biokids-app-*.scope`
+  (`_NET_WM_PID`, `/proc/<pid>/cgroup`) - by scope, since Chromium plays from a helper
+  process. Five rising bars show the level; both buttons dim when the app has no
+  stream.
+- ✕ asks the window to close (`_NET_CLOSE_WINDOW`), and stops its scope with
+  `systemctl --user stop` (TERM, the ten-second grace, KILL) if it is still there 3 s
+  later, or at once on a second tap. An app that answered with a window of its own
+  ("save your drawing?") is left to the child for a minute. Only a `biokids-app-*.scope`
+  under the child's own `user@<uid>.service` is ever stopped (SECURITY.md §2).
+GTK 3 and libwnck 3 through PyGObject: LGPL libraries from Debian's own packages,
+loaded at run time in that process only, never vendored or changed. The LGPL lets a
+program under any licence load a library that stays replaceable, which a Debian
+package is, so D-30 holds. A popup (override-redirect) window: one the window manager
+knows can be clicked into focus - and the "active app" would then be the bar - would be
+maximised by devilspie2, and is covered by an app gone full screen. The popup never
+takes the focus and is raised again whenever the stacking changes. While the bar is up,
+xfwm4's `button_layout` is `|`: one way out, not two. The launcher puts `|C` back the
+moment the bar's process ends, and every session starts with `|C`, so a child is never
+without a close button - without GTK (exit 3) the title bar keeps it for the session.
+The 64-pixel title bar stays: over a maximised app the bar sits in its strip and covers
+the title, not the app, which is what made D-163 turn down a floating button; it names
+the app; and it holds the fallback button in the same corner. xfwm4 now opens every
+window in the middle of the screen (`placement_ratio` 100). A click on the launcher
+around a small window still brings the launcher forward; the app's tile brings the app
+back. Dimming the launcher while an app is open was left out: the page could not tell
+which app to return to.
 

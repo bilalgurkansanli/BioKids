@@ -34,6 +34,10 @@ biokids (0.1.0-2) trixie; urgency=medium
     packages are installed, a panel shortcut goes on the parent's desktop,
     phone access is four numbered steps, Today offers the one restart setup
     needs, and a help page answers the first questions.
+  * biokids-shell: the app bar (D-197) - home, the app's own volume and a
+    close that stops an app which will not close, at the screen's top
+    right over every app. New Depends: python3-gi, gir1.2-gtk-3.0,
+    gir1.2-wnck-3.0, pulseaudio-utils.
 
  -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Wed, 07 Oct 2026 12:00:00 +0300
 

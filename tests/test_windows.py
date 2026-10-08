@@ -21,10 +21,14 @@ from pathlib import Path
 import pytest
 
 from biokids_shell import windows
+from biokids_shell.appbar import EXIT_UNAVAILABLE
 from biokids_shell.launcher import AppLauncher, LaunchRequest, prepare_browser_profile
 from biokids_shell.windows import (
+    CLOSE_BUTTON_LAYOUT,
+    NO_BUTTONS_LAYOUT,
     THEME_NAME,
     WINDOW_MANAGER_SETTINGS,
+    AppBar,
     WindowRules,
     apply_window_manager_settings,
 )
@@ -88,6 +92,13 @@ async def test_a_setting_that_does_not_take_is_logged(caplog: pytest.LogCaptureF
     )
     assert applied == 0
     assert "window manager settings could be applied" in caplog.text
+
+
+def test_a_window_that_cannot_fill_the_screen_opens_in_its_middle() -> None:
+    """D-197: Frozen Bubble's fixed window, and any other, never in a corner."""
+    settings = {prop: value for prop, _kind, value in WINDOW_MANAGER_SETTINGS}
+    assert settings["/general/placement_ratio"] == "100"
+    assert settings["/general/placement_mode"] == "center"
 
 
 def test_a_new_childs_file_says_the_same_as_the_live_settings() -> None:
@@ -174,6 +185,149 @@ async def test_no_devilspie2_means_no_crash(
     await rules.supervise(asyncio.Event())
     assert rules.process is None
     assert "devilspie2 is not installed" in caplog.text
+
+
+# ------------------------------------------------------------- the app bar
+
+
+class FakeBar:
+    """The app bar's process, as the launcher sees it: its stdout and its end."""
+
+    def __init__(self, lines: Sequence[bytes] = (b"ready\n",), code: int = 1) -> None:
+        self.stdout = asyncio.StreamReader()
+        for line in lines:
+            self.stdout.feed_data(line)
+        self.returncode: int | None = None
+        self.code = code
+        self.terminated = False
+        self._gone = asyncio.Event()
+
+    def exit(self) -> None:
+        if self.returncode is None:
+            self.returncode = self.code
+            self.stdout.feed_eof()
+            self._gone.set()
+
+    async def wait(self) -> int | None:
+        await self._gone.wait()
+        return self.returncode
+
+    def terminate(self) -> None:
+        self.terminated = True
+        self.exit()
+
+    def kill(self) -> None:  # pragma: no cover - only for a wedged bar
+        self.exit()
+
+
+class Spawner:
+    def __init__(self, *bars: FakeBar) -> None:
+        self.bars = list(bars)
+        self.argv: list[tuple[str, ...]] = []
+
+    async def __call__(self, *argv: str, **_kwargs: object) -> FakeBar:
+        self.argv.append(argv)
+        return self.bars.pop(0)
+
+
+def layouts(run: Recorder) -> list[str]:
+    return [call[-1] for call in run.calls if "/general/button_layout" in call]
+
+
+async def settle() -> None:
+    for _ in range(20):
+        await asyncio.sleep(0)
+
+
+async def test_the_title_bar_gives_up_its_button_only_once_the_bar_is_up() -> None:
+    """One way out, not two - and never none."""
+    run = Recorder()
+    bar = FakeBar()
+    app_bar = AppBar(run=run, xfconf_query="xfconf-query", spawn=Spawner(bar))
+
+    task = asyncio.create_task(app_bar.run_once())
+    await settle()
+    assert app_bar.ready
+    assert layouts(run) == [NO_BUTTONS_LAYOUT]
+
+    bar.exit()
+    assert await task == 1
+    assert layouts(run) == [NO_BUTTONS_LAYOUT, CLOSE_BUTTON_LAYOUT], "the button came back"
+    assert not app_bar.ready
+
+
+async def test_a_bar_that_never_came_up_never_took_the_button() -> None:
+    run = Recorder()
+    bar = FakeBar(lines=[b"Gtk-WARNING: cannot open display\n"])
+    app_bar = AppBar(run=run, xfconf_query="xfconf-query", spawn=Spawner(bar))
+
+    task = asyncio.create_task(app_bar.run_once())
+    await settle()
+    bar.exit()
+    await task
+
+    assert NO_BUTTONS_LAYOUT not in layouts(run)
+
+
+async def test_without_gtk_the_bar_is_not_restarted() -> None:
+    """Exit code 3: no GTK or libwnck. The title bar keeps the button for good."""
+    run = Recorder()
+    bar = FakeBar(lines=[], code=EXIT_UNAVAILABLE)
+    bar.exit()
+    spawner = Spawner(bar)
+    app_bar = AppBar(run=run, xfconf_query="xfconf-query", spawn=spawner)
+
+    await asyncio.wait_for(app_bar.supervise(asyncio.Event()), timeout=5)
+
+    assert len(spawner.argv) == 1
+    assert layouts(run) == [CLOSE_BUTTON_LAYOUT]
+
+
+async def test_a_bar_that_crashed_is_started_again(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(windows, "RESTART_SECONDS", 0.0)
+    run = Recorder()
+    first, second = FakeBar(code=1), FakeBar()
+    first.exit()
+    spawner = Spawner(first, second)
+    app_bar = AppBar(run=run, xfconf_query="xfconf-query", spawn=spawner)
+    stop = asyncio.Event()
+
+    task = asyncio.create_task(app_bar.supervise(stop))
+    await settle()
+    assert len(spawner.argv) == 2
+    assert app_bar.restarts == 1
+    assert app_bar.ready, "the second bar is up"
+
+    stop.set()
+    await app_bar.stop()
+    await asyncio.wait_for(task, timeout=5)
+    assert second.terminated
+    assert layouts(run)[-1] == CLOSE_BUTTON_LAYOUT
+
+
+async def test_a_bar_that_cannot_be_started_leaves_the_button_where_it_is() -> None:
+    run = Recorder()
+
+    async def no_python(*_argv: str, **_kwargs: object) -> FakeBar:
+        raise OSError("no such file")
+
+    app_bar = AppBar(run=run, xfconf_query="xfconf-query", spawn=no_python)
+    await asyncio.wait_for(app_bar.supervise(asyncio.Event()), timeout=5)
+    await app_bar.stop()
+    assert layouts(run) == []
+
+
+async def test_a_launcher_without_a_kiosk_leaves_the_desktop_alone() -> None:
+    """`--no-kiosk` never starts the bar; stopping it must not touch xfwm4."""
+    run = Recorder()
+    await AppBar(run=run, xfconf_query="xfconf-query").stop()
+    assert run.calls == []
+
+
+def test_the_bar_is_this_python_running_the_appbar_module() -> None:
+    import sys
+
+    assert AppBar().argv() == [sys.executable, "-m", "biokids_shell.appbar"]
 
 
 # ------------------------------------------------------------- the catalog

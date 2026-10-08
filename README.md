@@ -51,8 +51,9 @@ The full text is in [`CLAUDE.md`](CLAUDE.md) §2.
 - **Limits per kind of app**: at most so many minutes of games, learning, web or other
   apps a day, inside the day's time.
 - **A child launcher** instead of a desktop: big tiles for the apps and sites the parent
-  chose, a ring with the minutes left, one big close button on every app, no desktop,
-  no settings, no terminal. Two age bands; for children who cannot read yet,
+  chose, a ring with the minutes left, the same big buttons over every app (home, the
+  app's own volume, and a close that works even on an app that will not close), no
+  desktop, no settings, no terminal. Two age bands; for children who cannot read yet,
   tiles and screens read themselves aloud.
 - **Login by picture.** Each child is their own picture on a BioKids login screen; no
   password to remember.

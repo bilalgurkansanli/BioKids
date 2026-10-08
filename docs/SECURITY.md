@@ -17,7 +17,8 @@ parental-control tool that implies more protection than it provides is worse tha
 | Attack | Defence |
 |---|---|
 | Changing the system clock to get more time | `CLOCK_BOOTTIME` accounting (D-41) |
-| Closing or minimising the launcher | Chromium kiosk, no WM decorations, hotkeys suppressed |
+| Closing or minimising the launcher | Chromium kiosk, no WM decorations, hotkeys suppressed; the app bar is never shown over it and acts only on app windows (D-197) |
+| Using the app bar's close to stop the launcher or Zio and Sio | it stops only a `biokids-app-*.scope`, checked by name and by its cgroup path under the child's own `user@<uid>.service`; a window claiming another process's `_NET_WM_PID` can at most stop another of the child's own apps (D-197) |
 | Opening a terminal | no terminal emulator installed, TTY switching disabled |
 | Typing a blocked URL | Chromium policy + the children's DNS filter (D-167); the extension turns the error into the launcher's block page (D-187) |
 | Removing or switching off the BioKids extension | force-installed by policy, `chrome://extensions` closed, every other extension blocked (D-187) |
@@ -61,6 +62,7 @@ Never add a claim to marketing copy that contradicts this list.
 | `biokids-daemon` | root | needs logind control, nftables, service reloads, shutdown |
 | `biokids-panel` | root | writes config that only root may write |
 | `biokids-shell` | child | runs in the child session; no privilege. Reaches the daemon only over `/run/biokids/shell.sock`, where every operation is scoped to the calling uid's own child (D-123) |
+| the app bar (`biokids_shell.appbar`) | child, a child process of `biokids-shell` | reads windows through libwnck, steps the volume of the active app's own sound streams (`pactl`), and stops an app that would not close with `systemctl --user stop` - only ever a `biokids-app-*.scope` in the child's own user manager, never the launcher's or the voice's unit (D-197). No privilege: nothing it does is beyond what the child's own session may do |
 | `biokids-voice` | child | audio only |
 | `biokids-ai` | `biokids-ai` system user | runs the local models for the assistant (D-165); no network, no home, no devices |
 | `biokids-wiki` | `biokids-ai` system user | serves the offline Wikipedia on `127.0.0.1:7877` once a parent downloaded it (D-190); no capabilities, `IPAddressDeny=any` except localhost |

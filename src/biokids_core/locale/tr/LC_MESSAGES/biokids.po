@@ -138,6 +138,25 @@ msgstr "Vazgeç"
 msgid "shell.launching"
 msgstr "{app} açılıyor"
 
+# Uygulama çubuğu (D-197): düğmelerde yazı yok, bunlar ekran okuyucunun söylediği adlar.
+msgid "appbar.home"
+msgstr "Ana ekran"
+
+msgid "appbar.quieter"
+msgstr "Sesi kıs"
+
+msgid "appbar.louder"
+msgstr "Sesi aç"
+
+msgid "appbar.close"
+msgstr "Kapat"
+
+msgid "appbar.level"
+msgstr "Bu uygulamanın sesi: %{percent}"
+
+msgid "appbar.no_sound"
+msgstr "Bu uygulama ses çıkarmıyor"
+
 msgid "shell.no_apps"
 msgstr "Henüz hiç uygulaman yok. Bir büyüğüne söyle."
 

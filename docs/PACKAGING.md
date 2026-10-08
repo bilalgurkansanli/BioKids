@@ -14,7 +14,7 @@ How BioKids is built, signed, published and installed.
 | `biokids-core` | shared Python lib, DB schema, i18n, app catalog | python3, python3-sqlalchemy, alembic |
 | `biokids-daemon` | the enforcement daemon + systemd units, the children's DNS filter | biokids-core, systemd, dnsmasq-base (never `dnsmasq`, D-167), nftables |
 | `biokids-panel` | FastAPI panel, templates, static, PWA | biokids-core, python3-fastapi, uvicorn |
-| `biokids-shell` | child launcher + kiosk supervisor, the browser extension's source (packed on the machine, D-187), the VT guards, the login-by-picture PAM service | biokids-core, chromium, chromium-l10n, light-locker, devilspie2, xdotool |
+| `biokids-shell` | child launcher + kiosk supervisor, the app bar (D-197), the browser extension's source (packed on the machine, D-187), the VT guards, the login-by-picture PAM service | biokids-core, chromium, chromium-l10n, light-locker, devilspie2, xdotool, python3-gi, gir1.2-gtk-3.0, gir1.2-wnck-3.0, pulseaudio-utils |
 | `biokids-voice` | Zio & Sio: espeak-ng, MBROLA or Piper (D-137) | biokids-core, espeak-ng, pipewire; Suggests mbrola-tr1, mbrola-tr2 |
 | `biokids-desktop` | metapackage: XFCE config, theme, LightDM, app set | the above + xfce4 + the catalog apps |
 | `biokids-ai` | the assistant (D-165), its setup tool, the offline Wikipedia service (D-190) | biokids-core, llama.cpp-tools; Recommends kiwix-tools, whisper.cpp-tools. **Suggests**, never Depends |
