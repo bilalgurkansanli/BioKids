@@ -235,7 +235,7 @@ class AppBarUi:
             root = Gdk.get_default_root_window()
             area = Rect(0, 0, int(root.get_width()), int(root.get_height()))
         _minimum, natural = self.window.get_preferred_size()
-        origin = bar_origin(area, int(natural.width))
+        origin = bar_origin(area, int(natural.width), Rect(x, y, width, height))
         if origin != self.origin:
             self.window.move(*origin)
             self.origin = origin

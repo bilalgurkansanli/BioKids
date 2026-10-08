@@ -259,10 +259,22 @@ class Rect:
     height: int
 
 
-def bar_origin(monitor: Rect, bar_width: int) -> tuple[int, int]:
-    """The top-right corner of the monitor the app is on: where the title bar's
-    close button of a maximised window is, so the way out does not move."""
-    return monitor.x + max(0, monitor.width - bar_width), monitor.y
+def bar_origin(monitor: Rect, bar_width: int, window: Rect | None = None) -> tuple[int, int]:
+    """Where the bar goes: the top-right corner of the app's own title bar.
+
+    For a maximised window that is the top-right corner of the monitor, where
+    the title bar's close button was, so the way out does not move. A window
+    that cannot fill the screen - Frozen Bubble's fixed 640x480 - gets the bar
+    on its own title bar: at the monitor's corner it sat over the launcher's
+    remaining-time ring, beside an app in the middle of the screen. Never off
+    the monitor.
+    """
+    right, top = monitor.x + monitor.width, monitor.y
+    if window is not None and window.width < monitor.width:
+        right = min(right, window.x + window.width)
+        top = max(top, window.y)
+    x = max(monitor.x, right - bar_width)
+    return x, min(top, monitor.y + max(0, monitor.height - 1))
 
 
 # ------------------------------------------------------------------- sound

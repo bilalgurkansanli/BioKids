@@ -216,6 +216,11 @@ def test_the_bar_sits_in_the_top_right_corner_of_the_apps_screen() -> None:
     assert bar_origin(Rect(0, 0, 1920, 1080), 304) == (1616, 0)
     assert bar_origin(Rect(1920, 0, 1280, 1024), 304) == (2896, 0), "a second monitor"
     assert bar_origin(Rect(0, 0, 200, 150), 304) == (0, 0), "never off the screen"
+    # A window that cannot fill the screen keeps the bar on its own title bar,
+    # not over the launcher's ring in the corner.
+    assert bar_origin(Rect(0, 0, 1280, 800), 304, Rect(320, 160, 648, 548)) == (664, 160)
+    assert bar_origin(Rect(0, 0, 1280, 800), 304, Rect(0, 0, 1280, 800)) == (976, 0)
+    assert bar_origin(Rect(0, 0, 1280, 800), 304, Rect(10, 50, 200, 150)) == (0, 50)
 
 
 def test_every_button_is_big_enough_for_a_four_year_old() -> None:
@@ -685,7 +690,7 @@ def test_the_bar_follows_the_app_in_front_and_hides_for_the_launcher(
     screen.active = game
     screen.handlers["active-window-changed"](screen, kiosk)
     assert bar.shown
-    assert bar.origin == (1616, 0)
+    assert bar.origin == (976, 300), "on the small window's own title bar"
     assert bar.target == AppTarget(2, 4242, GAME)
     _deliver(bar, fake_gtk.idle)
     assert bar.audio == AudioState(True, 70)
