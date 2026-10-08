@@ -1051,10 +1051,10 @@ journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep -i 'app
 
 1. On the launcher's home screen there is **no** bar.
 2. Open **Balonlar** (Frozen Bubble). Its window opens in the middle of the screen,
-   its title bar has no button, and at the screen's top right is the bar: 🏠 🔉,
-   five small bars, 🔊, and a red ✕ — the emoji in colour, each button as big as
-   the old close button.
-3. With the game's music playing, the five bars show a level. Tap 🔉 twice:
+   its title bar has no button, and at its title bar's top right is the bar: 🏠,
+   "⏳ N dk" (with the clock under it for an 8–10 child), 🔉, a slider, 🔊, and a
+   red ✕ — the emoji in colour, each button as big as the old close button (D-201).
+3. With the game's music playing, the slider's knob shows the level. Tap 🔉 twice:
 
    ```bash
    as_elif pactl list sink-inputs | grep -E 'Sink Input|Volume:|process.id'
@@ -1063,7 +1063,9 @@ journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep -i 'app
 
    **Pass:** the game's stream went down by 20%, the machine's volume did not move,
    and a time warning (§7) is as loud as before. A game with no sound has both
-   volume buttons dimmed.
+   volume buttons and the slider dimmed. Drag the knob to the left end, then tap the
+   middle of the slider: the stream goes to 0%, then to about 50%, following the
+   finger without lagging behind it.
 4. Tap 🏠: the launcher is back and the game keeps running
    (`as_elif systemctl --user list-units --plain --no-legend 'biokids-app-*'`).
    Tap the Balonlar tile: the **same** game comes back, where it was left, and the
@@ -1092,6 +1094,38 @@ journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep -i 'app
    over it, 🔉 turns the video down, and ✕ closes the browser window. If the volume
    buttons stay dimmed while the video plays, write it down: Chromium's sound
    process did not give its own pid to the sound server.
+10. Dragging (D-201). Open a web tile (its window fills the screen, the bar at the
+    screen's top right, its strip flush with the title bar and the title bar's bottom
+    line running under it). Drag the window by its title bar and keep moving.
+    **Pass:** the bar disappears at the first movement — it never trails the window —
+    and about a quarter of a second after the finger lets go the window fills the
+    screen again with the bar back in the corner. Drag Balonlar the same way:
+    **pass** if it stays where it was dropped and the bar is on its own title bar's
+    top right, not a title bar's height lower and not left of its corner. If it is
+    off, record what the X server and libwnck said:
+
+    ```bash
+    sudo apt-get install -y x11-utils    # xprop, xwininfo: the test VM only
+    W=$(as_elif xprop -root _NET_ACTIVE_WINDOW | awk '{print $NF}')
+    as_elif xprop -id "$W" _NET_FRAME_EXTENTS _GTK_FRAME_EXTENTS WM_CLASS
+    as_elif xwininfo -id "$W" | grep -E 'Absolute|Width|Height'
+    as_elif systemctl --user set-environment BIOKIDS_LOG_LEVEL=debug
+    as_elif systemctl --user restart biokids-shell
+    journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep 'from the X server'
+    ```
+
+    (`unset-environment BIOKIDS_LOG_LEVEL` and a restart put it back.)
+11. Time and clock. **Pass:** the bar's "⏳ N dk" matches the launcher's ring; with
+    a grant or quota that leaves under five minutes it turns orange, under one red.
+    The clock shows only for an 8–10 child.
+12. Open apps on the launcher. Open Balonlar, tap 🏠. **Pass:** within a second the
+    launcher's footer shows "Açık" with Balonlar's bubble icon and its tile has a teal
+    dot; tapping the footer button brings the same game back (one scope, as in 4).
+    Close it with ✕: within five seconds of the launcher being in front again, it is
+    gone from "Açık" and its tile has no dot.
+13. The launcher's own sound bar: drag its knob, tap the bar's ends, and with Tab
+    focus it and press ← and →. **Pass:** `as_elif wpctl get-volume
+    @DEFAULT_AUDIO_SINK@` follows each.
 
 ---
 

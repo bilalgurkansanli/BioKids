@@ -1235,3 +1235,65 @@ def test_the_sound_is_two_buttons_at_the_top_right(
     assert 'id="vol" data-level="40"' in header
     assert 'data-step="-10"' in header and 'data-step="10"' in header
     assert 'id="volume"' not in page, "the old footer slider is gone"
+
+
+STATIC = pathlib.Path(shell_app.STATIC_DIR)
+
+
+def test_the_sound_bar_can_be_dragged_and_read_by_a_screen_reader(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-201: the bar between the buttons follows a finger, and is a slider to a
+    screen reader and to the arrow keys."""
+    from biokids_shell import device
+
+    async def level() -> int:
+        return 40
+
+    monkeypatch.setattr(device, "get_volume", level)
+    page = client.get("/").text
+    header = page[page.index('<header class="head">') : page.index("</header>")]
+    bar = header[header.index('id="vol-bar"') :]
+    assert 'role="slider"' in bar and 'tabindex="0"' in bar
+    assert 'aria-valuenow="40"' in bar
+    assert 'aria-valuemin="0"' in bar and 'aria-valuemax="100"' in bar
+    assert 'id="vol-knob" style="left: 40%"' in bar
+    script = (STATIC / "shell.js").read_text(encoding="utf-8")
+    for needed in ("pointerdown", "pointermove", "setPointerCapture", "ArrowLeft"):
+        assert needed in script
+    css = (STATIC / "shell.css").read_text(encoding="utf-8")
+    rule = css[css.index(".vol__bar {") :]
+    rule = rule[: rule.index("}")]
+    assert "touch-action: none" in rule
+    assert "height: var(--target-young)" in rule, "the whole height is the target"
+
+
+def test_the_apps_open_in_the_background_have_a_place_at_the_bottom(
+    client: TestClient,
+) -> None:
+    """D-201: "Açık", filled in by the page from /running; empty, it is hidden."""
+    page = client.get("/").text
+    foot = page[page.index('<footer class="foot">') : page.index("</footer>")]
+    assert 'id="open-apps"' in foot and 'id="open-apps-list"' in foot
+    assert "Açık" in foot
+    opening = foot[foot.index('id="open-apps"') :]
+    assert "hidden" in opening[: opening.index(">")]
+    script = (STATIC / "shell.js").read_text(encoding="utf-8")
+    assert 'fetch("/running"' in script
+    assert '"/launch/" + encodeURIComponent(slug)' in script, "a tap brings it back"
+    assert "visibilitychange" in script
+
+
+def test_the_launcher_says_which_apps_are_open(client: TestClient) -> None:
+    async def open_apps() -> list[str]:
+        return ["tuxpaint"]
+
+    client.app.state.shell.launcher.open_apps = open_apps  # type: ignore[attr-defined]
+    response = client.get("/running")
+    assert response.status_code == 200
+    assert response.json() == {"running": ["tuxpaint"]}
+    assert response.headers["cache-control"] == "no-store"
+
+
+def test_a_rebound_name_cannot_ask_which_apps_are_open(client: TestClient) -> None:
+    assert client.get("/running", headers={"host": "evil.example:7879"}).status_code == 421

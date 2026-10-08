@@ -1179,3 +1179,49 @@ menu and its recovery mode, and after a failed boot Debian's own 30-second menu 
 appears. Only where `/boot/grub` and `update-grub` exist; another bootloader is left
 alone. biokids (the packages on a parent's existing desktop) does not touch the boot.
 
+**D-201 [owner] The app bar keeps up with a dragged window; sound by dragging; open apps and the time in view.** (2026-10-08)
+The owner's second pass over D-197 on the VM. Dragging an app by its title bar left
+the bar trailing behind it - "the close button and the sound controls arrive late, it
+looks very bad" - because the bar moved only on its 500-ms tick; over a Chromium
+window that the drag had taken out of maximisation it then sat about a title bar's
+height too low and well left of the window's corner.
+- The bar follows the active window's libwnck `geometry-changed` and `state-changed`:
+  hidden at the first change, shown again on the window's title bar 250 ms after the
+  last (`appbar.Follower`). A window that was maximised and was dragged with a button
+  or finger down (the pointer's button mask) is maximised again once it is let go: a
+  child never needs a floating window, and the close button stays in the corner
+  (D-163). A fixed-size window (Frozen Bubble) or a full-screen one is only followed.
+  Without a button down nothing is maximised, so an app that sizes itself is not
+  fought; and a window still changing after 1.5 s without one (10 s with one) gets the
+  bar back, following it, so the way out is never gone for long.
+- Where the bar goes is the window's frame as the X server has it at that moment: the
+  contents' position and size (a foreign GdkWindow: XTranslateCoordinates,
+  XGetGeometry) grown by `_NET_FRAME_EXTENTS`, or shrunk by `_GTK_FRAME_EXTENTS` for a
+  window that draws its own title bar; libwnck's numbers only where these cannot be
+  read. Always that window's own title bar, kept on the monitor - no longer the
+  monitor's corner for a window merely as wide as the screen. Why libwnck's frame was
+  wrong over the dragged Chromium window could not be reproduced without an X session;
+  where the two differ the bar says so at debug level (VM-RUNBOOK §8.9).
+- The bar draws the title bar's two-pixel bottom line and its buttons' borders are
+  transparent, so it sits flush in the 64-pixel title bar instead of a pale box
+  breaking the line; each 56-pixel face sits where the title bar's close button sat.
+- The five level glyphs become a slider between 🔉 and 🔊 (a Gtk.Scale, 0-100, a
+  40-pixel knob, under an event box that takes the finger over the bar's whole
+  height). It sets the app's own streams as before; while a finger drags, at most every
+  80 ms and only the latest level while one is being set. The buttons still step by ten.
+- Between 🏠 and 🔉: "⏳ 12 dk", the minutes left as the launcher's own `GET /state`
+  (on this child's launcher port, loopback only, no proxy) reports them every 15 s -
+  never worked out in the bar - orange under five minutes and red under one, as the
+  launcher's banners; under it the clock, for 8-10 only, as on the launcher (UX.md
+  §2.2). Showing it to 4-7 too is a one-line change if the owner wants it.
+- The launcher's own sound bar (D-199) can be dragged or tapped anywhere along its
+  64-pixel height (pointer events, `touch-action: none`) and is a slider to a screen
+  reader and the arrow keys; it posts at most every 120 ms and once where the finger
+  lifts.
+- The launcher's footer lists the apps sent to the background as "Açık", and their
+  tiles carry a dot: `GET /running` returns the app tiles whose `biokids-app-*.scope`
+  one `systemctl --user is-active` says is running (a closed one is forgotten), polled
+  on load, every 5 s, and whenever the launcher comes back in front. Each button is
+  drawn from its own tile and goes through `/launch/<slug>`, the second tap that
+  brings the same window back (D-197). Web tiles are not listed: each opens a window.
+

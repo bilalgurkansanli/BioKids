@@ -15,11 +15,19 @@
     {% endif %}
 
     {# The sound, top right where a child looks for it (D-199): two big
-       buttons and a bar, because a four-year-old cannot drag a slider. #}
+       buttons a four-year-old taps, and between them a bar an older child
+       drags or taps anywhere along (D-201). #}
     {% set level = volume|default(70) %}
     <div class="vol" id="vol" data-level="{{ level }}" role="group" aria-label="{{ _('shell.volume') }}">
       <button class="vol__btn" type="button" data-step="-10" aria-label="{{ _('shell.volume.down') }}">🔉</button>
-      <span class="vol__bar" aria-hidden="true"><span class="vol__fill" id="vol-fill" style="width: {{ level }}%"></span></span>
+      <span class="vol__bar" id="vol-bar" role="slider" tabindex="0"
+            aria-label="{{ _('shell.volume') }}" aria-valuemin="0" aria-valuemax="100"
+            aria-valuenow="{{ level }}">
+        <span class="vol__track" id="vol-track">
+          <span class="vol__fill" id="vol-fill" style="width: {{ level }}%"></span>
+          <span class="vol__knob" id="vol-knob" style="left: {{ level }}%"></span>
+        </span>
+      </span>
       <button class="vol__btn" type="button" data-step="10" aria-label="{{ _('shell.volume.up') }}">🔊</button>
     </div>
 
@@ -94,6 +102,13 @@
       <span class="visually-hidden">{{ _('shell.brightness') }}</span>
       <input type="range" id="brightness" min="20" max="100" step="5" value="100">
     </label>
+
+    {# The apps sent to the background with the app bar's 🏠 (D-201): each
+       drawn from its own tile by shell.js, and a tap brings it back. #}
+    <div class="open-apps" id="open-apps" role="group" aria-label="{{ _('shell.open_apps') }}" hidden>
+      <span class="open-apps__label" aria-hidden="true">{{ _('shell.open_apps') }}</span>
+      <span class="open-apps__list" id="open-apps-list"></span>
+    </div>
 
     {# Asking for more time, in the last quarter of an hour (D-173). After the
        screen locks there is nothing to press, so the question has to be

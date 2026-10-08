@@ -459,17 +459,178 @@
 
   /* --------------------------------------------------------- volume/light */
 
+  /* The machine's sound (D-199, D-201): 🔉 and 🔊 step by ten, and the bar
+   * between them follows a finger dragged or tapped anywhere along it, or the
+   * arrow keys. A drag is dozens of positions a second: the sound is set at
+   * most every SEND_MS while it moves, and once more where the finger lifts. */
   var vol = document.getElementById("vol");
   if (vol) {
+    var SEND_MS = 120;
     var fill = document.getElementById("vol-fill");
+    var knob = document.getElementById("vol-knob");
+    var bar = document.getElementById("vol-bar");
+    var track = document.getElementById("vol-track");
+    var sentLevel = Number(vol.getAttribute("data-level")) || 0;
+    var queuedLevel = null;
+    var sendTimer = null;
+
+    var sendNow = function () {
+      window.clearTimeout(sendTimer);
+      sendTimer = null;
+      if (queuedLevel === null || queuedLevel === sentLevel) return;
+      sentLevel = queuedLevel;
+      queuedLevel = null;
+      fetch("/device/volume?value=" + sentLevel, { method: "POST" }).catch(function () {});
+    };
+
+    var setLevel = function (level, now) {
+      level = Math.max(0, Math.min(100, Math.round(level)));
+      vol.setAttribute("data-level", String(level));
+      if (fill) fill.style.width = level + "%";
+      if (knob) knob.style.left = level + "%";
+      if (bar) bar.setAttribute("aria-valuenow", String(level));
+      queuedLevel = level;
+      if (now) {
+        sendNow();
+      } else if (sendTimer === null) {
+        sendTimer = window.setTimeout(sendNow, SEND_MS);
+      }
+    };
+
+    var current = function () {
+      return Number(vol.getAttribute("data-level")) || 0;
+    };
+
     vol.addEventListener("click", function (event) {
       var button = event.target.closest("[data-step]");
       if (!button) return;
-      var level = Number(vol.getAttribute("data-level")) || 0;
-      level = Math.max(0, Math.min(100, level + Number(button.getAttribute("data-step"))));
-      vol.setAttribute("data-level", String(level));
-      if (fill) fill.style.width = level + "%";
-      fetch("/device/volume?value=" + level, { method: "POST" }).catch(function () {});
+      setLevel(current() + Number(button.getAttribute("data-step")), true);
+    });
+
+    if (bar && track) {
+      var dragging = null;
+      var levelAt = function (clientX) {
+        var box = track.getBoundingClientRect();
+        return box.width > 0 ? ((clientX - box.left) / box.width) * 100 : current();
+      };
+      bar.addEventListener("pointerdown", function (event) {
+        if (event.button !== undefined && event.button > 0) return;
+        event.preventDefault();
+        dragging = event.pointerId;
+        bar.classList.add("is-dragging");
+        try {
+          bar.setPointerCapture(event.pointerId);
+        } catch (err) {
+          /* a pointer that is already gone */
+        }
+        setLevel(levelAt(event.clientX), false);
+      });
+      bar.addEventListener("pointermove", function (event) {
+        if (dragging !== event.pointerId) return;
+        setLevel(levelAt(event.clientX), false);
+      });
+      var release = function (event) {
+        if (dragging !== event.pointerId) return;
+        dragging = null;
+        bar.classList.remove("is-dragging");
+        if (event.type === "pointerup") {
+          setLevel(levelAt(event.clientX), true);
+        } else {
+          sendNow();
+        }
+      };
+      bar.addEventListener("pointerup", release);
+      bar.addEventListener("pointercancel", release);
+      bar.addEventListener("keydown", function (event) {
+        var steps = { ArrowLeft: -10, ArrowDown: -10, ArrowRight: 10, ArrowUp: 10 };
+        if (event.key === "Home") {
+          setLevel(0, true);
+        } else if (event.key === "End") {
+          setLevel(100, true);
+        } else if (steps[event.key] !== undefined) {
+          setLevel(current() + steps[event.key], true);
+        } else {
+          return;
+        }
+        event.preventDefault();
+      });
+    }
+  }
+
+  /* ------------------------------------------------------------ open apps */
+
+  /* The apps sent to the background with the app bar's 🏠 (D-201), at the
+   * bottom as "Açık", with a dot on their tiles. A tap goes through
+   * /launch/<slug> like a tap on the tile, which brings the same window back.
+   * Asked for on load, every few seconds, and whenever the launcher comes back
+   * in front - which is what 🏠 does. */
+  var openApps = document.getElementById("open-apps");
+  var openList = document.getElementById("open-apps-list");
+  if (openApps && openList) {
+    var OPEN_POLL_MS = 5000;
+    var shownOpen = null;
+
+    var tileFor = function (slug) {
+      var tiles = document.querySelectorAll(".tile[data-slug]");
+      for (var i = 0; i < tiles.length; i += 1) {
+        if (tiles[i].getAttribute("data-slug") === slug) return tiles[i];
+      }
+      return null;
+    };
+
+    var paintOpen = function (slugs) {
+      var key = slugs.join(" ");
+      if (key === shownOpen) return;
+      shownOpen = key;
+      Array.prototype.forEach.call(document.querySelectorAll(".tile[data-slug]"), function (tile) {
+        tile.classList.toggle("is-open", slugs.indexOf(tile.getAttribute("data-slug")) !== -1);
+      });
+      openList.textContent = "";
+      slugs.forEach(function (slug) {
+        var tile = tileFor(slug);
+        if (!tile) return;
+        var icon = tile.querySelector(".tile__icon");
+        var label = tile.querySelector(".tile__label");
+        var name = label ? label.textContent.trim() : slug;
+        var link = document.createElement("a");
+        link.className = "open-app";
+        link.href = "/launch/" + encodeURIComponent(slug);
+        link.setAttribute("data-slug", slug);
+        link.setAttribute("aria-label", name);
+        link.title = name;
+        if (tile.hasAttribute("data-speak")) {
+          link.setAttribute("data-speak", tile.getAttribute("data-speak"));
+        }
+        var glyph = document.createElement("span");
+        glyph.className = "open-app__icon";
+        glyph.setAttribute("aria-hidden", "true");
+        glyph.textContent = icon ? icon.textContent.trim() : "";
+        var dot = document.createElement("span");
+        dot.className = "open-app__dot";
+        dot.setAttribute("aria-hidden", "true");
+        link.appendChild(glyph);
+        link.appendChild(dot);
+        openList.appendChild(link);
+      });
+      openApps.hidden = openList.childElementCount === 0;
+    };
+
+    var refreshOpen = function () {
+      fetch("/running", { cache: "no-store", credentials: "same-origin" })
+        .then(function (response) {
+          return response.ok ? response.json() : null;
+        })
+        .then(function (data) {
+          if (data && Array.isArray(data.running)) paintOpen(data.running.map(String));
+        })
+        .catch(function () {});
+    };
+
+    refreshOpen();
+    window.setInterval(refreshOpen, OPEN_POLL_MS);
+    window.addEventListener("focus", refreshOpen);
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") refreshOpen();
     });
   }
 

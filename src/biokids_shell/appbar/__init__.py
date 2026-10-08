@@ -18,8 +18,11 @@ app window the child is in, and never over the launcher:
 
 * 🏠 minimises the app and shows the launcher. The app keeps running, and its
   tile brings the same window back (`AppLauncher.launch`).
-* 🔉 and 🔊 step the app's own volume by ten percent - the app's sound streams,
-  not the machine's, so Zio and Sio's warnings stay as loud as they were.
+* 🔉, a slider and 🔊 set the app's own volume - the app's sound streams, not
+  the machine's, so Zio and Sio's warnings stay as loud as they were. The
+  buttons step by ten percent; the slider follows a finger (D-201).
+* The minutes left today and, for 8-10, the clock, read from the launcher's own
+  `/state` (D-201): orange in the last five minutes, red in the last one.
 * ✕ asks the window to close, as the title bar's button did. If it is still
   there three seconds later - and has not answered with a question of its own,
   "save your drawing?" - or the child taps ✕ again, its scope is stopped:
@@ -27,28 +30,42 @@ app window the child is in, and never over the launcher:
   in, which is TERM, then KILL after the grace period a drawing needs to be
   saved. Only ever such a scope, in the child's own user manager.
 
+A window being dragged takes the bar with it only once it stops: the bar is
+hidden the moment the window starts to move and comes back on its title bar a
+quarter of a second after it stops, and a window that was dragged out of
+filling the screen fills it again (D-201).
+
 This module is the part that can be tested anywhere: which scope a process is
-in, which sound streams belong to an app, how a volume steps, and when a close
-becomes a stop. The window itself is `ui.py`, in GTK 3 and libwnck 3, imported
-only when the bar runs (`python3 -m biokids_shell.appbar`), so the test suite
-needs neither.
+in, which sound streams belong to an app, how a volume steps, when a close
+becomes a stop, where a window's frame is and when a moving window has stopped.
+The window itself is `ui.py`, in GTK 3 and libwnck 3, imported only when the
+bar runs (`python3 -m biokids_shell.appbar`), so the test suite needs neither.
 """
 
 from __future__ import annotations
 
+import http.client
 import json
 import logging
 import math
 import os
 import re
 import subprocess
+import sys
+import time
+import urllib.request
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Final
+from typing import TYPE_CHECKING, Any, Final
+from urllib.parse import urlsplit
 
-from biokids_shell.kiosk import KIOSK_WINDOW_CLASS
+from biokids_core.types import AgeBand
+from biokids_shell.kiosk import KIOSK_WINDOW_CLASS, launcher_port
+
+if TYPE_CHECKING:
+    from biokids_core.config import Config
 
 log = logging.getLogger(__name__)
 
@@ -194,8 +211,12 @@ the height of the BioKids title bar, so over a maximised app the bar sits in the
 title bar's strip and covers nothing of the app itself."""
 BUTTON_FACE_PX: Final = 56
 """Each button, to the eye: the title bar's close button was a 56-pixel square
-in a 64-pixel bar (`dev/make_xfwm4_theme.py`). The rest is a border in the bar's
-own colour, which is still the button."""
+in a 64-pixel bar (`dev/make_xfwm4_theme.py`). The rest is a transparent border,
+which is still the button."""
+TITLE_LINE_PX: Final = 2
+"""The title bar's own line along its bottom edge (`dev/make_xfwm4_theme.py`).
+The bar draws it too, so over a maximised app it sits flush in the title bar
+instead of breaking the line with a pale box (D-201)."""
 BAR_NAME: Final = "biokids-appbar"
 
 HOME_GLYPH: Final = "🏠"
@@ -203,20 +224,47 @@ QUIETER_GLYPH: Final = "🔉"
 LOUDER_GLYPH: Final = "🔊"
 CLOSE_GLYPH: Final = "✕"
 """Text, not an emoji: white on the close button's red, as the title bar's was."""
+TIME_GLYPH: Final = "⏳"
 
-_EDGE = (BUTTON_TARGET_PX - BUTTON_FACE_PX) // 2
+BAR_BACKGROUND: Final = "#FBF7F2"  # --bg, the title bar's own colour
+BAR_LINE: Final = "#E7DED5"  # --line, the title bar's bottom line
+
+# Each face sits where the title bar's close button sat: three pixels from the
+# top, three above the line.
+_FACE_TOP = (BUTTON_TARGET_PX - TITLE_LINE_PX - BUTTON_FACE_PX) // 2
+_FACE_BOTTOM = BUTTON_TARGET_PX - BUTTON_FACE_PX - _FACE_TOP
+_FACE_SIDE = (BUTTON_TARGET_PX - BUTTON_FACE_PX) // 2
+
+SLIDER_PX: Final = 168
+"""The volume slider's width, to the finger: its whole height is the bar's."""
+SLIDER_PAD_PX: Final = 22
+"""Room at each end of the track for the knob at 0 and at 100."""
+TRACK_PX: Final = 14
+KNOB_PX: Final = 40
+"""The knob a child drags: as big as a fingertip, a white disc in a teal ring."""
+KNOB_RING_PX: Final = 3
+_KNOB_OUTER = KNOB_PX + 2 * KNOB_RING_PX
+_KNOB_OVERHANG = (_KNOB_OUTER - TRACK_PX) // 2
+INFO_PX: Final = 120
+"""The minutes and the clock: a fixed width, wide enough for "⏳ 120 dk", so the
+bar does not move as they change."""
 
 BAR_CSS: Final = f"""
 #{BAR_NAME} {{
-  background-color: #FBF7F2;
+  background-color: {BAR_BACKGROUND};
+  background-image: linear-gradient(to top, {BAR_LINE} {TITLE_LINE_PX}px, \
+{BAR_BACKGROUND} {TITLE_LINE_PX}px);
 }}
 #{BAR_NAME} button {{
   min-width: {BUTTON_FACE_PX}px;
   min-height: {BUTTON_FACE_PX}px;
   padding: 0;
   margin: 0;
-  border: {_EDGE}px solid #FBF7F2;
-  border-radius: {_EDGE + 15}px;
+  border-style: solid;
+  border-color: transparent;
+  border-width: {_FACE_TOP}px {_FACE_SIDE}px {_FACE_BOTTOM}px {_FACE_SIDE}px;
+  border-image: none;
+  border-radius: 18px;
   background-clip: padding-box;
   background-image: none;
   box-shadow: none;
@@ -239,16 +287,67 @@ BAR_CSS: Final = f"""
 #{BAR_NAME} button.close:hover {{ background-color: #C93A30; }}
 #{BAR_NAME} button.close:active {{ background-color: #B03028; }}
 #{BAR_NAME} button:disabled {{ opacity: 0.35; }}
-#{BAR_NAME} label.level {{
-  font-size: 15px;
-  min-width: 44px;
-  margin: 0 2px;
+#{BAR_NAME} scale {{
+  padding: {_KNOB_OVERHANG}px {SLIDER_PAD_PX}px;
+  margin: 0;
 }}
+#{BAR_NAME} scale trough {{
+  min-height: {TRACK_PX}px;
+  padding: 0;
+  border-width: 0;
+  border-image: none;
+  border-radius: {TRACK_PX // 2}px;
+  background-color: {BAR_LINE};
+  background-image: none;
+  box-shadow: none;
+}}
+#{BAR_NAME} scale highlight {{
+  border-width: 0;
+  border-image: none;
+  border-radius: {TRACK_PX // 2}px;
+  background-color: #1FB6A6;
+  background-image: none;
+  box-shadow: none;
+}}
+#{BAR_NAME} scale slider {{
+  min-width: {KNOB_PX}px;
+  min-height: {KNOB_PX}px;
+  margin: -{_KNOB_OVERHANG}px;
+  border-style: solid;
+  border-width: {KNOB_RING_PX}px;
+  border-color: #1FB6A6;
+  border-image: none;
+  border-radius: {_KNOB_OUTER // 2}px;
+  background-color: #FFFFFF;
+  background-image: none;
+  box-shadow: none;
+}}
+#{BAR_NAME} scale:disabled {{ opacity: 0.35; }}
+#{BAR_NAME} box.info {{
+  margin: 7px 4px 9px 4px;
+  padding: 0 8px;
+  border-radius: 14px;
+  background-color: {BAR_BACKGROUND};
+}}
+#{BAR_NAME} box.info label {{ color: #221E1C; }}
+#{BAR_NAME} box.info label.time {{
+  font-size: 19px;
+  font-weight: bold;
+}}
+#{BAR_NAME} box.info label.clock {{
+  font-size: 16px;
+  color: #6B625C;
+}}
+#{BAR_NAME} box.info.warn {{ background-color: #F2A32B; }}
+#{BAR_NAME} box.info.warn label {{ color: #3A2A00; }}
+#{BAR_NAME} box.info.danger {{ background-color: #E04A3F; }}
+#{BAR_NAME} box.info.danger label {{ color: #FFFFFF; }}
 """.encode()
 """GTK 3 CSS. The launcher's colours (UX.md section 1): an indigo tint for home,
 a teal tint for the sound, and for close the title bar's own red (`--danger`,
-white on it 4:1), so the way out looks as it did. Every property here is one GTK
-3 knows: an unknown one fails the whole sheet."""
+white on it 4:1), so the way out looks as it did. The minutes turn `--warn` with
+dark text, then `--danger` with white, as the launcher's banners do. Every
+property here is one GTK 3 knows: an unknown one fails the whole sheet."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -259,22 +358,222 @@ class Rect:
     height: int
 
 
-def bar_origin(monitor: Rect, bar_width: int, window: Rect | None = None) -> tuple[int, int]:
+def bar_origin(
+    monitor: Rect,
+    bar_width: int,
+    window: Rect | None = None,
+    bar_height: int = BUTTON_TARGET_PX,
+) -> tuple[int, int]:
     """Where the bar goes: the top-right corner of the app's own title bar.
 
     For a maximised window that is the top-right corner of the monitor, where
-    the title bar's close button was, so the way out does not move. A window
-    that cannot fill the screen - Frozen Bubble's fixed 640x480 - gets the bar
-    on its own title bar: at the monitor's corner it sat over the launcher's
-    remaining-time ring, beside an app in the middle of the screen. Never off
-    the monitor.
+    the title bar's close button was, so the way out does not move. Any other
+    window - Frozen Bubble's fixed 640x480, a window the child dragged - gets
+    the bar on its own title bar: at the monitor's corner it sat over the
+    launcher's remaining-time ring, beside an app in the middle of the screen.
+    Never off the monitor, not even partly.
     """
     right, top = monitor.x + monitor.width, monitor.y
-    if window is not None and window.width < monitor.width:
+    if window is not None:
         right = min(right, window.x + window.width)
         top = max(top, window.y)
     x = max(monitor.x, right - bar_width)
-    return x, min(top, monitor.y + max(0, monitor.height - 1))
+    return x, min(top, monitor.y + max(0, monitor.height - bar_height))
+
+
+# ------------------------------------------------------------ the frame
+
+NET_FRAME_EXTENTS: Final = "_NET_FRAME_EXTENTS"
+"""What the window manager draws around a window: its title bar and borders."""
+GTK_FRAME_EXTENTS: Final = "_GTK_FRAME_EXTENTS"
+"""The invisible shadow around a window that draws its own title bar."""
+MAX_EXTENT_PX: Final = 512
+"""Larger than any frame; a value past it is not one."""
+
+
+@dataclass(frozen=True, slots=True)
+class Extents:
+    left: int
+    right: int
+    top: int
+    bottom: int
+
+
+NO_EXTENTS: Final = Extents(0, 0, 0, 0)
+
+
+def decode_cardinals(data: bytes, count: int = 4) -> tuple[int, ...] | None:
+    """A format-32 X property as GDK hands it over: `count` C longs, native order.
+
+    `gdk_property_get` copies Xlib's buffer, in which each 32-bit item is a
+    `long` - eight bytes on amd64. Four-byte items are read too.
+    """
+    if count <= 0 or not data or len(data) % count:
+        return None
+    width = len(data) // count
+    if width not in (4, 8):
+        return None
+    return tuple(
+        int.from_bytes(data[i : i + width], sys.byteorder) for i in range(0, len(data), width)
+    )
+
+
+def extents_from(values: Sequence[int] | None) -> Extents | None:
+    """left, right, top, bottom, as `_NET_FRAME_EXTENTS` lists them; None for nonsense."""
+    if values is None or len(values) != 4:
+        return None
+    if any(value < 0 or value > MAX_EXTENT_PX for value in values):
+        return None
+    left, right, top, bottom = (int(value) for value in values)
+    return Extents(left, right, top, bottom)
+
+
+def implied_extents(client: Rect, frame: Rect) -> Extents:
+    """The frame libwnck assumed: its frame geometry against the client's."""
+    return Extents(
+        left=client.x - frame.x,
+        right=(frame.x + frame.width) - (client.x + client.width),
+        top=client.y - frame.y,
+        bottom=(frame.y + frame.height) - (client.y + client.height),
+    )
+
+
+def window_extents(
+    decorations: Extents | None, shadow: Extents | None, fallback: Extents
+) -> Extents:
+    """How far the visible window reaches beyond its contents.
+
+    The window manager's own frame, read from the X server at the moment it is
+    needed, when there is one. A window that draws its own title bar has none,
+    and an invisible shadow inside its edges instead: that is taken off. When
+    neither can be read, what libwnck last worked out.
+    """
+    if decorations is not None and decorations != NO_EXTENTS:
+        return decorations
+    if shadow is not None and shadow != NO_EXTENTS:
+        return Extents(-shadow.left, -shadow.right, -shadow.top, -shadow.bottom)
+    if decorations is not None:
+        return decorations
+    return fallback
+
+
+def frame_rect(client: Rect, extents: Extents) -> Rect | None:
+    """The window as the child sees it: its contents and the frame around them."""
+    frame = Rect(
+        client.x - extents.left,
+        client.y - extents.top,
+        client.width + extents.left + extents.right,
+        client.height + extents.top + extents.bottom,
+    )
+    return frame if frame.width > 0 and frame.height > 0 else None
+
+
+# --------------------------------------------------- following a window
+
+SETTLE_S: Final = 0.25
+"""How long a window must stay still before the bar comes back on it."""
+RESTLESS_S: Final = 1.5
+"""A window that keeps moving with no finger on it - an app resizing itself -
+gets the bar back after this, following it, rather than never."""
+HELD_AT_MOST_S: Final = 10.0
+"""A drag longer than this gets the bar back before it ends: the way out is
+never gone for long."""
+
+
+class FollowStep(StrEnum):
+    """What to do once a window may have stopped moving."""
+
+    WAIT = "wait"
+    """It moved a moment ago, or the finger is still on it."""
+    MAXIMIZE = "maximize"
+    """It was dragged out of filling the screen: it fills it again first."""
+    SHOW = "show"
+    """It has stopped: the bar goes back on its title bar."""
+
+
+def lost_maximize(changed: int, new_state: int, maximized_bits: int) -> bool:
+    """libwnck's `state-changed`: whether the window has just stopped being maximised."""
+    return bool(changed & maximized_bits) and (new_state & maximized_bits) != maximized_bits
+
+
+@dataclass
+class Follower:
+    """The bar over a window that is being moved or resized.
+
+    The bar is a separate window: moving it after every step of a drag kept it
+    a step behind, the close button trailing the window across the screen. So
+    it is hidden the moment the window starts to move, and shown again on the
+    window's title bar a quarter of a second after the last step. xfwm4 takes a
+    maximised window out of maximisation when it is dragged; a child never
+    needs a floating window, so one that was maximised before a drag with a
+    finger is maximised again when the finger lets go. An app that changes its
+    own size is not fought with: without a finger, nothing is maximised.
+    """
+
+    xid: int | None = None
+    since: float = 0.0
+    last_change: float = 0.0
+    was_maximized: bool = False
+    pressed: bool = False
+    remaximized: bool = False
+
+    def changed(
+        self,
+        xid: int,
+        now: float,
+        *,
+        maximized: bool,
+        pressed: bool,
+        unmaximized: bool = False,
+    ) -> bool:
+        """The window's geometry or state changed. True: keep the bar hidden.
+
+        `maximized` is what libwnck says at that moment, which at the first
+        step of a drag is still what the window was before it.
+        """
+        if self.xid != xid:
+            self.xid, self.since = xid, now
+            self.was_maximized, self.pressed, self.remaximized = maximized, False, False
+        self.last_change = now
+        self.was_maximized = self.was_maximized or unmaximized
+        self.pressed = self.pressed or pressed
+        return self.hiding(xid, now)
+
+    def hiding(self, xid: int, now: float) -> bool:
+        """Whether the bar stays off this window for now."""
+        if self.xid is None or xid != self.xid:
+            return False
+        limit = HELD_AT_MOST_S if self.pressed else RESTLESS_S
+        return now - self.since < limit
+
+    def settle(
+        self, now: float, *, maximized: bool, can_maximize: bool, pressed: bool
+    ) -> tuple[FollowStep, float]:
+        """The next step, and how long to wait before asking again when it is WAIT."""
+        if self.xid is None:
+            return FollowStep.SHOW, 0.0
+        quiet = now - self.last_change
+        if quiet < SETTLE_S:
+            return FollowStep.WAIT, SETTLE_S - quiet
+        if pressed and now - self.since < HELD_AT_MOST_S:
+            self.pressed = True
+            return FollowStep.WAIT, SETTLE_S
+        if (
+            self.was_maximized
+            and self.pressed
+            and not maximized
+            and can_maximize
+            and not self.remaximized
+        ):
+            self.remaximized = True
+            self.last_change = now
+            return FollowStep.MAXIMIZE, SETTLE_S
+        self.forget()
+        return FollowStep.SHOW, 0.0
+
+    def forget(self) -> None:
+        self.xid = None
+        self.pressed = self.was_maximized = self.remaximized = False
 
 
 # ------------------------------------------------------------------- sound
@@ -283,10 +582,8 @@ VOLUME_STEP: Final = 10
 VOLUME_MAX: Final = 100
 """Never louder than the app's own full volume: the machine's volume is the
 launcher's slider, and an app pushed past 100% distorts."""
-LEVEL_MARKS: Final = 5
-LEVEL_GLYPHS: Final = "▁▂▄▆█"
-LEVEL_ON: Final = "#1FB6A6"  # --bio-teal
-LEVEL_OFF: Final = "#E7DED5"  # --line
+SEND_EVERY_MS: Final = 80
+"""While a finger drags the slider, the sound server is told at most this often."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -472,20 +769,55 @@ def stepped(level: int, *, louder: bool) -> int:
     return max(0, (math.ceil(level / VOLUME_STEP) - 1) * VOLUME_STEP)
 
 
-def level_marks(level: int) -> int:
-    """How many of the five bars to fill. Any sound at all fills one."""
-    if level <= 0:
+def level_at(x: float, track_x: float, track_width: float, knob: float = 0.0) -> int:
+    """The volume under a finger at `x` on the slider: 0 at the track's left end,
+    100 at its right, whole percents in between, and never past either end.
+
+    `knob` is how much of the track the knob's own length takes: its centre
+    travels from half a knob in at one end to half a knob in at the other.
+    """
+    span = track_width - knob
+    if span <= 0:
         return 0
-    return max(1, min(LEVEL_MARKS, round(level * LEVEL_MARKS / VOLUME_MAX)))
+    fraction = (x - track_x - knob / 2) / span
+    return max(0, min(VOLUME_MAX, round(fraction * VOLUME_MAX)))
 
 
-def level_markup(state: AudioState) -> str:
-    """The indicator between the two volume buttons: five rising bars."""
-    marks = level_marks(state.level) if state.has_sound else 0
-    return (
-        f'<span foreground="{LEVEL_ON}">{LEVEL_GLYPHS[:marks]}</span>'
-        f'<span foreground="{LEVEL_OFF}">{LEVEL_GLYPHS[marks:]}</span>'
-    )
+class LevelSender:
+    """The level a finger is dragging the slider to, sent one at a time.
+
+    A drag is dozens of positions a second and each one a `pactl` run. Only the
+    latest waits: while one is being set, the finger's newest place replaces
+    whatever was waiting, so the sound follows the finger without a queue
+    building up behind it.
+    """
+
+    def __init__(self) -> None:
+        self.wanted: int | None = None
+        self.sent: int | None = None
+        self.busy = False
+
+    def want(self, level: int) -> None:
+        self.wanted = level
+
+    def next(self) -> int | None:
+        """The level to send now, or None: nothing new, or one is on its way."""
+        if self.busy or self.wanted is None or self.wanted == self.sent:
+            return None
+        self.busy = True
+        return self.wanted
+
+    def done(self, level: int) -> None:
+        self.busy = False
+        self.sent = level
+
+    def waiting(self) -> bool:
+        """A newer level than the one just sent is waiting to go."""
+        return not self.busy and self.wanted is not None and self.wanted != self.sent
+
+    def settling(self) -> bool:
+        """The slider shows the child's level, not yet the sound server's."""
+        return self.busy or self.waiting()
 
 
 def read_audio(
@@ -493,6 +825,15 @@ def read_audio(
 ) -> AudioState:
     mine = app_inputs(list_sink_inputs(run) or [], target, scope_of)
     return AudioState(has_sound=True, level=audio_level(mine)) if mine else NO_SOUND
+
+
+def _apply_level(streams: Iterable[SinkInput], level: int, run: Runner) -> AudioState:
+    """Every stream of the app at `level`; a muted one is unmuted to be heard."""
+    for stream in streams:
+        run(["pactl", "set-sink-input-volume", str(stream.index), f"{level}%"])
+        if stream.muted and level > 0:
+            run(["pactl", "set-sink-input-mute", str(stream.index), "0"])
+    return AudioState(has_sound=True, level=level)
 
 
 def change_volume(
@@ -506,12 +847,107 @@ def change_volume(
     mine = app_inputs(list_sink_inputs(run) or [], target, scope_of)
     if not mine:
         return NO_SOUND
-    level = stepped(audio_level(mine), louder=louder)
-    for stream in mine:
-        run(["pactl", "set-sink-input-volume", str(stream.index), f"{level}%"])
-        if stream.muted and louder and level > 0:
-            run(["pactl", "set-sink-input-mute", str(stream.index), "0"])
-    return AudioState(has_sound=True, level=level)
+    return _apply_level(mine, stepped(audio_level(mine), louder=louder), run)
+
+
+def set_volume(
+    target: AppTarget,
+    level: int,
+    *,
+    scope_of: Callable[[int], str | None],
+    run: Runner = run_command,
+) -> AudioState:
+    """Set the app's volume to where the slider was dragged, 0 to 100."""
+    mine = app_inputs(list_sink_inputs(run) or [], target, scope_of)
+    if not mine:
+        return NO_SOUND
+    return _apply_level(mine, max(0, min(VOLUME_MAX, int(level))), run)
+
+
+# -------------------------------------------------------- time and clock
+
+TIME_POLL_S: Final = 15
+"""How often the bar asks the launcher for the minutes left."""
+CLOCK_TICK_S: Final = 5
+WARN_BELOW_S: Final = 5 * 60
+"""Orange, as the launcher's ring and banners are, in the last five minutes."""
+DANGER_BELOW_S: Final = 60
+"""Red in the last minute."""
+STATE_TIMEOUT_S: Final = 3.0
+MAX_STATE_BYTES: Final = 256 * 1024
+LOOPBACK_HOSTS: Final = frozenset({"127.0.0.1", "localhost", "::1"})
+
+
+class TimeTone(StrEnum):
+    OK = "ok"
+    WARN = "warn"
+    DANGER = "danger"
+
+
+@dataclass(frozen=True, slots=True)
+class TimeLeft:
+    minutes: int
+    """Rounded up, as the launcher's ring shows them."""
+    tone: TimeTone
+
+
+def time_tone(seconds: int) -> TimeTone:
+    if seconds < DANGER_BELOW_S:
+        return TimeTone.DANGER
+    if seconds < WARN_BELOW_S:
+        return TimeTone.WARN
+    return TimeTone.OK
+
+
+def time_left(state: Mapping[str, Any] | None) -> TimeLeft | None:
+    """The minutes left today, from the launcher's `/state`; None when it cannot say.
+
+    Never worked out here: the daemon is the only thing that knows how much
+    time a child has, and the launcher only passes its answer on.
+    """
+    if not state or state.get("offline") or state.get("managed") is False:
+        return None
+    seconds = state.get("remaining_seconds")
+    if isinstance(seconds, bool) or not isinstance(seconds, int | float):
+        return None
+    seconds = max(0, int(seconds))
+    return TimeLeft(minutes=math.ceil(seconds / 60), tone=time_tone(seconds))
+
+
+def shows_clock(state: Mapping[str, Any] | None) -> bool:
+    """8-10 get the clock, as on the launcher; 4-7 do not (UX.md section 2.2)."""
+    return bool(state) and str((state or {}).get("age_band", "")) == AgeBand.OLDER.value
+
+
+def clock_text(moment: time.struct_time) -> str:
+    return time.strftime("%H:%M", moment)
+
+
+def state_url(config: Config) -> str:
+    """The launcher's own `/state`, on this child's own launcher port (D-188)."""
+    return f"http://{config.shell.host}:{launcher_port(config)}/state"
+
+
+def fetch_state(
+    url: str,
+    timeout: float = STATE_TIMEOUT_S,
+    open_url: Callable[..., Any] | None = None,
+) -> dict[str, Any] | None:
+    """The launcher's `/state`, or None. Only ever on this machine's loopback."""
+    parts = urlsplit(url)
+    if parts.scheme != "http" or parts.hostname not in LOOPBACK_HOSTS:
+        log.warning("not asking %s for the time: not the launcher on this machine", url)
+        return None
+    if open_url is None:
+        # No proxy, whatever the session's environment says: the launcher is here.
+        open_url = urllib.request.build_opener(urllib.request.ProxyHandler({})).open
+    try:
+        with open_url(url, timeout=timeout) as response:
+            data = json.loads(response.read(MAX_STATE_BYTES))
+    except (OSError, ValueError, http.client.HTTPException) as exc:
+        log.debug("the launcher's state could not be read: %s", exc)
+        return None
+    return data if isinstance(data, dict) else None
 
 
 # ------------------------------------------------------------------- close

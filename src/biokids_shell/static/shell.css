@@ -767,7 +767,9 @@ svg {
 .ring-wrap[data-tone="warn"] .ring__sun { fill: #ff9f3d; }
 .ring-wrap[data-tone="danger"] .ring__sun { fill: #ff6b3d; }
 
-/* The sound, top right (D-199). Buttons, not a slider: a four-year-old taps. */
+/* The sound, top right (D-199): two big buttons a four-year-old taps, and
+ * between them a bar to drag or tap anywhere along (D-201). The bar's whole
+ * height is the target, not only its thin track. */
 .vol {
   display: flex;
   align-items: center;
@@ -792,18 +794,126 @@ svg {
 .vol__btn:active { background: var(--line); }
 
 .vol__bar {
-  display: block;
-  width: 6rem;
+  display: flex;
+  align-items: center;
+  width: 10rem;
+  height: var(--target-young);
+  padding: 0 18px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  touch-action: none;
+}
+
+.vol__track {
+  position: relative;
+  flex: 1;
   height: 14px;
   border-radius: var(--r-pill);
   background: var(--line);
-  overflow: hidden;
 }
 
 .vol__fill {
   display: block;
   height: 100%;
+  border-radius: var(--r-pill);
   background: var(--bio-indigo);
   transition: width .15s;
+}
+
+/* As big as a fingertip: the thing a child grabs. */
+.vol__knob {
+  position: absolute;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+  border: 4px solid var(--bio-indigo);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  transition: left .15s;
+}
+
+.vol__bar.is-dragging .vol__fill,
+.vol__bar.is-dragging .vol__knob { transition: none; }
+
+.vol__bar.is-dragging .vol__knob { transform: scale(1.12); }
+
+@media (prefers-reduced-motion: reduce) {
+  .vol__fill,
+  .vol__knob { transition: none; }
+}
+
+/* The apps still open in the background (D-201): at the bottom, "Açık", each a
+ * round button with the app's own icon; the same dot sits on its tile. */
+.open-apps {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0 auto;
+}
+
+.open-apps[hidden] { display: none; }
+
+.open-apps__label {
+  flex: none;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+/* Many open apps scroll sideways rather than squeeze the footer; the padding
+ * keeps each round button's edge and dot inside the scrolling box. */
+.open-apps__list {
+  display: flex;
+  gap: var(--sp-2);
+  min-width: 0;
+  padding: 4px;
+  overflow-x: auto;
+}
+
+.open-app {
+  position: relative;
+  flex: none;
+  width: var(--target-young);
+  height: var(--target-young);
+  display: grid;
+  place-items: center;
+  border: 2px solid color-mix(in srgb, var(--bio-teal) 55%, var(--line));
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  font-size: 2rem;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.open-app:active { transform: scale(.94); }
+
+.open-app__dot,
+.tile.is-open::after {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--bio-teal);
+  box-shadow: 0 0 0 3px var(--surface);
+}
+
+.open-app__dot {
+  top: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+}
+
+.tile.is-open { position: relative; }
+
+.tile.is-open::after {
+  content: "";
+  top: 14px;
+  right: 14px;
+  width: 18px;
+  height: 18px;
 }
 
