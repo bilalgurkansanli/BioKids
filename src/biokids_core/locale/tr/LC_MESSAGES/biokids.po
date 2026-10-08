@@ -1229,10 +1229,10 @@ msgid "voices.title"
 msgstr "Kendi sesiniz"
 
 msgid "voices.teaser"
-msgstr "Uyarıları Zio ve Sio yerine sizin sesiniz söylesin."
+msgstr "Robot gibi konuşan bilgisayar sesi yerine doğal bir ses indirin ya da uyarıları kendi sesinizle kaydedin."
 
 msgid "voices.open"
-msgstr "Sesleri kaydet"
+msgstr "Sesleri ayarla"
 
 msgid "voices.help"
 msgstr "Her cümleyi bir kez kaydedin: Kaydet'e basın, cümleyi söyleyin, Durdur'a basın. Kayıtlar yalnızca bu bilgisayarda kalır. Kaydetmediğiniz cümleleri bilgisayarın sesi söylemeye devam eder."
@@ -1323,6 +1323,64 @@ msgstr "Şimdi olmaz canım, akşam konuşalım."
 
 msgid "audit.action.voice_recorded"
 msgstr "Ses kaydedildi"
+
+# D-196: the natural voice, downloaded with one button
+msgid "voices.page.title"
+msgstr "Zio ve Sio'nun sesi"
+
+msgid "voices.natural.title"
+msgstr "Doğal ses"
+
+msgid "voices.natural.now_robot"
+msgstr "Şu an Zio ve Sio robot sesiyle konuşuyor: anlaşılır ama bir makine gibi."
+
+msgid "voices.natural.now_natural"
+msgstr "Şu an Zio ve Sio doğal sesle konuşuyor."
+
+msgid "voices.natural.offer"
+msgstr "İnsan sesine çok daha yakın, Türkçe bir ses indirebilirsiniz."
+
+msgid "voices.natural.download"
+msgstr "Doğal sesi indir (yaklaşık {size} MB)"
+
+msgid "voices.natural.licence"
+msgstr "Bu ses, ailelerin kişisel ve ticari olmayan kullanımı için ücretsizdir. BioKids ile gelmez: düğmeye bastığınızda bir kez, kendi yapımcılarından indirilir."
+
+msgid "voices.natural.zio"
+msgstr "Türkçe doğal ses bir erkek sesidir. Sio onu olduğu gibi, Zio biraz daha ince bir tonla konuşur."
+
+msgid "voices.natural.own"
+msgstr "En doğal ses yine de sizinkidir: aşağıda uyarıları kendi sesinizle kaydedebilirsiniz."
+
+msgid "voices.natural.running"
+msgstr "İndiriliyor: %{percent}"
+
+msgid "voices.natural.follow"
+msgstr "İlerlemeyi gör"
+
+msgid "voices.natural.installed"
+msgstr "Doğal ses bu bilgisayarda kurulu."
+
+msgid "voices.natural.failed"
+msgstr "İndirme tamamlanamadı. İnternet bağlantısını kontrol edip yeniden deneyin."
+
+msgid "voices.natural.not_started"
+msgstr "İndirme başlatılamadı. Biraz sonra yeniden deneyin."
+
+msgid "voices.natural.starting"
+msgstr "İndirme başlıyor…"
+
+msgid "voices.natural.refreshing"
+msgstr "Bu sayfa kendini yeniliyor. İsterseniz kapatabilirsiniz; indirme sürer."
+
+msgid "voices.natural.done"
+msgstr "Hazır. Zio ve Sio bir sonraki cümleden itibaren doğal sesle konuşur."
+
+msgid "voices.natural.back"
+msgstr "Seslere dön"
+
+msgid "audit.action.voice_download"
+msgstr "Doğal sesin indirilmesi başlatıldı"
 
 # D-176: time pickers and a schedule per day
 msgid "time.windows.from"

@@ -20,6 +20,7 @@
 # db_path = "/var/lib/biokids/biokids.db"
 # voice_cache_dir = "/var/lib/biokids/voice-cache"
 # model_dir = "/var/lib/biokids-voices/models"
+# piper_dir = "/var/lib/biokids-voices/piper"
 # run_dir = "/run/biokids"
 # daemon_socket = "/run/biokids/daemon.sock"
 # shell_socket = "/run/biokids/shell.sock"

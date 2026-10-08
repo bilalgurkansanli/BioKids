@@ -17,6 +17,12 @@ Each line is also shown on screen as a card.
 Speech is made on the machine, with
 .BR espeak\-ng (1)
 unless the family has installed Piper; nothing is sent anywhere.
+A parent can download Piper and its Turkish voice with one button in the
+panel, which runs
+.BR "biokids\-admin voice\-setup" ;
+the program is then used from
+.IR /var/lib/biokids\-voices/piper/ ,
+and one on the PATH otherwise.
 It runs in the child's own session as the systemd user unit
 .BR biokids\-voice.service ;
 the child's session starts it, not a person.
@@ -42,6 +48,19 @@ One of DEBUG, INFO, WARNING or ERROR.
 .TP
 .I /usr/share/biokids/voice/
 What Zio and Sio say, one file per event and language.
+.TP
+.I /var/lib/biokids\-voices/models/piper/
+Piper voices:
+.IB locale \- persona .onnx
+with its
+.B .onnx.json
+beside it, such as
+.IR tr\-sio.onnx .
+When Zio's is the same file as Sio's, she speaks it higher.
+.TP
+.I /var/lib/biokids\-voices/piper/
+The Piper program the panel downloaded.
 .SH SEE ALSO
+.BR biokids\-admin (8),
 .BR biokids\-shell (1),
 .BR espeak\-ng (1)

@@ -23,6 +23,13 @@ trade against a four-year-old being shown a card they cannot read yet. Piper is
 still tried first and still wins wherever a family installs it. See D-137 and
 D-145.
 
+A family installs it with one button (D-196): the panel's "Doğal sesi indir" has
+`biokids-voice-setup.service` fetch Piper and `tr_TR-dfki-medium`, pinned by
+SHA-256, into `/var/lib/biokids-voices` (`biokids_core/natural_voice.py`).
+`PiperSynth` runs `/var/lib/biokids-voices/piper/piper` before any `piper` on
+PATH, and a Piper that appears while the service runs speaks the next line. The
+voice is a man's: Sio speaks it as it is, Zio lifted (`synth.ZIO_LIFT`).
+
 If a Turkish Piper voice with a redistributable dataset ever appears, bundling it
 is still the better outcome. Before any `.onnx` is added to this repository:
 
@@ -41,8 +48,9 @@ it, and the log says why on every line.
 | Path | What |
 |---|---|
 | `/usr/share/biokids/voice/<locale>/<event>.txt` | line variants, editable |
-| `/var/lib/biokids/voices/<persona>/<locale>.onnx` | a family's cloned voice |
-| `/var/lib/biokids/models/piper/<locale>-<persona>.onnx` | the stock voice |
+| `/var/lib/biokids-voices/<locale>/<event>.wav` | a parent's own recording (D-174) |
+| `/var/lib/biokids-voices/models/piper/<locale>-<persona>.onnx` | the Piper voice, with its `.onnx.json` |
+| `/var/lib/biokids-voices/piper/piper` | the Piper program the panel downloaded (D-196) |
 | `/var/lib/biokids/voice-cache/<sha256>.wav` | rendered audio, LRU capped |
 | `/var/lib/biokids/voice-cache/silent/` | the stub backend's silence, kept apart |
 | `/run/user/<uid>/biokids-voice.sock` | the service socket, mode 0600 |

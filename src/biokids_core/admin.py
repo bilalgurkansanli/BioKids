@@ -80,6 +80,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "unprovision-child": cmd_unprovision_child,
         "refresh-greeter": cmd_refresh_greeter,
         "remote-setup": cmd_remote_setup,
+        "voice-setup": cmd_voice_setup,
         "backup-db": cmd_backup_db,
         "pack-extension": cmd_pack_extension,
         "version": cmd_version,
@@ -143,6 +144,17 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser(
         "refresh-greeter",
         help="show every child's name and picture on the login screen (D-170)",
+    )
+    voice = sub.add_parser(
+        "voice-setup",
+        help="download Piper and its Turkish voice for Zio and Sio, or remove them (D-196)",
+    )
+    voice.add_argument(
+        "action",
+        nargs="?",
+        choices=("download", "status", "remove"),
+        default="download",
+        help="download (the default) fetches and checks; status prints JSON",
     )
     sub.add_parser("version", help="print the version")
 
@@ -623,6 +635,31 @@ def cmd_remote_setup(args: argparse.Namespace, config: Config) -> int:
     finally:
         database.dispose()
     return 0 if result.ok or approval else 1
+
+
+def cmd_voice_setup(args: argparse.Namespace, config: Config) -> int:
+    """What `biokids-voice-setup.service` runs when a parent presses "Doğal sesi
+    indir" (D-196): Piper and its Turkish voice, each checked against its pinned
+    SHA-256 before it is moved into place. `status` and `remove` are for a person
+    at a terminal; the panel reads the same state itself.
+    """
+    from biokids_core import natural_voice
+
+    if args.action == "status":
+        print(json.dumps(natural_voice.describe(config), indent=2))
+        return 0
+    if args.action == "remove":
+        natural_voice.remove(config)
+        log.info("the natural voice was removed; Zio and Sio speak with espeak-ng again")
+        return 0
+    try:
+        natural_voice.install(config)
+    except (OSError, natural_voice.VoiceSetupError) as exc:
+        # URLError and every socket error are OSErrors. Nothing half-done is
+        # left in place: each file is checked before it is renamed into it.
+        log.error("the natural voice could not be installed: %s", exc)
+        return 1
+    return 0
 
 
 def cmd_refresh_greeter(args: argparse.Namespace, config: Config) -> int:

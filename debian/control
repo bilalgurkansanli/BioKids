@@ -203,7 +203,10 @@ Description: parental controls for Debian - Zio and Sio, the voice companions
  .
  Piper sounds far better and is used instead whenever it is installed, but it
  is not in Debian and its remaining Turkish voice may not be redistributed, so
- it cannot be the default. Where mbrola-tr1 and mbrola-tr2 are installed,
+ it cannot be the default. A parent can download both with one button in the
+ parent panel, from their authors, for the family's own non-commercial use;
+ every file is checked against a pinned checksum, and nothing else in this
+ package uses the network. Where mbrola-tr1 and mbrola-tr2 are installed,
  Zio and Sio speak with those recorded Turkish voices instead, which sounds far
  more like a person. They are suggested rather than recommended because the
  voices are in non-free and mbrola itself in contrib.

@@ -29,7 +29,7 @@ line (event)
      │
      ├── the parent's own recording of it (D-174)         ← when they made one
      │
-     ├── Piper  (ONNX, CPU, offline)                      ← when a family installed it
+     ├── Piper  (ONNX, CPU, offline)                      ← one button in the panel (D-196)
      │
      ├── espeak-ng  (tr, in Debian main, offline)        ← the default in practice
      │
@@ -41,13 +41,15 @@ line (event)
 > archive, and the one Turkish voice left in the Piper catalogue is licensed
 > CC-BY-NC-SA, so BioKids may not ship it either. See
 > `assets/voices/LICENSES.md` for what the catalogue actually contains and
-> D-137 for the decision. espeak-ng is what speaks by default.
+> D-137 for the decision. espeak-ng is what speaks by default, and since D-196 a
+> parent can fetch Piper and that voice with one button (section 3a).
 
 ### Why this stack
 
-- **Piper** is MIT, fully offline, CPU-only, real-time on weak hardware, and has decent
-  Turkish voices. It is the best engine here and it is used whenever it is installed —
-  but it is not in Debian and it cannot be the thing a family relies on arriving.
+- **Piper** is MIT, fully offline, CPU-only, real-time on weak hardware, and has one
+  Turkish voice. It is the best engine here and it is used whenever it is installed —
+  but it is not in Debian and BioKids may not ship it, so it arrives only when a parent
+  asks for it (section 3a).
 - **espeak-ng** is the permanent fallback, and on most machines the only engine present.
   GPL-3+, in Debian main, speaks Turkish, carries its voices inside the package, needs
   no model file and no network. It sounds like a 1990s robot. That is the honest trade
@@ -68,8 +70,8 @@ Two per language ship with the package:
 
 | Persona | Locale | Source |
 |---|---|---|
-| Zio | tr_TR | MBROLA `tr2` (a woman) when installed, else espeak-ng `-v tr+f3`, higher pitch; a Piper voice when one is installed |
-| Sio | tr_TR | MBROLA `tr1` (a man) when installed, else espeak-ng `-v tr+m3`, lower pitch; a Piper voice when one is installed |
+| Zio | tr_TR | the natural voice, lifted 1.2 times, once downloaded (D-196); else MBROLA `tr2` (a woman) when installed, else espeak-ng `-v tr+f3`, higher pitch |
+| Sio | tr_TR | the natural voice as it is, once downloaded (D-196); else MBROLA `tr1` (a man) when installed, else espeak-ng `-v tr+m3`, lower pitch |
 | Zio | en_US | espeak-ng `-v en+f3` |
 | Sio | en_US | espeak-ng `-v en+m3` |
 
@@ -92,13 +94,67 @@ with different terms; some are not redistributable. Record the chosen voice, its
 dataset, and its license in `assets/voices/LICENSES.md`. **This was done, and the
 answer was no** — both Turkish alternatives to the CC-BY-NC-SA one were withdrawn from
 the catalogue at their contributors' request. Nothing is bundled, and nothing is
-downloaded at first run either: espeak-ng is already there.
+downloaded at first run either: espeak-ng is already there. The CC-BY-NC-SA voice is
+downloaded only when a parent asks (section 3a).
+
+---
+
+## 3a. The natural voice (D-196)
+
+espeak-ng is clear and robotic; Piper sounds like a person. A family may use Piper's
+Turkish voice at home, and BioKids may not ship it, so the panel fetches it from its
+authors on a parent's button:
+
+1. **Ayarlar → Zio ve Sio'nun sesi** (`/voices`) says which voice speaks now — "robot
+   sesi" or "doğal ses" — and offers **Doğal sesi indir (yaklaşık 90 MB)**, with one
+   sentence on the licence (free for a family's personal, non-commercial use;
+   downloaded from its authors, not shipped by BioKids) and a reminder that the
+   parent's own recordings (section 4) are the most natural of all.
+2. The button asks the daemon (`voice_setup`) to start `biokids-voice-setup.service`,
+   which runs `biokids-admin voice-setup download` and nothing else: no capability,
+   writable only `/var/lib/biokids-voices`, the only part of the voices with a network.
+3. It fetches, each pinned by SHA-256 and size (`biokids_core/natural_voice.py`):
+
+   | What | From | Licence | To |
+   |---|---|---|---|
+   | Piper 2023.11.14-2, `piper_linux_x86_64.tar.gz` (26 MB) | `github.com/rhasspy/piper` releases (archived) | MIT; its bundled espeak-ng fork is GPL-3, run as a separate process (D-30) | `/var/lib/biokids-voices/piper/` |
+   | `tr_TR-dfki-medium.onnx`, `.onnx.json`, `MODEL_CARD` (63 MB) | `huggingface.co/rhasspy/piper-voices` at commit `c10ece1a` | dataset CC BY-NC-SA 4.0 (DFKI "OT", one male speaker) | `/var/lib/biokids-voices/models/piper/` |
+
+   Each file is written beside its place under a temporary name, checked, and only
+   then renamed; a mismatch is deleted and the unit fails. The archive is unpacked
+   through tarfile's `data` filter and only under its own `piper/`. The voice is then
+   hard-linked as `tr-sio.onnx` and `tr-zio.onnx`, each with its `.onnx.json`, because
+   Piper reads a model's settings from its path plus `.json`. Piper goes in before
+   the voice: a voice's cache key changes when its model appears, and the first line
+   under the new key must be Piper's.
+4. `/voice-natural` follows the download, refreshing itself, with the percentage
+   read from the files on disk; `/voices` itself never refreshes, because a
+   recording may be under way. A failed download says so and offers the button again.
+5. The voice service runs `/var/lib/biokids-voices/piper/piper` (else a `piper` on
+   PATH), looked up on every line, so a voice downloaded while a child is at the
+   machine is heard from the next sentence.
+
+**Zio.** The dfki voice is a man's and there is no Turkish woman in the catalogue.
+Sio speaks it as it is. Zio speaks the same model *lifted*: Piper is asked for speech
+1.2 times slower (`--length_scale`), and the WAV's sample rate is then raised 1.2
+times, so pitch and formants rise about three semitones and the pace comes back to
+where it was. No sample is changed, so there is none of the warble of a
+pitch-shifting effect, and nothing else to install. It is a lighter, clearly
+different person, not a woman; a family who wants a mother's voice records it
+(section 4). The lift applies only while Zio's model is the very file Sio's is: a
+voice of her own at `tr-zio.onnx` is spoken as it was recorded. Piper speaks at
+`--length_scale 1.1` for both, a little slower for the youngest children (D-161).
+
+Turkish only: a child whose language is English still hears espeak-ng.
+`biokids-admin voice-setup status` prints the state as JSON, and
+`biokids-admin voice-setup remove` deletes what the download installed. Purging
+biokids-core with the family's data deletes it with the recordings.
 
 ---
 
 ## 4. A parent's own voice (D-174)
 
-In the panel, under **Ayarlar → Kendi sesiniz**:
+In the panel, under **Ayarlar → Zio ve Sio'nun sesi → Kendi sesiniz**:
 
 1. Say which character the voice belongs to: the mother's (Zio is shown) or the
    father's (Sio).
@@ -231,3 +287,8 @@ goes first; cut after a whole sentence at 1,500 characters.
   the card; a recording that is not a short mono WAV is refused.
 - Ducking restores the previous volume even if playback is killed.
 - Card renders and dismisses correctly with audio disabled entirely.
+- The natural voice (`tests/test_natural_voice.py`, never over the network): a file
+  that does not match its pin is refused and deleted, half a voice is never
+  installed, an archive reaching outside `piper/` is refused, each persona finds the
+  voice under its own name, the downloaded Piper is found before PATH, Zio's line is
+  rendered slower and lifted, and a Piper that arrives mid-session speaks the next line.

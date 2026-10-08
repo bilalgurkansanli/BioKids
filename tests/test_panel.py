@@ -1881,6 +1881,122 @@ def test_a_recording_without_the_token_is_refused(
     assert response.status_code == 403
 
 
+# ------------------------------------------------- D-196 the natural voice
+
+
+def _natural_state(
+    monkeypatch: pytest.MonkeyPatch, state: str, *, speaks: bool = False
+) -> None:
+    from biokids_core import natural_voice
+
+    monkeypatch.setattr(natural_voice, "state", lambda _config, runner=None: state)
+    monkeypatch.setattr(natural_voice, "natural_speaks", lambda _config: speaks)
+    monkeypatch.setattr(natural_voice, "progress", lambda _config: 42)
+
+
+def test_the_voices_page_says_the_robot_speaks_and_offers_the_natural_voice(
+    client: TestClient, family_ready: None
+) -> None:
+    login(client)
+    page = client.get("/voices").text
+
+    assert "robot sesiyle" in page
+    assert 'action="/voice-natural"' in page
+    assert "Doğal sesi indir (yaklaşık 90 MB)" in page
+    assert "ticari olmayan" in page, "the licence, in one sentence, before the button"
+    assert "kendi sesinizle kaydedebilirsiniz" in page, "and the parent's own voice"
+
+
+def test_the_button_starts_the_download_and_lands_on_its_progress(
+    client: TestClient, family_ready: None, daemon: FakeDaemon, db: Database
+) -> None:
+    login(client)
+    response = client.post(
+        "/voice-natural", data={"csrf_token": csrf_of(client)}, follow_redirects=False
+    )
+
+    assert response.headers["location"] == "/voice-natural?started=1"
+    assert daemon.ran("voice_setup")
+    page = client.get("/voice-natural?started=1").text
+    # The unit may not have started yet: wait once, never offer the button again.
+    assert 'http-equiv="refresh" content="3;url=/voice-natural"' in page
+    assert 'action="/voice-natural"' not in page
+    with db.session() as session:
+        assert session.query(AuditLog).filter_by(action="voice_download").count() == 1
+
+
+def test_the_download_needs_the_form_token(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    login(client)
+    response = client.post(
+        "/voice-natural", data={"csrf_token": "forged"}, follow_redirects=False
+    )
+    assert "error=csrf" in response.headers["location"]
+    assert not daemon.ran("voice_setup")
+
+
+def test_a_download_the_daemon_could_not_start_is_said_plainly(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    login(client)
+    token = csrf_of(client)
+    daemon.up = False
+    response = client.post("/voice-natural", data={"csrf_token": token}, follow_redirects=False)
+    assert response.headers["location"] == "/voices?error=voices.natural.not_started"
+
+
+def test_while_it_downloads_only_its_own_page_refreshes(
+    client: TestClient, family_ready: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """/voices has a sentence field per line and maybe a recording under way."""
+    _natural_state(monkeypatch, "running")
+    login(client)
+
+    progress = client.get("/voice-natural").text
+    assert "İndiriliyor: %42" in progress
+    assert '<meta http-equiv="refresh" content="5">' in progress
+
+    voices = client.get("/voices").text
+    assert "İndiriliyor: %42" in voices
+    assert 'href="/voice-natural"' in voices
+    assert "http-equiv" not in voices
+    assert 'action="/voice-natural"' not in voices
+
+
+def test_once_installed_the_card_says_the_natural_voice_speaks(
+    client: TestClient, family_ready: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _natural_state(monkeypatch, "installed", speaks=True)
+    login(client)
+
+    page = client.get("/voices").text
+    assert "doğal sesle konuşuyor" in page
+    assert "bu bilgisayarda kurulu" in page
+    assert 'action="/voice-natural"' not in page
+    assert "Hazır." in client.get("/voice-natural").text
+
+
+def test_a_failed_download_says_so_and_offers_the_button_again(
+    client: TestClient, family_ready: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _natural_state(monkeypatch, "failed")
+    login(client)
+
+    for path in ("/voices", "/voice-natural"):
+        page = client.get(path).text
+        assert "İndirme tamamlanamadı" in page, path
+        assert 'action="/voice-natural"' in page, path
+        assert "http-equiv" not in page, path
+
+
+def test_the_settings_lead_to_the_voices(client: TestClient, family_ready: None) -> None:
+    login(client)
+    page = client.get("/settings").text
+    assert "doğal bir ses indirin" in page
+    assert 'href="/voices"' in page
+
+
 # ------------------------------------------------------ D-176 time pickers
 
 

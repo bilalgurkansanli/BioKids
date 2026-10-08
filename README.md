@@ -43,9 +43,10 @@ The full text is in [`CLAUDE.md`](CLAUDE.md) §2.
 - **Time limits** that a child cannot cheat by changing the clock: daily quotas,
   allowed hours, separate weekday and weekend rules, and any day of the week with its
   own. Warnings at 10, 5 and 1 minute are **spoken** by Zio and Sio — espeak-ng out of
-  the box, MBROLA's Turkish voices or Piper where a family installs them — and shown in
-  front of whatever app is open. Then the screen locks, counts down, and the computer
-  shuts down (or only locks, or logs out: the parent chooses).
+  the box, a natural Piper voice one button away in the panel, or the parent's own
+  recorded voice — and shown in front of whatever app is open. Then the screen locks,
+  counts down, and the computer shuts down (or only locks, or logs out: the parent
+  chooses).
 - **Breaks and earned time.** Optional forced breaks; time in learning apps can earn
   extra game time, at a ratio the parent sets.
 - **Limits per kind of app**: at most so many minutes of games, learning, web or other
@@ -165,7 +166,9 @@ A bootable ISO with everything preinstalled is v1.1 ([`iso/README.md`](iso/READM
 account. The list of outbound connections BioKids makes is short, most of it optional,
 and complete in [`docs/SECURITY.md`](docs/SECURITY.md#4-outbound-network-inventory):
 Debian and BioKids updates, DNS, and only what the parent switches on — their own mail
-server, Tailscale, and the assistant's one-time download.
+server, Tailscale, the assistant's one-time download, and the natural voice's (Piper
+from GitHub, its Turkish voice from Hugging Face, each checked against a pinned
+checksum).
 
 - The browser extension tells the child's own launcher the **name** of each site
   opened — never the page, the search, or anything typed — and the child is told so.

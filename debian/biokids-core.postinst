@@ -74,9 +74,10 @@ case "$1" in
         # mode. install -d is idempotent and re-asserts the mode, which is the
         # point: an upgrade should repair a loosened permission.
         install -d -o root -g root -m 0700 "$DATA_DIR"
-        # A parent's own recordings of the spoken lines (D-174), and Piper
-        # voices a family adds. Readable by everyone, because the voice service
-        # that plays them is the child's process; written only by root.
+        # A parent's own recordings of the spoken lines (D-174), and Piper and
+        # its voice when a family downloads them (D-196). Readable by everyone,
+        # because the voice service that plays them is the child's process;
+        # written only by root.
         install -d -o root -g root -m 0755 /var/lib/biokids-voices
         # The packed browser extension (D-187), which the child's Chromium
         # installs from here. Its signing key stays in the 0700 data directory.

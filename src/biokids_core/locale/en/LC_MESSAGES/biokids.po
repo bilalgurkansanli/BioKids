@@ -1229,10 +1229,10 @@ msgid "voices.title"
 msgstr "Your own voice"
 
 msgid "voices.teaser"
-msgstr "Let your own voice say the warnings instead of Zio and Sio's."
+msgstr "Download a natural voice instead of the robot-like computer voice, or record the warnings in your own voice."
 
 msgid "voices.open"
-msgstr "Record the lines"
+msgstr "Set up the voices"
 
 msgid "voices.help"
 msgstr "Record each sentence once: press Record, say it, press Stop. The recordings stay on this computer. Sentences you do not record are still said by the computer's voice."
@@ -1323,6 +1323,64 @@ msgstr "Not now, sweetheart. Let's talk this evening."
 
 msgid "audit.action.voice_recorded"
 msgstr "Voice line recorded"
+
+# D-196: the natural voice, downloaded with one button
+msgid "voices.page.title"
+msgstr "Zio and Sio's voice"
+
+msgid "voices.natural.title"
+msgstr "Natural voice"
+
+msgid "voices.natural.now_robot"
+msgstr "Right now Zio and Sio speak with a robot voice: clear, but like a machine."
+
+msgid "voices.natural.now_natural"
+msgstr "Right now Zio and Sio speak with a natural voice."
+
+msgid "voices.natural.offer"
+msgstr "You can download a Turkish voice that sounds much more like a person."
+
+msgid "voices.natural.download"
+msgstr "Download the natural voice (about {size} MB)"
+
+msgid "voices.natural.licence"
+msgstr "This voice is free for a family's personal, non-commercial use. It does not come with BioKids: it is downloaded once, from the people who made it, when you press the button."
+
+msgid "voices.natural.zio"
+msgstr "The Turkish natural voice is a man's. Sio speaks it as it is, Zio a little higher."
+
+msgid "voices.natural.own"
+msgstr "The most natural voice is still your own: you can record the warnings yourself below."
+
+msgid "voices.natural.running"
+msgstr "Downloading: {percent}%"
+
+msgid "voices.natural.follow"
+msgstr "See the progress"
+
+msgid "voices.natural.installed"
+msgstr "The natural voice is installed on this computer."
+
+msgid "voices.natural.failed"
+msgstr "The download did not finish. Check the internet connection and try again."
+
+msgid "voices.natural.not_started"
+msgstr "The download could not be started. Try again in a moment."
+
+msgid "voices.natural.starting"
+msgstr "Starting the download…"
+
+msgid "voices.natural.refreshing"
+msgstr "This page refreshes itself. You can close it; the download carries on."
+
+msgid "voices.natural.done"
+msgstr "Done. Zio and Sio speak with the natural voice from their next sentence."
+
+msgid "voices.natural.back"
+msgstr "Back to the voices"
+
+msgid "audit.action.voice_download"
+msgstr "Natural voice download started"
 
 # D-176: time pickers and a schedule per day
 msgid "time.windows.from"

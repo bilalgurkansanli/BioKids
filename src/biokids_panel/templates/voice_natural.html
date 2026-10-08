@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ _('voices.natural.title') }} · {{ _('panel.title') }}{% endblock %}
+
+{#
+  D-196. Where the parent lands after pressing "Doğal sesi indir": the download,
+  as a percentage read from the files themselves, refreshing itself while the
+  unit runs. Just after the button the unit may not have started yet, so the
+  first view waits once rather than offering the button again.
+#}
+{% block head %}
+  {% if natural.state == 'running' %}
+    <meta http-equiv="refresh" content="5">
+  {% elif started and natural.state != 'installed' %}
+    <meta http-equiv="refresh" content="3;url=/voice-natural">
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  <h1>{{ _('voices.natural.title') }}</h1>
+
+  <section class="card">
+    {% if natural.state == 'running' %}
+      <p role="status"><strong>{{ _('voices.natural.running', percent=natural.progress) }}</strong></p>
+      <progress max="100" value="{{ natural.progress }}">{{ natural.progress }}%</progress>
+      <p class="help">{{ _('voices.natural.refreshing') }}</p>
+    {% elif natural.state == 'installed' %}
+      <p role="status"><strong>{{ _('voices.natural.done') }}</strong></p>
+      <p class="help">{{ _('voices.natural.zio') }}</p>
+    {% elif started %}
+      <p role="status">{{ _('voices.natural.starting') }}</p>
+    {% else %}
+      {% if natural.state == 'failed' %}
+        <div class="notice notice--danger" role="alert">{{ _('voices.natural.failed') }}</div>
+      {% endif %}
+      <p>{{ _('voices.natural.offer') }}</p>
+      <form method="post" action="/voice-natural">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button class="btn btn--primary" type="submit">{{ _('voices.natural.download', size=natural.size_mb) }}</button>
+      </form>
+    {% endif %}
+    <p class="help">{{ _('voices.natural.licence') }}</p>
+  </section>
+
+  <a class="btn btn--quiet" href="/voices">{{ _('voices.natural.back') }}</a>
+{% endblock %}

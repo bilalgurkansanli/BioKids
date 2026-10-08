@@ -18,7 +18,7 @@ Nothing yet.
 ## [0.1.0-2] - 2026-10-07
 
 The v1.0 release candidate. Not published: the APT repository waits for its archive
-key (`docs/ROADMAP.md`). Decisions D-171 to D-194; read them in `docs/DECISIONS.md`.
+key (`docs/ROADMAP.md`). Decisions D-171 to D-196; read them in `docs/DECISIONS.md`.
 An upgrade from 0.1.0-1 runs whichever of the migrations `3e8b51c0d2a7` (request
 kinds), `9a4f2c7e1b36` (day schedules) and `c41d8e0f5a92` (the cuts) the database has
 not seen, after `biokids-admin backup-db` has copied it; it moves the virtual-terminal
@@ -27,6 +27,15 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
 
 ### Added
 
+- **A natural voice for Zio and Sio, one button away** (D-196). **Ayarlar → Zio ve
+  Sio'nun sesi** says whether the robot voice or the natural one speaks and offers
+  "Doğal sesi indir (yaklaşık 90 MB)": `biokids-voice-setup.service` fetches Piper
+  2023.11.14-2 from GitHub and its Turkish voice from Hugging Face, each checked
+  against a pinned SHA-256, into `/var/lib/biokids-voices`, and a page follows the
+  download. The voice is free for a family's personal, non-commercial use and is not
+  shipped by BioKids. Sio speaks it as it is and Zio a little higher; the voice
+  service picks it up at the next sentence. `biokids-admin voice-setup
+  status|remove`. New config key `paths.piper_dir`; new daemon op `voice_setup`.
 - **A guided first run** (D-195). Installing the packages opens the setup wizard at
   once in the open desktop; a "BioKids Ebeveyn Paneli" shortcut goes on the parent's
   desktop; phone access is four numbered steps with App Store and Google Play QR

@@ -34,6 +34,11 @@ biokids (0.1.0-2) trixie; urgency=medium
     packages are installed, a panel shortcut goes on the parent's desktop,
     phone access is four numbered steps, Today offers the one restart setup
     needs, and a help page answers the first questions.
+  * biokids-voice: biokids-voice-setup.service downloads Piper and its
+    Turkish voice when a parent presses "Doğal sesi indir" in the panel,
+    each file checked against a pinned SHA-256 (D-196). Never enabled,
+    never started by apt; purging biokids-core with the family's data
+    removes what it installed.
 
  -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Wed, 07 Oct 2026 12:00:00 +0300
 

@@ -39,6 +39,9 @@ class PathsConfig:
     model_dir: Path = Path("/var/lib/biokids-voices/models")
     """Piper voices a family installed themselves (D-137), under `piper/`. In the
     world-readable voices directory because the voice service runs as the child."""
+    piper_dir: Path = Path("/var/lib/biokids-voices/piper")
+    """The Piper program the panel's "natural voice" button downloads (D-196).
+    Looked in before PATH; world-readable for the same reason."""
     run_dir: Path = Path("/run/biokids")
     daemon_socket: Path = Path("/run/biokids/daemon.sock")
     shell_socket: Path = Path("/run/biokids/shell.sock")
@@ -119,6 +122,8 @@ class VoiceConfig:
     queue_depth: int = 3
     duck_percent: int = 30
     piper_binary: str = "piper"
+    """A bare name is looked for in `paths.piper_dir` first, where the panel's
+    "natural voice" button puts it (D-196), then on PATH; a path is used as is."""
     espeak_binary: str = "espeak-ng"
     """The fallback engine, tried when Piper is absent. It usually is: piper-tts
     is not in Debian 13 and the last Turkish Piper voice is CC-BY-NC-SA."""

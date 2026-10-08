@@ -20,6 +20,7 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+from biokids_core import natural_voice
 from biokids_core.config import Config, get_config
 from biokids_core.errors import IpcError
 from biokids_core.ipc import Event, Op, Request, Response, decode_frame
@@ -242,6 +243,7 @@ class DaemonServer:
             Op.ASSISTANT_STATUS: self._assistant_status,
             Op.ASSISTANT_SETUP: self._assistant_setup,
             Op.REMOTE_SETUP: self._remote_setup,
+            Op.VOICE_SETUP: self._voice_setup,
             Op.DECIDE_REQUEST: self._decide_request,
             Op.UNLOCK_NOW: self._unlock_now,
         }
@@ -356,6 +358,15 @@ class DaemonServer:
         ok = await run_systemctl("start", "--no-block", REMOTE_SETUP_UNIT)
         return Response(id=request.id, ok=ok, error="" if ok else "remote.setup.failed")
 
+    async def _voice_setup(self, request: Request) -> Response:
+        """The natural voice in one button (D-196): Piper and its Turkish voice,
+        fetched by their own unit - the one part of biokids-voice with a network,
+        which writes nothing but the voices directory. `--no-block`, because it
+        takes a minute or two and the panel follows it on a page of its own.
+        """
+        ok = await run_systemctl("start", "--no-block", VOICE_SETUP_UNIT)
+        return Response(id=request.id, ok=ok, error="" if ok else "voices.natural.not_started")
+
     async def _reload(self, request: Request) -> Response:
         self.supervisor.reload()
         return Response(
@@ -413,6 +424,7 @@ __all__ = ["DaemonServer", "decode_frame"]
 
 AI_SETUP_UNIT = "biokids-ai-setup.service"
 REMOTE_SETUP_UNIT = "biokids-remote-setup.service"
+VOICE_SETUP_UNIT = natural_voice.SETUP_UNIT
 
 
 async def run_systemctl(*args: str) -> bool:

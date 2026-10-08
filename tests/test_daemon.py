@@ -550,6 +550,30 @@ async def test_the_server_refuses_an_unknown_op(supervisor: Supervisor, bus: Eve
     assert "unknown op" in response.error
 
 
+@pytest.mark.parametrize("starts", [True, False])
+async def test_the_natural_voice_is_downloaded_by_its_own_unit(
+    supervisor: Supervisor, bus: EventBus, monkeypatch: pytest.MonkeyPatch, starts: bool
+) -> None:
+    """D-196: the daemon only starts the unit; the unit alone has the network."""
+    from biokids_daemon import server as server_module
+
+    asked: list[tuple[str, ...]] = []
+
+    async def systemctl(*args: str) -> bool:
+        asked.append(args)
+        return starts
+
+    monkeypatch.setattr(server_module, "run_systemctl", systemctl)
+    await supervisor.start()
+    server = DaemonServer(supervisor, bus, supervisor.config)
+
+    response, _ = await server._dispatch(Request(op=Op.VOICE_SETUP, id="5").encode())
+
+    assert asked == [("start", "--no-block", "biokids-voice-setup.service")]
+    assert response.ok is starts
+    assert response.error == ("" if starts else "voices.natural.not_started")
+
+
 async def test_the_server_survives_a_malformed_frame(
     supervisor: Supervisor, bus: EventBus
 ) -> None:
