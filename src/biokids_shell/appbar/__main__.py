@@ -3,7 +3,8 @@
 Two ways to run it:
 
 * with no arguments, the bar itself: it prints `ready` once its window exists
-  and runs until the launcher stops it;
+  and runs until the launcher stops it. It reads the minutes left from the
+  launcher's own `/state` on this child's launcher port (D-201);
 * `--bring-back biokids-app-<slug>-<n>`, once: show that app's window again and
   exit. The launcher runs this when a child taps the tile of an app that is
   already open, so the tap brings back the game they sent to the background
@@ -32,6 +33,7 @@ from biokids_shell.appbar import (
     is_app_scope,
     own_uid,
     scope_unit,
+    state_url,
 )
 from biokids_shell.client import ShellClient
 
@@ -116,7 +118,7 @@ def main(argv: list[str] | None = None) -> int:
         return code
     config = Config.load(args.config)
     tr = translator(child_locale(config))
-    code = ui.run_bar(tr, uid=own_uid(), ready=announce_ready)
+    code = ui.run_bar(tr, uid=own_uid(), ready=announce_ready, state_url=state_url(config))
     return code
 
 

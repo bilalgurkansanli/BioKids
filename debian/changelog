@@ -49,6 +49,11 @@ biokids (0.1.0-2) trixie; urgency=medium
     the catalogue (D-199).
   * biokids-desktop hides the GRUB menu (Esc shows it; removed with the
     package) (D-200).
+  * biokids-shell: the app bar leaves a dragged window and comes back on
+    its title bar when it stops, re-maximising one dragged out of
+    maximisation; a volume slider, the minutes left and the clock; the
+    launcher's sound bar can be dragged and its footer lists the apps open
+    in the background (D-201).
 
  -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Wed, 07 Oct 2026 12:00:00 +0300
 

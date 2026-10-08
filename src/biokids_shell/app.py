@@ -551,6 +551,18 @@ def register_routes(app: FastAPI) -> None:
         data = await shell.client.state()
         return JSONResponse(data or {"offline": True})
 
+    @app.get("/running")
+    async def running(shell: Shell) -> JSONResponse:
+        """The apps open in the background, for the footer's "Açık" (D-201).
+
+        Slugs only; the page draws each from its own tile, and a tap on one
+        goes through /launch like a tap on the tile, which brings it back.
+        """
+        return JSONResponse(
+            {"running": await shell.launcher.open_apps()},
+            headers={"Cache-Control": "no-store"},
+        )
+
     @app.get("/healthz")
     async def healthz(shell: Shell) -> JSONResponse:
         # `biokids: launcher` is how the extension recognises its own launcher

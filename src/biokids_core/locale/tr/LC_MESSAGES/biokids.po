@@ -157,6 +157,10 @@ msgstr "Bu uygulamanın sesi: %{percent}"
 msgid "appbar.no_sound"
 msgstr "Bu uygulama ses çıkarmıyor"
 
+# At the bottom of the home screen, the apps sent to the background (D-201).
+msgid "shell.open_apps"
+msgstr "Açık"
+
 msgid "shell.no_apps"
 msgstr "Henüz hiç uygulaman yok. Bir büyüğüne söyle."
 

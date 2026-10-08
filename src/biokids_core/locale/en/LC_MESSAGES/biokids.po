@@ -157,6 +157,10 @@ msgstr "This app's volume: {percent}%"
 msgid "appbar.no_sound"
 msgstr "This app makes no sound"
 
+# At the bottom of the home screen, the apps sent to the background (D-201).
+msgid "shell.open_apps"
+msgstr "Open"
+
 msgid "shell.no_apps"
 msgstr "You do not have any apps yet. Tell a grown-up."
 

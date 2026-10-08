@@ -57,22 +57,29 @@ that palette reads as cheap to parents, and parents are half the audience.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  [avatar] Merhaba Elif           ◔ 42 dk        [Zio badge]  │
+│  [avatar] Merhaba Elif     ( 🔉 ━━━●━━ 🔊 )  [Zio]   ◔ 42 dk  │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
 │    ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐         │
-│    │        │   │        │   │        │   │        │         │
+│    │      ● │   │        │   │        │   │        │         │
 │    │ 🎨     │   │ 🔢     │   │ 🌐     │   │ 🎮     │         │
 │    │        │   │        │   │        │   │        │         │
 │    │ Boya   │   │ Sayılar│   │ İnternet│  │ Oyunlar│         │
 │    └────────┘   └────────┘   └────────┘   └────────┘         │
 │                                                              │
 ├──────────────────────────────────────────────────────────────┤
-│  🔊 ────────●───    ☀ ──────●─────            [ Kapat ]      │
+│  ☀ ──────●─────       Açık (🎨)               [ Kapat ]      │
 └──────────────────────────────────────────────────────────────┘
 ```
 
 Fullscreen Chromium kiosk. No window chrome, no scrollbars, nothing behind it.
+
+The sound is at the top right (D-199): 🔉 and 🔊 step by a tenth for a child who
+taps, and the bar between them follows a finger dragged or tapped anywhere along it,
+or the arrow keys (D-201). At the bottom, **Açık** lists the apps sent to the
+background with the app bar's 🏠, each a round button with the app's own icon, and a
+dot marks their tiles; a tap on either brings the same window back (D-201). Web tiles
+are not listed: each opens a window of its own (D-197).
 
 ### 2.2 Age bands
 
@@ -158,32 +165,44 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
 
 ### 2.6 The app bar
 
-Asked for by the owner (D-197): next to the close button, a way to send an app to
-the background and the app's own volume.
+Asked for by the owner (D-197, D-201): next to the close button, a way to send an
+app to the background, the app's own volume, and the time.
 
 ```
-                         ┌──────┬──────┬───────┬──────┬──────┐
-     … app title …       │  🏠  │  🔉  │ ▁▂▄▆█ │  🔊  │  ✕   │  ← top right of the screen
-                         └──────┴──────┴───────┴──────┴──────┘
+                  ┌──────┬──────────┬──────┬─────────────┬──────┬──────┐
+   … app title …  │  🏠  │ ⏳ 12 dk │  🔉  │ ━━━━━●━━━━━ │  🔊  │  ✕   │  ← top right of the app
+                  │      │  15:24   │      │             │      │      │
+                  └──────┴──────────┴──────┴─────────────┴──────┴──────┘
 ```
 
-- Shown whenever an app window is the active one, at the top right of the screen
-  that app is on; never over the launcher, its warnings or the screens that end the
-  day. It never takes the keyboard from the app.
-- Each button is 64 × 64 for the finger, a 56-pixel rounded square for the eye, in
-  the bar's off-white: the same size as the title bar it sits in, so over a
-  maximised app it covers only the title.
+- Shown whenever an app window is the active one, at the top right of that
+  window's own title bar: for an app that fills the screen, the top right of the
+  screen. Never over the launcher, its warnings or the screens that end the day. It
+  never takes the keyboard from the app.
+- Each button is 64 × 64 for the finger, a 56-pixel rounded square for the eye, on
+  the bar's off-white: the same height as the title bar it sits in, with the title
+  bar's own line along its bottom, so over a maximised app it sits flush in the
+  title bar and covers only the title.
 - **🏠 Ana ekran** sends the app to the background and shows the launcher. The app
-  keeps running; its tile brings the same window back, not a second copy.
+  keeps running; its tile, or its button under **Açık** at the launcher's bottom,
+  brings the same window back, not a second copy.
+- **⏳ 12 dk** — the minutes left today, as the launcher's ring counts them; orange
+  in the last five minutes, red in the last one. Under it the clock, for 8–10 only,
+  as on the launcher (§2.2).
 - **🔉 / 🔊** turn this app's own sound down or up by a tenth, never the machine's,
-  so Zio and Sio stay as loud as they were. Five rising bars between them show the
-  level; both dim when the app makes no sound. The machine's volume is the
-  launcher's slider.
+  so Zio and Sio stay as loud as they were. The slider between them follows a finger
+  dragged or tapped anywhere along the bar's height, with a knob as big as a
+  fingertip. All three dim when the app makes no sound. The machine's volume is the
+  launcher's.
 - **✕ Kapat** closes the app. It asks first, so an app can ask "save your
   drawing?"; an app still there after three seconds, or tapped a second time, is
   stopped. Red, with a white cross, as the title bar's button was.
+- **A window being dragged** leaves the bar behind at once and gets it back on its
+  title bar a quarter of a second after it stops — never a bar trailing the window.
+  An app that filled the screen fills it again when the finger lets go; a game with
+  a fixed size stays where it was put.
 - No words on the buttons; a screen reader hears "Ana ekran", "Sesi kıs", "Sesi
-  aç", "Kapat".
+  aç", "Kapat", and the minutes left.
 
 ---
 

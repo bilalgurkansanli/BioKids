@@ -18,7 +18,8 @@ than at a packaged binary, so "İnternet" is accounted for exactly like TuxPaint
 
 A tap on the tile of an app that is already open brings that app's window back
 rather than starting a second copy (D-197): the app bar's 🏠 sends an app to the
-background, and its tile is the way back to it.
+background, and its tile is the way back to it. The launcher's footer lists the
+apps that are open that way, from `AppLauncher.open_apps` (D-201).
 """
 
 from __future__ import annotations
@@ -31,12 +32,13 @@ import shlex
 import shutil
 import sys
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from biokids_core.catalog import resolve_program
 from biokids_core.config import Config, get_config
-from biokids_shell.appbar import EXIT_NOT_FOUND, MODULE, scope_unit, stop_command
+from biokids_shell.appbar import EXIT_NOT_FOUND, MODULE, is_app_scope, scope_unit, stop_command
 
 log = logging.getLogger(__name__)
 
@@ -53,6 +55,9 @@ STILL_OPENING_S = 30.0
 second tap waits for it rather than starting another. Later, a scope with no
 window is something left behind, and is stopped before the app starts again."""
 UNIT_COMMAND_TIMEOUT_S = 30.0
+OPEN_APPS_TIMEOUT_S = 5.0
+"""The launcher's page asks every few seconds which apps are open; a slow answer
+is no answer, and the footer stays as it was."""
 
 
 UNIT_PREFIX = "biokids-app"
@@ -86,8 +91,9 @@ class AppLauncher:
     config: Config = field(default_factory=get_config)
     counter: int = 0
     running: dict[str, str] = field(default_factory=dict)
-    """slug -> unit name, so a second tap re-focuses rather than starting a second
-    copy (`_open_again`)."""
+    """slug -> unit name of each app tile's app, so a second tap re-focuses
+    rather than starting a second copy (`_open_again`). Not web tiles: every
+    browser window is one Chromium, and their tiles open a window each time."""
     started: dict[str, float] = field(default_factory=dict)
     """slug -> when its unit started (monotonic): an app still opening its window
     is told apart from a scope that has none."""
@@ -164,8 +170,10 @@ class AppLauncher:
             refused = await self._refused_quickly(process, request.slug)
             if refused:
                 return LaunchResult(ok=False, error="error.unknown")
-            self.running[request.slug] = unit
-            self.started[request.slug] = time.monotonic()
+            if request.kind == "app":
+                self.running.pop(request.slug, None)  # the newest last, for the footer
+                self.running[request.slug] = unit
+                self.started[request.slug] = time.monotonic()
         return LaunchResult(ok=True, unit=unit)
 
     # ------------------------------------------------------- open it again
@@ -200,6 +208,38 @@ class AppLauncher:
     def _forget(self, slug: str) -> None:
         self.running.pop(slug, None)
         self.started.pop(slug, None)
+
+    async def open_apps(self) -> list[str]:
+        """The app tiles whose app is still running, in the order they were opened.
+
+        What the launcher's footer shows as "Açık" (D-201): an app sent to the
+        background with 🏠, which a tap on it brings back. Each is checked with
+        systemd, all in one `systemctl --user is-active`; an app that has closed
+        is forgotten. When systemd cannot be asked, the list is what the
+        launcher started, unchecked.
+        """
+        apps = dict(self.running)
+        if not apps:
+            return []
+        active = await self.active_units(list(apps.values()))
+        if active is None:
+            return list(apps)
+        open_now: list[str] = []
+        for slug, unit in apps.items():
+            if scope_unit(unit) in active:
+                open_now.append(slug)
+            elif self.running.get(slug) == unit:
+                # Not one started again while systemctl was answering.
+                self._forget(slug)
+        return open_now
+
+    async def active_units(self, units: Sequence[str]) -> set[str] | None:
+        """Which of these app scopes are running; None when systemd cannot say."""
+        scopes = [scope_unit(unit) for unit in units if is_app_scope(scope_unit(unit))]
+        if not scopes:
+            return set()
+        out = await _stdout(["systemctl", "--user", "is-active", *scopes], OPEN_APPS_TIMEOUT_S)
+        return None if out is None else active_scopes(scopes, out)
 
     async def bring_back(self, unit: str) -> int | None:
         """Ask the app bar's helper to show this app's window again.
@@ -406,6 +446,45 @@ def prepare_browser_profile(profile: Path, locale: str = "") -> bool:
             partial.unlink()
         return False
     return True
+
+
+def active_scopes(scopes: Sequence[str], output: str) -> set[str] | None:
+    """`systemctl is-active a b c` prints one state per unit, in order.
+
+    Only `active` is running: `inactive` is a scope that has ended (and with
+    `--collect`, been forgotten), `deactivating` one being stopped. Output that
+    does not line up with the question is no answer.
+    """
+    states = output.split()
+    if len(states) != len(scopes):
+        return None
+    return {scope for scope, state in zip(scopes, states, strict=True) if state == "active"}
+
+
+async def _stdout(argv: list[str], within: float) -> str | None:
+    """stdout of a short command whatever its exit code; None if it could not run in time.
+
+    `systemctl is-active` exits 3 when any unit is not active, and still says
+    which are.
+    """
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *argv,
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+    except OSError as exc:
+        log.debug("%s could not be run: %s", argv[0], exc)
+        return None
+    try:
+        out, _ = await asyncio.wait_for(process.communicate(), timeout=within)
+    except TimeoutError:
+        log.warning("%s took longer than %s s", " ".join(argv[:4]), within)
+        with contextlib.suppress(ProcessLookupError):
+            process.kill()
+        return None
+    return out.decode("utf-8", "replace")
 
 
 async def _exit_code(argv: list[str], within: float) -> int | None:

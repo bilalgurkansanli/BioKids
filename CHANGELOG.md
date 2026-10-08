@@ -48,6 +48,15 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
   tapped again. Never over the launcher. While it runs the title bar has no button;
   the moment it does not, the title bar's close button is back. biokids-shell now
   depends on `python3-gi`, `gir1.2-gtk-3.0`, `gir1.2-wnck-3.0` and `pulseaudio-utils`.
+- **The app bar keeps up, and shows the time** (D-201). A window being dragged no
+  longer trails the bar behind it: the bar leaves at once and comes back on the
+  window's title bar a quarter of a second after it stops, placed by the frame the X
+  server reports; an app dragged out of filling the screen fills it again when let go.
+  The bar sits flush in the title bar. Its five level marks become a slider to drag,
+  and "⏳ 12 dk" (orange under five minutes, red under one) and, for 8-10, the clock
+  sit beside the sound. The launcher's own sound bar can be dragged too, and its
+  footer lists the apps sent to the background as "Açık", a tap bringing each back,
+  with a dot on their tiles (new route `GET /running`).
 - **A guided first run** (D-195). Installing the packages opens the setup wizard at
   once in the open desktop; a "BioKids Ebeveyn Paneli" shortcut goes on the parent's
   desktop; phone access is four numbered steps with App Store and Google Play QR
