@@ -917,3 +917,17 @@ svg {
   height: 18px;
 }
 
+
+/* For screen readers only: the footer's "Parlaklık" label and the assistant's
+ * question label were meant to be read, not shown, and nothing defined this. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
