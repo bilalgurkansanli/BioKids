@@ -15,6 +15,7 @@
   <title>{% block title %}BioKids{% endblock %}</title>
   <link rel="stylesheet" href="/static/shared/tokens.css?v={{ asset_version }}">
   <link rel="stylesheet" href="/static/shell.css?v={{ asset_version }}">
+  <link rel="stylesheet" href="/static/daily.css?v={{ asset_version }}">
   <link rel="icon" href="/static/icons/icon-192.png" sizes="192x192">
 </head>
 <body>
@@ -71,5 +72,6 @@
     window.BIOKIDS_NOTICE_MS = {{ notice_ms|default(7000)|int }};
   </script>
   <script src="/static/shell.js?v={{ asset_version }}" defer></script>
+  <script src="/static/daily.js?v={{ asset_version }}" defer></script>
 </body>
 </html>

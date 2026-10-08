@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import contextlib
+import datetime as dt
 import functools
 import hashlib
 import json
@@ -44,6 +45,7 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from jinja2 import ChainableUndefined, Environment, FileSystemLoader, select_autoescape
 
+from biokids_core import daily
 from biokids_core.browser_policy import packed_extension
 from biokids_core.catalog import program_installed
 from biokids_core.config import Config, get_config
@@ -96,6 +98,14 @@ TILE_ICONS: dict[str, str] = {
     "video": "🎬",
     "game": "🎮",
     "earth": "🌍",
+    "satellite": "🛰️",
+    "potato": "🥔",
+    "memory": "🧠",
+    "jigsaw": "🖼️",
+    "map": "🗺️",
+    "turtle": "🐢",
+    "fractions": "🍕",
+    "chess": "♟️",
     "globe": "🌐",
     "speaker": "🔊",
     "sun": "☀️",
@@ -323,6 +333,8 @@ def register_routes(app: FastAPI) -> None:
             "home.html",
             data,
             volume=DEFAULT_VOLUME if volume is None else volume,
+            # Bugünün sürprizi (D-203): today's card, for this child's tiles.
+            daily=daily.for_launcher(data, dt.date.today(), tile_can_start),
         )
 
     @app.get("/first-run", response_class=HTMLResponse)

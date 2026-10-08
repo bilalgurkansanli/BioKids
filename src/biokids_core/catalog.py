@@ -8,7 +8,9 @@ foreign key.
 
 Synchronisation is additive. An app that disappears from the file is marked
 gone, never deleted, because a `child_app` row may point at it and a family's
-arrangement of tiles should survive an upgrade that drops a package.
+arrangement of tiles should survive an upgrade that drops a package. A slug is
+never reused for something else: a tile that changes what it is gets a new
+slug, and `inherits` hands it to the children who had the old one (D-203).
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ from urllib.parse import urlsplit
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from biokids_core import repo
 from biokids_core.config import Config, get_config
 from biokids_core.db.models import App, ChildApp
 from biokids_core.errors import ConfigError
@@ -71,6 +74,11 @@ class CatalogEntry:
     allow: tuple[str, ...] = ()
     """What a web tile may open in "selected sites only" mode, as Chromium URL
     filters. Empty means the host of `url`, which is right for most sites."""
+    inherits: tuple[str, ...] = ()
+    """Tiles this one takes over from (D-203). When it first enters the `app`
+    table, every child with one of these enabled gets it too, beside it: the
+    tile called "Dünya" became Marble, and a child whose parent ticked "Dünya"
+    should still have a Dünya that works."""
 
     def allowed_patterns(self) -> tuple[str, ...]:
         if self.allow:
@@ -183,6 +191,7 @@ def _parse(path: Path) -> Catalog:
                 description_en=str(item.get("description_en", "")),
                 suggest=bool(item.get("suggest", True)),
                 allow=tuple(str(x) for x in item.get("allow", []) or []),
+                inherits=tuple(str(x) for x in item.get("inherits", []) or []),
             )
         )
     return Catalog(entries=tuple(entries))
@@ -205,10 +214,12 @@ def sync_catalog(session: Session, catalog: Catalog | None = None) -> tuple[int,
     catalog = catalog or load_catalog()
     existing = {row.slug: row for row in session.scalars(select(App)).all()}
     added = updated = 0
+    arrived: list[CatalogEntry] = []
 
     for entry in catalog.entries:
         row = existing.pop(entry.slug, None)
         if row is None:
+            arrived.append(entry)
             session.add(
                 App(
                     slug=entry.slug,
@@ -249,7 +260,53 @@ def sync_catalog(session: Session, catalog: Catalog | None = None) -> tuple[int,
             gone += 1
 
     session.flush()
+    for entry in arrived:
+        if entry.inherits:
+            hand_down(session, entry)
     return added, updated, gone
+
+
+def hand_down(session: Session, entry: CatalogEntry) -> int:
+    """Give a new tile to every child who has one it takes over from (D-203).
+
+    Only ever from `sync_catalog`, when the tile's row is first added - once
+    per database - so a parent who unticks it later is never overruled. It
+    takes the old tile's place and category, right after it; the old tile
+    stays, because nobody loses a tile to an upgrade. Returns how many
+    children were given it.
+    """
+    links = session.scalars(
+        select(ChildApp)
+        .where(ChildApp.app_slug.in_(entry.inherits), ChildApp.enabled.is_(True))
+        .order_by(ChildApp.child_id, ChildApp.position)
+    ).all()
+    given: set[int] = set()
+    for link in links:
+        if link.child_id in given:
+            continue
+        if session.get(ChildApp, (link.child_id, entry.slug)) is not None:
+            continue
+        session.add(
+            ChildApp(
+                child_id=link.child_id,
+                app_slug=entry.slug,
+                enabled=True,
+                position=link.position,
+                category_override=link.category_override,
+            )
+        )
+        # In the parent's audit log like any change to a child's tiles, so a
+        # tile that appeared after an upgrade can be traced to why.
+        repo.audit(
+            session,
+            actor="system",
+            action="apps_changed",
+            target=f"child:{link.child_id}",
+            detail={"added": [entry.slug], "removed": [], "inherits": list(entry.inherits)},
+        )
+        given.add(link.child_id)
+    session.flush()
+    return len(given)
 
 
 ALWAYS_ON_TILES: tuple[str, ...] = ("volume", "brightness", "shutdown")

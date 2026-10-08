@@ -1,0 +1,235 @@
+/* Bugünün sürprizi - today's surprise (D-203).
+ *
+ * One strip under the header: a picture, one sentence with its kind in front,
+ * the day's name and the week's theme on the right, and at most one thing to
+ * press. Measured, not hoped: on a 1280 x 800 screen the young band's two rows
+ * of 220-pixel tiles and the older band's three rows of 150-pixel ones still
+ * fit under it without the grid scrolling, which is why the older band's
+ * sentence is kept to two lines (tests/test_daily.py) and the strip's own
+ * padding is thin. Tinted by the week's theme with the brand tokens only
+ * (UX.md §1); the words stay in --ink, for the launcher's AAA contrast.
+ */
+
+/* A row of its own between the header and the tiles, which keep the rest and
+ * give back a little of their padding. */
+.screen:has(> .daily:not([hidden])) {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.screen:has(> .daily:not([hidden])) > .tiles {
+  padding-top: var(--sp-1);
+  padding-bottom: var(--sp-1);
+}
+
+.daily {
+  --accent: var(--bio-amber);
+  --press: var(--target-older);
+  --picture: var(--target-older);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin: 0 var(--sp-4);
+  padding: 2px var(--sp-1);
+  border: 2px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(circle at 28px 50%, color-mix(in srgb, var(--accent) 30%, transparent) 0,
+      transparent 6rem),
+    color-mix(in srgb, var(--accent) 9%, var(--surface));
+  box-shadow: var(--shadow-1);
+  color: var(--ink);
+  animation: daily-in .5s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.daily[hidden] { display: none; }
+
+.daily[data-accent="coral"] { --accent: var(--bio-coral); }
+.daily[data-accent="amber"] { --accent: var(--bio-amber); }
+.daily[data-accent="teal"] { --accent: var(--bio-teal); }
+.daily[data-accent="indigo"] { --accent: var(--bio-indigo); }
+.daily[data-accent="ok"] { --accent: var(--ok); }
+
+/* 4-7: a bigger picture, and 64 pixels for anything a finger presses (UX.md §2.4). */
+.screen[data-band="4-7"] .daily {
+  --press: var(--target-young);
+  --picture: 56px;
+}
+
+.daily__emoji {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--picture);
+  height: var(--picture);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  border: 2px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  font-size: calc(var(--picture) * .6);
+  line-height: 1;
+  animation: daily-wiggle 1.1s ease-in-out .6s 1;
+}
+
+.daily__body {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: calc(1rem * var(--font-scale));
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.screen[data-band="4-7"] .daily__body {
+  font-size: calc(1.25rem * var(--font-scale));
+  font-weight: 600;
+}
+
+/* For a child who cannot read yet the sentence is a button: a tap and Zio
+ * reads it. The press shows at once (the 100 ms rule). */
+.screen[data-band="4-7"] .daily__body {
+  cursor: pointer;
+  border-radius: var(--r-md);
+  transition: transform .12s ease;
+}
+
+.screen[data-band="4-7"] .daily__body:active { transform: scale(.985); }
+
+/* The kind of card, in front of its sentence: a chip in the theme's colour. */
+.daily__label {
+  display: inline-block;
+  margin-right: var(--sp-1);
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--accent) 24%, var(--surface));
+  font-size: .85em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.daily__label strong { font-weight: 700; }
+
+.daily__ear { font-size: .9em; }
+
+/* The day's name and the week's theme, small, on the right. */
+.daily__meta {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin: 0;
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+/* The answer's button, and the task's: a pill with the tile's own picture. */
+.daily__pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--press);
+  padding: 0 var(--sp-3);
+  border: 2px solid color-mix(in srgb, var(--accent) 60%, var(--line));
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+
+.daily__pill:hover,
+.daily__pill:focus-visible { box-shadow: var(--shadow-2); }
+
+.daily__pill:active { transform: scale(.95); }
+
+.daily__go-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.daily__answer { flex: none; }
+
+.daily__answer summary { list-style: none; }
+.daily__answer summary::-webkit-details-marker { display: none; }
+
+/* Once open, the answer takes the button's place: there is nothing to close. */
+.daily__answer[open] summary { display: none; }
+
+.daily__reveal {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--press);
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--accent) 32%, var(--surface));
+  font-size: 1.2rem;
+  font-weight: 700;
+  white-space: nowrap;
+  animation: daily-pop .35s cubic-bezier(.2, .8, .2, 1.4) both;
+}
+
+.daily__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Put away until tomorrow. Only with a script, which shows it. */
+.daily__hide {
+  flex: none;
+  width: var(--press);
+  height: var(--press);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.daily__hide[hidden] { display: none; }
+.daily__hide:hover,
+.daily__hide:focus-visible { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); }
+
+.daily.is-leaving { animation: daily-out .22s ease forwards; }
+
+@keyframes daily-in {
+  from { opacity: 0; transform: translateY(-6px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes daily-out {
+  to { opacity: 0; transform: translateY(-6px) scale(.98); }
+}
+
+@keyframes daily-wiggle {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-12deg) scale(1.08); }
+  50% { transform: rotate(9deg) scale(1.08); }
+  75% { transform: rotate(-4deg); }
+}
+
+@keyframes daily-pop {
+  from { opacity: 0; transform: scale(.6); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daily,
+  .daily__emoji,
+  .daily__reveal,
+  .daily.is-leaving { animation: none; }
+  .daily__body,
+  .daily__pill { transition: none; }
+}

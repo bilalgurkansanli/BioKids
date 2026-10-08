@@ -54,6 +54,11 @@ biokids (0.1.0-2) trixie; urgency=medium
     maximisation; a volume slider, the minutes left and the clock; the
     launcher's sound bar can be dragged and its footer lists the apps open
     in the background (D-201).
+  * The launcher shows "Bugünün sürprizi", a card that changes every day,
+    from a corpus shipped in biokids-core. Dünya is the Marble globe instead
+    of Google Earth, which needs WebGL; biokids-desktop now also recommends
+    marble, kgeography, kbruch, blinken, ktuberling, palapeli, kturtle and
+    gnome-chess (D-203).
 
  -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Wed, 07 Oct 2026 12:00:00 +0300
 

@@ -27,6 +27,17 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
 
 ### Added
 
+- **Bugünün sürprizi** (D-203): a strip under the launcher's header with something new
+  every day - a fact, a riddle whose answer opens with a tap, an animal, a word, or a
+  small task that can open one of the child's own apps - inside a theme that changes
+  every week (space, the ocean, dinosaurs, the seasons, Türkiye...). 178 cards in
+  Turkish and English, written and checked, shipped in the package: offline, never
+  generated, the same all day and different tomorrow, different for siblings. A child
+  of four to seven hears it from Zio with a tap; ✕ puts it away until tomorrow.
+- **More to learn with** (D-203): Marble, KGeography, KBruch, Blinken, KTuberling,
+  Palapeli, KTurtle and GNOME Chess join the catalogue and biokids-desktop's
+  Recommends; all offline, in Turkish, in a window. The last three are offered, not
+  ticked.
 - **A natural voice for Zio and Sio, one button away** (D-196). **Ayarlar → Zio ve
   Sio'nun sesi** says whether the robot voice or the natural one speaks and offers
   "Doğal sesi indir (yaklaşık 90 MB)": `biokids-voice-setup.service` fetches Piper
@@ -136,6 +147,11 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
 
 ### Fixed
 
+- **"Dünya" showed only "WebGL is not supported"** on a machine without graphics
+  acceleration (D-203). Dünya is now the Marble globe, which needs neither a graphics
+  card nor the internet. The web tile stays as "Google Earth", offered from 8 and not
+  ticked; a child who had Dünya keeps it under its new name and is given the new
+  Dünya beside it, once, on the upgrade.
 - **"Sor Bana" answered nothing** (D-198): the tile showed where the assistant was not
   installed or had no model, and where it was, the daemon could not open its socket
   after D-171's hardening. The tile now shows only when the assistant can answer, and

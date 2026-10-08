@@ -1546,6 +1546,37 @@ msgstr "Email settings saved"
 msgid "audit.action.mail_removed"
 msgstr "Email notifications turned off"
 
+# D-203: Bugünün sürprizi, the launcher's card of the day
+msgid "daily.title"
+msgstr "Today's surprise"
+
+msgid "daily.kind.fact"
+msgstr "Did you know?"
+
+msgid "daily.kind.riddle"
+msgstr "Riddle"
+
+msgid "daily.kind.animal"
+msgstr "Animal of the day"
+
+msgid "daily.kind.challenge"
+msgstr "Today's challenge"
+
+msgid "daily.kind.word"
+msgstr "Word of the day"
+
+msgid "daily.answer.show"
+msgstr "Show the answer"
+
+msgid "daily.answer"
+msgstr "Answer"
+
+msgid "daily.challenge.open"
+msgstr "Open {app}"
+
+msgid "daily.dismiss"
+msgstr "Put away until tomorrow"
+
 # D-178
 msgid "assistant.knowledge.on"
 msgstr "It checks its answers against Wikipedia summaries kept on this computer; it does not go online."

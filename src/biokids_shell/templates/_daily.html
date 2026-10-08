@@ -1,0 +1,51 @@
+{#
+  Bugünün sürprizi (D-203): one small new thing a day, under the header, inside
+  a theme that changes every week. One strip, so the tiles keep their rows: the
+  picture, the sentence with its kind in front, the day's name and the week's
+  theme on the right, and at most one thing to press. Drawn here, so it reads
+  with JavaScript off; daily.js only adds the button that puts it away until
+  tomorrow. 4-7: one sentence, which Zio reads on a tap (data-speak, D-175).
+  8-10: a sentence more. A riddle's answer opens without a script (<details>).
+#}
+{% if daily %}
+{% set label = _('daily.kind.' ~ daily.kind) %}
+{% set heading = label ~ (': ' ~ daily.title if daily.title else '') %}
+<section class="daily" id="daily" data-kind="{{ daily.kind }}" data-accent="{{ daily.accent }}"
+         data-day="{{ daily.day }}" aria-label="{{ _('daily.title') }}">
+  <span class="daily__emoji" aria-hidden="true">{{ daily.emoji }}</span>
+  <p class="daily__body"
+     {% if young %}data-speak="{{ heading }}{{ '' if heading.endswith('?') else '.' }} {{ daily.text }}"{% endif %}>
+    <span class="daily__label">{{ label }}{% if daily.title %}: <strong>{{ daily.title }}</strong>{% endif %}</span>
+    {{ daily.text }}{% if young %}<span class="daily__ear" aria-hidden="true"> 🔊</span>{% endif %}
+  </p>
+  <p class="daily__meta">
+    <span><span aria-hidden="true">🎁</span> {{ _('daily.title') }}</span>
+    <span><span aria-hidden="true">{{ daily.theme_emoji }}</span> {{ daily.theme_label }}</span>
+  </p>
+  {% if daily.answer %}
+    <details class="daily__answer">
+      <summary class="daily__pill"
+               {% if young %}data-speak="{{ _('daily.answer') }}: {{ daily.answer }}"{% endif %}>{{ _('daily.answer.show') }}</summary>
+      <span class="daily__reveal"><span class="daily__sr">{{ _('daily.answer') }}: </span>{{ daily.answer }}</span>
+    </details>
+  {% endif %}
+  {% if daily.app %}
+    <a class="daily__pill daily__go" href="/launch/{{ daily.app.slug }}"
+       aria-label="{{ _('daily.challenge.open', app=daily.app.name) }}"
+       {% if young %}data-speak="{{ daily.app.name }}"{% endif %}>
+      <span class="daily__go-icon" aria-hidden="true">{{ daily.app.icon|icon }}</span>
+      <span>{{ daily.app.name }}</span>
+    </a>
+  {% endif %}
+  <button class="daily__hide" id="daily-hide" type="button" hidden
+          aria-label="{{ _('daily.dismiss') }}" title="{{ _('daily.dismiss') }}">✕</button>
+</section>
+<script>
+  /* Put away today already: hidden before it is painted, so the tiles do not jump. */
+  try {
+    if (window.localStorage.getItem("biokids.daily.hidden") === {{ daily.day|tojson }}) {
+      document.getElementById("daily").hidden = true;
+    }
+  } catch (err) {}
+</script>
+{% endif %}
