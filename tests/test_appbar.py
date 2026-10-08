@@ -765,7 +765,7 @@ def test_no_minutes_when_the_launcher_cannot_say(state: dict[str, Any] | None) -
 def test_the_clock_is_for_8_to_10_as_on_the_launcher() -> None:
     """UX.md section 2.2: a number a four-year-old cannot read is noise."""
     assert shows_clock({"age_band": "8-10"})
-    assert not shows_clock({"age_band": "4-7"})
+    assert shows_clock({"age_band": "4-7"}), "the owner wants the clock for every child"
     assert not shows_clock(None)
     assert clock_text(time.struct_time((2026, 10, 8, 9, 5, 0, 3, 281, 0))) == "09:05"
 

@@ -915,8 +915,10 @@ def time_left(state: Mapping[str, Any] | None) -> TimeLeft | None:
 
 
 def shows_clock(state: Mapping[str, Any] | None) -> bool:
-    """8-10 get the clock, as on the launcher; 4-7 do not (UX.md section 2.2)."""
-    return bool(state) and str((state or {}).get("age_band", "")) == AgeBand.OLDER.value
+    """Every child gets the clock in the app bar: the owner asked for it there
+    (D-201), next to the minutes left. The launcher still shows it only to 8-10
+    (UX.md section 2.2), where the ring is the main thing to read."""
+    return bool(state)
 
 
 def clock_text(moment: time.struct_time) -> str:
