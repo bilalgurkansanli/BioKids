@@ -15,6 +15,10 @@ That one line buys four things (`ARCHITECTURE.md` §7):
 
 A web tile is the same mechanism pointed at the child's Chromium profile rather
 than at a packaged binary, so "İnternet" is accounted for exactly like TuxPaint.
+
+A tap on the tile of an app that is already open brings that app's window back
+rather than starting a second copy (D-197): the app bar's 🏠 sends an app to the
+background, and its tile is the way back to it.
 """
 
 from __future__ import annotations
@@ -25,11 +29,14 @@ import json
 import logging
 import shlex
 import shutil
+import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from biokids_core.catalog import resolve_program
 from biokids_core.config import Config, get_config
+from biokids_shell.appbar import EXIT_NOT_FOUND, MODULE, scope_unit, stop_command
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +45,14 @@ SCOPE_REFUSAL_TIMEOUT_S = 1.5
 
 A refusal happens before the exec and so is immediate; anything still alive
 after this has become the application itself."""
+
+BRING_BACK_TIMEOUT_S = 5.0
+"""How long the app bar's helper gets to find an app's window and show it."""
+STILL_OPENING_S = 30.0
+"""An app with no window yet this soon after it started is still opening it; a
+second tap waits for it rather than starting another. Later, a scope with no
+window is something left behind, and is stopped before the app starts again."""
+UNIT_COMMAND_TIMEOUT_S = 30.0
 
 
 UNIT_PREFIX = "biokids-app"
@@ -71,7 +86,11 @@ class AppLauncher:
     config: Config = field(default_factory=get_config)
     counter: int = 0
     running: dict[str, str] = field(default_factory=dict)
-    """slug -> unit name, so a second tap re-focuses rather than starting a second copy."""
+    """slug -> unit name, so a second tap re-focuses rather than starting a second
+    copy (`_open_again`)."""
+    started: dict[str, float] = field(default_factory=dict)
+    """slug -> when its unit started (monotonic): an app still opening its window
+    is told apart from a scope that has none."""
     _drains: set[asyncio.Task[None]] = field(default_factory=set)
     """Live stderr drains. Held so the event loop cannot collect one mid-flight."""
 
@@ -79,6 +98,13 @@ class AppLauncher:
         argv = self.build_argv(request)
         if argv is None:
             return LaunchResult(ok=False, error="app.not_allowed")
+        if request.kind == "app":
+            # Not web tiles: every browser window is one Chromium, in the scope
+            # of whichever tile started it first, so "the window of this tile's
+            # scope" can be another tile's site. A web tile opens a window.
+            again = await self._open_again(request.slug)
+            if again is not None:
+                return again
         if request.kind == "web" or (request.kind == "builtin" and request.slug == "browser"):
             prepare_browser_profile(self.child_browser_profile(), request.locale)
 
@@ -139,7 +165,70 @@ class AppLauncher:
             if refused:
                 return LaunchResult(ok=False, error="error.unknown")
             self.running[request.slug] = unit
+            self.started[request.slug] = time.monotonic()
         return LaunchResult(ok=True, unit=unit)
+
+    # ------------------------------------------------------- open it again
+
+    async def _open_again(self, slug: str) -> LaunchResult | None:
+        """The second tap on an open app's tile: its window, not a second copy.
+
+        A result when the tap is answered by the app already running; None when
+        it should be started as usual.
+        """
+        unit = self.running.get(slug)
+        if not unit:
+            return None
+        shown = await self.bring_back(unit)
+        if shown == 0:
+            log.info("%s is open already; its window is in front again", unit)
+            return LaunchResult(ok=True, unit=unit)
+        if shown != EXIT_NOT_FOUND:
+            # The helper could not look (no GTK, no display): start it as before.
+            self._forget(slug)
+            return None
+        if not await self.unit_active(unit):
+            self._forget(slug)
+            return None
+        if time.monotonic() - self.started.get(slug, 0.0) < STILL_OPENING_S:
+            return LaunchResult(ok=True, unit=unit)
+        log.info("%s is running with no window; stopping it to start it again", unit)
+        await self.stop_unit(unit)
+        self._forget(slug)
+        return None
+
+    def _forget(self, slug: str) -> None:
+        self.running.pop(slug, None)
+        self.started.pop(slug, None)
+
+    async def bring_back(self, unit: str) -> int | None:
+        """Ask the app bar's helper to show this app's window again.
+
+        Its exit code: 0 shown, `EXIT_NOT_FOUND` no window, anything else (or
+        None) could not look. The helper is the bar's own code, run once, because
+        the bar is what knows the windows: which are the app's, and which are
+        only minimised.
+        """
+        return await _exit_code(
+            [sys.executable, "-m", MODULE, "--bring-back", unit], BRING_BACK_TIMEOUT_S
+        )
+
+    async def unit_active(self, unit: str) -> bool:
+        return (
+            await _exit_code(
+                ["systemctl", "--user", "is-active", "--quiet", scope_unit(unit)],
+                UNIT_COMMAND_TIMEOUT_S,
+            )
+            == 0
+        )
+
+    async def stop_unit(self, unit: str) -> bool:
+        try:
+            argv = stop_command(scope_unit(unit))
+        except ValueError:
+            log.warning("not stopping %s: not an app's scope", unit)
+            return False
+        return await _exit_code(argv, UNIT_COMMAND_TIMEOUT_S) == 0
 
     async def _refused_quickly(self, process: asyncio.subprocess.Process, slug: str) -> bool:
         """Did systemd-run refuse, or is the application now running?
@@ -317,6 +406,26 @@ def prepare_browser_profile(profile: Path, locale: str = "") -> bool:
             partial.unlink()
         return False
     return True
+
+
+async def _exit_code(argv: list[str], within: float) -> int | None:
+    """Run a short command; its exit code, or None if it could not be run in time."""
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *argv,
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.DEVNULL,
+        )
+    except OSError as exc:
+        log.warning("%s could not be run: %s", argv[0], exc)
+        return None
+    try:
+        return await asyncio.wait_for(process.wait(), timeout=within)
+    except TimeoutError:
+        log.warning("%s took longer than %s s", " ".join(argv[:4]), within)
+        with contextlib.suppress(ProcessLookupError):
+            process.kill()
+        return None
 
 
 def _safe_unit(slug: str) -> str:

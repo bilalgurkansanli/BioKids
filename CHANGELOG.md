@@ -36,6 +36,16 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
   shipped by BioKids. Sio speaks it as it is and Zio a little higher; the voice
   service picks it up at the next sentence. `biokids-admin voice-setup
   status|remove`. New config key `paths.piper_dir`; new daemon op `voice_setup`.
+- **The launcher's sound at the top right** (D-199): two big buttons and a level bar
+  instead of the footer slider.
+- **The app bar** (D-197). Over every app the child opens, four big buttons at the top
+  right of the screen: 🏠 sends the app to the background and shows the launcher (its
+  tile brings the same window back), 🔉 and 🔊 turn that app's own sound down and up
+  with a small level beside them, never the machine's or Zio and Sio's, and ✕ closes
+  it - asking first, and stopping the app if it is still there three seconds later or
+  tapped again. Never over the launcher. While it runs the title bar has no button;
+  the moment it does not, the title bar's close button is back. biokids-shell now
+  depends on `python3-gi`, `gir1.2-gtk-3.0`, `gir1.2-wnck-3.0` and `pulseaudio-utils`.
 - **A guided first run** (D-195). Installing the packages opens the setup wizard at
   once in the open desktop; a "BioKids Ebeveyn Paneli" shortcut goes on the parent's
   desktop; phone access is four numbered steps with App Store and Google Play QR
@@ -115,6 +125,17 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
 
 ### Fixed
 
+- **"Sor Bana" answered nothing** (D-198): the tile showed where the assistant was not
+  installed or had no model, and where it was, the daemon could not open its socket
+  after D-171's hardening. The tile now shows only when the assistant can answer, and
+  the daemon reaches the socket through the `biokids-ai` group.
+
+- **An app that would not close could not be left** (D-197). Frozen Bubble's fixed-size
+  window floated mid-screen with its close button at its own corner, and an app that
+  ignores the title bar's close request stayed open; the app bar's ✕ stops it. Windows
+  that cannot fill the screen now open in its middle.
+- **A second tap on an open app's tile started a second copy** (D-197); it brings the
+  open one back, minimised or not.
 - **Two children logged in at once shared one launcher port** (D-188).
 - **What the live VM run found** (D-179): the lockdown waits up to twenty seconds for
   light-locker before ending a session; the first filter check waits thirty seconds,

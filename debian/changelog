@@ -39,6 +39,14 @@ biokids (0.1.0-2) trixie; urgency=medium
     each file checked against a pinned SHA-256 (D-196). Never enabled,
     never started by apt; purging biokids-core with the family's data
     removes what it installed.
+  * biokids-shell: the app bar (D-197) - home, the app's own volume and a
+    close that stops an app which will not close, at the screen's top
+    right over every app. New Depends: python3-gi, gir1.2-gtk-3.0,
+    gir1.2-wnck-3.0, pulseaudio-utils.
+  * "Sor Bana" shows only when the assistant can answer, and the daemon
+    reaches the assistant's socket through the biokids-ai group (D-198).
+    The launcher's sound is two buttons at the top right; "Tablo" leaves
+    the catalogue (D-199).
 
  -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Wed, 07 Oct 2026 12:00:00 +0300
 

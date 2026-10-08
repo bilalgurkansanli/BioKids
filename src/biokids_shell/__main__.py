@@ -28,7 +28,12 @@ from biokids_shell.app import ShellState, create_app
 from biokids_shell.client import ShellClient
 from biokids_shell.kiosk import KioskSupervisor, keep_fullscreen, launcher_port
 from biokids_shell.relay import SessionRelay, WindowRaiser, voice_socket_path
-from biokids_shell.windows import RULES_SUBDIR, WindowRules, apply_window_manager_settings
+from biokids_shell.windows import (
+    RULES_SUBDIR,
+    AppBar,
+    WindowRules,
+    apply_window_manager_settings,
+)
 
 SHUTDOWN_GRACE_SECONDS = 3
 """How long the launcher's server waits for open connections when it stops. The
@@ -89,6 +94,7 @@ async def main_async(args: argparse.Namespace) -> int:
 
     kiosk = KioskSupervisor(config)
     rules = WindowRules(config.paths.share_dir / RULES_SUBDIR)
+    appbar = AppBar()
     shell: ShellState = app.state.shell
     relay = SessionRelay(
         ShellClient(config.paths.shell_socket),
@@ -106,6 +112,9 @@ async def main_async(args: argparse.Namespace) -> int:
         # (D-163). Neither belongs on a developer's own desktop, hence the guard.
         await apply_window_manager_settings()
         tasks.append(asyncio.create_task(rules.supervise(stop_event), name="window-rules"))
+        # The app bar: home, the app's volume and a close that works (D-197).
+        # It takes the title bar's close button over once it is on screen.
+        tasks.append(asyncio.create_task(appbar.supervise(stop_event), name="app-bar"))
         # Give the launcher a moment to bind before pointing a browser at it;
         # Chromium's own error page is not something a four-year-old should see.
         await asyncio.sleep(0.5)
@@ -116,6 +125,7 @@ async def main_async(args: argparse.Namespace) -> int:
 
     await kiosk.stop()
     await rules.stop()
+    await appbar.stop()
     server.should_exit = True
     for task in tasks:
         task.cancel()

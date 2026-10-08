@@ -13,7 +13,7 @@ it: delete the files and log in again.
 
 | File | Effect |
 |---|---|
-| `xfwm4.xml` | No window decorations, no keyboard shortcut that closes or moves a window, no workspace switching, no alt-tab |
+| `xfwm4.xml` | A 64-pixel title bar with one big close button (D-163) - which the launcher takes away while the app bar is running and gives back when it is not (D-197) - windows opened in the middle of the screen, no keyboard shortcut that closes or moves a window, no workspace switching, no alt-tab |
 | `xfce4-session.xml` | No session save, no logout dialog, no "restore on login" prompt |
 | `xfce4-desktop.xml` | No desktop icons, no right-click desktop menu, a plain background |
 | `xfce4-power-manager.xml` | No suspend on lid or idle — a suspended machine mid-countdown is a machine that comes back in a state nobody expects |

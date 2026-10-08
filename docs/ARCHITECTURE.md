@@ -410,6 +410,12 @@ if allowed, the shell spawns the app via `systemd-run --user --scope
 Focus tracking on X11: `_NET_ACTIVE_WINDOW` via python-xlib, mapped to a PID via
 `_NET_WM_PID`, mapped to a cgroup via `/proc/<pid>/cgroup`.
 
+The app bar (D-197, `biokids_shell/appbar/`) already walks that chain in the child's
+session, through libwnck: the active window, its `_NET_WM_PID`, its
+`biokids-app-*.scope`. It uses the scope to find the app's own sound streams and, when
+an app will not close, to stop it; the launcher uses it, through the bar's
+`--bring-back`, to show an open app's window again when its tile is tapped.
+
 ---
 
 ## 8. i18n

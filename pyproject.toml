@@ -143,6 +143,12 @@ exclude = ["src/biokids_core/migrations/"]
 module = ["dbus_next.*", "qrcode.*", "argon2.*"]
 ignore_missing_imports = true
 
+# PyGObject (python3-gi) is Debian's, for the app bar alone (D-197), and ships
+# no stubs; everything from gi.repository is Any.
+[[tool.mypy.overrides]]
+module = ["gi", "gi.*"]
+ignore_missing_imports = true
+
 # ---------------------------------------------------------------- pytest
 
 [tool.pytest.ini_options]

@@ -881,7 +881,7 @@ warning, and the machine going down — not the wizard.
 
 ## 8. What 0.1.0-2 added
 
-D-187 to D-194, none of which §1–§7 exercises. Run it on the machine from §7, after
+D-187 to D-194 and D-197, none of which §1–§7 exercises. Run it on the machine from §7, after
 the recording, with Elif set up and her quota raised so she is not locked out
 halfway. `curl` is used below: `sudo apt install -y curl` if §3.3's manual way did
 not already bring it.
@@ -1025,6 +1025,73 @@ systemctl status biokids-wiki.path biokids-wiki.service --no-pager
 and the Vikipedi tile on Elif's home screen the next time it is drawn, opening the
 encyclopedia in her browser. If `biokids-ai` cannot be installed yet, record the first
 half as the pass and the second as not run.
+
+### 8.9 The app bar
+
+D-197. biokids-shell has four new dependencies; before installing the build:
+
+```bash
+apt-cache policy python3-gi gir1.2-gtk-3.0 gir1.2-wnck-3.0 pulseaudio-utils | grep -B1 Candidate
+```
+
+Log Elif in. The helpers below are used from ssh throughout:
+
+```bash
+U=elif; R=/run/user/$(id -u $U)
+as_elif() { sudo -u $U env XDG_RUNTIME_DIR=$R DBUS_SESSION_BUS_ADDRESS=unix:path=$R/bus \
+  DISPLAY=:0 XAUTHORITY=/home/$U/.Xauthority "$@"; }
+as_elif systemctl --user status biokids-shell --no-pager | grep 'biokids_shell.appbar'
+as_elif xfconf-query -c xfwm4 -p /general/button_layout     # "|": the bar has the button
+as_elif xfconf-query -c xfwm4 -p /general/placement_ratio   # 100
+journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep -i 'app bar'
+```
+
+**Pass, in order** (a screenshot of each is worth keeping:
+`as_elif xfce4-screenshooter -f -s /tmp/bar.png`):
+
+1. On the launcher's home screen there is **no** bar.
+2. Open **Balonlar** (Frozen Bubble). Its window opens in the middle of the screen,
+   its title bar has no button, and at the screen's top right is the bar: 🏠 🔉,
+   five small bars, 🔊, and a red ✕ — the emoji in colour, each button as big as
+   the old close button.
+3. With the game's music playing, the five bars show a level. Tap 🔉 twice:
+
+   ```bash
+   as_elif pactl list sink-inputs | grep -E 'Sink Input|Volume:|process.id'
+   as_elif wpctl get-volume @DEFAULT_AUDIO_SINK@
+   ```
+
+   **Pass:** the game's stream went down by 20%, the machine's volume did not move,
+   and a time warning (§7) is as loud as before. A game with no sound has both
+   volume buttons dimmed.
+4. Tap 🏠: the launcher is back and the game keeps running
+   (`as_elif systemctl --user list-units --plain --no-legend 'biokids-app-*'`).
+   Tap the Balonlar tile: the **same** game comes back, where it was left, and the
+   list still has one `biokids-app-frozen-bubble-*` scope, not two.
+5. Tap ✕: the game is gone within three seconds (or thirteen, if it had to be
+   stopped), its scope is gone from the list, and the launcher is in front.
+6. An app that ignores the request. Open Balonlar again and freeze it:
+
+   ```bash
+   S=$(as_elif systemctl --user list-units --plain --no-legend 'biokids-app-*' | awk '{print $1; exit}')
+   CG=$(as_elif systemctl --user show -p ControlGroup --value "$S")
+   sudo kill -STOP $(cat /sys/fs/cgroup$CG/cgroup.procs)
+   ```
+
+   Tap ✕. **Pass:** about three seconds later the journal says "did not close when
+   asked; stopping its scope" and the window goes. A second tap on ✕ stops it at
+   once.
+7. The fallback. Kill the bar:
+   `sudo pkill -KILL -f '^/usr/bin/python3 -m biokids_shell.appbar$'`.
+   **Pass:** `button_layout` is `|C` at once and an app's title bar shows its close
+   button again; within about five seconds the bar is back and the layout is `|`.
+8. With an app open, let a time warning come (§7.2's quota, or a grant that leaves
+   ten minutes). **Pass:** the warning fills the screen with **no** bar on it, and
+   the bar is back over the app when the warning hands the screen back.
+9. A web tile: a video in YouTube Kids, made full screen. **Pass:** the bar stays
+   over it, 🔉 turns the video down, and ✕ closes the browser window. If the volume
+   buttons stay dimmed while the video plays, write it down: Chromium's sound
+   process did not give its own pid to the sound server.
 
 ---
 

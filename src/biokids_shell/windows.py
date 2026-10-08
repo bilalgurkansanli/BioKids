@@ -22,33 +22,57 @@ every session:
 
 Apps that would start full screen - which hides the title bar and its button -
 are started windowed instead, by their catalog entries.
+
+Since D-197 the close button is BioKids' own: `AppBar` keeps the app bar
+running (`biokids_shell.appbar`) - home, the app's volume, and a close that
+stops an app which will not close - at the screen's top right, over whichever
+app is in front. While the bar is up the title bar has no button, so there is
+one way out and not two; whenever it is not, the title bar's close button is
+back. A child is never left without one.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import shutil
+import sys
 from collections.abc import Awaitable, Callable, Sequence
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
+
+from biokids_shell.appbar import EXIT_UNAVAILABLE, MODULE, READY
 
 log = logging.getLogger(__name__)
 
 THEME_NAME: Final = "BioKids"
 
+BUTTON_LAYOUT: Final = "/general/button_layout"
+CLOSE_BUTTON_LAYOUT: Final = "|C"
+"""Title on the left, then the close button; no other button anywhere. The
+layout every session starts with, and the one it falls back to (D-197)."""
+NO_BUTTONS_LAYOUT: Final = "|"
+"""The title alone, while the app bar carries the close button."""
+
 #: (property, xfconf type, value) in the `xfwm4` channel. The same values as
 #: `xfce/xfwm4.xml`, which a test keeps in step with this table.
 WINDOW_MANAGER_SETTINGS: Final[tuple[tuple[str, str, str], ...]] = (
     ("/general/theme", "string", THEME_NAME),
-    # Title on the left, then the close button; no other button anywhere.
-    ("/general/button_layout", "string", "|C"),
-    # The title bar is the only place the close button can be, so a maximised
-    # window keeps it. Borders still go: they are of no use to a child.
+    (BUTTON_LAYOUT, "string", CLOSE_BUTTON_LAYOUT),
+    # The title bar is where the close button is when the app bar is not, so
+    # a maximised window keeps it; and with the bar it is the strip the bar
+    # sits in, so the bar covers nothing of the app. Borders still go: they
+    # are of no use to a child.
     ("/general/titleless_maximize", "bool", "false"),
     ("/general/borderless_maximize", "bool", "true"),
     ("/general/title_font", "string", "Sans Bold 16"),
     ("/general/title_alignment", "string", "center"),
+    # A window that cannot fill the screen - Frozen Bubble's fixed 640x480 -
+    # opens in the middle of it, whatever its size, rather than in a corner
+    # the window manager picked (D-197).
+    ("/general/placement_ratio", "int", "100"),
+    ("/general/placement_mode", "string", "center"),
 )
 
 RULES_SUBDIR: Final = "devilspie2"
@@ -175,3 +199,140 @@ class WindowRules:
             await asyncio.wait_for(process.wait(), timeout=COMMAND_TIMEOUT_S)
         except TimeoutError:  # pragma: no cover - a wedged helper
             process.kill()
+
+
+# ------------------------------------------------------------- the app bar
+
+APPBAR_STABLE_SECONDS: Final = 60.0
+"""A bar that ran this long before it stopped is restarted at once, not after a
+backoff that grew while it was crash-looping an hour ago."""
+
+Spawn = Callable[..., Awaitable[Any]]
+
+
+async def set_button_layout(
+    layout: str, run: Runner = run_quietly, *, xfconf_query: str | None = None
+) -> bool:
+    """Which buttons the title bar has, in this session, now."""
+    program = xfconf_query or shutil.which("xfconf-query")
+    if program is None:
+        return False
+    return await run(
+        [program, "-c", "xfwm4", "-p", BUTTON_LAYOUT, "--create", "-t", "string", "-s", layout]
+    )
+
+
+class AppBar:
+    """The app bar (D-197), and the title bar's close button standing in for it.
+
+    The order is the safety property: the title bar loses its close button only
+    after the bar has said it is on screen (`READY`), and gets it back the
+    moment the bar's process is gone - crashed, killed, or never started for
+    want of GTK. Every session also starts with the button
+    (`apply_window_manager_settings`), so a layout left behind by a launcher
+    that was killed outright lasts only until the next login.
+    """
+
+    def __init__(
+        self,
+        *,
+        python: str = sys.executable,
+        run: Runner = run_quietly,
+        xfconf_query: str | None = None,
+        spawn: Spawn | None = None,
+    ) -> None:
+        self.python = python
+        self.run = run
+        self.xfconf_query = xfconf_query
+        self.spawn: Spawn = spawn or asyncio.create_subprocess_exec
+        self.process: Any = None
+        self.ready = False
+        self.restarts = 0
+        self._started = False
+        self._stopping = False
+
+    def argv(self) -> list[str]:
+        return [self.python, "-m", MODULE]
+
+    async def _layout(self, layout: str) -> None:
+        await set_button_layout(layout, self.run, xfconf_query=self.xfconf_query)
+
+    async def run_once(self) -> int | None:
+        """Run the bar until it exits. Its exit code; None if it would not start."""
+        try:
+            process = await self.spawn(
+                *self.argv(),
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE,
+                # Its log goes where the launcher's goes: the journal.
+                stderr=None,
+            )
+        except OSError as exc:
+            log.warning("the app bar could not be started: %s", exc)
+            return None
+        self.process = process
+        self._started = True
+        try:
+            if await self._announced(process):
+                self.ready = True
+                await self._layout(NO_BUTTONS_LAYOUT)
+            if process.stdout is not None:
+                await process.stdout.read()
+            code: int | None = await process.wait()
+        finally:
+            self.ready = False
+            await self._layout(CLOSE_BUTTON_LAYOUT)
+        return code
+
+    @staticmethod
+    async def _announced(process: Any) -> bool:
+        """Read the bar's output until it says it is ready, or ends."""
+        if process.stdout is None:
+            return False
+        while True:
+            line = await process.stdout.readline()
+            if not line:
+                return False
+            if line.strip() == READY.encode():
+                return True
+
+    async def supervise(self, stop_event: asyncio.Event) -> None:
+        """Keep the bar running for as long as the launcher runs."""
+        loop = asyncio.get_running_loop()
+        backoff = RESTART_SECONDS
+        while not (stop_event.is_set() or self._stopping):
+            started = loop.time()
+            code = await self.run_once()
+            if stop_event.is_set() or self._stopping:
+                return
+            if code is None or code == EXIT_UNAVAILABLE:
+                log.warning(
+                    "the app bar cannot run in this session; every app keeps the "
+                    "title bar's close button"
+                )
+                return
+            self.restarts += 1
+            if loop.time() - started >= APPBAR_STABLE_SECONDS:
+                backoff = RESTART_SECONDS
+            log.warning(
+                "the app bar exited (%s); the title bar has the close button until it "
+                "is back (restart %s)",
+                code,
+                self.restarts,
+            )
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(stop_event.wait(), timeout=backoff)
+            backoff = min(RESTART_BACKOFF_MAX, backoff * 1.5)
+
+    async def stop(self) -> None:
+        self._stopping = True
+        process = self.process
+        self.process = None
+        if process is not None and process.returncode is None:
+            process.terminate()
+            try:
+                await asyncio.wait_for(process.wait(), timeout=COMMAND_TIMEOUT_S)
+            except TimeoutError:  # pragma: no cover - a wedged bar
+                process.kill()
+        if self._started:
+            await self._layout(CLOSE_BUTTON_LAYOUT)

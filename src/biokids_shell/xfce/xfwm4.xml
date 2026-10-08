@@ -11,6 +11,12 @@
   on a 64-pixel title bar that maximised windows keep (D-163). The launcher
   sets the same keys live at every login (biokids_shell/windows.py), which is
   what reaches a child whose home already has an older copy of this file.
+
+  While the BioKids app bar runs - home, the app's volume and close, at the
+  screen's top right (D-197) - the launcher takes the title bar's button away
+  (button_layout "|") and gives it back the moment the bar is gone, so "|C"
+  here is the fallback every session starts with. Windows that cannot fill the
+  screen open in its middle.
 -->
 <channel name="xfwm4" version="1.0">
   <property name="general" type="empty">
@@ -23,6 +29,8 @@
     <property name="wrap_workspaces" type="bool" value="false"/>
     <property name="cycle_workspaces" type="bool" value="false"/>
     <property name="snap_to_border" type="bool" value="true"/>
+    <property name="placement_ratio" type="int" value="100"/>
+    <property name="placement_mode" type="string" value="center"/>
     <property name="borderless_maximize" type="bool" value="true"/>
     <property name="titleless_maximize" type="bool" value="false"/>
     <property name="mousewheel_rollup" type="bool" value="false"/>

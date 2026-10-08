@@ -138,6 +138,25 @@ msgstr "Never mind"
 msgid "shell.launching"
 msgstr "Opening {app}"
 
+# The app bar (D-197): its buttons carry no words; these are what a screen reader says.
+msgid "appbar.home"
+msgstr "Home screen"
+
+msgid "appbar.quieter"
+msgstr "Quieter"
+
+msgid "appbar.louder"
+msgstr "Louder"
+
+msgid "appbar.close"
+msgstr "Close"
+
+msgid "appbar.level"
+msgstr "This app's volume: {percent}%"
+
+msgid "appbar.no_sound"
+msgstr "This app makes no sound"
+
 msgid "shell.no_apps"
 msgstr "You do not have any apps yet. Tell a grown-up."
 

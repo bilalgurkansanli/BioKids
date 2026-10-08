@@ -150,8 +150,12 @@ Depends: biokids-core (= ${binary:Version}),
          chromium-l10n,
          devilspie2,
          fonts-noto-color-emoji,
+         gir1.2-gtk-3.0,
+         gir1.2-wnck-3.0,
          light-locker,
+         pulseaudio-utils,
          python3-fastapi,
+         python3-gi,
          python3-jinja2,
          python3-python-multipart,
          python3-uvicorn,
@@ -174,6 +178,10 @@ Description: parental controls for Debian - child launcher
  .
  The tile grid changes with the child's age: the four-to-seven layout is
  larger, has fewer tiles and uses pictures rather than words.
+ .
+ Over every app the child opens, the same four big buttons sit in the
+ screen's top-right corner: back to the launcher, the app's own volume down
+ and up, and close - which stops an app that will not close by itself.
  .
  BioKids is built for a curious child aged 4 to 10 working alone at one
  computer. The launcher cannot be left with a keyboard or a mouse, which is
