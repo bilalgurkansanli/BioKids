@@ -169,8 +169,9 @@ Bugün / Today          ← default, the only screen most parents open; a badge
 Geçmiş / History       → fourteen days of minutes, and one day's apps, sites and
                          requests (D-192)
 Kayıtlar / Audit log
-Ayarlar / Settings     → PIN, passphrase, email, phone access, language, and the
-                         parent's own voice (Sesler, D-174)
+Ayarlar / Settings     → PIN, passphrase, email, phone access, language, and Zio
+                         and Sio's voice: the natural voice to download (D-196)
+                         and the parent's own (D-174)
 ```
 
 **İstekler / Requests** is not in the menu: it is one tap from Today, where the badge

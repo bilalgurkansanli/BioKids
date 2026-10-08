@@ -1,0 +1,48 @@
+[Unit]
+Description=BioKids voices: one-time download of the natural voice
+Documentation=man:biokids-admin(8)
+# Started by the daemon when a parent presses "Doğal sesi indir" in the panel
+# (D-196), never at boot and never by itself. It is the only part of the voices
+# with a network: it fetches Piper from github.com/rhasspy/piper and its Turkish
+# voice from huggingface.co/rhasspy/piper-voices, each pinned by SHA-256
+# (docs/SECURITY.md section 4), puts them under /var/lib/biokids-voices, and
+# exits. BioKids may not ship either (D-137); the family fetches them itself.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/biokids-admin voice-setup download
+Environment=PYTHONUNBUFFERED=1
+# Root by uid only, as the panel is: /var/lib/biokids-voices is root's, 0755,
+# and the voice service that reads it runs as the child. Root owns what it
+# writes there without any capability at all.
+UMask=0022
+# About 90 MB over a family's connection.
+TimeoutStartSec=1h
+Nice=10
+IOWeight=50
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectKernelLogs=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# The voices directory and nothing else: not the family's database, not /etc.
+ReadWritePaths=/var/lib/biokids-voices

@@ -74,6 +74,22 @@ through AccountsService.
 The package runs this on every installation and upgrade; a child added in the
 panel gets them when the account is made.
 .TP
+.BR voice\-setup " [" download | status | remove ]
+Zio and Sio's natural voice.
+.B download
+fetches Piper and its Turkish voice, checks each file against its pinned
+SHA\-256, and puts them under
+.IR /var/lib/biokids\-voices ;
+it is what
+.B biokids\-voice\-setup.service
+runs when a parent presses the button in the panel.
+.B status
+prints what is installed, as JSON, and
+.B remove
+deletes what the download installed, after which espeak\-ng speaks again.
+The voice is free for a family's personal, non\-commercial use and is not
+part of BioKids.
+.TP
 .B sync\-catalog
 Load the application catalogue into the database.
 It only adds: an application a parent disabled stays disabled, and one that
@@ -109,6 +125,9 @@ Where the daemon listens.
 .TP
 .I /usr/share/biokids/catalog/catalog.toml
 The application catalogue.
+.TP
+.I /var/lib/biokids\-voices/
+The parent's recordings, and Piper and its voice once downloaded.
 .SH SEE ALSO
 .BR biokids\-daemon (8),
 .BR biokids\-panel (8),

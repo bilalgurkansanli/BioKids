@@ -184,6 +184,12 @@ override_dh_python3:
 #     without the argument dh_installsystemd acts on every unit already in the
 #     package build directory, which by then includes biokids-lockdown.service -
 #     and starting that one locks every child session on install.
+#
+# The setup units - remote access, the assistant's models and the natural voice
+# (D-169, D-165, D-196) - run only when the daemon starts them for a parent who
+# pressed a button: never enabled, never started by apt. biokids-voice has no
+# other system unit (the voice service is a user unit, below), so
+# --remaining-packages then leaves it alone.
 override_dh_installsystemd:
 	dh_installsystemd -pbiokids-daemon --name=biokids-lockdown --no-enable --no-start
 	dh_installsystemd -pbiokids-daemon biokids-daemon.service
@@ -195,6 +201,7 @@ override_dh_installsystemd:
 	dh_installsystemd -pbiokids-ai --name=biokids-ai-setup --no-enable --no-start
 	dh_installsystemd -pbiokids-ai biokids-ai.service
 	dh_installsystemd -pbiokids-ai --name=biokids-wiki
+	dh_installsystemd -pbiokids-voice --name=biokids-voice-setup --no-enable --no-start
 	dh_installsystemd --remaining-packages
 
 # The shell and the voice service belong to a child's session and are enabled

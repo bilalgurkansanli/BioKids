@@ -56,6 +56,24 @@ warns the child on screen. It does not fail silently and it does not pretend.
 appears, or if `piper-tts` enters Debian. Bundling one is still the better
 outcome; there is simply nothing to bundle today.
 
+## Downloaded on the parent's button, not bundled (D-196)
+
+Step 5 below, done. The panel's "Doğal sesi indir" runs
+`biokids-voice-setup.service`, which fetches these from their authors onto the
+family's machine. None of them is in this directory, in any package, or in the
+repository; each is pinned in `src/biokids_core/natural_voice.py` by URL, size and
+SHA-256, checked on 2026-10-08.
+
+| What | Source | Licence | Who | Notes |
+|---|---|---|---|---|
+| Piper 2023.11.14-2, `piper_linux_x86_64.tar.gz` | `github.com/rhasspy/piper` releases (archived) | MIT; the archive bundles rhasspy's espeak-ng fork (GPL-3) and onnxruntime (MIT) | — | run as a separate process (D-30) |
+| `tr_TR-dfki-medium` (`.onnx`, `.onnx.json`, `MODEL_CARD`) | `huggingface.co/rhasspy/piper-voices`, commit `c10ece1aade47bb51c153c893d14e5bf8e5b7117` | dataset `github.com/marytts/dfki-ot-data`: **CC BY-NC-SA 4.0** | one male Turkish speaker (MaryTTS's `dfki-ot` voice is described as male) | personal, non-commercial family use; the model card is kept beside the model |
+
+No female Turkish voice exists in the catalogue, so Zio speaks this one raised
+(`docs/VOICE.md` section 3a). The panel says, next to the button, that the voice is
+free for a family's personal, non-commercial use and comes from its authors, not
+from BioKids.
+
 ## The table
 
 One row per bundled model. Every column must be filled in before the file lands.

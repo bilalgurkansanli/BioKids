@@ -78,7 +78,8 @@ guards hold.
 
 The voice question is closed (D-137): no Turkish Piper voice may be redistributed and
 `piper-tts` is not in Debian 13, so espeak-ng speaks and Piper is used wherever a family
-installs it.
+installs it - which the panel now does with one button, downloading Piper and the
+Turkish voice from their authors (D-196).
 
 ---
 

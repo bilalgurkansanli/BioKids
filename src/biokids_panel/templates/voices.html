@@ -1,14 +1,53 @@
 {% extends "base.html" %}
-{% block title %}{{ _('voices.title') }} · {{ _('panel.title') }}{% endblock %}
+{% block title %}{{ _('voices.page.title') }} · {{ _('panel.title') }}{% endblock %}
 
 {#
-  Zio and Sio in the parent's own voice (D-174). Seven sentences, each recorded
-  with one press to start and one to stop. Recording needs voices.js and a
-  microphone; listening to and deleting what is there does not.
+  Zio and Sio's voice. First the natural voice a parent can download (D-196):
+  which voice speaks now, one button, the licence in one sentence. The download
+  is followed on /voice-natural, which refreshes itself; this page must not,
+  with a sentence field per line and perhaps a recording under way.
+
+  Then the parent's own voice (D-174). Seven sentences, each recorded with one
+  press to start and one to stop. Recording needs voices.js and a microphone;
+  listening to and deleting what is there does not.
 #}
 {% block content %}
   <meta name="csrf-token" content="{{ csrf }}">
-  <h1>{{ _('voices.title') }}</h1>
+  <h1>{{ _('voices.page.title') }}</h1>
+
+  <section class="card" id="natural">
+    <h2>{{ _('voices.natural.title') }}</h2>
+    {% if natural.speaks %}
+      <p><strong>{{ _('voices.natural.now_natural') }}</strong></p>
+    {% else %}
+      <p><strong>{{ _('voices.natural.now_robot') }}</strong></p>
+    {% endif %}
+
+    {% if natural.state == 'running' %}
+      <p role="status">{{ _('voices.natural.running', percent=natural.progress) }}</p>
+      <a class="btn" href="/voice-natural">{{ _('voices.natural.follow') }}</a>
+    {% elif natural.state == 'installed' or natural.speaks %}
+      {# `speaks` alone: a Piper and a voice a family installed by hand. #}
+      <p>{{ _('voices.natural.installed') }}</p>
+      {% if natural.state == 'installed' %}
+        <p class="help">{{ _('voices.natural.zio') }}</p>
+      {% endif %}
+    {% else %}
+      {% if natural.state == 'failed' %}
+        <div class="notice notice--danger" role="alert">{{ _('voices.natural.failed') }}</div>
+      {% endif %}
+      <p>{{ _('voices.natural.offer') }}</p>
+      <form method="post" action="/voice-natural">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button class="btn btn--primary" type="submit">{{ _('voices.natural.download', size=natural.size_mb) }}</button>
+      </form>
+      <p class="help">{{ _('voices.natural.zio') }}</p>
+    {% endif %}
+    <p class="help">{{ _('voices.natural.licence') }}</p>
+    <p class="help">{{ _('voices.natural.own') }}</p>
+  </section>
+
+  <h2>{{ _('voices.title') }}</h2>
   <p class="muted">{{ _('voices.help') }}</p>
 
   <form class="card card--flat" method="post" action="/voice-persona">

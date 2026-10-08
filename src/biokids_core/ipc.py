@@ -68,6 +68,8 @@ class Op(StrEnum):
     """Start the one-time model download a parent asked for (D-165)."""
     REMOTE_SETUP = "remote_setup"
     """Install Tailscale if needed, wait for sign-in, publish the panel (D-169)."""
+    VOICE_SETUP = "voice_setup"
+    """Start the one-time download of the natural voice a parent asked for (D-196)."""
     DECIDE_REQUEST = "decide_request"
     """A parent's yes or no to something a child asked for (D-173)."""
     UNLOCK_NOW = "unlock_now"

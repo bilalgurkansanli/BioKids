@@ -66,6 +66,7 @@ Never add a claim to marketing copy that contradicts this list.
 | `biokids-wiki` | `biokids-ai` system user | serves the offline Wikipedia on `127.0.0.1:7877` once a parent downloaded it (D-190); no capabilities, `IPAddressDeny=any` except localhost |
 | `biokids-dns` | started as root, `dnsmasq` drops to its own user | the children's DNS filter, on loopback port 5354 only (D-167) |
 | `biokids-remote-setup` | root, oneshot, only when the parent asks | installs Tailscale and signs it in for phone access (D-169); apt needs root |
+| `biokids-voice-setup` | root by uid only, oneshot, only when the parent asks | downloads Piper and its Turkish voice into `/var/lib/biokids-voices`, each file pinned by SHA-256 (D-196); no capability, nothing else writable |
 | `biokids-provision@` | root, oneshot, one instance per child added | creates the child's account and session files: one fixed command, `biokids-admin provision-child %I`, because the panel's sandbox cannot write `/etc` or `/home` (D-142) |
 | `biokids-unprovision@` | root, oneshot, one instance per child removed | the reverse, `biokids-admin unprovision-child %I`: out of `biokids-child`, `SystemAccount=true` for AccountsService and a `nologin` shell, only BioKids' own session files removed; the account and its home stay (D-191) |
 | the BioKids extension | inside Chromium, every profile on the machine | `webNavigation` and `storage`, host permission `http://127.0.0.1/*` only; no content scripts, no `tabs` (D-187) |
@@ -98,6 +99,7 @@ On top of that block, each root unit names the little of root it keeps (D-171):
 |---|---|---|---|
 | `biokids-daemon` | `CAP_NET_ADMIN` (nft), `CAP_CHOWN` (its socket) | unix, netlink, inet, inet6 | `/var/lib/biokids /run/biokids /etc/chromium/policies/managed` |
 | `biokids-panel` | none | unix, inet, inet6 | `/var/lib/biokids /run/biokids /var/lib/biokids-voices` |
+| `biokids-voice-setup` | none | unix, inet, inet6 | `/var/lib/biokids-voices` |
 
 The panel is root by uid only: the one root process a phone can reach holds no
 capability a bug in it could use.
@@ -107,6 +109,13 @@ internet and cannot. The one-time model download is a separate unit,
 `biokids-ai-setup.service`, which only the parent's button starts, which has the
 network and writes nothing but the models directory, and which checks every file
 against its pinned SHA-256 (D-165).
+
+The voice service has no network either; it runs as the child and only plays and
+synthesises. The natural voice's one-time download is `biokids-voice-setup.service`,
+started only by the parent's button, with the network, no capability and nothing
+writable but `/var/lib/biokids-voices`. It refuses any file whose size or SHA-256 is
+not the pinned one, and unpacks Piper's archive with tarfile's `data` filter, only
+under the archive's own `piper/` (D-196).
 
 ---
 
@@ -144,6 +153,8 @@ entry in `DECISIONS.md` and a note in the README.**
 | `log.tailscale.com` | Tailscale's own client logs | **turned off**: the runbook starts `tailscaled` with `--no-logs-no-support` (D-157) |
 | Hugging Face | one-time download of the assistant's models | yes: only with the AI package, only when the parent presses the button (D-165) |
 | `download.kiwix.org` and the mirror it redirects to | one-time download of the encyclopedia the assistant checks itself against, pinned by SHA-256 | yes: the same button, the same package (D-178) |
+| `github.com` and `release-assets.githubusercontent.com`, where it redirects | one-time download of the Piper program, release 2023.11.14-2, pinned by SHA-256 | yes: only when the parent presses "Doğal sesi indir" (D-196) |
+| `huggingface.co` and its CDN (`*.cdn.hf.co`), where it redirects | one-time download of Piper's Turkish voice, pinned to a commit and by SHA-256 | yes: the same button (D-196) |
 
 Zero telemetry. No crash reporting. No version ping. No analytics.
 

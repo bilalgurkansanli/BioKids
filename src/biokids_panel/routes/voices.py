@@ -1,21 +1,36 @@
-"""Zio and Sio in the parent's own voice (D-174): the lines, recorded here."""
+"""Zio and Sio's voice: the natural one a parent downloads (D-196), and the
+parent's own, recorded here (D-174)."""
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Form, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from biokids_core import recorded_voice, repo
-from biokids_panel.common import View, see_other
+from biokids_core import natural_voice, recorded_voice, repo
+from biokids_core.ipc import Op
+from biokids_panel.common import PanelView, View, _call_daemon, see_other
 
 router = APIRouter()
 
 
+def _natural(view: PanelView) -> dict[str, Any]:
+    """What the natural-voice card and its page show (D-196)."""
+    config = view.ctx.config
+    state = natural_voice.state(config)
+    return {
+        "state": state,
+        "speaks": natural_voice.natural_speaks(config),
+        "size_mb": round(natural_voice.DOWNLOAD_BYTES / 1_000_000),
+        "progress": natural_voice.progress(config) if state == natural_voice.RUNNING else 0,
+    }
+
+
 @router.get("/voices", response_class=HTMLResponse)
 def voices_view(view: View) -> Response:
-    """A parent records Zio and Sio's lines in their own voice (D-174)."""
+    """A parent records Zio and Sio's lines in their own voice (D-174), and can
+    give them a natural voice for every other line (D-196)."""
     if blocked := view.guard():
         return blocked
     tr = view.tr
@@ -37,7 +52,32 @@ def voices_view(view: View) -> Response:
         lines=lines,
         locale=locale,
         persona=recorded_voice.persona(directory),
+        natural=_natural(view),
     )
+
+
+@router.get("/voice-natural", response_class=HTMLResponse)
+def natural_view(view: View, started: str = "") -> Response:
+    """The download, followed on a page of its own that refreshes itself.
+
+    Not on /voices: that page has a sentence field for every line and may be
+    halfway through a recording, and a refresh would lose both.
+    """
+    if blocked := view.guard():
+        return blocked
+    return view.render("voice_natural.html", natural=_natural(view), started=started == "1")
+
+
+@router.post("/voice-natural")
+def natural_download(view: View, csrf_token: Annotated[str, Form()] = "") -> Response:
+    """Start the one-time download (D-196), run by the daemon as its own unit."""
+    if blocked := view.guard_form(csrf_token, "/voices?error=csrf"):
+        return blocked
+    repo.audit(view.session, actor=view.actor, action="voice_download")
+    view.session.commit()
+    if not _call_daemon(view.ctx, Op.VOICE_SETUP):
+        return see_other("/voices?error=voices.natural.not_started")
+    return see_other("/voice-natural?started=1")
 
 
 @router.get("/voices/{locale}/{event}.wav")

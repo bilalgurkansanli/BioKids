@@ -37,6 +37,9 @@ case "$1" in
             # stored in it, and that needs this key to be read.
             rm -f "$CONF_DIR/ext.token" "$CONF_DIR/secret.key"
             rm -rf "$DATA_DIR"
+            # The parent's recordings (D-174), and Piper and its Turkish voice
+            # if the family downloaded them (D-196). Kept on every other path:
+            # purging biokids-voice alone does not ask, so it leaves them too.
             rm -rf /var/lib/biokids-voices
             # Earlier versions kept logs here; everything goes to the journal now.
             rm -rf "$LOG_DIR"

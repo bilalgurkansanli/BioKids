@@ -23,7 +23,7 @@ Replaced in full or in part: D-14 → D-188 · D-16 → D-185 · D-32 → D-129 
 D-53 → D-189 · D-55 → D-184 · D-57 → D-171 · D-59, D-61, D-62 → D-167 ·
 D-70, D-72–D-75, D-77–D-80 → D-180 · D-86 → D-174, D-181 · D-87, D-88 → D-137 ·
 D-89, D-90 → D-181 · D-92 → D-165, D-166 · D-149 → D-151. Completed by a later entry:
-D-38 → D-177 · D-44 → D-193 · D-64 → D-187 · D-65 → D-173.
+D-38 → D-177 · D-44 → D-193 · D-64 → D-187 · D-65 → D-173 · D-137 → D-196.
 
 ## Scope
 
@@ -568,6 +568,7 @@ CC-BY-NC-SA-4.0, `fahrettin` and `fettah` were withdrawn by their contributors),
 robotic, but a four-year-old who hears "beş dakika kaldı" has been warned, and one shown
 a card they cannot read has not. Piper is tried first where a family installs it; MBROLA
 is a Suggests (D-161). Each engine caches separately, since the key names no engine.
+*Completed by D-196:* the panel downloads Piper and that voice on the parent's button.
 
 **D-138 [claude] An end action is scoped to whoever is actually at the machine.** The
 sequence does not start for a child with no session. When someone else is logged in,
@@ -1049,4 +1050,47 @@ once after setup, Today shows a banner with a confirmed "Şimdi yeniden başlat"
 op `reboot_now`), because LightDM reads the login-by-picture setting only when it
 starts (D-155). A help page answers the questions parents ask first and is open
 before signing in, since "I forgot my PIN" is one of them.
+
+**D-196 [claude] The natural voice, downloaded with one button.** (2026-10-08)
+The owner found Zio and Sio "very robotic", and espeak-ng is. Piper sounds like a
+person, and BioKids still may not ship it (D-137), so the family fetches it from its
+authors. **Ayarlar → Zio ve Sio'nun sesi** (`/voices`) says which voice speaks now,
+"robot sesi" or "doğal ses", and offers **Doğal sesi indir (yaklaşık 90 MB)**, with one
+sentence on the licence and a reminder that the parent's own recordings (D-174) are
+more natural still. The button audits `voice_download`; the daemon op `voice_setup`
+starts `biokids-voice-setup.service` (oneshot, never enabled, root with no
+capabilities, `ProtectSystem=strict`, writable only `/var/lib/biokids-voices`), which
+runs `biokids-admin voice-setup` (`biokids_core.natural_voice`):
+- Piper 2023.11.14-2, `piper_linux_x86_64.tar.gz` from the archived MIT-licensed
+  `github.com/rhasspy/piper`, unpacked into `paths.piper_dir`
+  (`/var/lib/biokids-voices/piper/`) through tarfile's `data` filter, only under the
+  archive's `piper/`; and `tr_TR-dfki-medium` (`.onnx`, `.onnx.json`, its model card)
+  from `huggingface.co/rhasspy/piper-voices` at commit `c10ece1a`, into
+  `models/piper/`, hard-linked as `tr-sio.onnx` and `tr-zio.onnx` with a `.onnx.json`
+  beside each, the names `VoiceBank` looks for. Every file is pinned by SHA-256 and
+  size, written beside its place, checked, then renamed; a mismatch is deleted and the
+  unit fails. No other network, at any other time.
+- Piper goes in first and the voice last: audio is cached by sentence and voice, never
+  engine, and the voice's key changes when its model appears, so the first line under
+  the new key is Piper's, not espeak-ng's. The voice service looks for Piper in
+  `piper_dir` before PATH, on every line, and a Piper that appears while a child is at
+  the machine joins the chain at the next sentence (`Synthesizer._wake`).
+- The panel follows the unit on `/voice-natural`, which refreshes itself and reads
+  the percentage from the files on disk; `/voices` never refreshes, since a recording
+  may be under way. States: absent, running, failed (with the button again),
+  installed.
+- The only Turkish voice in the catalogue is a man's (DFKI's "OT" speaker; dataset CC
+  BY-NC-SA 4.0: a family may use it, BioKids may not ship it). Sio speaks it as it is.
+  Zio, the mother (D-85), speaks the same model lifted by 1.2 (`ZIO_LIFT`): Piper
+  speaks 1.2 times slower, and the WAV's sample rate is raised 1.2 times, so pitch and
+  formants rise about three semitones at an unchanged pace, with every sample as Piper
+  made it. Chosen over sox's `pitch` effect (a phasey warble, and a new Recommends)
+  and over leaving Zio on MBROLA `tr2` or espeak-ng (a woman, but a robot again beside
+  a natural Sio): to a child, a lighter, clearly different person beats a female
+  robot. She does not sound like a woman; a family who wants that records their own
+  voice, as the card says. A voice of Zio's own at `tr-zio.onnx`, any other file, is
+  not lifted. Piper speaks with `--length_scale 1.1`, for D-161's reason.
+- Purging biokids-core with the family's data removes it with the recordings;
+  `biokids-admin voice-setup remove` removes it alone. Turkish only: a child set to
+  English still hears espeak-ng. Two rows in `docs/SECURITY.md` §4. Completes D-137.
 

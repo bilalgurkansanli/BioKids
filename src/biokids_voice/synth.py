@@ -7,11 +7,15 @@ and forbids linking it, and calling `piper` over a pipe keeps us on the right
 side of that line permanently, whatever Piper's packaging does next.
 
 Nothing here touches the network. Piper is offline by design (VOICE.md §2) and
-`SECURITY.md` §4 lists no TTS destination at all: cloud voices were cut (D-181).
+cloud voices were cut (D-181). The one download a voice ever needs - Piper and its
+Turkish voice, when a parent presses "Doğal sesi indir" - is made by
+`biokids_core.natural_voice` in a unit of its own, never by this process (D-196).
 
 Three backends:
 
 * `PiperSynth` is the best one, and it fails loudly when its model is missing.
+  It runs the Piper the panel's button downloaded, else one on PATH, and a Piper
+  that arrives while the service runs joins the chain at the next line.
 * `EspeakSynth` is the one a stock Debian machine actually has. It speaks
   through the MBROLA Turkish voices when a family has installed them, and with
   espeak-ng's own voice otherwise.
@@ -40,6 +44,7 @@ from pathlib import Path
 from shutil import which
 from typing import Final, Protocol, cast
 
+from biokids_core import natural_voice
 from biokids_core.config import Config, PathsConfig, get_config
 from biokids_core.errors import BioKidsError
 
@@ -53,7 +58,20 @@ MIN_DURATION_S: Final = 0.8
 MAX_DURATION_S: Final = 15.0
 PIPER_TIMEOUT_S: Final = 20.0
 
-STOCK_MODEL_SUBDIR: Final = "piper"
+STOCK_MODEL_SUBDIR: Final = natural_voice.MODEL_SUBDIR
+PIPER_TUNING: Final = 1
+"""Bumped whenever Piper is asked to sound different; part of what its cache
+remembers, as `ESPEAK_TUNING` is for espeak-ng's."""
+PIPER_LENGTH_SCALE: Final = 1.1
+"""Piper's `--length_scale`: a tenth slower than the voice's own pace, for the
+reason espeak-ng speaks at 140 words a minute (D-161) - a four-year-old needs the
+sentence slower than an adult reading along does."""
+ZIO_LIFT: Final = 1.2
+"""How much higher Zio speaks a voice she shares with Sio (D-196): about three
+semitones, pitch and formants together. There is no Turkish woman in Piper's
+catalogue, only the man of `tr_TR-dfki-medium`, so the mother speaks his voice
+lifted - lighter and clearly someone else, and still a person rather than a
+robot. Part of the cache key, so a change is heard at once."""
 ESPEAK_CACHE_SUBDIR: Final = "espeak"
 """espeak-ng's audio is cached apart from Piper's, for the same reason the stub's
 is: the cache key names the sentence and the voice and never the engine."""
@@ -63,7 +81,7 @@ remembers, so a family hears the change instead of yesterday's audio."""
 MBROLA_DIR: Final = Path("/usr/share/mbrola")
 """Where Debian's `mbrola-*` packages put their databases."""
 MADE_BY_FILE: Final = ".made-by"
-MODEL_SUFFIX: Final = ".onnx"
+MODEL_SUFFIX: Final = natural_voice.MODEL_SUFFIX
 
 STUB_CACHE_SUBDIR: Final = "silent"
 """Where `StubSynth` keeps its silence, apart from real audio. See `from_config`."""
@@ -102,6 +120,9 @@ class VoiceSpec:
     """Part of the cache key, so re-recording a voice invalidates its audio."""
     model_path: Path | None = None
     """None means "whatever the backend does by default", which only the stub has."""
+    lift: float = 1.0
+    """Above 1, Piper speaks the model this much higher (`ZIO_LIFT`). The other
+    engines have a voice of their own for each persona and ignore it."""
 
 
 def cache_key(text: str, voice: VoiceSpec) -> str:
@@ -124,30 +145,52 @@ class VoiceBank:
 
     def candidates(self, persona: str, locale: str) -> tuple[VoiceSpec, ...]:
         stock_model = self.stock_model(persona, locale)
+        lift = self.lift(persona, locale, stock_model)
+        profile_id = f"stock:{persona}:{locale}:{_fingerprint(stock_model)}"
+        if lift != 1.0:
+            profile_id += f":lift {lift:g}"
         return (
             VoiceSpec(
                 persona=persona,
                 locale=locale,
                 kind="stock",
-                profile_id=f"stock:{persona}:{locale}:{_fingerprint(stock_model)}",
+                profile_id=profile_id,
                 model_path=stock_model,
+                lift=lift,
             ),
         )
 
     def stock_model(self, persona: str, locale: str) -> Path | None:
-        """`<model_dir>/piper/<locale>-<persona>.onnx`, or None when unbundled.
+        """`<model_dir>/piper/<locale>-<persona>.onnx`, or None when absent.
 
-        Phase 0 ships no voice model (see this package's README), so this is
-        normally None and the chain ends at the card. One naming convention
-        rather than a search: a voice that is not where the packaging put it is
-        a packaging bug, and guessing would hide it.
+        BioKids ships no voice model (D-137). The panel's "Doğal sesi indir"
+        puts the Turkish one here (D-196), and a family may put their own. One
+        naming convention rather than a search: a voice that is not where the
+        download put it is a bug, and guessing would hide it.
         """
-        candidate = (
-            self._config.paths.model_dir
-            / STOCK_MODEL_SUBDIR
-            / f"{locale}-{persona}{MODEL_SUFFIX}"
+        candidate = natural_voice.persona_model(
+            self._config.paths.model_dir / STOCK_MODEL_SUBDIR, locale, persona
         )
         return candidate if _present(candidate) else None
+
+    def lift(self, persona: str, locale: str, model: Path | None) -> float:
+        """`ZIO_LIFT` when Zio's model is the very file Sio speaks, else 1.
+
+        The download gives both personas the one Turkish voice there is, a
+        man's (D-196). Sio speaks it as it is; Zio, the mother (D-85), speaks it
+        raised. A family who puts a voice of her own at `tr-zio.onnx` - a
+        different file - hears it as it was recorded.
+        """
+        if persona != "zio" or model is None:
+            return 1.0
+        his = self.stock_model("sio", locale)
+        if his is None:
+            return 1.0
+        try:
+            shared = model.samefile(his)
+        except OSError:
+            return 1.0
+        return ZIO_LIFT if shared else 1.0
 
 
 _UNREADABLE: set[Path] = set()
@@ -208,19 +251,46 @@ class Synth(Protocol):
 
 
 class PiperSynth:
-    """Piper, over a pipe: text on stdin, a WAV at `--output_file`."""
+    """Piper, over a pipe: text on stdin, a WAV at `--output_file`.
+
+    The program is the one the panel's button downloaded into `directory`
+    (`paths.piper_dir`, D-196), else whatever `binary` names on PATH. Looked up
+    for every line rather than once, so that a Piper downloaded while a child is
+    at the machine speaks the next sentence (`Synthesizer._wake`).
+    """
 
     name = "piper"
 
-    def __init__(self, binary: str = "piper", *, timeout: float = PIPER_TIMEOUT_S) -> None:
+    def __init__(
+        self,
+        binary: str = "piper",
+        *,
+        directory: Path | None = None,
+        timeout: float = PIPER_TIMEOUT_S,
+        length_scale: float = PIPER_LENGTH_SCALE,
+    ) -> None:
         self._binary = binary
+        self._directory = directory
         self._timeout = timeout
+        self._length_scale = length_scale
+
+    def program(self) -> str | None:
+        """The path to run, or None when there is no Piper at all."""
+        if self._directory is None:
+            return which(self._binary)
+        return natural_voice.find_piper(self._binary, self._directory)
 
     def available(self) -> bool:
-        return which(self._binary) is not None
+        return self.program() is not None
+
+    @property
+    def flavour(self) -> str:
+        """What this engine's audio sounds like, in one line, for the cache."""
+        return f"piper tuning {PIPER_TUNING}; pace {self._length_scale:g}"
 
     def render(self, text: str, voice: VoiceSpec, destination: Path) -> None:
-        if not self.available():
+        program = self.program()
+        if program is None:
             raise SynthError(f"{self._binary} is not installed")
         if voice.model_path is None:
             raise SynthError(f"no voice model for {voice.persona}/{voice.locale}")
@@ -229,11 +299,15 @@ class PiperSynth:
 
         destination.parent.mkdir(parents=True, exist_ok=True)
         argv = [
-            self._binary,
+            program,
             "--model",
             str(voice.model_path),
             "--output_file",
             str(destination),
+            # Slower by the lift as well, so that playing it faster afterwards
+            # leaves the pace where it was and moves only the pitch.
+            "--length_scale",
+            f"{self._length_scale * voice.lift:.3f}",
         ]
         try:
             finished = subprocess.run(
@@ -251,6 +325,31 @@ class PiperSynth:
             raise SynthError(f"{self._binary} exited {finished.returncode}: {detail}")
         if not destination.is_file() or destination.stat().st_size == 0:
             raise SynthError(f"{self._binary} wrote nothing to {destination}")
+        if voice.lift != 1.0:
+            lift_pitch(destination, voice.lift)
+
+
+def lift_pitch(path: Path, factor: float) -> None:
+    """Make a WAV `factor` times higher by playing it `factor` times faster.
+
+    Only the sample rate in the header changes: every sample stays as Piper made
+    it, so there is none of the warble a pitch-shifting effect adds, and nothing
+    to install - no `sox`, no second process. Pitch and formants rise together,
+    which is what makes a man's voice read as a lighter one rather than as the
+    same man straining. Piper was asked for speech `factor` times slower first
+    (`--length_scale`), so the pace comes out where it began.
+    """
+    try:
+        with wave.open(str(path), "rb") as source:
+            params = source.getparams()
+            frames = source.readframes(params.nframes)
+        with wave.open(str(path), "wb") as target:
+            target.setnchannels(params.nchannels)
+            target.setsampwidth(params.sampwidth)
+            target.setframerate(round(params.framerate * factor))
+            target.writeframes(frames)
+    except (wave.Error, EOFError) as exc:
+        raise SynthError(f"{path.name} is not a WAV file Piper could have made: {exc}") from exc
 
 
 @dataclass(frozen=True, slots=True)
@@ -697,6 +796,8 @@ class Synthesizer:
         self,
         engines: Synth | Sequence[tuple[Synth, VoiceCache]],
         cache: VoiceCache | None = None,
+        *,
+        standby: Sequence[tuple[Synth, VoiceCache]] = (),
     ) -> None:
         if cache is not None:
             # The one-engine form, which the tests and `from_config`'s simpler
@@ -707,6 +808,8 @@ class Synthesizer:
         )
         if not self.engines:
             raise ValueError("a synthesizer needs at least one engine")
+        # Better engines that were not installed when the service started.
+        self._standby: list[tuple[Synth, VoiceCache]] = list(standby)
         self._spoke_with: Synth | None = None
 
     @property
@@ -742,10 +845,17 @@ class Synthesizer:
         """
         config = config or get_config()
         engines: list[tuple[Synth, VoiceCache]] = []
+        standby: list[tuple[Synth, VoiceCache]] = []
 
-        piper = PiperSynth(config.voice.piper_binary)
+        piper = PiperSynth(config.voice.piper_binary, directory=config.paths.piper_dir)
+        piper_cache = VoiceCache.from_config(config)
+        piper_cache.made_by(piper.flavour)
         if piper.available():
-            engines.append((piper, VoiceCache.from_config(config)))
+            engines.append((piper, piper_cache))
+        else:
+            # Waiting rather than left out: a parent may download the natural
+            # voice while a child is at the machine (D-196).
+            standby.append((piper, piper_cache))
 
         espeak = EspeakSynth(
             config.voice.espeak_binary, mbrola_binary=config.voice.mbrola_binary
@@ -772,7 +882,7 @@ class Synthesizer:
                     config.voice.piper_binary,
                     config.voice.espeak_binary,
                 )
-            return cls(engines)
+            return cls(engines, standby=standby)
 
         LOG.warning(
             "neither %s nor %s is installed: cards will appear but nothing will be spoken",
@@ -785,7 +895,11 @@ class Synthesizer:
         # installed Piper afterwards listening to yesterday's empty WAVs for
         # every line they hear every day, with `status` cheerfully reporting
         # `piper`.
-        return cls(StubSynth(), VoiceCache.from_config(config, subdir=STUB_CACHE_SUBDIR))
+        return cls(
+            StubSynth(),
+            VoiceCache.from_config(config, subdir=STUB_CACHE_SUBDIR),
+            standby=standby,
+        )
 
     def render(self, text: str, voices: Sequence[VoiceSpec]) -> SynthResult:
         """Every voice, through every engine, until one of them speaks.
@@ -795,6 +909,7 @@ class Synthesizer:
         and Piper before espeak-ng within each. Never raises; the worst case is
         no audio and a card that carries the line as text.
         """
+        self._wake()
         degraded = False
         for voice in voices:
             key = cache_key(text, voice)
@@ -825,6 +940,19 @@ class Synthesizer:
 
         LOG.warning("no voice could speak %r: the card will appear silently", text[:60])
         return SynthResult(degraded=True)
+
+    def _wake(self) -> None:
+        """Put an engine installed since the service started at the front.
+
+        The natural voice is downloaded from the panel, often while a child is
+        at the machine (D-196). Without this the child would go on hearing
+        espeak-ng until their next login, and the parent who pressed the button
+        would hear nothing change.
+        """
+        for pair in [pair for pair in self._standby if pair[0].available()]:
+            self._standby.remove(pair)
+            self.engines.insert(0, pair)
+            LOG.info("%s is installed now and speaks from this line on", pair[0].name)
 
     def _render_whole(
         self, backend: Synth, text: str, voice: VoiceSpec, destination: Path
