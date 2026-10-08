@@ -704,3 +704,19 @@ async def test_the_lookup_goes_to_the_article_by_its_title(
     monkeypatch.setattr(knowledge, "request", fake_request)
     shelf = knowledge.Knowledge(Server(), [knowledge.Book("tr", "b")])  # type: ignore[arg-type]
     assert await shelf.lookup("Ay neyin etrafında döner?", "tr") == sentence
+
+
+def test_the_daemon_may_open_the_assistants_socket() -> None:
+    """Without CAP_DAC_OVERRIDE root needs the socket's group: on the VM every
+    question came back "I'm resting" - permission denied (D-198)."""
+    import pathlib
+
+    root = pathlib.Path(__file__).resolve().parent.parent
+    daemon = (root / "debian/biokids-daemon.service").read_text(encoding="utf-8")
+    worker = (root / "debian/biokids-ai.service").read_text(encoding="utf-8")
+    assert "SupplementaryGroups=biokids-ai" in daemon
+    assert "Group=biokids-ai" in worker
+    caps = next(
+        line for line in daemon.splitlines() if line.startswith("CapabilityBoundingSet=")
+    )
+    assert "CAP_DAC_OVERRIDE" not in caps, "the group is the narrow way in, not the capability"

@@ -76,6 +76,11 @@ ProtectHostname=yes
 # the daemon runs (nft, loginctl, systemctl) inherits the same bound.
 CapabilityBoundingSet=CAP_NET_ADMIN CAP_CHOWN
 AmbientCapabilities=
+# Without CAP_DAC_OVERRIDE root is held to file permissions like anyone else, so
+# the assistant's socket (/run/biokids-ai/ai.sock, 0660 biokids-ai) needs the
+# group. biokids-core's postinst creates it on every machine, assistant or not.
+# Found on the VM: every question was "I'm resting" - permission denied (D-198).
+SupplementaryGroups=biokids-ai
 RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6
 # The "-" prefix matters: a missing path in ReadWritePaths= is a unit that
 # refuses to start. /etc/chromium/policies/managed is shipped empty by this
