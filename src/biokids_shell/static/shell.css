@@ -231,9 +231,11 @@ svg {
 
 /* --------------------------------------------------------------------- foot */
 
+/* Kapat stays in the bottom-right corner whether or not "Açık" is shown. */
 .foot {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--sp-4);
   padding: var(--sp-3) var(--sp-4);
   border-top: 1px solid var(--line);
