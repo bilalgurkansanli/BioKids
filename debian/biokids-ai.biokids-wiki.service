@@ -5,6 +5,10 @@ Documentation=https://github.com/bilalgurkansanli/BioKids
 # (D-190). A child opens it from the Vikipedi tile, if a parent enabled it.
 ConditionPathExistsGlob=/var/lib/biokids-ai/models/wikipedia_*.zim
 
+# A file it cannot serve should not restart it every five seconds for ever.
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
 [Service]
 Type=simple
 # The same files the assistant reads, served on loopback only. The glob needs a
@@ -19,7 +23,10 @@ Nice=10
 # Nothing to reach but the children's browsers on this machine.
 IPAddressDeny=any
 IPAddressAllow=localhost
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# AF_NETLINK: kiwix-serve lists the machine's addresses (getifaddrs) before it
+# binds, and without it refused to start at all - "IP address is not available
+# on this system: 127.0.0.1" - found on the VM (D-190).
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
 NoNewPrivileges=yes
 ProtectSystem=strict
 ReadOnlyPaths=/var/lib/biokids-ai
