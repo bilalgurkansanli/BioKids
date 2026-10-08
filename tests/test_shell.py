@@ -1175,3 +1175,46 @@ def test_the_parents_panel_opens_in_the_parents_chromium() -> None:
     assert isinstance(allowed, list)
     assert "127.0.0.1:7878" in allowed and "localhost:7878" in allowed
     assert policy["URLBlocklist"][0] == "*"  # type: ignore[index]
+
+
+def test_the_kiosk_follows_the_screen_when_it_changes_size() -> None:
+    """In the VM the screen grew and the launcher stayed an 800x600 box."""
+    from biokids_shell import kiosk
+
+    ran: list[tuple[str, ...]] = []
+    stop = asyncio.Event()
+
+    async def fake(*args: str) -> str | None:
+        ran.append(args)
+        if args[0] == "getdisplaygeometry":
+            return "1920 1080\n"
+        if args[0] == "search":
+            return "4194306\n"
+        if args[0] == "getwindowgeometry":
+            stop.set()
+            return "Window 4194306\n  Position: 560,234 (screen: 0)\n  Geometry: 800x600\n"
+        return ""
+
+    asyncio.run(kiosk.keep_fullscreen(stop, fake))
+
+    assert ("windowsize", "4194306", "1920", "1080") in ran
+    assert ("windowstate", "--add", "FULLSCREEN", "4194306") in ran
+
+
+def test_a_kiosk_that_already_fits_is_left_alone() -> None:
+    from biokids_shell import kiosk
+
+    ran: list[tuple[str, ...]] = []
+    stop = asyncio.Event()
+
+    async def fake(*args: str) -> str | None:
+        ran.append(args)
+        if args[0] == "getdisplaygeometry":
+            return "1920 1080\n"
+        if args[0] == "search":
+            return "7\n"
+        stop.set()
+        return "Window 7\n  Position: 0,0 (screen: 0)\n  Geometry: 1920x1080\n"
+
+    asyncio.run(kiosk.keep_fullscreen(stop, fake))
+    assert not any(call[0] == "windowsize" for call in ran)

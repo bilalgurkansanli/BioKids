@@ -24,6 +24,7 @@ both the enforcement and, for a four-year-old, the explanation.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -230,3 +231,59 @@ class KioskSupervisor:
             await asyncio.wait_for(process.wait(), timeout=5)
         except TimeoutError:  # pragma: no cover - a wedged browser
             process.kill()
+
+
+# ---------------------------------------------------------- the screen size
+
+FIT_CHECK_SECONDS = 2.0
+"""How often the kiosk window is compared with the screen."""
+
+
+async def _xdotool(*args: str) -> str | None:
+    """stdout of an xdotool command that succeeded, or None."""
+    if shutil.which("xdotool") is None:
+        return None
+    try:
+        process = await asyncio.create_subprocess_exec(
+            "xdotool",
+            *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        out, _ = await asyncio.wait_for(process.communicate(), timeout=5)
+    except (OSError, TimeoutError):
+        return None
+    return out.decode("utf-8", "replace") if process.returncode == 0 else None
+
+
+def _size(text: str | None) -> tuple[int, int] | None:
+    """`1920 1080`, or xdotool's `Geometry: 1920x1080` line, as a pair."""
+    if not text:
+        return None
+    numbers = [int(t) for t in text.replace("x", " ").split() if t.isdigit()]
+    return (numbers[-2], numbers[-1]) if len(numbers) >= 2 else None
+
+
+async def keep_fullscreen(stop_event: asyncio.Event, run: object = None) -> None:
+    """Fit the kiosk to the screen again whenever the screen changes size.
+
+    Chromium's kiosk window stayed at the size the screen had when it started:
+    in the VM, the guest additions grew the screen when the window was resized
+    and the launcher sat in an 800x600 box in the middle of it. A projector or a
+    second monitor does the same on real hardware. Leaving fullscreen and
+    entering it again makes the window manager size it to the screen it has now.
+    """
+    xdotool = run if callable(run) else _xdotool
+    while not stop_event.is_set():
+        screen = _size(await xdotool("getdisplaygeometry"))
+        found = await xdotool("search", "--class", KIOSK_WINDOW_CLASS)
+        for window in (found or "").split():
+            geometry = _size(await xdotool("getwindowgeometry", window))
+            if screen and geometry and geometry != screen and geometry[0] > 1:
+                log.info("the screen is now %sx%s; fitting the kiosk to it", *screen)
+                await xdotool("windowstate", "--remove", "FULLSCREEN", window)
+                await xdotool("windowsize", window, str(screen[0]), str(screen[1]))
+                await xdotool("windowmove", window, "0", "0")
+                await xdotool("windowstate", "--add", "FULLSCREEN", window)
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(stop_event.wait(), timeout=FIT_CHECK_SECONDS)

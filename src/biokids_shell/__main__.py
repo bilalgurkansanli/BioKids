@@ -26,7 +26,7 @@ from biokids_core.config import Config, set_config
 from biokids_core.ipc import AsyncDaemonClient
 from biokids_shell.app import ShellState, create_app
 from biokids_shell.client import ShellClient
-from biokids_shell.kiosk import KioskSupervisor, launcher_port
+from biokids_shell.kiosk import KioskSupervisor, keep_fullscreen, launcher_port
 from biokids_shell.relay import SessionRelay, WindowRaiser, voice_socket_path
 from biokids_shell.windows import RULES_SUBDIR, WindowRules, apply_window_manager_settings
 
@@ -110,6 +110,7 @@ async def main_async(args: argparse.Namespace) -> int:
         # Chromium's own error page is not something a four-year-old should see.
         await asyncio.sleep(0.5)
         tasks.append(asyncio.create_task(kiosk.supervise(stop_event), name="kiosk"))
+        tasks.append(asyncio.create_task(keep_fullscreen(stop_event), name="kiosk-fit"))
 
     await stop_event.wait()
 
