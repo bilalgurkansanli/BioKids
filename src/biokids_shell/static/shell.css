@@ -21,7 +21,7 @@ html,
 body {
   height: 100%;
   margin: 0;
-  overflow: hidden; /* nothing scrolls; the grid is sized to fit */
+  overflow: hidden; /* the page never scrolls; only the tile grid does */
 }
 
 body {
@@ -160,8 +160,13 @@ svg {
 .tiles {
   display: grid;
   gap: var(--sp-4);
-  align-content: center;
+  /* More tiles than fit scroll inside the grid, with the head and the foot
+   * staying put; "safe" keeps the first row reachable when they overflow. */
+  align-content: safe center;
   justify-content: center;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--sp-3) var(--sp-5);
   grid-template-columns: repeat(auto-fit, var(--tile-size));
 }
