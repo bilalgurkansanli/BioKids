@@ -102,7 +102,7 @@ Apps and web tiles are metadata in `/usr/share/biokids/catalog/`, not hardcoded;
 parent picks, and unpicked apps are not shown. The starting set was the Debian classics
 (GCompris, TuxPaint, TuxMath, Klavaro, SuperTux, Frozen Bubble…), LibreOffice and a
 home-only Thunar for 8–10, and EBA as the target of earned time (D-45). Revised by
-D-163 and D-164.
+D-163, D-164 and D-203.
 
 **D-21 [owner] Chromium, not Firefox.** Its enterprise policy
 (`/etc/chromium/policies/managed/*.json`) is far more capable than Firefox's, and the
@@ -749,7 +749,8 @@ patterns its catalog entry lists, and DNS never blocks them (D-167).
 **Çocuklar → Uygulamalar ve siteler** has a checkbox per app and site (volume,
 brightness and shutdown always on); saving is audited and rewrites the policy. Google
 Earth replaces Stellarium. A tile whose program is missing is not shown; games are found
-in `/usr/games`.
+in `/usr/games`. *Partly superseded by D-203:* Dünya is Marble; Google Earth stays,
+offered for 8+.
 
 **D-165 [owner] The child can ask: a local assistant, "Sor Bana".**
 A local model the child asks by typing or speaking (D-166), answering for their age,
@@ -1179,3 +1180,46 @@ menu and its recovery mode, and after a failed boot Debian's own 30-second menu 
 appears. Only where `/boot/grub` and `update-grub` exist; another bootloader is left
 alone. biokids (the packages on a parent's existing desktop) does not touch the boot.
 
+
+**D-203 [owner] Something new every day, more to learn with, and a Dünya that works.** (2026-10-08)
+The owner: a child who sees the same things every time gets bored. Three changes.
+- **Bugünün sürprizi.** A strip under the launcher's header with one card a day: a
+  fact (Biliyor muydun?), a riddle (Bilmece) whose answer opens with a tap, an animal
+  (Günün hayvanı), a word (Bugünün kelimesi) or a task (Bugünün görevi), which may be a
+  button to one of the child's own tiles. 178 cards in twelve weekly themes - space,
+  animals, seasons, ocean, numbers, dinosaurs, plants, the body, the poles, insects,
+  Türkiye, birds - in `biokids_core/data/daily/daily.toml`: Turkish written first,
+  only settled facts (approximate numbers say so), nothing frightening, the child
+  addressed as sen, a task done in a room or with a grown-up. The loader refuses a card
+  in one language, a riddle without an answer or with a picture that gives it away,
+  a task for anything but a catalogue app. Chosen, never generated - the assistant is
+  D-165's, behind its own gate - and offline: the week (Monday to Sunday) picks the
+  theme, the same for siblings; inside it each kind is spread evenly through the deal;
+  the day of the week walks the deal, seven cards further on each time the theme comes
+  round (every twelve weeks), and the child's id moves the start, so siblings differ.
+  No card repeats within twelve weeks. A task is dealt only to a child whose tile it
+  names can start. 4-7 get one sentence, which Zio reads on a tap (D-175's
+  `data-speak`); 8-10 a sentence more. Drawn by the server, so it reads with scripts
+  off; ✕ puts it away until tomorrow (the date, in the child's own browser storage,
+  nothing else). Measured at 1280 x 800: the young band's two rows of 220-pixel tiles
+  and the older band's three rows of 150 still fit under it, which is why an 8-10 card
+  is held to two lines (a test).
+- **More to learn with.** From trixie main, each offline, with a Turkish interface,
+  starting in a window: Marble (Dünya, 6-10), KTuberling (Patates Kafa, 4-6), Blinken
+  (Hafıza, 5-7), KGeography (Haritalar, 8-10, with Türkiye's provinces) and KBruch
+  (Kesirler, 9-10); Palapeli (Yapboz), KTurtle (Kaplumbağa) and GNOME Chess (Satranç,
+  with its own engine) are offered but not ticked, so the default screens do not
+  grow. Recommends of biokids-desktop; separate programs under the GPL and LGPL, so
+  D-30 holds. Not taken: gbrainy and gtans (not in trixie), Tux Typing (no Turkish
+  words; Klavye exists), KHangman and Kanagram (no Turkish word lists offline),
+  KLettres (no Turkish letters), Stellarium (D-164 dropped it).
+- **Dünya is Marble.** Google Earth on the web needs WebGL; on a machine without
+  graphics acceleration (the VM, an old laptop) it says only "WebGL is not supported".
+  Marble draws its globe itself, with QPainter, from maps its package installs, so it
+  works offline and anywhere. `google-earth` stays as "Google Earth", 8+, offered but
+  never ticked. A slug is never reused, so Marble is `marble`; the catalogue's new
+  `inherits = ["google-earth"]` makes `sync_catalog`, the first time Marble's row is
+  added, give it to every child who had Google Earth enabled, in its place and with its
+  category, in the audit log as a change by the system. It happens once per database:
+  a parent who unticks it is not overruled by the next upgrade. Nobody loses a tile;
+  the old one stays where it was.

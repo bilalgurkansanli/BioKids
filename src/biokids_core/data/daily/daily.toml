@@ -1,0 +1,1971 @@
+# Bugünün sürprizi - "today's surprise" on the launcher's home screen (D-203).
+#
+# One small card a day, inside a theme that changes every week. Everything a
+# child reads here was written and checked by people; nothing is generated.
+#
+# Rules for every entry, because a parental control must never teach a child
+# something untrue or leave them frightened:
+#   - Only facts that are settled and checkable in an encyclopedia. When a
+#     number is approximate, the sentence says so ("yaklaşık", "about").
+#   - Nothing frightening: no danger, no injury, no death, no predators eating.
+#   - The child is "sen", never "siz" (UX.md §4). A task is something a child
+#     can do safely in a room, or with a grown-up ("bir büyüğünle").
+#   - Turkish first, written to be read aloud; English says the same thing.
+#   - `text` is one short sentence: all a child of four to seven sees, and what
+#     Zio reads when they tap it. `more` is one more sentence for eight to ten.
+#   - Lengths (tests/test_daily.py): text 120, more 140, title 24, answer 32.
+#
+# Fields:
+#   [[theme]]  slug, emoji, label_tr/label_en (the weekly chip), accent - one of
+#              the brand tokens: coral, amber, teal, indigo, ok
+#   [[item]]   id (stable), theme, kind, emoji (not for a riddle), text_tr/text_en,
+#              more_tr/more_en (optional),
+#              title_tr/title_en (the animal or the word; animal and word only),
+#              answer_tr/answer_en (riddle only; a riddle has no emoji of its
+#              own and shows 🤔, so the picture never gives the answer away),
+#              app (challenge only: a catalogue slug; the card is drawn only for
+#              a child who has that tile, and its text names the tile),
+#              bands (optional; default both, "4-7" and "8-10")
+#
+# Kinds: fact (Biliyor muydun?), riddle (Bilmece), animal (Günün hayvanı),
+# challenge (Bugünün görevi), word (Bugünün kelimesi). Themes are visited in the
+# order they are listed, one a week.
+
+# ------------------------------------------------------------------ themes
+
+[[theme]]
+slug = "space"
+emoji = "🚀"
+label_tr = "Uzay haftası"
+label_en = "Space week"
+accent = "indigo"
+
+[[theme]]
+slug = "animals"
+emoji = "🐾"
+label_tr = "Hayvanlar haftası"
+label_en = "Animal week"
+accent = "amber"
+
+[[theme]]
+slug = "seasons"
+emoji = "🍂"
+label_tr = "Mevsimler haftası"
+label_en = "Seasons week"
+accent = "amber"
+
+[[theme]]
+slug = "ocean"
+emoji = "🌊"
+label_tr = "Okyanus haftası"
+label_en = "Ocean week"
+accent = "teal"
+
+[[theme]]
+slug = "numbers"
+emoji = "🔢"
+label_tr = "Sayılar haftası"
+label_en = "Numbers week"
+accent = "indigo"
+
+[[theme]]
+slug = "dinosaurs"
+emoji = "🦕"
+label_tr = "Dinozor haftası"
+label_en = "Dinosaur week"
+accent = "ok"
+
+[[theme]]
+slug = "plants"
+emoji = "🌳"
+label_tr = "Bitkiler haftası"
+label_en = "Plant week"
+accent = "ok"
+
+[[theme]]
+slug = "body"
+emoji = "💪"
+label_tr = "Vücudumuz haftası"
+label_en = "Body week"
+accent = "coral"
+
+[[theme]]
+slug = "polar"
+emoji = "❄️"
+label_tr = "Kutuplar haftası"
+label_en = "Polar week"
+accent = "teal"
+
+[[theme]]
+slug = "insects"
+emoji = "🐞"
+label_tr = "Böcekler haftası"
+label_en = "Bug week"
+accent = "coral"
+
+[[theme]]
+slug = "turkiye"
+emoji = "🇹🇷"
+label_tr = "Türkiye haftası"
+label_en = "Türkiye week"
+accent = "coral"
+
+[[theme]]
+slug = "birds"
+emoji = "🐦"
+label_tr = "Kuşlar haftası"
+label_en = "Bird week"
+accent = "indigo"
+
+# ------------------------------------------------------------------- space
+
+[[item]]
+id = "space-sun-star"
+theme = "space"
+kind = "fact"
+emoji = "☀️"
+text_tr = "Güneş aslında bir yıldızdır."
+text_en = "The Sun is actually a star."
+more_tr = "Bize en yakın yıldız olduğu için ötekilerden çok daha büyük ve parlak görünür."
+more_en = "It is the star closest to us, so it looks much bigger and brighter than the others."
+
+[[item]]
+id = "space-moon-light"
+theme = "space"
+kind = "fact"
+emoji = "🌙"
+text_tr = "Ay'ın kendi ışığı yoktur."
+text_en = "The Moon has no light of its own."
+more_tr = "Geceleri gördüğümüz parlaklık, Güneş'in Ay'dan yansıyan ışığıdır."
+more_en = "The glow we see at night is sunlight bouncing off the Moon."
+
+[[item]]
+id = "space-year"
+theme = "space"
+kind = "fact"
+emoji = "🌍"
+text_tr = "Dünya, Güneş'in çevresindeki bir turunu bir yılda tamamlar."
+text_en = "The Earth takes one year to travel once around the Sun."
+more_tr = "Bu yolculuk yaklaşık 365 gün sürer; takvimimiz de buna göre yapılmıştır."
+more_en = "The trip takes about 365 days, and our calendar is built around it."
+
+[[item]]
+id = "space-saturn"
+theme = "space"
+kind = "fact"
+emoji = "🪐"
+text_tr = "Satürn'ün çevresinde kocaman halkalar vardır."
+text_en = "Saturn has huge rings around it."
+more_tr = "Halkalar, milyarlarca buz ve kaya parçasından oluşur."
+more_en = "The rings are made of billions of pieces of ice and rock."
+
+[[item]]
+id = "space-mars"
+theme = "space"
+kind = "fact"
+emoji = "🔴"
+text_tr = "Mars'a Kızıl Gezegen denir."
+text_en = "Mars is called the Red Planet."
+more_tr = "Toprağındaki demir paslandığı için kırmızımsı görünür."
+more_en = "The iron in its soil has rusted, which makes it look reddish."
+
+[[item]]
+id = "space-footprints"
+theme = "space"
+kind = "fact"
+emoji = "👣"
+text_tr = "Ay'da rüzgâr ve yağmur olmadığı için astronotların ayak izleri hâlâ orada olabilir."
+text_en = "There is no wind or rain on the Moon, so the astronauts' footprints may still be there."
+more_tr = "Dünya'da kumdaki bir iz, ilk rüzgârda ya da dalgada silinir."
+more_en = "On Earth, a footprint in the sand is gone with the first wind or wave."
+
+[[item]]
+id = "space-jupiter"
+theme = "space"
+kind = "fact"
+emoji = "🔭"
+text_tr = "Jüpiter, Güneş Sistemi'nin en büyük gezegenidir."
+text_en = "Jupiter is the biggest planet in our Solar System."
+more_tr = "İçine bin taneden fazla Dünya sığabilir."
+more_en = "More than a thousand Earths could fit inside it."
+
+[[item]]
+id = "space-orbit"
+theme = "space"
+kind = "word"
+emoji = "🛰️"
+title_tr = "Yörünge"
+title_en = "Orbit"
+text_tr = "Ay'ın Dünya'nın çevresinde dolanırken izlediği yola yörünge denir."
+text_en = "The path the Moon follows around the Earth is called its orbit."
+more_tr = "Dünya da Güneş'in çevresinde kendi yörüngesinde dolanır."
+more_en = "The Earth travels around the Sun in an orbit of its own."
+
+[[item]]
+id = "space-astronaut"
+theme = "space"
+kind = "word"
+emoji = "🧑‍🚀"
+title_tr = "Astronot"
+title_en = "Astronaut"
+text_tr = "Uzaya yolculuk eden kişiye astronot denir."
+text_en = "A person who travels into space is called an astronaut."
+more_tr = "Astronotlar uzay istasyonunda aylarca yaşayıp deney yapabilir."
+more_en = "Astronauts can live on a space station for months and do experiments there."
+
+[[item]]
+id = "space-riddle-moon"
+theme = "space"
+kind = "riddle"
+text_tr = "Gökyüzünde bazen top gibi yuvarlak, bazen ince bir dilim gibi görünürüm. Ben neyim?"
+text_en = "In the sky I sometimes look as round as a ball, and sometimes like a thin slice. What am I?"
+answer_tr = "Ay"
+answer_en = "The Moon"
+
+[[item]]
+id = "space-riddle-sun"
+theme = "space"
+kind = "riddle"
+text_tr = "Sabah doğarım, akşam batarım; her yeri ısıtır, aydınlatırım. Ben neyim?"
+text_en = "I rise in the morning and set in the evening; I warm and light up everything. What am I?"
+answer_tr = "Güneş"
+answer_en = "The Sun"
+
+[[item]]
+id = "space-riddle-star"
+theme = "space"
+kind = "riddle"
+text_tr = "Geceleri gökyüzünde göz kırparım, sayısız kardeşim var. Ben neyim?"
+text_en = "At night I twinkle in the sky, and I have countless brothers and sisters. What am I?"
+answer_tr = "Yıldız"
+answer_en = "A star"
+
+[[item]]
+id = "space-draw-rocket"
+theme = "space"
+kind = "challenge"
+emoji = "🚀"
+app = "tuxpaint"
+text_tr = "Boya'da kendi uzay gemini çiz."
+text_en = "Draw a spaceship of your own in Paint."
+more_tr = "Gemine bir isim ver ve hangi gezegene gideceğini düşün."
+more_en = "Give it a name and think about which planet it will fly to."
+
+[[item]]
+id = "space-count-stars"
+theme = "space"
+kind = "challenge"
+emoji = "✨"
+text_tr = "Bu akşam bir büyüğünle gökyüzüne bak: Kaç yıldız sayabilirsin?"
+text_en = "Tonight, look at the sky with a grown-up: how many stars can you count?"
+
+[[item]]
+id = "space-moon-scene"
+theme = "space"
+kind = "challenge"
+emoji = "🌙"
+app = "ktuberling"
+text_tr = "Patates Kafa'da Ay sahnesini seç ve oraya bir astronot yerleştir."
+text_en = "Pick the Moon scene in Potato Guy and put an astronaut on it."
+
+# ----------------------------------------------------------------- animals
+
+[[item]]
+id = "animals-giraffe"
+theme = "animals"
+kind = "animal"
+emoji = "🦒"
+title_tr = "Zürafa"
+title_en = "Giraffe"
+text_tr = "Zürafa, dünyanın en uzun boylu hayvanıdır."
+text_en = "The giraffe is the tallest animal in the world."
+more_tr = "Uzun ve koyu renkli diliyle yüksek dallardaki yaprakları koparır."
+more_en = "It uses its long, dark tongue to pull leaves off high branches."
+
+[[item]]
+id = "animals-elephant"
+theme = "animals"
+kind = "animal"
+emoji = "🐘"
+title_tr = "Fil"
+title_en = "Elephant"
+text_tr = "Filler hortumlarıyla su içer, yiyeceklerini tutar ve birbirlerini selamlar."
+text_en = "Elephants use their trunks to drink, to hold their food and to greet each other."
+more_tr = "Fil, karada yaşayan en büyük hayvandır."
+more_en = "The elephant is the biggest animal living on land."
+
+[[item]]
+id = "animals-cheetah"
+theme = "animals"
+kind = "animal"
+emoji = "🐆"
+title_tr = "Çita"
+title_en = "Cheetah"
+text_tr = "Çita, karada en hızlı koşan hayvandır."
+text_en = "The cheetah is the fastest runner on land."
+more_tr = "Kısa bir süre için otoyoldaki bir araba kadar hızlı koşabilir."
+more_en = "For a short time, it can run as fast as a car on the motorway."
+
+[[item]]
+id = "animals-koala"
+theme = "animals"
+kind = "animal"
+emoji = "🐨"
+title_tr = "Koala"
+title_en = "Koala"
+text_tr = "Koalalar günün büyük bölümünü uyuyarak geçirir."
+text_en = "Koalas spend most of the day asleep."
+more_tr = "Neredeyse yalnızca okaliptüs yaprağı yerler."
+more_en = "They eat almost nothing but eucalyptus leaves."
+
+[[item]]
+id = "animals-zebra"
+theme = "animals"
+kind = "animal"
+emoji = "🦓"
+title_tr = "Zebra"
+title_en = "Zebra"
+text_tr = "Her zebranın çizgileri farklıdır."
+text_en = "Every zebra's stripes are different."
+more_tr = "Tıpkı insanların parmak izleri gibi, iki zebranın çizgileri aynı olmaz."
+more_en = "Just like people's fingerprints, no two zebras have the same stripes."
+
+[[item]]
+id = "animals-cow"
+theme = "animals"
+kind = "animal"
+emoji = "🐄"
+title_tr = "İnek"
+title_en = "Cow"
+text_tr = "İnekler, yuttukları otu ağızlarına geri getirip yeniden çiğner."
+text_en = "Cows bring the grass they have swallowed back up and chew it again."
+more_tr = "Buna geviş getirmek denir; koyunlar ve keçiler de geviş getirir."
+more_en = "This is called chewing the cud, and sheep and goats do it too."
+
+[[item]]
+id = "animals-squirrel"
+theme = "animals"
+kind = "animal"
+emoji = "🐿️"
+title_tr = "Sincap"
+title_en = "Squirrel"
+text_tr = "Sincaplar kış için toprağa ceviz ve fındık gömer."
+text_en = "Squirrels bury nuts in the ground for the winter."
+more_tr = "Unuttukları tohumlardan bazen yeni ağaçlar büyür."
+more_en = "Sometimes new trees grow from the ones they forget."
+
+[[item]]
+id = "animals-tortoise"
+theme = "animals"
+kind = "fact"
+emoji = "🐢"
+text_tr = "Bazı dev kaplumbağalar yüz yıldan fazla yaşayabilir."
+text_en = "Some giant tortoises can live for more than a hundred years."
+more_tr = "Kabukları, sırtlarında taşıdıkları sağlam bir ev gibidir."
+more_en = "Their shell is like a strong house they carry on their back."
+
+[[item]]
+id = "animals-hedgehog"
+theme = "animals"
+kind = "fact"
+emoji = "🦔"
+text_tr = "Kirpiler korkunca top gibi kıvrılır."
+text_en = "Hedgehogs curl up into a ball when they are scared."
+more_tr = "Sırtlarındaki dikenler onları korur."
+more_en = "The spines on their backs keep them safe."
+
+[[item]]
+id = "animals-mammal"
+theme = "animals"
+kind = "word"
+emoji = "🍼"
+title_tr = "Memeli"
+title_en = "Mammal"
+text_tr = "Yavrularını sütle besleyen hayvanlara memeli denir."
+text_en = "Animals that feed their babies on milk are called mammals."
+more_tr = "Köpekler, kediler, balinalar ve biz insanlar da memeliyiz."
+more_en = "Dogs, cats, whales and we humans are all mammals."
+
+[[item]]
+id = "animals-herbivore"
+theme = "animals"
+kind = "word"
+emoji = "🌿"
+title_tr = "Otçul"
+title_en = "Herbivore"
+text_tr = "Yalnızca bitki yiyen hayvanlara otçul denir."
+text_en = "Animals that eat only plants are called herbivores."
+more_tr = "İnek, zürafa ve tavşan otçul hayvanlardır."
+more_en = "Cows, giraffes and rabbits are herbivores."
+
+[[item]]
+id = "animals-riddle-elephant"
+theme = "animals"
+kind = "riddle"
+text_tr = "Uzun bir burnum var, ona hortum derler; kulaklarım da kocaman. Ben neyim?"
+text_en = "I have a long nose called a trunk, and my ears are enormous. What am I?"
+answer_tr = "Fil"
+answer_en = "An elephant"
+
+[[item]]
+id = "animals-riddle-hedgehog"
+theme = "animals"
+kind = "riddle"
+text_tr = "Sırtımda dikenler var ama gül değilim; korkunca top olurum. Ben neyim?"
+text_en = "I have prickles on my back, but I am not a rose; when I am scared I become a ball. What am I?"
+answer_tr = "Kirpi"
+answer_en = "A hedgehog"
+
+[[item]]
+id = "animals-sounds"
+theme = "animals"
+kind = "challenge"
+emoji = "🗣️"
+text_tr = "Bir hayvan seç ve onun gibi ses çıkar; ailen hangi hayvan olduğunu tahmin etsin!"
+text_en = "Pick an animal and make its sound; let your family guess which animal it is!"
+
+[[item]]
+id = "animals-funny-face"
+theme = "animals"
+kind = "challenge"
+emoji = "🥔"
+app = "ktuberling"
+text_tr = "Patates Kafa'ya göz, burun ve ağız seçerek komik bir yüz yap."
+text_en = "Make a funny face in Potato Guy by choosing eyes, a nose and a mouth."
+
+[[item]]
+id = "animals-draw"
+theme = "animals"
+kind = "challenge"
+emoji = "🎨"
+app = "kolourpaint"
+text_tr = "Çizim'de en sevdiğin hayvanın resmini yap."
+text_en = "Open Draw and make a picture of your favourite animal."
+
+# ----------------------------------------------------------------- seasons
+
+[[item]]
+id = "seasons-rainbow"
+theme = "seasons"
+kind = "fact"
+emoji = "🌈"
+text_tr = "Gökkuşağı, güneş ışığı yağmur damlalarından geçerken oluşur."
+text_en = "A rainbow appears when sunlight shines through raindrops."
+more_tr = "Gökkuşağını görmek için Güneş'in arkanda olması gerekir."
+more_en = "To see one, you need the Sun behind you."
+
+[[item]]
+id = "seasons-snowflake"
+theme = "seasons"
+kind = "fact"
+emoji = "❄️"
+text_tr = "Kar kristallerinin altı kolu ya da altı köşesi vardır."
+text_en = "Snow crystals have six arms or six corners."
+more_tr = "Tıpatıp aynı iki kar tanesi bulmak neredeyse imkânsızdır."
+more_en = "Finding two snowflakes that are exactly the same is almost impossible."
+
+[[item]]
+id = "seasons-thunder"
+theme = "seasons"
+kind = "fact"
+emoji = "⚡"
+text_tr = "Şimşeği önce görür, gök gürültüsünü sonra duyarız."
+text_en = "We see the lightning first and hear the thunder after."
+more_tr = "Çünkü ışık, sesten çok daha hızlı yol alır."
+more_en = "That is because light travels much faster than sound."
+
+[[item]]
+id = "seasons-tilt"
+theme = "seasons"
+kind = "fact"
+emoji = "🌍"
+text_tr = "Mevsimler, Dünya'nın eğik durması yüzünden oluşur."
+text_en = "We have seasons because the Earth is tilted."
+more_tr = "Dünya'nın bir yarısı Güneş'e daha çok döndüğünde orada yaz yaşanır."
+more_en = "When one half of the Earth leans towards the Sun, it is summer there."
+
+[[item]]
+id = "seasons-leaves"
+theme = "seasons"
+kind = "fact"
+emoji = "🍁"
+text_tr = "Sonbaharda birçok ağacın yaprakları sararıp dökülür."
+text_en = "In autumn, the leaves of many trees turn yellow and fall."
+more_tr = "Yapraklardaki yeşil renk azalınca, saklı duran sarı ve turuncu renkler ortaya çıkar."
+more_en = "As the green fades from the leaves, the yellow and orange hidden inside show through."
+
+[[item]]
+id = "seasons-clouds"
+theme = "seasons"
+kind = "fact"
+emoji = "☁️"
+text_tr = "Bulutlar, havada asılı duran minicik su damlacıklarından ve buz kristallerinden oluşur."
+text_en = "Clouds are made of tiny drops of water and bits of ice floating in the air."
+more_tr = "Damlacıklar birleşip ağırlaşınca yağmur olarak yere düşer."
+more_en = "When the droplets join up and get heavy, they fall as rain."
+
+[[item]]
+id = "seasons-months"
+theme = "seasons"
+kind = "fact"
+emoji = "📅"
+text_tr = "Bir yılda dört mevsim ve on iki ay vardır."
+text_en = "A year has four seasons and twelve months."
+more_tr = "Her mevsim yaklaşık üç ay sürer."
+more_en = "Each season lasts about three months."
+
+[[item]]
+id = "seasons-frost"
+theme = "seasons"
+kind = "word"
+emoji = "🌨️"
+title_tr = "Kırağı"
+title_en = "Frost"
+text_tr = "Soğuk sabahlarda otların üstünde gördüğün ince beyaz buza kırağı denir."
+text_en = "The thin white ice you see on the grass on cold mornings is called frost."
+more_tr = "Havadaki nem, soğuk yüzeylerde donarak kırağıya dönüşür."
+more_en = "It forms when moisture in the air freezes on cold surfaces."
+
+[[item]]
+id = "seasons-breeze"
+theme = "seasons"
+kind = "word"
+emoji = "🍃"
+title_tr = "Meltem"
+title_en = "Sea breeze"
+text_tr = "Denizden karaya ya da karadan denize esen hafif rüzgâra meltem denir."
+text_en = "A gentle wind blowing between the sea and the land is called a sea breeze."
+more_tr = "Yazın deniz kenarında esen serin meltem insanı ferahlatır."
+more_en = "On a summer day by the sea, a cool breeze feels lovely."
+
+[[item]]
+id = "seasons-riddle-rainbow"
+theme = "seasons"
+kind = "riddle"
+text_tr = "Yağmurdan sonra gökyüzünde renkli bir köprü gibi belirir. Nedir?"
+text_en = "After the rain it appears in the sky like a colourful bridge. What is it?"
+answer_tr = "Gökkuşağı"
+answer_en = "A rainbow"
+
+[[item]]
+id = "seasons-riddle-snow"
+theme = "seasons"
+kind = "riddle"
+text_tr = "Kışın gökten beyaz beyaz yağar, güneş çıkınca erir gider. Nedir?"
+text_en = "In winter it falls from the sky all white, and when the sun comes out it melts away. What is it?"
+answer_tr = "Kar"
+answer_en = "Snow"
+
+[[item]]
+id = "seasons-riddle-wind"
+theme = "seasons"
+kind = "riddle"
+text_tr = "Beni göremezsin ama ağaçları sallarım, uçurtmanı uçururum. Ben neyim?"
+text_en = "You cannot see me, but I shake the trees and fly your kite. What am I?"
+answer_tr = "Rüzgâr"
+answer_en = "The wind"
+
+[[item]]
+id = "seasons-weather"
+theme = "seasons"
+kind = "challenge"
+emoji = "🪟"
+text_tr = "Pencereden dışarı bak: Bugün hava güneşli mi, bulutlu mu, yağmurlu mu?"
+text_en = "Look out of the window: is it sunny, cloudy or rainy today?"
+more_tr = "Yarın da bak ve iki günü karşılaştır."
+more_en = "Look again tomorrow and compare the two days."
+
+[[item]]
+id = "seasons-draw"
+theme = "seasons"
+kind = "challenge"
+emoji = "🎨"
+app = "tuxpaint"
+text_tr = "Boya'da dört mevsimi çiz: kış, ilkbahar, yaz ve sonbahar."
+text_en = "Draw the four seasons in Paint: winter, spring, summer and autumn."
+
+# ------------------------------------------------------------------- ocean
+
+[[item]]
+id = "ocean-blue-whale"
+theme = "ocean"
+kind = "animal"
+emoji = "🐋"
+title_tr = "Mavi balina"
+title_en = "Blue whale"
+text_tr = "Mavi balina, yaşadığı bilinen en büyük hayvandır."
+text_en = "The blue whale is the biggest animal known to have ever lived."
+more_tr = "Boyu 30 metreye yaklaşabilir; bu, iki otobüsten daha uzundur."
+more_en = "It can grow to almost 30 metres long, longer than two buses."
+
+[[item]]
+id = "ocean-octopus"
+theme = "ocean"
+kind = "animal"
+emoji = "🐙"
+title_tr = "Ahtapot"
+title_en = "Octopus"
+text_tr = "Ahtapotun üç kalbi vardır."
+text_en = "An octopus has three hearts."
+more_tr = "Sekiz kolunun her birinde yüzlerce vantuz bulunur."
+more_en = "Each of its eight arms has hundreds of suckers."
+
+[[item]]
+id = "ocean-turtle"
+theme = "ocean"
+kind = "animal"
+emoji = "🐢"
+title_tr = "Deniz kaplumbağası"
+title_en = "Sea turtle"
+text_tr = "Deniz kaplumbağaları yumurtalarını kumsala bırakır."
+text_en = "Sea turtles lay their eggs on sandy beaches."
+more_tr = "Türkiye'de de her yaz bazı kumsallara caretta caretta kaplumbağaları gelir."
+more_en = "Every summer, loggerhead turtles come to some beaches in Türkiye to do just that."
+
+[[item]]
+id = "ocean-dolphin"
+theme = "ocean"
+kind = "animal"
+emoji = "🐬"
+title_tr = "Yunus"
+title_en = "Dolphin"
+text_tr = "Yunuslar balık değil, memelidir."
+text_en = "Dolphins are not fish: they are mammals."
+more_tr = "Nefes almak için suyun yüzeyine çıkarlar."
+more_en = "They come up to the surface to breathe."
+
+[[item]]
+id = "ocean-clownfish"
+theme = "ocean"
+kind = "animal"
+emoji = "🐠"
+title_tr = "Palyaço balığı"
+title_en = "Clownfish"
+text_tr = "Palyaço balığı, deniz şakayıklarının dokunaçları arasında yaşar."
+text_en = "A clownfish lives among the tentacles of a sea anemone."
+more_tr = "Şakayığın iğneleyen kolları ona zarar vermez, üstelik onu öteki balıklardan korur."
+more_en = "The anemone's stinging arms do not hurt it, and they keep it safe from other fish."
+
+[[item]]
+id = "ocean-water"
+theme = "ocean"
+kind = "fact"
+emoji = "🌊"
+text_tr = "Dünya'nın yüzeyinin çoğu suyla kaplıdır."
+text_en = "Most of the Earth's surface is covered with water."
+more_tr = "Yüzeyin yaklaşık onda yedisi okyanus ve denizlerdir."
+more_en = "About seven tenths of it is oceans and seas."
+
+[[item]]
+id = "ocean-salt"
+theme = "ocean"
+kind = "fact"
+emoji = "🧂"
+text_tr = "Deniz suyu tuzlu olduğu için içilmez."
+text_en = "Sea water is salty, so we cannot drink it."
+more_tr = "Yine de denizlerde binlerce çeşit canlı yaşar."
+more_en = "Even so, thousands of kinds of living things make their home in the sea."
+
+[[item]]
+id = "ocean-crab"
+theme = "ocean"
+kind = "fact"
+emoji = "🦀"
+text_tr = "Yengeçlerin çoğu yana doğru yürür."
+text_en = "Most crabs walk sideways."
+more_tr = "Bacakları yana doğru büküldüğü için böyle yürümek onlara daha kolay gelir."
+more_en = "Their legs bend to the side, so walking that way is easier for them."
+
+[[item]]
+id = "ocean-tide"
+theme = "ocean"
+kind = "word"
+emoji = "🌊"
+title_tr = "Gelgit"
+title_en = "Tide"
+text_tr = "Okyanus kıyılarında deniz suyunun her gün yükselip alçalmasına gelgit denir."
+text_en = "The way the sea rises and falls on ocean shores every day is called the tide."
+more_tr = "Bunun en büyük nedeni Ay'ın çekim gücüdür."
+more_en = "The main cause is the pull of the Moon."
+
+[[item]]
+id = "ocean-coral"
+theme = "ocean"
+kind = "word"
+emoji = "🪸"
+title_tr = "Mercan"
+title_en = "Coral"
+text_tr = "Mercan taşa benzer, ama aslında bir hayvandır."
+text_en = "Coral looks like stone, but it is really an animal."
+more_tr = "Minicik mercan hayvanları bir araya gelerek kocaman resifler oluşturur."
+more_en = "Tiny coral animals live together and build huge reefs."
+
+[[item]]
+id = "ocean-riddle-octopus"
+theme = "ocean"
+kind = "riddle"
+text_tr = "Sekiz kolum var ama hiç elim yok; denizin dibinde yaşarım. Ben neyim?"
+text_en = "I have eight arms but not a single hand, and I live on the sea floor. What am I?"
+answer_tr = "Ahtapot"
+answer_en = "An octopus"
+
+[[item]]
+id = "ocean-riddle-dolphin"
+theme = "ocean"
+kind = "riddle"
+text_tr = "Denizde yaşarım ama balık değilim; zıplamayı ve oynamayı çok severim. Ben neyim?"
+text_en = "I live in the sea but I am not a fish, and I love to jump and play. What am I?"
+answer_tr = "Yunus"
+answer_en = "A dolphin"
+
+[[item]]
+id = "ocean-draw"
+theme = "ocean"
+kind = "challenge"
+emoji = "🎨"
+app = "tuxpaint"
+text_tr = "Boya'da denizin altını çiz: balıklar, yosunlar ve bir ahtapot."
+text_en = "Draw the world under the sea in Paint: fish, seaweed and an octopus."
+
+[[item]]
+id = "ocean-egg"
+theme = "ocean"
+kind = "challenge"
+emoji = "🥚"
+text_tr = "Bir büyüğünle bir bardak suya bol tuz karıştır, içine bir yumurta bırak: Yüzüyor mu?"
+text_en = "With a grown-up, stir lots of salt into a glass of water and add an egg: does it float?"
+more_tr = "Tuzlu su cisimleri daha iyi taşır; denizde yüzmek bu yüzden daha kolaydır."
+more_en = "Salt water holds things up better, so floating in the sea is easier."
+
+# ----------------------------------------------------------------- numbers
+
+[[item]]
+id = "numbers-honeycomb"
+theme = "numbers"
+kind = "fact"
+emoji = "🍯"
+text_tr = "Arılar, peteklerini altıgen biçiminde yapar."
+text_en = "Bees build their honeycomb out of hexagons."
+more_tr = "Altıgenler boşluk bırakmadan yan yana dizilir; az mumla çok bal saklanır."
+more_en = "Hexagons fit together with no gaps, so a little wax holds a lot of honey."
+
+[[item]]
+id = "numbers-zero"
+theme = "numbers"
+kind = "fact"
+emoji = "0️⃣"
+text_tr = "Bir sayının sağına sıfır eklersen sayı on kat büyür."
+text_en = "Put a zero on the right of a number and it becomes ten times bigger."
+more_tr = "5'in sağına sıfır koyunca 50, bir sıfır daha koyunca 500 olur."
+more_en = "5 becomes 50, and with one more zero, 500."
+
+[[item]]
+id = "numbers-triangle"
+theme = "numbers"
+kind = "fact"
+emoji = "🔺"
+text_tr = "Üçgenin üç kenarı ve üç köşesi vardır."
+text_en = "A triangle has three sides and three corners."
+more_tr = "Köprülerde ve çatılarda üçgenler sık kullanılır, çünkü üçgen çok sağlam bir şekildir."
+more_en = "Bridges and roofs often use triangles, because a triangle is a very strong shape."
+
+[[item]]
+id = "numbers-football"
+theme = "numbers"
+kind = "fact"
+emoji = "⚽"
+text_tr = "Klasik bir futbol topu, beşgen ve altıgen parçalardan dikilir."
+text_en = "A classic football is stitched together from pentagons and hexagons."
+more_tr = "Bu toplarda 12 beşgen ve 20 altıgen bulunur."
+more_en = "It has 12 pentagons and 20 hexagons."
+
+[[item]]
+id = "numbers-day"
+theme = "numbers"
+kind = "fact"
+emoji = "🕐"
+text_tr = "Bir günde 24 saat vardır."
+text_en = "There are 24 hours in a day."
+more_tr = "Bir saatte 60 dakika, bir dakikada da 60 saniye vardır."
+more_en = "There are 60 minutes in an hour, and 60 seconds in a minute."
+
+[[item]]
+id = "numbers-leap-year"
+theme = "numbers"
+kind = "fact"
+emoji = "📅"
+text_tr = "Şubat ayı genellikle dört yılda bir 29 gün çeker."
+text_en = "February usually has 29 days once every four years."
+more_tr = "O yıllara artık yıl denir ve 366 gün sürerler."
+more_en = "Those years are called leap years, and they have 366 days."
+
+[[item]]
+id = "numbers-symmetry"
+theme = "numbers"
+kind = "word"
+emoji = "🦋"
+title_tr = "Simetri"
+title_en = "Symmetry"
+text_tr = "Bir şeklin iki yarısı ayna gibi birbirinin aynısıysa, buna simetri denir."
+text_en = "When the two halves of a shape match like a mirror, that is called symmetry."
+more_tr = "Kelebeklerin kanatları neredeyse tam simetriktir."
+more_en = "A butterfly's wings are almost perfectly symmetrical."
+
+[[item]]
+id = "numbers-even"
+theme = "numbers"
+kind = "word"
+emoji = "2️⃣"
+bands = ["8-10"]
+title_tr = "Çift sayı"
+title_en = "Even number"
+text_tr = "İkiye kalansız bölünebilen sayılara çift sayı denir: 2, 4, 6, 8..."
+text_en = "Numbers that can be split into two equal groups are even numbers: 2, 4, 6, 8..."
+more_tr = "Sonu 0, 2, 4, 6 ya da 8 ile biten her sayı çifttir."
+more_en = "Every number ending in 0, 2, 4, 6 or 8 is even."
+
+[[item]]
+id = "numbers-riddle-circle"
+theme = "numbers"
+kind = "riddle"
+text_tr = "Hiç köşem yok, tekerlek gibi yuvarlağım. Ben hangi şekilim?"
+text_en = "I have no corners at all, and I am round like a wheel. Which shape am I?"
+answer_tr = "Daire"
+answer_en = "A circle"
+
+[[item]]
+id = "numbers-riddle-square"
+theme = "numbers"
+kind = "riddle"
+text_tr = "Dört kenarım var, hepsi aynı uzunlukta; dört köşem de dik. Ben hangi şekilim?"
+text_en = "I have four sides, all the same length, and corners like the corners of a book. Which shape am I?"
+answer_tr = "Kare"
+answer_en = "A square"
+
+[[item]]
+id = "numbers-riddle-week"
+theme = "numbers"
+kind = "riddle"
+text_tr = "Yedi kardeşiz, her hafta sırayla geliriz. Biz neyiz?"
+text_en = "We are seven brothers and sisters, and we take turns every week. What are we?"
+answer_tr = "Haftanın günleri"
+answer_en = "The days of the week"
+
+[[item]]
+id = "numbers-shapes-hunt"
+theme = "numbers"
+kind = "challenge"
+emoji = "🔍"
+text_tr = "Evde üçgen, kare ve daire biçiminde birer eşya bul."
+text_en = "Find something at home shaped like a triangle, a square and a circle."
+
+[[item]]
+id = "numbers-tuxmath"
+theme = "numbers"
+kind = "challenge"
+emoji = "🔢"
+app = "tuxmath"
+text_tr = "Sayılar'da bir oyun oyna ve kaç işlemi doğru yaptığını say."
+text_en = "Play a game in Numbers and count how many sums you got right."
+
+[[item]]
+id = "numbers-gcompris"
+theme = "numbers"
+kind = "challenge"
+emoji = "🧮"
+app = "gcompris"
+text_tr = "GCompris'te bir sayma oyunu seç ve oyna."
+text_en = "Pick a counting game in GCompris and play it."
+
+[[item]]
+id = "numbers-fractions"
+theme = "numbers"
+kind = "challenge"
+emoji = "🍕"
+app = "kbruch"
+bands = ["8-10"]
+text_tr = "Kesirler'de üç alıştırma çöz: Hangisi daha büyük, yarım mı, çeyrek mi?"
+text_en = "Do three exercises in Fractions: which is bigger, a half or a quarter?"
+
+[[item]]
+id = "numbers-turtle-square"
+theme = "numbers"
+kind = "challenge"
+emoji = "🐢"
+app = "kturtle"
+bands = ["8-10"]
+text_tr = "Kaplumbağa'da kaplumbağaya bir kare çizdir: dört kez ileri git, dört kez sağa dön."
+text_en = "In Turtle, make the turtle draw a square: go forward four times and turn right four times."
+
+[[item]]
+id = "numbers-chess-knight"
+theme = "numbers"
+kind = "challenge"
+emoji = "♟️"
+app = "gnome-chess"
+text_tr = "Satranç'ta atın nasıl hareket ettiğine bak: L harfi çizer!"
+text_en = "In Chess, watch how the knight moves: it draws the letter L!"
+
+# --------------------------------------------------------------- dinosaurs
+
+[[item]]
+id = "dinosaurs-long-ago"
+theme = "dinosaurs"
+kind = "fact"
+emoji = "🦕"
+text_tr = "Dinozorlar, insanlardan milyonlarca yıl önce yaşadı."
+text_en = "Dinosaurs lived millions of years before people."
+more_tr = "Onları, bulunan fosillerinden tanıyoruz."
+more_en = "We know about them from the fossils they left behind."
+
+[[item]]
+id = "dinosaurs-birds"
+theme = "dinosaurs"
+kind = "fact"
+emoji = "🐦"
+text_tr = "Kuşlar, dinozorların bugün yaşayan akrabalarıdır."
+text_en = "Birds are the living relatives of the dinosaurs."
+more_tr = "Bilim insanlarına göre bahçedeki serçe bile dinozorların soyundan gelir."
+more_en = "Scientists say even the sparrow in the garden comes from the dinosaur family."
+
+[[item]]
+id = "dinosaurs-long-neck"
+theme = "dinosaurs"
+kind = "fact"
+emoji = "🦕"
+text_tr = "Uzun boyunlu dinozorlar, ağaçların tepesindeki yaprakları yiyebilirdi."
+text_en = "Long-necked dinosaurs could eat the leaves at the tops of trees."
+more_tr = "Et değil, bitki yiyorlardı."
+more_en = "They ate plants, not meat."
+
+[[item]]
+id = "dinosaurs-eggs"
+theme = "dinosaurs"
+kind = "fact"
+emoji = "🥚"
+text_tr = "Dinozor yavruları yumurtadan çıkardı."
+text_en = "Baby dinosaurs hatched from eggs."
+more_tr = "Bilim insanları dinozor yumurtalarının fosillerini de buldu."
+more_en = "Scientists have even found fossil dinosaur eggs."
+
+[[item]]
+id = "dinosaurs-small"
+theme = "dinosaurs"
+kind = "fact"
+emoji = "🐔"
+text_tr = "Her dinozor dev değildi; bazıları bir tavuk kadar küçüktü."
+text_en = "Not every dinosaur was a giant; some were as small as a chicken."
+more_tr = "Bazıları ise bir otobüsten çok daha uzundu."
+more_en = "Others were much longer than a bus."
+
+[[item]]
+id = "dinosaurs-trex"
+theme = "dinosaurs"
+kind = "animal"
+emoji = "🦖"
+title_tr = "T. rex"
+title_en = "T. rex"
+text_tr = "T. rex kocaman bir dinozordu ama ön kolları çok kısaydı."
+text_en = "T. rex was a huge dinosaur, but its front arms were very short."
+more_tr = "Kolları bir yetişkinin kolu kadardı; koca gövdesinin yanında minicik kalıyordu."
+more_en = "Its arms were about as long as a grown-up's, tiny next to its enormous body."
+
+[[item]]
+id = "dinosaurs-triceratops"
+theme = "dinosaurs"
+kind = "animal"
+emoji = "🦕"
+title_tr = "Triceratops"
+title_en = "Triceratops"
+text_tr = "Triceratops'un başında üç boynuz vardı."
+text_en = "Triceratops had three horns on its head."
+more_tr = "Adı da zaten 'üç boynuzlu yüz' anlamına gelir."
+more_en = "Its name even means 'three-horned face'."
+
+[[item]]
+id = "dinosaurs-stegosaurus"
+theme = "dinosaurs"
+kind = "animal"
+emoji = "🦕"
+title_tr = "Stegosaurus"
+title_en = "Stegosaurus"
+text_tr = "Stegosaurus'un sırtında büyük kemik plakalar vardı."
+text_en = "Stegosaurus had big bony plates along its back."
+more_tr = "Kuyruğunun ucunda ise sivri dikenler bulunuyordu."
+more_en = "The tip of its tail had sharp spikes."
+
+[[item]]
+id = "dinosaurs-fossil"
+theme = "dinosaurs"
+kind = "word"
+emoji = "🦴"
+title_tr = "Fosil"
+title_en = "Fossil"
+text_tr = "Çok eski bir canlıdan kalan, taşa dönüşmüş kemiğe ya da ize fosil denir."
+text_en = "A bone or a print from long ago that has turned to stone is called a fossil."
+more_tr = "Fosiller sayesinde milyonlarca yıl önce yaşamış canlıları tanıyoruz."
+more_en = "Fossils tell us about animals and plants that lived millions of years ago."
+
+[[item]]
+id = "dinosaurs-palaeontologist"
+theme = "dinosaurs"
+kind = "word"
+emoji = "🔍"
+bands = ["8-10"]
+title_tr = "Paleontolog"
+title_en = "Palaeontologist"
+text_tr = "Fosilleri bulup inceleyen bilim insanına paleontolog denir."
+text_en = "A scientist who finds and studies fossils is called a palaeontologist."
+more_tr = "Paleontologlar küçük fırçalarla kayaların arasındaki kemikleri dikkatle temizler."
+more_en = "They carefully clean the bones out of the rock with small brushes."
+
+[[item]]
+id = "dinosaurs-riddle-fossil"
+theme = "dinosaurs"
+kind = "riddle"
+text_tr = "Çok eskiden yaşadım, kemiklerim taşa döndü; müzelerde beni görmeye gelirsin. Ben neyim?"
+text_en = "I lived long, long ago and my bones turned to stone; you come to see me in museums. What am I?"
+answer_tr = "Dinozor fosili"
+answer_en = "A dinosaur fossil"
+
+[[item]]
+id = "dinosaurs-riddle-bird"
+theme = "dinosaurs"
+kind = "riddle"
+text_tr = "Yumurtadan çıkarım, tüylerim ve kanatlarım var; dinozorlar benim akrabam. Ben neyim?"
+text_en = "I hatch from an egg, I have feathers and wings, and dinosaurs are my relatives. What am I?"
+answer_tr = "Kuş"
+answer_en = "A bird"
+
+[[item]]
+id = "dinosaurs-draw"
+theme = "dinosaurs"
+kind = "challenge"
+emoji = "🖍️"
+app = "tuxpaint"
+text_tr = "Boya'da kendi dinozorunu çiz ve ona bir isim ver."
+text_en = "Draw a dinosaur of your own in Paint and give it a name."
+
+[[item]]
+id = "dinosaurs-walk"
+theme = "dinosaurs"
+kind = "challenge"
+emoji = "👣"
+text_tr = "Odanda bir dakika boyunca kocaman adımlarla bir dinozor gibi yürü."
+text_en = "For one minute, walk around your room with giant steps, like a dinosaur."
+
+[[item]]
+id = "dinosaurs-forest"
+theme = "dinosaurs"
+kind = "challenge"
+emoji = "🌴"
+app = "kolourpaint"
+text_tr = "Çizim'de dinozorların yaşadığı bir orman çiz."
+text_en = "Open Draw and paint the forest the dinosaurs lived in."
+
+[[item]]
+id = "dinosaurs-story"
+theme = "dinosaurs"
+kind = "challenge"
+emoji = "📝"
+app = "libreoffice-writer"
+bands = ["8-10"]
+text_tr = "Yazı'da bir dinozor hakkında üç cümlelik bir hikâye yaz."
+text_en = "Write a three-sentence story about a dinosaur in Writer."
+
+# ------------------------------------------------------------------ plants
+
+[[item]]
+id = "plants-oxygen"
+theme = "plants"
+kind = "fact"
+emoji = "🌳"
+text_tr = "Ağaçlar, soluduğumuz havaya oksijen verir."
+text_en = "Trees give oxygen to the air we breathe."
+more_tr = "Yapraklarıyla güneş ışığını kullanarak kendi besinlerini yaparlar."
+more_en = "Their leaves use sunlight to make their own food."
+
+[[item]]
+id = "plants-sunflower"
+theme = "plants"
+kind = "fact"
+emoji = "🌻"
+text_tr = "Genç ayçiçekleri gün boyunca başlarını Güneş'e doğru çevirir."
+text_en = "Young sunflowers turn their heads to follow the Sun during the day."
+more_tr = "Büyüyüp çiçek açtıklarında ise çoğunlukla doğuya bakarak dururlar."
+more_en = "Once they are grown and in bloom, most of them stay facing east."
+
+[[item]]
+id = "plants-apple-seed"
+theme = "plants"
+kind = "fact"
+emoji = "🍎"
+text_tr = "Bir elma çekirdeğinden koca bir elma ağacı büyüyebilir."
+text_en = "A whole apple tree can grow from one apple seed."
+more_tr = "Ama ağacın meyve vermesi için birkaç yıl beklemek gerekir."
+more_en = "But you have to wait a few years before it gives any fruit."
+
+[[item]]
+id = "plants-rings"
+theme = "plants"
+kind = "fact"
+emoji = "🪵"
+text_tr = "Kesilmiş bir ağacın gövdesindeki halkaları sayarak yaşını bulabiliriz."
+text_en = "You can tell a tree's age by counting the rings in its trunk."
+more_tr = "Ağaç her yıl gövdesine yeni bir halka ekler."
+more_en = "A tree adds a new ring every year."
+
+[[item]]
+id = "plants-cactus"
+theme = "plants"
+kind = "fact"
+emoji = "🌵"
+text_tr = "Kaktüsler, gövdelerinde su biriktirir."
+text_en = "Cacti store water in their stems."
+more_tr = "Bu sayede yağmurun az yağdığı çöllerde yaşayabilirler."
+more_en = "That is how they survive in deserts, where it hardly ever rains."
+
+[[item]]
+id = "plants-mushroom"
+theme = "plants"
+kind = "fact"
+emoji = "🍄"
+text_tr = "Mantarlar bitki değildir."
+text_en = "Mushrooms are not plants."
+more_tr = "Hayvan da değildirler; kendilerine ait ayrı bir canlı grubu oluştururlar."
+more_en = "They are not animals either; they belong to a group of living things of their own."
+
+[[item]]
+id = "plants-needs"
+theme = "plants"
+kind = "fact"
+emoji = "🌱"
+text_tr = "Bitkilerin büyümek için suya, ışığa ve havaya ihtiyacı vardır."
+text_en = "Plants need water, light and air to grow."
+more_tr = "Kökleriyle de topraktaki besinleri alırlar."
+more_en = "Their roots also take in food from the soil."
+
+[[item]]
+id = "plants-photosynthesis"
+theme = "plants"
+kind = "word"
+emoji = "☀️"
+bands = ["8-10"]
+title_tr = "Fotosentez"
+title_en = "Photosynthesis"
+text_tr = "Bitkilerin güneş ışığını kullanarak kendi besinini yapmasına fotosentez denir."
+text_en = "Photosynthesis is how plants use sunlight to make their own food."
+more_tr = "Fotosentez sırasında bitkiler havaya oksijen bırakır."
+more_en = "While they do it, they release oxygen into the air."
+
+[[item]]
+id = "plants-sprout"
+theme = "plants"
+kind = "word"
+emoji = "🌱"
+title_tr = "Filiz"
+title_en = "Sprout"
+text_tr = "Tohumdan yeni çıkan küçük bitkiye filiz denir."
+text_en = "A tiny new plant coming out of a seed is called a sprout."
+more_tr = "Filiz, ışığa doğru uzanarak büyür."
+more_en = "It grows by reaching up towards the light."
+
+[[item]]
+id = "plants-riddle-pomegranate"
+theme = "plants"
+kind = "riddle"
+text_tr = "Çarşıdan aldım bir tane, eve geldim bin tane. Nedir?"
+text_en = "I bought one at the market, and when I got home there were a thousand. What is it?"
+answer_tr = "Nar"
+answer_en = "A pomegranate"
+
+[[item]]
+id = "plants-riddle-tree"
+theme = "plants"
+kind = "riddle"
+text_tr = "Kışın çıplak, yazın yeşil giyinirim; kuşlar dallarıma yuva yapar. Ben neyim?"
+text_en = "Bare in winter and dressed in green in summer, I let birds build nests in my branches. What am I?"
+answer_tr = "Ağaç"
+answer_en = "A tree"
+
+[[item]]
+id = "plants-riddle-carrot"
+theme = "plants"
+kind = "riddle"
+text_tr = "Toprağın altında büyürüm, turuncu renkliyim, tavşanlar beni çok sever. Ben neyim?"
+text_en = "I grow under the ground, I am orange, and rabbits love me. What am I?"
+answer_tr = "Havuç"
+answer_en = "A carrot"
+
+[[item]]
+id = "plants-beans"
+theme = "plants"
+kind = "challenge"
+emoji = "🫘"
+text_tr = "Bir büyüğünle bir saksıya birkaç fasulye ek, sula ve her gün ne kadar büyüdüğüne bak."
+text_en = "With a grown-up, plant a few beans in a pot, water them and check every day how much they have grown."
+
+[[item]]
+id = "plants-draw"
+theme = "plants"
+kind = "challenge"
+emoji = "🌳"
+app = "tuxpaint"
+text_tr = "Boya'da kocaman bir ağaç çiz ve dallarına kuşlar kondur."
+text_en = "Draw a big tree in Paint and put some birds on its branches."
+
+[[item]]
+id = "plants-jigsaw"
+theme = "plants"
+kind = "challenge"
+emoji = "🍊"
+app = "palapeli"
+text_tr = "Yapboz'da bir meyve resmi seç ve parçalarını birleştir."
+text_en = "Pick a picture of fruit in Jigsaw and put the pieces together."
+
+# -------------------------------------------------------------------- body
+
+[[item]]
+id = "body-heart"
+theme = "body"
+kind = "fact"
+emoji = "❤️"
+text_tr = "Kalbin, yaklaşık kendi yumruğun büyüklüğündedir."
+text_en = "Your heart is about the size of your own fist."
+more_tr = "Sen uyurken bile gece gündüz hiç durmadan çalışır."
+more_en = "It keeps working day and night, even while you sleep."
+
+[[item]]
+id = "body-bones"
+theme = "body"
+kind = "fact"
+emoji = "🦴"
+text_tr = "Bir yetişkinin vücudunda 206 kemik vardır."
+text_en = "A grown-up's body has 206 bones."
+more_tr = "Bebekler daha fazla kemikle doğar; bazı kemikler büyüdükçe birleşir."
+more_en = "Babies are born with more, and some of them join together as they grow."
+
+[[item]]
+id = "body-nose"
+theme = "body"
+kind = "fact"
+emoji = "👃"
+text_tr = "Burnun binlerce farklı kokuyu ayırt edebilir."
+text_en = "Your nose can tell thousands of different smells apart."
+more_tr = "Koku almak, yemeklerin tadını almana da yardım eder."
+more_en = "Smelling also helps you taste your food."
+
+[[item]]
+id = "body-sleep"
+theme = "body"
+kind = "fact"
+emoji = "😴"
+text_tr = "Uyurken vücudun dinlenir ve büyür."
+text_en = "While you sleep, your body rests and grows."
+more_tr = "Beynin de uykuda gün içinde öğrendiklerini yerli yerine koyar."
+more_en = "Your brain also sorts out what you learned during the day."
+
+[[item]]
+id = "body-blink"
+theme = "body"
+kind = "fact"
+emoji = "👁️"
+text_tr = "Gözlerin her gün binlerce kez kırpışır."
+text_en = "Your eyes blink thousands of times every day."
+more_tr = "Her kırpış gözünü temizler ve nemli tutar."
+more_en = "Every blink cleans your eyes and keeps them moist."
+
+[[item]]
+id = "body-teeth"
+theme = "body"
+kind = "fact"
+emoji = "🦷"
+text_tr = "Süt dişlerin dökülünce yerine kalıcı dişler çıkar."
+text_en = "When your baby teeth fall out, grown-up teeth come in their place."
+more_tr = "Çoğu çocukta ilk süt dişi 6 yaş civarında sallanmaya başlar."
+more_en = "For most children, the first one starts to wobble at around six."
+
+[[item]]
+id = "body-water"
+theme = "body"
+kind = "fact"
+emoji = "💧"
+text_tr = "Vücudunun yarısından fazlası sudur."
+text_en = "More than half of your body is water."
+more_tr = "Bu yüzden gün içinde su içmek çok önemlidir."
+more_en = "That is why drinking water during the day matters so much."
+
+[[item]]
+id = "body-muscle"
+theme = "body"
+kind = "word"
+emoji = "💪"
+title_tr = "Kas"
+title_en = "Muscle"
+text_tr = "Koşmanı ve zıplamanı sağlayan, kemiklerine bağlı güçlü yapılara kas denir."
+text_en = "The strong parts joined to your bones that let you run and jump are called muscles."
+more_tr = "Gülümserken bile yüzündeki birçok kası kullanırsın."
+more_en = "Even a smile uses many muscles in your face."
+
+[[item]]
+id = "body-pulse"
+theme = "body"
+kind = "word"
+emoji = "💓"
+title_tr = "Nabız"
+title_en = "Pulse"
+text_tr = "Bileğine iki parmağınla hafifçe bastırınca hissettiğin tık tık vuruşa nabız denir."
+text_en = "The tap-tap you feel when you press two fingers gently on your wrist is called your pulse."
+more_tr = "Her vuruş, kalbinin bir kez attığını gösterir."
+more_en = "Each beat is one beat of your heart."
+
+[[item]]
+id = "body-riddle-nose"
+theme = "body"
+kind = "riddle"
+text_tr = "Yüzünün ortasındayım, kokuları ben alırım. Ben neyim?"
+text_en = "I sit in the middle of your face, and I smell things for you. What am I?"
+answer_tr = "Burun"
+answer_en = "Your nose"
+
+[[item]]
+id = "body-riddle-eyes"
+theme = "body"
+kind = "riddle"
+text_tr = "İki pencereyiz; gündüz açık, uyurken kapalıyız. Biz neyiz?"
+text_en = "We are two windows, open in the day and shut while you sleep. What are we?"
+answer_tr = "Gözler"
+answer_en = "Your eyes"
+
+[[item]]
+id = "body-handwash"
+theme = "body"
+kind = "challenge"
+emoji = "🧼"
+text_tr = "Ellerini yıkarken 'İyi ki doğdun' şarkısını iki kez söyle."
+text_en = "When you wash your hands, sing 'Happy Birthday' twice."
+more_tr = "Bu kadar uzun yıkamak, ellerindeki mikropları uzaklaştırır."
+more_en = "Washing for that long gets rid of the germs on your hands."
+
+[[item]]
+id = "body-jump"
+theme = "body"
+kind = "challenge"
+emoji = "🤸"
+text_tr = "Yerinde on kez zıpla, sonra elini göğsüne koy: Kalbin daha hızlı atıyor mu?"
+text_en = "Jump on the spot ten times, then put your hand on your chest: is your heart beating faster?"
+
+[[item]]
+id = "body-self-portrait"
+theme = "body"
+kind = "challenge"
+emoji = "🖍️"
+app = "kolourpaint"
+text_tr = "Çizim'de kendi resmini yap: saçların, gözlerin ve en sevdiğin kıyafetinle."
+text_en = "Open Draw and make a picture of yourself, with your hair, your eyes and your favourite clothes."
+
+[[item]]
+id = "body-memory"
+theme = "body"
+kind = "challenge"
+emoji = "🧠"
+app = "blinken"
+text_tr = "Hafıza'yı aç ve ışıkların yanma sırasını aklında tut: Kaç tanesini doğru hatırladın?"
+text_en = "Open Memory and remember the order the lights flash in: how many did you get right?"
+
+# ------------------------------------------------------------------- polar
+
+[[item]]
+id = "polar-penguin"
+theme = "polar"
+kind = "animal"
+emoji = "🐧"
+title_tr = "Penguen"
+title_en = "Penguin"
+text_tr = "Penguenler uçamaz ama çok iyi yüzer."
+text_en = "Penguins cannot fly, but they are excellent swimmers."
+more_tr = "Kanatlarını suyun altında yüzgeç gibi kullanırlar."
+more_en = "Under water, they use their wings like flippers."
+
+[[item]]
+id = "polar-bear"
+theme = "polar"
+kind = "animal"
+emoji = "🐻‍❄️"
+title_tr = "Kutup ayısı"
+title_en = "Polar bear"
+text_tr = "Kutup ayısının beyaz kürkünün altındaki derisi siyahtır."
+text_en = "Under its white fur, a polar bear's skin is black."
+more_tr = "Kalın bir yağ tabakası da onu buzlu suda sıcak tutar."
+more_en = "A thick layer of fat keeps it warm in icy water."
+
+[[item]]
+id = "polar-seal"
+theme = "polar"
+kind = "animal"
+emoji = "🦭"
+title_tr = "Fok"
+title_en = "Seal"
+text_tr = "Foklar, kalın yağ tabakaları sayesinde buzlu sularda üşümez."
+text_en = "Seals stay warm in icy water thanks to a thick layer of fat."
+more_tr = "Karada biraz sakar görünürler ama suda çok çeviktirler."
+more_en = "They look a little clumsy on land, but in the water they are very quick."
+
+[[item]]
+id = "polar-fox"
+theme = "polar"
+kind = "animal"
+emoji = "🦊"
+title_tr = "Kutup tilkisi"
+title_en = "Arctic fox"
+text_tr = "Çoğu kutup tilkisinin kürkü kışın beyaz, yazın kahverengidir."
+text_en = "Most Arctic foxes have white fur in winter and brown fur in summer."
+more_tr = "Böylece her mevsimde etrafına uyar ve kolay kolay fark edilmez."
+more_en = "That way they blend in with their surroundings, whatever the season."
+
+[[item]]
+id = "polar-never-meet"
+theme = "polar"
+kind = "fact"
+emoji = "🧭"
+text_tr = "Kutup ayıları kuzeyde, penguenler güneyde yaşar; doğada hiç karşılaşmazlar."
+text_en = "Polar bears live in the north and penguins in the south, so they never meet in the wild."
+more_tr = "Kutup ayıları Kuzey Kutbu'nun, penguenlerin çoğu da Antarktika'nın çevresinde yaşar."
+more_en = "Polar bears live around the North Pole, and most penguins around Antarctica."
+
+[[item]]
+id = "polar-antarctica"
+theme = "polar"
+kind = "fact"
+emoji = "🧊"
+text_tr = "Antarktika, Dünya'nın en soğuk yeridir."
+text_en = "Antarctica is the coldest place on Earth."
+more_tr = "Orada hava sıfırın 80 derece altına kadar soğuyabilir."
+more_en = "The air there can get as cold as 80 degrees below zero."
+
+[[item]]
+id = "polar-midnight-sun"
+theme = "polar"
+kind = "fact"
+emoji = "☀️"
+text_tr = "Kutuplarda yazın Güneş günlerce hiç batmaz."
+text_en = "At the poles, the summer Sun does not set for days and days."
+more_tr = "Kışın ise günlerce hiç doğmaz ve her yer karanlık kalır."
+more_en = "In winter it does not rise for days, and everything stays dark."
+
+[[item]]
+id = "polar-iceberg"
+theme = "polar"
+kind = "word"
+emoji = "🧊"
+title_tr = "Buzdağı"
+title_en = "Iceberg"
+text_tr = "Denizde yüzen kocaman buz kütlesine buzdağı denir."
+text_en = "A huge block of ice floating in the sea is called an iceberg."
+more_tr = "Buzdağının büyük bölümü suyun altında saklıdır."
+more_en = "Most of an iceberg is hidden under the water."
+
+[[item]]
+id = "polar-pole"
+theme = "polar"
+kind = "word"
+emoji = "🌐"
+title_tr = "Kutup"
+title_en = "Pole"
+text_tr = "Dünya'nın en kuzeyindeki ve en güneyindeki noktalara kutup denir."
+text_en = "The points furthest north and furthest south on the Earth are called the poles."
+more_tr = "Güney Kutbu Antarktika'dadır; Kuzey Kutbu ise donmuş bir denizin üstündedir."
+more_en = "The South Pole is in Antarctica; the North Pole is on a frozen sea."
+
+[[item]]
+id = "polar-riddle-penguin"
+theme = "polar"
+kind = "riddle"
+text_tr = "Siyah beyaz giyinirim, buzda yürürüm; uçamam ama yüzerim. Ben neyim?"
+text_en = "I dress in black and white and walk on ice; I cannot fly, but I can swim. What am I?"
+answer_tr = "Penguen"
+answer_en = "A penguin"
+
+[[item]]
+id = "polar-riddle-bear"
+theme = "polar"
+kind = "riddle"
+text_tr = "Bembeyaz bir kürküm var; karların arasında yaşar, buzlu denizde yüzerim. Ben neyim?"
+text_en = "I have pure white fur; I live in the snow and swim in the icy sea. What am I?"
+answer_tr = "Kutup ayısı"
+answer_en = "A polar bear"
+
+[[item]]
+id = "polar-ice-cube"
+theme = "polar"
+kind = "challenge"
+emoji = "🧊"
+text_tr = "Bir buz küpünü tabağa koy ve tamamen erimesinin ne kadar sürdüğüne bak."
+text_en = "Put an ice cube on a plate and see how long it takes to melt."
+more_tr = "Bir tanesini de güneşe koy: Hangisi daha hızlı eridi?"
+more_en = "Put another one in the sun: which one melted faster?"
+
+[[item]]
+id = "polar-globe"
+theme = "polar"
+kind = "challenge"
+emoji = "🌍"
+app = "marble"
+text_tr = "Dünya'yı aç, küreyi çevir ve en alttaki beyaz kıtayı bul: Antarktika!"
+text_en = "Open Globe, spin the Earth and find the white continent at the bottom: Antarctica!"
+
+[[item]]
+id = "polar-draw"
+theme = "polar"
+kind = "challenge"
+emoji = "🐧"
+app = "tuxpaint"
+text_tr = "Boya'da buzların üstünde yürüyen bir penguen ailesi çiz."
+text_en = "Draw a family of penguins walking on the ice in Paint."
+
+# ----------------------------------------------------------------- insects
+
+[[item]]
+id = "insects-bee"
+theme = "insects"
+kind = "animal"
+emoji = "🐝"
+title_tr = "Bal arısı"
+title_en = "Honeybee"
+text_tr = "Bal arıları, çiçeklerden topladıkları nektardan bal yapar."
+text_en = "Honeybees make honey from the nectar they collect from flowers."
+more_tr = "Dans ederek birbirlerine çiçeklerin yerini anlatırlar."
+more_en = "They dance to tell each other where the flowers are."
+
+[[item]]
+id = "insects-ant"
+theme = "insects"
+kind = "animal"
+emoji = "🐜"
+title_tr = "Karınca"
+title_en = "Ant"
+text_tr = "Karıncalar, kendi ağırlıklarından kat kat ağır yükler taşıyabilir."
+text_en = "Ants can carry loads many times heavier than themselves."
+more_tr = "Bir karınca yuvasında herkesin bir görevi vardır."
+more_en = "In an ant nest, everyone has a job to do."
+
+[[item]]
+id = "insects-butterfly"
+theme = "insects"
+kind = "animal"
+emoji = "🦋"
+title_tr = "Kelebek"
+title_en = "Butterfly"
+text_tr = "Kelebekler, yumurtadan tırtıl olarak çıkar."
+text_en = "Butterflies hatch from their eggs as caterpillars."
+more_tr = "Tırtıl bir süre sonra pupaya dönüşür ve pupanın içinde kelebek olur."
+more_en = "Later the caterpillar turns into a pupa, and inside it becomes a butterfly."
+
+[[item]]
+id = "insects-ladybird"
+theme = "insects"
+kind = "animal"
+emoji = "🐞"
+title_tr = "Uğur böceği"
+title_en = "Ladybird"
+text_tr = "Uğur böcekleri, bitkilere zarar veren yaprak bitlerini yer."
+text_en = "Ladybirds eat aphids, tiny bugs that harm plants."
+more_tr = "Bu yüzden bahçıvanlar uğur böceklerini çok sever."
+more_en = "That is why gardeners love them."
+
+[[item]]
+id = "insects-six-legs"
+theme = "insects"
+kind = "fact"
+emoji = "🐜"
+text_tr = "Böceklerin altı bacağı vardır."
+text_en = "Insects have six legs."
+more_tr = "Örümceğin sekiz bacağı vardır; bu yüzden örümcek bir böcek değildir."
+more_en = "A spider has eight, so a spider is not an insect."
+
+[[item]]
+id = "insects-cricket"
+theme = "insects"
+kind = "fact"
+emoji = "🦗"
+text_tr = "Cırcır böcekleri, kanatlarını birbirine sürterek ses çıkarır."
+text_en = "Crickets chirp by rubbing their wings together."
+more_tr = "Bu sesi genellikle erkek cırcır böcekleri çıkarır."
+more_en = "It is usually the males that sing."
+
+[[item]]
+id = "insects-firefly"
+theme = "insects"
+kind = "fact"
+emoji = "✨"
+text_tr = "Ateş böcekleri karanlıkta kendi ışıklarını üretir."
+text_en = "Fireflies make their own light in the dark."
+more_tr = "Bu ışık neredeyse hiç ısı çıkarmaz."
+more_en = "Their light gives off almost no heat."
+
+[[item]]
+id = "insects-metamorphosis"
+theme = "insects"
+kind = "word"
+emoji = "🐛"
+bands = ["8-10"]
+title_tr = "Başkalaşım"
+title_en = "Metamorphosis"
+text_tr = "Bir canlının büyürken biçim değiştirmesine başkalaşım denir."
+text_en = "Changing shape while growing up is called metamorphosis."
+more_tr = "Tırtılın kelebeğe, iribaşın kurbağaya dönüşmesi buna örnektir."
+more_en = "A caterpillar turning into a butterfly, or a tadpole into a frog, is an example."
+
+[[item]]
+id = "insects-pollen"
+theme = "insects"
+kind = "word"
+emoji = "🌼"
+title_tr = "Polen"
+title_en = "Pollen"
+text_tr = "Çiçeklerin içindeki sarı, toz gibi taneciklere polen denir."
+text_en = "The yellow dust inside flowers is called pollen."
+more_tr = "Arılar polenleri çiçekten çiçeğe taşıyarak bitkilerin meyve vermesine yardım eder."
+more_en = "Bees carry it from flower to flower, which helps plants make fruit."
+
+[[item]]
+id = "insects-riddle-ladybird"
+theme = "insects"
+kind = "riddle"
+text_tr = "Benekli, kırmızı bir elbisem var; yaprakların üstünde gezerim. Ben neyim?"
+text_en = "I wear a red dress with spots and stroll about on leaves. What am I?"
+answer_tr = "Uğur böceği"
+answer_en = "A ladybird"
+
+[[item]]
+id = "insects-riddle-butterfly"
+theme = "insects"
+kind = "riddle"
+text_tr = "Önce tırtıldım, sonra kanatlandım; çiçekten çiçeğe uçarım. Ben neyim?"
+text_en = "First I was a caterpillar, then I grew wings, and now I fly from flower to flower. What am I?"
+answer_tr = "Kelebek"
+answer_en = "A butterfly"
+
+[[item]]
+id = "insects-riddle-bee"
+theme = "insects"
+kind = "riddle"
+text_tr = "Vızır vızır uçarım, çiçek çiçek gezerim, tatlı bal yaparım. Ben neyim?"
+text_en = "I buzz and buzz, I visit flower after flower, and I make sweet honey. What am I?"
+answer_tr = "Arı"
+answer_en = "A bee"
+
+[[item]]
+id = "insects-draw"
+theme = "insects"
+kind = "challenge"
+emoji = "🦋"
+app = "tuxpaint"
+text_tr = "Boya'da renkli kanatları olan bir kelebek çiz."
+text_en = "Draw a butterfly with colourful wings in Paint."
+more_tr = "İki kanadını da aynı desenle süsle."
+more_en = "Decorate both wings with the same pattern."
+
+[[item]]
+id = "insects-look"
+theme = "insects"
+kind = "challenge"
+emoji = "🔍"
+text_tr = "Bir büyüğünle dışarıya ya da pencereden bak: Kaç farklı böcek görebilirsin? Dokunma, sadece bak."
+text_en = "With a grown-up, look outside or out of the window: how many different bugs can you see? Just look."
+
+# ----------------------------------------------------------------- türkiye
+
+[[item]]
+id = "turkiye-agri"
+theme = "turkiye"
+kind = "fact"
+emoji = "🏔️"
+text_tr = "Ağrı Dağı, Türkiye'nin en yüksek dağıdır."
+text_en = "Mount Ağrı (Ararat) is the highest mountain in Türkiye."
+more_tr = "Yüksekliği 5.000 metreyi geçer ve tepesi yazın bile karlıdır."
+more_en = "It is more than 5,000 metres high, and its top has snow even in summer."
+
+[[item]]
+id = "turkiye-istanbul"
+theme = "turkiye"
+kind = "fact"
+emoji = "🌉"
+text_tr = "İstanbul, iki kıtaya birden yayılmış bir şehirdir."
+text_en = "Istanbul is a city spread over two continents."
+more_tr = "Bir yakası Avrupa'da, öbür yakası Asya'dadır; aralarından İstanbul Boğazı geçer."
+more_en = "One side is in Europe and the other in Asia, with the Bosphorus running between them."
+
+[[item]]
+id = "turkiye-van-lake"
+theme = "turkiye"
+kind = "fact"
+emoji = "💧"
+text_tr = "Van Gölü, Türkiye'nin en büyük gölüdür."
+text_en = "Lake Van is the biggest lake in Türkiye."
+more_tr = "Suyu tuzlu ve sodalıdır; bu suda yaşayabilen tek balık inci kefalidir."
+more_en = "Its water is salty and full of soda, and the only fish that can live in it is the pearl mullet."
+
+[[item]]
+id = "turkiye-seas"
+theme = "turkiye"
+kind = "fact"
+emoji = "🌊"
+text_tr = "Türkiye'nin üç yanı denizlerle çevrilidir."
+text_en = "Türkiye has sea on three sides."
+more_tr = "Kuzeyde Karadeniz, batıda Ege, güneyde Akdeniz var; Marmara Denizi ise içeride kalır."
+more_en = "The Black Sea to the north, the Aegean to the west and the Mediterranean to the south; the Sea of Marmara lies inside."
+
+[[item]]
+id = "turkiye-kizilirmak"
+theme = "turkiye"
+kind = "fact"
+emoji = "🏞️"
+bands = ["8-10"]
+text_tr = "Kızılırmak, baştan sona Türkiye topraklarında akan en uzun nehirdir."
+text_en = "The Kızılırmak is the longest river that flows only through Türkiye."
+more_tr = "Adını, taşıdığı toprağın verdiği kırmızımsı renkten alır."
+more_en = "Its name means 'Red River', after the reddish soil it carries."
+
+[[item]]
+id = "turkiye-provinces"
+theme = "turkiye"
+kind = "fact"
+emoji = "🗺️"
+text_tr = "Türkiye'de 81 il vardır."
+text_en = "Türkiye has 81 provinces."
+more_tr = "Her ilin bir plaka numarası var: Ankara'nınki 06, İstanbul'unki 34."
+more_en = "Each has its own number plate code: Ankara's is 06 and Istanbul's is 34."
+
+[[item]]
+id = "turkiye-cappadocia"
+theme = "turkiye"
+kind = "fact"
+emoji = "🎈"
+text_tr = "Kapadokya'daki peri bacalarını rüzgâr ve yağmur oydu."
+text_en = "The fairy chimneys of Cappadocia were carved by wind and rain."
+more_tr = "Yumuşak kayaların yavaş yavaş aşınması çok uzun bir zaman aldı."
+more_en = "Wearing away the soft rock took a very, very long time."
+
+[[item]]
+id = "turkiye-tulip"
+theme = "turkiye"
+kind = "fact"
+emoji = "🌷"
+text_tr = "Laleler, ilk olarak Orta Asya ve Anadolu'nun dağlarında kendiliğinden yetişti."
+text_en = "Tulips first grew wild in the mountains of Central Asia and Anatolia."
+more_tr = "Avrupa'ya ilk kez Osmanlılar zamanında İstanbul'dan gönderildiler."
+more_en = "They first reached Europe from Istanbul, in Ottoman times."
+
+[[item]]
+id = "turkiye-van-cat"
+theme = "turkiye"
+kind = "animal"
+emoji = "🐈"
+title_tr = "Van kedisi"
+title_en = "Van cat"
+text_tr = "Bazı Van kedilerinin bir gözü mavi, öbür gözü kehribar rengidir."
+text_en = "Some Van cats have one blue eye and one amber eye."
+more_tr = "Suyla oynamayı seven, yüzebilen kediler olarak bilinirler."
+more_en = "They are known as cats that like playing in water and can swim."
+
+[[item]]
+id = "turkiye-kangal"
+theme = "turkiye"
+kind = "animal"
+emoji = "🐕"
+title_tr = "Kangal"
+title_en = "Kangal"
+text_tr = "Kangal köpekleri, koyun sürülerini koruyan güçlü çoban köpekleridir."
+text_en = "Kangal dogs are strong shepherd dogs that guard flocks of sheep."
+more_tr = "Adlarını Sivas'ın Kangal ilçesinden alırlar."
+more_en = "They are named after Kangal, a town in the province of Sivas."
+
+[[item]]
+id = "turkiye-peninsula"
+theme = "turkiye"
+kind = "word"
+emoji = "🗺️"
+title_tr = "Yarımada"
+title_en = "Peninsula"
+text_tr = "Üç yanı suyla çevrili kara parçasına yarımada denir."
+text_en = "A piece of land with water on three sides is called a peninsula."
+more_tr = "Anadolu da büyük bir yarımadadır."
+more_en = "Anatolia is a big peninsula too."
+
+[[item]]
+id = "turkiye-riddle-bosphorus"
+theme = "turkiye"
+kind = "riddle"
+bands = ["8-10"]
+text_tr = "İki kıtanın arasındayım, gemiler içimden geçer; bir yanım Avrupa, bir yanım Asya. Ben neyim?"
+text_en = "I lie between two continents and ships sail through me; Europe on one side, Asia on the other. What am I?"
+answer_tr = "İstanbul Boğazı"
+answer_en = "The Bosphorus"
+
+[[item]]
+id = "turkiye-riddle-cat"
+theme = "turkiye"
+kind = "riddle"
+text_tr = "Bıyıklarım var, miyav derim, yumak kovalamayı çok severim. Ben neyim?"
+text_en = "I have whiskers, I say miaow, and I love chasing balls of wool. What am I?"
+answer_tr = "Kedi"
+answer_en = "A cat"
+
+[[item]]
+id = "turkiye-maps"
+theme = "turkiye"
+kind = "challenge"
+emoji = "🗺️"
+app = "kgeography"
+bands = ["8-10"]
+text_tr = "Haritalar'da Türkiye haritasını aç ve başkent Ankara'yı bul."
+text_en = "Open the map of Türkiye in Maps and find the capital, Ankara."
+
+[[item]]
+id = "turkiye-globe"
+theme = "turkiye"
+kind = "challenge"
+emoji = "🌍"
+app = "marble"
+text_tr = "Dünya'yı aç, küreyi çevir, Türkiye'yi bul ve çevresindeki denizlere bak."
+text_en = "Open Globe, spin the Earth, find Türkiye and look at the seas around it."
+
+# ------------------------------------------------------------------- birds
+
+[[item]]
+id = "birds-owl"
+theme = "birds"
+kind = "animal"
+emoji = "🦉"
+title_tr = "Baykuş"
+title_en = "Owl"
+text_tr = "Baykuşlar başlarını çok geriye doğru çevirebilir."
+text_en = "Owls can turn their heads a very long way round."
+more_tr = "Gözlerini oynatamadıkları için etrafa bakmak üzere başlarını çevirirler."
+more_en = "They cannot move their eyes, so they turn their heads to look around."
+
+[[item]]
+id = "birds-flamingo"
+theme = "birds"
+kind = "animal"
+emoji = "🦩"
+title_tr = "Flamingo"
+title_en = "Flamingo"
+text_tr = "Flamingolar, yedikleri yiyecekler sayesinde pembe olur."
+text_en = "Flamingos turn pink because of the food they eat."
+more_tr = "Türkiye'de de flamingoların yaşadığı göller vardır."
+more_en = "Some lakes in Türkiye are home to flamingos too."
+
+[[item]]
+id = "birds-parrot"
+theme = "birds"
+kind = "animal"
+emoji = "🦜"
+title_tr = "Papağan"
+title_en = "Parrot"
+text_tr = "Bazı papağanlar duydukları sesleri taklit edebilir."
+text_en = "Some parrots can copy the sounds they hear."
+more_tr = "Hatta bazıları insanların söylediği kelimeleri tekrarlayabilir."
+more_en = "Some can even repeat words that people say."
+
+[[item]]
+id = "birds-stork"
+theme = "birds"
+kind = "animal"
+emoji = "🪺"
+title_tr = "Leylek"
+title_en = "Stork"
+text_tr = "Leylekler her sonbaharda sıcak ülkelere göç eder."
+text_en = "Storks fly away to warm countries every autumn."
+more_tr = "Baharda çoğu zaman aynı yuvaya geri dönerler."
+more_en = "In spring, they often come back to the very same nest."
+
+[[item]]
+id = "birds-eggs"
+theme = "birds"
+kind = "fact"
+emoji = "🥚"
+text_tr = "Bütün kuşlar yumurtlar."
+text_en = "All birds lay eggs."
+more_tr = "Çoğu kuş, yumurtalarını sıcak tutmak için üzerlerinde oturur."
+more_en = "Most birds sit on their eggs to keep them warm."
+
+[[item]]
+id = "birds-ostrich"
+theme = "birds"
+kind = "fact"
+emoji = "🪶"
+text_tr = "Devekuşu, dünyanın en büyük kuşudur."
+text_en = "The ostrich is the biggest bird in the world."
+more_tr = "Uçamaz ama çok hızlı koşar."
+more_en = "It cannot fly, but it runs very fast."
+
+[[item]]
+id = "birds-hummingbird"
+theme = "birds"
+kind = "fact"
+emoji = "🐦"
+text_tr = "Sinek kuşu, kanatlarını o kadar hızlı çırpar ki havada asılı durabilir."
+text_en = "A hummingbird beats its wings so fast that it can hover in mid-air."
+more_tr = "Geriye doğru bile uçabilir."
+more_en = "It can even fly backwards."
+
+[[item]]
+id = "birds-migration"
+theme = "birds"
+kind = "word"
+emoji = "🧭"
+title_tr = "Göç"
+title_en = "Migration"
+text_tr = "Kuşların havalar soğuyunca topluca sıcak yerlere uçmasına göç denir."
+text_en = "When birds fly off together to warmer places as the weather turns cold, it is called migration."
+more_tr = "Bazı kuşlar göç ederken binlerce kilometre yol alır."
+more_en = "Some birds fly thousands of kilometres when they migrate."
+
+[[item]]
+id = "birds-beak"
+theme = "birds"
+kind = "word"
+emoji = "🐤"
+title_tr = "Gaga"
+title_en = "Beak"
+text_tr = "Kuşların ağzındaki sert, sivri bölüme gaga denir."
+text_en = "The hard, pointed part of a bird's mouth is called a beak."
+more_tr = "Her kuşun gagası, yediği yiyeceğe göre farklı bir biçimdedir."
+more_en = "Each bird's beak is shaped for the food it eats."
+
+[[item]]
+id = "birds-riddle-owl"
+theme = "birds"
+kind = "riddle"
+text_tr = "Geceleri uyumam, ağaçta otururum, 'hu hu' diye öterim. Ben neyim?"
+text_en = "I stay awake at night, sit in a tree and call 'hoo hoo'. What am I?"
+answer_tr = "Baykuş"
+answer_en = "An owl"
+
+[[item]]
+id = "birds-riddle-rooster"
+theme = "birds"
+kind = "riddle"
+text_tr = "Sabahları herkesi ötüşümle uyandırırım, başımda kırmızı bir ibik var. Ben neyim?"
+text_en = "In the morning my crowing wakes everybody up, and I have a red comb on my head. What am I?"
+answer_tr = "Horoz"
+answer_en = "A rooster"
+
+[[item]]
+id = "birds-listen"
+theme = "birds"
+kind = "challenge"
+emoji = "👂"
+text_tr = "Pencerenin yanında sessizce bekle ve kuşları dinle: Kaç farklı ses duyabiliyorsun?"
+text_en = "Sit quietly by the window and listen to the birds: how many different songs can you hear?"
+
+[[item]]
+id = "birds-draw"
+theme = "birds"
+kind = "challenge"
+emoji = "🪺"
+app = "tuxpaint"
+text_tr = "Boya'da yuvasında yumurtaları olan bir kuş çiz."
+text_en = "Draw a bird with eggs in its nest in Paint."

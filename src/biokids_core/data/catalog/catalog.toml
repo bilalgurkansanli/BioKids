@@ -16,6 +16,9 @@
 #   suggest           false keeps a tile out of that pre-selection (default true)
 #   allow             for a web tile, what the browser may open in "selected sites
 #                     only" mode, as Chromium URL filters; default: the URL's host
+#   inherits          slugs this tile takes over from: on the upgrade that first
+#                     brings it, every child who had one of them enabled gets
+#                     this one too, beside it (D-203)
 #
 # Apps that would start full screen are started windowed instead (D-163): full
 # screen hides the title bar and its close button, and a child with no way out
@@ -163,6 +166,141 @@ min_age = 8
 max_age = 10
 description_tr = "Kendi klasörüne erişim. Sadece 8 yaş ve üzeri için önerilir."
 description_en = "Access to their own folder. Suggested for ages 8 and up."
+
+# --- more to learn with (D-203) ---------------------------------------------
+# Debian 13 "trixie" main, checked on packages.debian.org on 2026-10-08: each
+# works offline, has a Turkish interface, and starts in a window of its own
+# with no full-screen option to turn off. The KDE ones are 4:25.04.0-1 in
+# trixie, GNOME Chess 1:48.0-1. Separate programs the launcher starts: their
+# licences (GPL, LGPL) do not reach BioKids' own code (CLAUDE.md §6).
+
+[[app]]
+# The globe that works everywhere. Marble draws it itself (QPainter), with no
+# OpenGL or WebGL, from maps the package installs: offline, and on a machine
+# without graphics acceleration, where Google Earth on the web only says
+# "WebGL is not supported". It opens on its offline Atlas map.
+slug = "marble"
+name_tr = "Dünya"
+name_en = "Globe"
+exec = ["marble"]
+package = "marble"
+kind = "app"
+icon = "earth"
+default_category = "learning"
+min_age = 6
+max_age = 10
+# "Dünya" was Google Earth until D-203. A child whose parent had ticked it is
+# given this tile too, beside it, on the upgrade that brings it - see
+# `inherits` in biokids_core/catalog.py.
+inherits = ["google-earth"]
+description_tr = "Sanal küre: Dünya'yı çevir; ülkeleri, dağları ve denizleri keşfet. İnternetsiz çalışır."
+description_en = "A virtual globe: spin the Earth and explore countries, mountains and seas. Works offline."
+
+[[app]]
+slug = "ktuberling"
+name_tr = "Patates Kafa"
+name_en = "Potato Guy"
+exec = ["ktuberling"]
+package = "ktuberling"
+kind = "app"
+icon = "potato"
+default_category = "games"
+min_age = 4
+max_age = 6
+description_tr = "Patatese göz, burun ve ağız tak; Ay'a ve trenli vadiye çıkartmalar yapıştır. Okuma gerekmez."
+description_en = "Give the potato eyes, a nose and a mouth, and fill the Moon and a train valley with stickers. No reading needed."
+
+[[app]]
+slug = "blinken"
+name_tr = "Hafıza"
+name_en = "Memory"
+exec = ["blinken"]
+package = "blinken"
+kind = "app"
+icon = "memory"
+default_category = "learning"
+min_age = 5
+max_age = 7
+description_tr = "Renkli ışıkların yanma sırasını aklında tut ve aynı sırayla bas."
+description_en = "Remember the order the coloured lights flash in, and play it back."
+
+[[app]]
+slug = "palapeli"
+name_tr = "Yapboz"
+name_en = "Jigsaw"
+exec = ["palapeli"]
+package = "palapeli"
+kind = "app"
+icon = "jigsaw"
+default_category = "games"
+min_age = 6
+max_age = 10
+# Offered, not ticked: the default screens are full enough (UX.md §2.2).
+suggest = false
+description_tr = "Resimli yapbozlar: parçaları sürükleyip birleştir."
+description_en = "Picture jigsaw puzzles: drag the pieces together."
+
+[[app]]
+slug = "kgeography"
+name_tr = "Haritalar"
+name_en = "Maps"
+exec = ["kgeography"]
+package = "kgeography"
+kind = "app"
+icon = "map"
+default_category = "learning"
+min_age = 8
+max_age = 10
+description_tr = "Harita oyunu: Türkiye'nin illerini, ülkeleri, başkentleri ve bayrakları öğren."
+description_en = "A map game: learn Türkiye's provinces and the world's countries, capitals and flags."
+
+[[app]]
+slug = "kturtle"
+name_tr = "Kaplumbağa"
+name_en = "Turtle"
+exec = ["kturtle"]
+package = "kturtle"
+kind = "app"
+icon = "turtle"
+default_category = "learning"
+min_age = 8
+max_age = 10
+# Offered, not ticked: three coding sites are ticked for 8-10 already. The one
+# of the four that needs no internet.
+suggest = false
+description_tr = "Kaplumbağaya komut yazarak çizim yaptır: programlamaya ilk adım. İnternetsiz çalışır."
+description_en = "Write commands that make a turtle draw: a first step into programming. Works offline."
+
+[[app]]
+slug = "kbruch"
+name_tr = "Kesirler"
+name_en = "Fractions"
+exec = ["kbruch"]
+package = "kbruch"
+kind = "app"
+icon = "fractions"
+default_category = "learning"
+min_age = 9
+max_age = 10
+description_tr = "Kesirlerle toplama, çıkarma ve karşılaştırma alıştırmaları."
+description_en = "Practise adding, subtracting and comparing fractions."
+
+[[app]]
+slug = "gnome-chess"
+name_tr = "Satranç"
+name_en = "Chess"
+exec = ["gnome-chess"]
+package = "gnome-chess"
+kind = "app"
+icon = "chess"
+default_category = "games"
+min_age = 7
+max_age = 10
+# Offered, not ticked. It brings its own engine (hoichess), so the computer
+# plays back with no network.
+suggest = false
+description_tr = "Bilgisayara ya da yanındaki birine karşı satranç."
+description_en = "Chess against the computer or someone sitting beside you."
 
 # --- web tiles -------------------------------------------------------------
 # These open the child's Chromium at a URL. In allowlist mode the address is
@@ -335,23 +473,28 @@ description_en = "Google's open-source coding games: puzzle, maze, bird. No ads,
 
 [[app]]
 slug = "google-earth"
-name_tr = "Dünya"
-name_en = "Earth"
+name_tr = "Google Earth"
+name_en = "Google Earth"
 exec = []
 url = "https://earth.google.com/web"
 # The whole host: the app moves itself to /static/multi-threaded/... at once.
 allow = ["earth.google.com"]
 package = ""
 kind = "web"
-icon = "earth"
+icon = "satellite"
 default_category = "learning"
-min_age = 6
+min_age = 8
 max_age = 10
-# Replaces Stellarium (D-165). The web version, which runs in the child's
-# browser: Google Earth Pro for Linux is a proprietary package from Google's
-# own repository, which BioKids does not add to a family's machine.
-description_tr = "Google Earth: dünyayı uzaydan gez, şehirlere ve dağlara yaklaş. Hesap gerekmez."
-description_en = "Google Earth: fly around the planet and zoom into cities and mountains. No account."
+# The web version, which runs in the child's browser: Google Earth Pro for
+# Linux is a proprietary package from Google's own repository, which BioKids
+# does not add to a family's machine. It needs WebGL, which a machine without
+# graphics acceleration (a virtual machine, an old laptop) does not have: there
+# it only says "WebGL is not supported". So "Dünya" is Marble since D-203, and
+# this tile is offered but not ticked; the slug stays, so a child who had it
+# keeps it.
+suggest = false
+description_tr = "Google Earth: dünyayı uydu fotoğraflarıyla gez. İnternet ve ekran kartı hızlandırması (WebGL) gerekir."
+description_en = "Google Earth: explore the world in satellite photos. Needs the internet and graphics acceleration (WebGL)."
 
 [[app]]
 slug = "youtube-kids"

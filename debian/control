@@ -230,11 +230,19 @@ Depends: biokids (= ${binary:Version}),
          lightdm,
          xfce4,
          ${misc:Depends}
-Recommends: frozen-bubble,
+Recommends: blinken,
+            frozen-bubble,
             gcompris-qt,
+            gnome-chess,
             gnome-mahjongg,
+            kbruch,
+            kgeography,
             klavaro,
             kolourpaint,
+            ktuberling,
+            kturtle,
+            marble,
+            palapeli,
             supertux,
             tuxmath,
             tuxpaint
@@ -244,7 +252,9 @@ Description: parental controls for Debian - full child desktop (metapackage)
  is handed: BioKids itself, the Xfce session it is built on, the LightDM
  greeter with its large avatars, and the applications in the BioKids
  catalogue - GCompris, TuxPaint, TuxMath, Klavaro, KolourPaint,
- SuperTux, Frozen Bubble and gnome-mahjongg.
+ SuperTux, Frozen Bubble and gnome-mahjongg, and for learning the Marble
+ globe, KGeography, KBruch, KTurtle, Blinken, KTuberling, Palapeli and
+ GNOME Chess. All of them work without the internet.
  .
  The applications arrive as recommendations, so a parent who wants a smaller
  set can drop any of them without fighting the package manager. Nothing a

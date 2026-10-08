@@ -59,6 +59,7 @@ that palette reads as cheap to parents, and parents are half the audience.
 ┌──────────────────────────────────────────────────────────────┐
 │  [avatar] Merhaba Elif           ◔ 42 dk        [Zio badge]  │
 ├──────────────────────────────────────────────────────────────┤
+│ (🦒) [Günün hayvanı: Zürafa] Zürafa, dünyanın…  🎁 🐾  [✕]   │  ← §2.7
 │                                                              │
 │    ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐         │
 │    │        │   │        │   │        │   │        │         │
@@ -124,7 +125,7 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
 
 ### 2.5 Screens
 
-1. **Home** — the tile grid.
+1. **Home** — the tile grid, and above it the day's surprise (§2.7).
 2. **Launching** — big icon, app name, a progress bar.
 3. **Blocked** — Zio or Sio looking concerned, one sentence ("Burası senin için
    değil"), and a large **"Büyüğüme sor"** button: it names no parent, because the
@@ -184,6 +185,34 @@ the background and the app's own volume.
   stopped. Red, with a white cross, as the title bar's button was.
 - No words on the buttons; a screen reader hears "Ana ekran", "Sesi kıs", "Sesi
   aç", "Kapat".
+
+### 2.7 Bugünün sürprizi
+
+Asked for by the owner (D-203): a child who sees the same screen every day gets
+bored. One strip between the header and the tiles, new every day, inside a theme
+that changes every Monday.
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│ (🦒)  [Günün hayvanı: Zürafa] Zürafa, dünyanın en   🎁 Bugünün sürprizi    ✕ │
+│       uzun boylu hayvanıdır. (8-10: a sentence more) 🐾 Hayvanlar haftası    │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+- Five kinds, dealt in turn: **Biliyor muydun?** (a fact), **Bilmece** (🤔, and a
+  "Cevabı gör" button that opens the answer in its place), **Günün hayvanı**,
+  **Bugünün kelimesi**, **Bugünün görevi** (a small task; when it names one of the
+  child's own tiles, that tile is a button beside it, and a task never names a tile
+  the child does not have).
+- 4–7: a big picture, one short sentence, and a tap on it is Zio reading it; the
+  answer is read when it opens. 8–10: one sentence more, and no voice.
+- Compact: at 1280 × 800 the tiles keep their rows under it — two of 220 pixels for
+  4–7, three of 150 for 8–10 — so an 8–10 card is at most two lines.
+- ✕ puts it away until tomorrow. It is drawn by the server, so everything but ✕
+  works with scripts off.
+- The theme's colour is a tint of a brand token; the words stay `--ink`.
+- What it says is written and checked by people, never generated, and is in
+  `biokids_core/data/daily/daily.toml` with the rules for adding to it.
 
 ---
 

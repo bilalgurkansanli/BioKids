@@ -1542,6 +1542,37 @@ msgstr "E-posta ayarları kaydedildi"
 msgid "audit.action.mail_removed"
 msgstr "E-posta bildirimleri kapatıldı"
 
+# D-203: Bugünün sürprizi, the launcher's card of the day
+msgid "daily.title"
+msgstr "Bugünün sürprizi"
+
+msgid "daily.kind.fact"
+msgstr "Biliyor muydun?"
+
+msgid "daily.kind.riddle"
+msgstr "Bilmece"
+
+msgid "daily.kind.animal"
+msgstr "Günün hayvanı"
+
+msgid "daily.kind.challenge"
+msgstr "Bugünün görevi"
+
+msgid "daily.kind.word"
+msgstr "Bugünün kelimesi"
+
+msgid "daily.answer.show"
+msgstr "Cevabı gör"
+
+msgid "daily.answer"
+msgstr "Cevap"
+
+msgid "daily.challenge.open"
+msgstr "Aç: {app}"
+
+msgid "daily.dismiss"
+msgstr "Yarına kadar kapat"
+
 # D-178
 msgid "assistant.knowledge.on"
 msgstr "Cevaplarını bu bilgisayardaki Vikipedi özetleriyle kontrol ediyor; internete bağlanmıyor."
