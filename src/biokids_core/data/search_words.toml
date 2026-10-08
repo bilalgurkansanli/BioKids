@@ -1,0 +1,78 @@
+# Searches a child's browser will not make (D-202). `biokids_core.search_filter`
+# turns every term into part of a regular expression the BioKids extension gives
+# Chromium, which then refuses any address whose search box value (q=, query=,
+# search=, ...) or Wikipedia article title holds the term. The request is never
+# sent: the search engine does not see it, and the child sees the launcher's
+# "Bunu arayamayız" page.
+#
+# What it covers: pornography and explicit sexual searches, in Turkish and
+# English, the vulgar sexual words children pick up, and first-person and
+# method searches about hurting oneself. The DNS filter already closes the
+# sites themselves (D-167); this closes the search that leads to them.
+#
+# What it does not cover, on purpose: anatomy and sex education ("penis",
+# "vajina", "cinsel", "sexual", "ergenlik"), which a family answers in its own
+# way; sexual orientation ("gay", "lezbiyen"), which is not adult content;
+# violence, drugs, gambling and profanity that is not sexual; and the word
+# "intihar"/"suicide" on its own, so a child can still read what it means and
+# find help. A parent adds any of these under Children > Internet > Advanced.
+#
+# Every term is written as Turkish spells it, in lower case. The pattern then
+# matches it in any case and as a child might type it: without Turkish letters
+# ("sikis"), with accents, with look-alike digits ("p0rn", "s3x", "$ex"), with
+# letters held down ("pooorno"), and with any spaces or punctuation between the
+# words of a phrase. A dotted "i" does not match a dotless "ı", so "sık sık" and
+# "sıkışık" stay searchable while "sikiş" does not.
+#
+# A term may be one word or several, in this order:
+#
+#   prefix   the last word may go on: "porn" closes "porno", "pornografi" and
+#            "pornhub"; "çıplak kız" closes "çıplak kızlar"
+#   whole    whole words only: "sex" leaves "Sussex", "sextant" and "sexual";
+#            "want to die" leaves "want to diet"
+#   exact    whole words, letters not held down: "seks" must not become
+#            "seeks", and "seksen" (80) and "seksek" (hopscotch) are other words
+#   squash   a prefix that may also be spelled out, "p o r n o" or "p.o.r.n.o":
+#            long, unambiguous words only, because spelling out joins words
+#
+# Kept out because a child searches them innocently: "am" (English "I am"),
+# "meme" (internet memes, a kitten feeding), "göt" (folds to "got"), "dick"
+# (Moby Dick), "pussy" (pussy cat), "cock" and "tits" (birds), "booby" (a
+# bird), "naked" alone (naked mole rat, naked eye), "çıplak" alone (çıplak
+# gözle, çıplak ayak), "escort" (a game mission, a car), "hooker" (rugby),
+# "stripper" (paint and wire strippers), "bikini", "nipple" (baby bottles),
+# "breast" (chicken), "anal" (analiz). And these stay searchable because their
+# term is whole-word or longer: "milföy" (pastry), "saksofon", "fahiş fiyat".
+
+[sexual]
+prefix = [
+  "porn",
+  "xvideo", "xnxx", "xhamster", "youporn", "redtube", "brazzers", "spankbang",
+  "chaturbate", "stripchat", "nhentai",
+  "erotik", "erotic", "masturb", "orgazm", "orgasm",
+  "sikiş", "seviş", "yarrak", "amcık", "fahişe", "orospu", "pezevenk",
+  "blowjob", "handjob", "cumshot", "gangbang", "deepthroat",
+  "striptiz", "striptease", "camgirl", "fuck", "slut", "whore", "dildo",
+  "çıplak kız", "çıplak kadın", "çıplak erkek", "çıplak resim", "çıplak foto",
+  "naked girl", "naked woman", "naked women", "naked pic", "naked photo",
+  "rule 34",
+]
+whole = [
+  "xxx", "sex", "sexy", "seksi", "nude", "nudes", "boobs", "milf", "nsfw",
+  "bdsm", "fetish", "threesome", "orgy", "creampie", "playboy", "sik",
+  "sakso", "rule34",
+]
+exact = ["seks"]
+squash = ["porno", "hentai", "onlyfans"]
+
+[self_harm]
+prefix = [
+  "kendimi öldür", "kendimi asma", "kendimi kes", "kendime zarar",
+  "bileğimi kes", "bilek kes", "intihar yöntem", "intihar yol", "nasıl intihar",
+  "suicide method",
+]
+whole = [
+  "ölmek istiyorum", "yaşamak istemiyorum",
+  "kill myself", "killing myself", "hang myself", "hurt myself", "cut myself",
+  "end my life", "want to die", "how to suicide", "commit suicide",
+]

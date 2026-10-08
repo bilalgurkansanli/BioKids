@@ -2026,6 +2026,38 @@ async def test_no_is_said_kindly_and_changes_nothing(
     assert decided[-1]["approved"] is False
 
 
+async def test_a_refused_search_asks_for_a_talk_and_names_nothing(
+    supervisor: Supervisor, bus: EventBus, session: Session
+) -> None:
+    """D-202: the words never reach the database, and there is nothing to allow."""
+    from biokids_core.db.models import AccessRequest, FilterRule
+
+    await supervisor.start()
+    request_id = supervisor.file_access_request(
+        1, "https://www.google.com/search?q=porno", "search"
+    )
+    row = session.get(AccessRequest, request_id)
+    assert row is not None and row.kind == "search" and row.url == ""
+
+    result = await supervisor.decide_request(request_id, True)
+    assert result == {"ok": True, "status": "denied"}, "a yes cannot open anything"
+    assert session.query(FilterRule).count() == 0
+    assert "request_denied" in [e["event"] for e in events_of(bus, EventKind.SPEAK)]
+
+
+async def test_the_launcher_hears_the_parents_search_words(
+    supervisor: Supervisor, session: Session
+) -> None:
+    from biokids_core import repo
+
+    await supervisor.start()
+    assert supervisor.shell_state(1)["search_words"] == []
+    repo.set_search_words(session, ["kumar", "bahis"])
+    session.commit()
+    supervisor.reload()
+    assert supervisor.shell_state(1)["search_words"] == ["kumar", "bahis"]
+
+
 async def test_unlock_lets_the_child_back_in_without_adding_time(
     supervisor: Supervisor,
     clock: FakeClock,

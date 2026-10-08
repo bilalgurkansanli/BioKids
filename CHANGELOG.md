@@ -27,6 +27,18 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
 
 ### Added
 
+- **A forbidden search is never sent** (D-202). The browser extension refuses any
+  search, suggestion, Wikipedia or offline Vikipedi search or article whose words are
+  on BioKids' list - pornography and explicit sexual words in Turkish and English, and
+  self-harm searches - before it leaves the machine, and the child sees "Bunu
+  arayamayız. İstersen bir büyüğüne sorabilirsin." with "Büyüğüme sor", whose request
+  names nothing. Turkish letters typed or not, capitals, look-alike digits and held
+  letters count; "seksen", "sık sık" and "kaşık" stay searchable. A parent adds the
+  family's own words under **Çocuklar → İnternet → Gelişmiş**. The address bar searches
+  SafeSearch Google and suggests nothing. The extension is now 1.1.0, with the
+  `declarativeNetRequest` and `alarms` permissions and still no host but 127.0.0.1;
+  the launcher serves `GET /search-rules`; requests gain the kind `search`; new
+  setting `search_words`.
 - **A natural voice for Zio and Sio, one button away** (D-196). **Ayarlar → Zio ve
   Sio'nun sesi** says whether the robot voice or the natural one speaks and offers
   "Doğal sesi indir (yaklaşık 90 MB)": `biokids-voice-setup.service` fetches Piper

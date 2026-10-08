@@ -25,6 +25,38 @@ told the site's host name with `POST <launcher>/visit` and the body
 are kept in `chrome.storage.session`, so a service worker that Chromium stopped and
 restarted does not send them again. Addresses on the machine are never reported.
 
+**Forbidden searches** (D-202). A request whose address carries a word on BioKids'
+list is refused before it is sent: a search typed in Google, YouTube, Wikipedia,
+Yandex or the offline Vikipedi, the suggestions a search box fetches while the child
+types, an article titled with the word, and a frame showing one. The extension asks
+its launcher for `GET /search-rules`, which answers
+
+```json
+{"biokids": "search-rules", "version": "…", "complete": true, "terms": 89,
+ "patterns": ["<RE2 expression>", "…"]}
+```
+
+and installs them as `declarativeNetRequest` dynamic rules: rule 1 *allows* the
+launcher's own origin, and one rule per expression Chromium accepts
+(`isRegexSupported`) *blocks* `main_frame`, `sub_frame`, `xmlhttprequest` and `script`
+requests whose address matches, case-insensitively. The actions, priorities and types
+are fixed in `background.js`; the launcher supplies expressions and nothing else, and
+`biokids_core.search_filter` builds and tests every one of them.
+
+A refused page or frame fails with `net::ERR_BLOCKED_BY_CLIENT`, and the tab goes to
+`<launcher>/blocked?reason=search.blocked`: the reason, never the words. A page that
+searches without loading a new one (YouTube's in-page search) is checked against the
+same expressions when its address changes (`webNavigation.onHistoryStateUpdated`).
+
+The rules are fetched on install, when the browser starts, every five minutes
+(`chrome.alarms`) and as soon as the launcher answers again after it did not. The whole
+set is swapped in one `updateDynamicRules` call, and dynamic rules survive a browser
+restart, so the last set stays in force while the launcher is away. A set marked
+`"complete": false` (the launcher could not reach the daemon for the parent's words)
+never replaces a complete one. No rules at all is logged as an error in the service
+worker's console; in a grown-up's profile, which no launcher answers, that is expected
+and nothing is blocked.
+
 **Finding the launcher.** Each child's launcher listens on
 `127.0.0.1:(7879 + uid % 100)`, and nftables lets a child's processes reach only
 their own. The extension cannot know the uid, so it asks `GET /healthz` on every
@@ -39,11 +71,14 @@ contract are constants at the top of `background.js`.
   title, the page's contents, a keystroke, a form field or a screenshot.
   `docs/SECURITY.md` §7 is the boundary, and `tests/test_extension.py` fails if
   the request body becomes anything other than `{ host }`.
+- It never reports a search: not the words, not that one was refused. The block
+  page is told why, and the request "Büyüğüme sor" files names nothing.
 - No content scripts, so it cannot read or change any page.
 - No `tabs` permission: it can send a tab to the block page, but cannot read
   the address or title of any tab.
 - It talks to nothing but `127.0.0.1`. Its only host permission is
-  `http://127.0.0.1/*`.
+  `http://127.0.0.1/*`; its rules block or allow, which needs none, and never
+  redirect or change a header, which would.
 - It runs no code from anywhere else and loads nothing at run time.
 
 ## How it is installed
@@ -92,8 +127,10 @@ the policy is written from `extension-id` rather than from a remembered value.
 The extension assumes the launcher provides:
 
 - `GET /healthz` answering JSON that contains `"biokids": "launcher"`
-- `GET /blocked?url=…`, the page a child sees for a closed site
+- `GET /blocked?url=…`, the page a child sees for a closed site, and
+  `GET /blocked?reason=search.blocked` for a refused search
 - `POST /visit` taking `{"host": "…"}` as JSON
+- `GET /search-rules`, the expressions to install
 
 The extension trusts whichever launcher it can reach. nftables keeps a child's
 browser to their own port, but the policy covers every profile on the machine,

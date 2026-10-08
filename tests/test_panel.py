@@ -1698,6 +1698,78 @@ def test_an_unknown_mode_falls_back_to_the_safe_default(
         assert repo.get_or_create_policy(session, 1).filter_mode == "blocklist"
 
 
+def test_the_internet_screen_says_searches_are_already_stopped(
+    client: TestClient, family_ready: None
+) -> None:
+    """D-202: a parent is told a list exists before being asked for words."""
+    login(client)
+    page = html.unescape(client.get("/children/1/internet").text)
+    assert "Aranamayacak kelimeler" in page
+    assert "hazır bir listeyle zaten durdurur" in page
+    assert "bütün çocuklarınız için geçerlidir" in page
+    assert 'action="/children/1/internet/words"' in page
+
+
+def test_a_parent_adds_search_words_for_the_family(
+    client: TestClient, family_ready: None, db: Database, daemon: FakeDaemon
+) -> None:
+    login(client)
+    response = client.post(
+        "/children/1/internet/words",
+        data={"words": "Kumar\nbahis, KUMAR", "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/children/1/internet?saved=1"
+    with db.session() as session:
+        assert repo.search_words(session) == ["kumar", "bahis"]
+        entry = repo.recent_audit(session, limit=1)[0]
+    assert entry.action == "search_words_changed"
+    assert daemon.ran("reload")
+
+    page = html.unescape(client.get("/children/1/internet").text)
+    assert "kumar\nbahis" in page
+
+
+def test_a_word_that_cannot_be_one_is_left_out_and_the_parent_told(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    response = client.post(
+        "/children/1/internet/words",
+        data={"words": "x\nkumar", "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    assert response.headers["location"] == "/children/1/internet?error=internet.words.refused"
+    with db.session() as session:
+        assert repo.search_words(session) == ["kumar"]
+    page = client.get(response.headers["location"]).text
+    assert "Bazı kelimeler eklenmedi" in page
+
+
+def test_search_words_need_the_csrf_token(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    client.post("/children/1/internet/words", data={"words": "kumar"}, follow_redirects=False)
+    with db.session() as session:
+        assert repo.search_words(session) == []
+
+
+def test_a_refused_search_request_offers_a_talk_and_nothing_to_allow(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    from biokids_core.db.models import AccessRequest
+
+    with db.session() as session:
+        session.add(AccessRequest(child_id=1, url="", kind="search", status="pending"))
+    login(client)
+    page = html.unescape(client.get("/requests").text)
+    assert "Elif kapalı bir şeyi aramak istedi" in page
+    assert "Tamam, konuşacağız" in page
+    assert "İzin ver" not in page
+
+
 def test_every_quota_field_accepts_twenty_minutes() -> None:
     """The exit criterion's quota is 20 minutes. The wizard's fields had
     `step="15"`, so the browser refused 20 and the parent could not go on;

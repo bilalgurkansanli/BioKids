@@ -1,6 +1,6 @@
 // BioKids: the extension the managed policy installs in the children's Chromium.
 //
-// It does two things and nothing else:
+// It does three things and nothing else:
 //
 //   1. When the filter closes a page the child tried to open, the tab shows the
 //      launcher's own "this site is closed" page instead of a Chromium error.
@@ -8,6 +8,11 @@
 //      host, never the path, the query, the title or anything on the page, and
 //      at most once per host every ten minutes. docs/SECURITY.md section 7 is
 //      the boundary this file must stay inside.
+//   3. A search for a word on BioKids' list is never sent (D-202). The launcher
+//      serves the list as regular expressions; Chromium matches them against
+//      each request (declarativeNetRequest) and refuses it, and the tab shows
+//      the launcher's "we can't search that" page. Nothing about the search is
+//      reported to anyone: not the word, not that it happened.
 //
 // No content scripts, no access to any page, no remote code, and no network
 // peer other than the child's own launcher on 127.0.0.1.
@@ -49,6 +54,32 @@ const VISIT_INTERVAL_MS = 10 * 60 * 1000;
 
 const STORAGE_LAUNCHER = "launcher";
 const STORAGE_VISITS = "visits";
+
+// ------------------------------------------------------------ search rules
+
+// GET <launcher>/search-rules answers {"biokids": "search-rules", "version",
+// "complete", "patterns": [RE2 expressions]}. The module search_filter in
+// biokids_core builds and tests them; docs/SECURITY.md section 5 says what
+// they match.
+const SEARCH_RULES_PATH = "/search-rules";
+const SEARCH_RULES_KEY = "search-rules";
+const SEARCH_RULES_VALUE = "search-rules";
+// Asked again this often, and whenever the launcher answers after it did not.
+const SEARCH_RULES_ALARM = "search-rules";
+const SEARCH_RULES_MINUTES = 5;
+// A navigation Chromium refused because of a rule fails with this error. No
+// other extension can exist (ExtensionInstallBlocklist "*"), so it is ours.
+const SEARCH_BLOCKED_ERROR = "net::ERR_BLOCKED_BY_CLIENT";
+const SEARCH_BLOCKED_REASON = "search.blocked";
+// Rule 1 lets the launcher's own pages through, whatever is in their address;
+// the patterns are rules 2 and up. Chromium takes at most 1000 regex rules.
+const LAUNCHER_RULE_ID = 1;
+const FIRST_PATTERN_RULE_ID = 2;
+const MAX_PATTERNS = 990;
+const MAX_PATTERN_LENGTH = 4000;
+// Pages, frames (the offline Wikipedia shows articles in one), and the
+// suggestions a search box fetches while the child types.
+const SEARCHED_TYPES = ["main_frame", "sub_frame", "xmlhttprequest", "script"];
 
 // The webNavigation events are only delivered for these schemes.
 const WEB_ONLY = { url: [{ schemes: ["http", "https"] }] };
@@ -139,6 +170,10 @@ function probeOnce() {
       const origin = await probe();
       if (origin) {
         await chrome.storage.session.set({ [STORAGE_LAUNCHER]: origin });
+        if (searchRulesStale) {
+          // The launcher answers again: fetch what it could not give before.
+          refreshSearchRules();
+        }
       } else {
         lastEmptyProbe = Date.now();
       }
@@ -173,7 +208,9 @@ async function forgetLauncher(origin) {
 
 // ---------------------------------------------------------- the block page
 
-async function showBlockedPage(tabId, url) {
+// The launcher's page for a closed site, given its address, or for a refused
+// search, given only the reason: the words of a search never leave the browser.
+async function showBlockedPage(tabId, url, reason = "") {
   const origin = await findLauncher({ verify: true });
   if (!origin) {
     // No launcher to ask: Chromium's own error page stays, which still
@@ -181,9 +218,11 @@ async function showBlockedPage(tabId, url) {
     console.warn("BioKids: no launcher answered; leaving Chromium's error page");
     return;
   }
-  const target = `${origin}${BLOCKED_PATH}?url=${encodeURIComponent(url)}`;
+  const query = reason
+    ? `reason=${encodeURIComponent(reason)}`
+    : `url=${encodeURIComponent(url)}`;
   try {
-    await chrome.tabs.update(tabId, { url: target });
+    await chrome.tabs.update(tabId, { url: `${origin}${BLOCKED_PATH}?${query}` });
   } catch (error) {
     // The tab was closed in the meantime.
     console.warn("BioKids: could not show the block page:", error);
@@ -191,7 +230,16 @@ async function showBlockedPage(tabId, url) {
 }
 
 chrome.webNavigation.onErrorOccurred.addListener((details) => {
-  if (details.frameId !== 0 || details.tabId < 0 || !BLOCK_ERRORS.has(details.error)) {
+  if (details.tabId < 0) {
+    return;
+  }
+  if (details.error === SEARCH_BLOCKED_ERROR) {
+    // A search rule refused the page, or a frame in it (the offline
+    // Wikipedia shows its articles in one): the whole tab says why.
+    showBlockedPage(details.tabId, "", SEARCH_BLOCKED_REASON);
+    return;
+  }
+  if (details.frameId !== 0 || !BLOCK_ERRORS.has(details.error)) {
     return;
   }
   if (!webHost(details.url)) {
@@ -266,4 +314,242 @@ chrome.webNavigation.onCommitted.addListener((details) => {
     return;
   }
   enqueue(() => reportVisit(host));
+}, WEB_ONLY);
+
+// ------------------------------------------------------- the search rules
+
+// True until the rules were fetched once in this service worker's life, and
+// again after a fetch failed: the next launcher that answers is asked at once.
+let searchRulesStale = true;
+let refreshing = null;
+// The installed patterns as JavaScript expressions, for addresses a page
+// changes without a request (below); rebuilt after every install.
+let compiledRules = null;
+
+function isPattern(value) {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= MAX_PATTERN_LENGTH &&
+    /^[\x20-\x7e]+$/.test(value)
+  );
+}
+
+async function fetchSearchRules(origin) {
+  const response = await fetch(origin + SEARCH_RULES_PATH, {
+    cache: "no-store",
+    credentials: "omit",
+    redirect: "error",
+  });
+  if (!response.ok) {
+    throw new Error(`the launcher answered ${response.status}`);
+  }
+  const fetched = await response.json();
+  if (
+    fetched === null ||
+    typeof fetched !== "object" ||
+    fetched[HEALTHZ_KEY] !== SEARCH_RULES_VALUE ||
+    typeof fetched.version !== "string" ||
+    !Array.isArray(fetched.patterns)
+  ) {
+    throw new Error("the launcher's answer is not a set of search rules");
+  }
+  return fetched;
+}
+
+// The rules to install: the launcher's own pages always open (a closed site's
+// address, carried to its block page, may hold a listed word), then one
+// blocking rule per pattern Chromium accepts. Every action and condition is
+// fixed here; the launcher supplies expressions and nothing else.
+async function buildSearchRules(origin, patterns) {
+  const rules = [
+    {
+      id: LAUNCHER_RULE_ID,
+      priority: 2,
+      action: { type: "allow" },
+      condition: { urlFilter: `|${origin}/`, resourceTypes: SEARCHED_TYPES },
+    },
+  ];
+  const accepted = [];
+  for (const regex of patterns.filter(isPattern).slice(0, MAX_PATTERNS)) {
+    const verdict = await chrome.declarativeNetRequest.isRegexSupported({
+      regex,
+      isCaseSensitive: false,
+    });
+    if (!verdict.isSupported) {
+      console.error(
+        `BioKids: Chromium refused a search pattern (${verdict.reason}); its words are not stopped:`,
+        regex,
+      );
+      continue;
+    }
+    rules.push({
+      id: FIRST_PATTERN_RULE_ID + accepted.length,
+      priority: 1,
+      action: { type: "block" },
+      condition: {
+        regexFilter: regex,
+        isUrlFilterCaseSensitive: false,
+        resourceTypes: SEARCHED_TYPES,
+      },
+    });
+    accepted.push(regex);
+  }
+  return { rules, accepted };
+}
+
+async function installSearchRules(origin, fetched) {
+  const { rules, accepted } = await buildSearchRules(origin, fetched.patterns);
+  if (accepted.length === 0) {
+    throw new Error("Chromium could use none of the launcher's search patterns");
+  }
+  const installed = await chrome.declarativeNetRequest.getDynamicRules();
+  // One call, which Chromium applies whole or not at all: there is no moment
+  // between the old rules and the new ones. Dynamic rules outlive a restart of
+  // the browser, so the last set stays in force while the launcher is away.
+  await chrome.declarativeNetRequest.updateDynamicRules({
+    removeRuleIds: installed.map((rule) => rule.id),
+    addRules: rules,
+  });
+  await chrome.storage.local.set({
+    [SEARCH_RULES_KEY]: {
+      version: fetched.version,
+      complete: fetched.complete === true,
+      origin,
+      patterns: accepted,
+    },
+  });
+  compiledRules = null;
+  console.info(`BioKids: ${accepted.length} search rules installed (${fetched.version})`);
+}
+
+async function storedSearchRules() {
+  const stored = await chrome.storage.local.get(SEARCH_RULES_KEY);
+  const value = stored[SEARCH_RULES_KEY];
+  return value !== null && typeof value === "object" ? value : null;
+}
+
+async function blockingRuleCount() {
+  const rules = await chrome.declarativeNetRequest.getDynamicRules();
+  return rules.filter((rule) => rule.action.type === "block").length;
+}
+
+// Never silent: no rules in a child's browser means any search goes through.
+// In a grown-up's profile, where no launcher ever answers, the error is
+// expected, and nothing there is blocked.
+async function warnIfUnprotected(why) {
+  const count = await blockingRuleCount();
+  if (count === 0) {
+    console.error(
+      `BioKids: NO search rules are installed (${why}). In a child's browser, forbidden searches are not being stopped.`,
+    );
+  } else {
+    console.warn(
+      `BioKids: the search rules were not refreshed (${why}); the ${count} installed last stay in force.`,
+    );
+  }
+}
+
+async function refreshOnce() {
+  const origin = await findLauncher();
+  if (!origin) {
+    searchRulesStale = true;
+    await warnIfUnprotected("no launcher answered");
+    return false;
+  }
+  let fetched;
+  try {
+    fetched = await fetchSearchRules(origin);
+  } catch (error) {
+    searchRulesStale = true;
+    await forgetLauncher(origin);
+    await warnIfUnprotected(String(error));
+    return false;
+  }
+  const stored = await storedSearchRules();
+  const installed =
+    stored !== null && stored.origin === origin && (await blockingRuleCount()) > 0;
+  if (installed && stored.version === fetched.version) {
+    searchRulesStale = fetched.complete !== true;
+    return true;
+  }
+  if (installed && stored.complete === true && fetched.complete !== true) {
+    // The launcher could not reach the daemon and knows only the default list:
+    // the installed set, with the parent's own words, is the better one.
+    searchRulesStale = true;
+    console.warn(
+      "BioKids: the launcher has only the default search list; keeping the installed rules",
+    );
+    return false;
+  }
+  await installSearchRules(origin, fetched);
+  searchRulesStale = fetched.complete !== true;
+  return true;
+}
+
+// One refresh at a time, shared by everyone who asks while it runs.
+function refreshSearchRules() {
+  if (refreshing === null) {
+    refreshing = refreshOnce()
+      .catch(async (error) => {
+        searchRulesStale = true;
+        try {
+          await warnIfUnprotected(String(error));
+        } catch {
+          console.error("BioKids: the search rules could not be checked:", error);
+        }
+        return false;
+      })
+      .finally(() => {
+        refreshing = null;
+      });
+  }
+  return refreshing;
+}
+
+function scheduleSearchRules() {
+  chrome.alarms.create(SEARCH_RULES_ALARM, { periodInMinutes: SEARCH_RULES_MINUTES });
+  refreshSearchRules();
+}
+
+chrome.runtime.onInstalled.addListener(scheduleSearchRules);
+chrome.runtime.onStartup.addListener(scheduleSearchRules);
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === SEARCH_RULES_ALARM) {
+    refreshSearchRules();
+  }
+});
+
+async function compiledSearchRules() {
+  if (compiledRules === null) {
+    const stored = await storedSearchRules();
+    const patterns = stored !== null && Array.isArray(stored.patterns) ? stored.patterns : [];
+    const list = [];
+    for (const pattern of patterns) {
+      try {
+        list.push(new RegExp(pattern, "i"));
+      } catch (error) {
+        console.error("BioKids: a search pattern does not compile here:", error);
+      }
+    }
+    compiledRules = { origin: stored !== null ? String(stored.origin) : "", list };
+  }
+  return compiledRules;
+}
+
+// Some pages search without loading a new one: YouTube sends the words in the
+// body of a request, which no rule can read, then changes the address bar to
+// the results' address. That address is checked here against the same
+// expressions, and the tab goes to the same page.
+chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
+  if (details.tabId < 0 || details.frameId !== 0) {
+    return;
+  }
+  const { origin, list } = await compiledSearchRules();
+  if (origin && details.url.startsWith(`${origin}/`)) {
+    return;
+  }
+  if (list.some((pattern) => pattern.test(details.url))) {
+    showBlockedPage(details.tabId, "", SEARCH_BLOCKED_REASON);
+  }
 }, WEB_ONLY);

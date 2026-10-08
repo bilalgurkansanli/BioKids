@@ -99,6 +99,8 @@ class Reason:
     CATEGORY_EXHAUSTED: Final = "category.exhausted"
     APP_NOT_ALLOWED: Final = "app.not_allowed"
     FILTER_BLOCKED: Final = "filter.blocked"
+    SEARCH_BLOCKED: Final = "search.blocked"
+    """A search for a word on the list, refused by the browser (D-202)."""
     NO_POLICY: Final = "policy.missing"
 
 

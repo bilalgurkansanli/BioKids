@@ -49,6 +49,12 @@ biokids (0.1.0-2) trixie; urgency=medium
     the catalogue (D-199).
   * biokids-desktop hides the GRUB menu (Esc shows it; removed with the
     package) (D-200).
+  * A search for a word on BioKids' list is never sent (D-202): the
+    extension (1.1.0) installs declarativeNetRequest rules from the
+    launcher's GET /search-rules, the child sees "Bunu arayamayız", and a
+    parent adds the family's own words under Çocuklar > İnternet >
+    Gelişmiş. The address bar searches SafeSearch Google without
+    suggestions.
 
  -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Wed, 07 Oct 2026 12:00:00 +0300
 

@@ -44,6 +44,7 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from jinja2 import ChainableUndefined, Environment, FileSystemLoader, select_autoescape
 
+from biokids_core import search_filter
 from biokids_core.browser_policy import packed_extension
 from biokids_core.catalog import program_installed
 from biokids_core.config import Config, get_config
@@ -152,6 +153,9 @@ class ShellState:
         self.spoken: dict[str, Any] = {}
         """The last line the voice service accepted, as it resolved it: the
         sentence actually being said and the character saying it (D-160)."""
+        self.search_words: list[str] | None = None
+        """The parent's own search terms as the daemon last sent them (D-202),
+        kept for a moment the daemon does not answer."""
 
     def remember_spoken(self, card: dict[str, Any]) -> None:
         self.spoken = dict(card)
@@ -408,6 +412,7 @@ def register_routes(app: FastAPI) -> None:
         reason: str = Reason.FILTER_BLOCKED,
     ) -> Response:
         data = await shell.client.state()
+        kind = _request_kind_for(reason, url, slug)
         return await render(
             shell,
             request,
@@ -415,8 +420,9 @@ def register_routes(app: FastAPI) -> None:
             data,
             reason=reason,
             blocked_url=url,
-            ask_kind=_request_kind_for(reason, url, slug),
-            ask_what=url or slug,
+            ask_kind=kind,
+            # A refused search carries nothing to the parent (D-202).
+            ask_what="" if kind == "search" else url or slug,
         )
 
     @app.post("/ask-a-parent")
@@ -549,6 +555,10 @@ def register_routes(app: FastAPI) -> None:
     async def state_json(shell: Shell) -> JSONResponse:
         """What the ring and the banners read. Never computed here."""
         data = await shell.client.state()
+        if data:
+            # The parent's search words are the extension's, not a page's: the
+            # child's browser may open this address too (D-202).
+            data = {key: value for key, value in data.items() if key != "search_words"}
         return JSONResponse(data or {"offline": True})
 
     @app.get("/healthz")
@@ -575,6 +585,31 @@ def register_routes(app: FastAPI) -> None:
             return JSONResponse({"ok": False}, status_code=400)
         await shell.client.report_visit(host)
         return Response(status_code=204)
+
+    @app.get("/search-rules")
+    async def search_rules(request: Request, shell: Shell) -> Response:
+        """The patterns the extension installs to stop forbidden searches (D-202).
+
+        The default list and the parent's own words, which the daemon sends with
+        the state. Without the daemon, the words it sent last; and with none
+        ever sent, the default list alone, marked incomplete so the extension
+        keeps a fuller set it already has. Not a page: the launcher's address
+        is open in the child's browser, and the parent's words are not for
+        reading there.
+        """
+        if request.headers.get("sec-fetch-mode") == "navigate":
+            return PlainTextResponse("", status_code=404)
+        data = await shell.client.state()
+        terms = data.get("search_words") if isinstance(data, dict) else None
+        if isinstance(terms, list):
+            shell.search_words = [str(term) for term in terms]
+        known = shell.search_words
+        if known is None:
+            log.warning("the parent's search terms are unknown; serving the default list")
+        return JSONResponse(
+            search_filter.payload(known or (), complete=known is not None),
+            headers={"Cache-Control": "no-store"},
+        )
 
     # ------------------------------------------------------------- device
 
@@ -696,10 +731,13 @@ def _request_kind_for(reason: str, url: str, slug: str) -> str:
     """What "ask a grown-up" asks for, from why the child was stopped.
 
     Out of minutes for the day or for a kind of app: more time. An app that is
-    not on their screen: that app. Anything else: the page they wanted.
+    not on their screen: that app. A search the browser refused: a talk, which
+    names nothing (D-202). Anything else: the page they wanted.
     """
     if reason in {Reason.QUOTA_EXHAUSTED, Reason.CATEGORY_EXHAUSTED}:
         return "time"
+    if reason == Reason.SEARCH_BLOCKED:
+        return "search"
     if reason == Reason.APP_NOT_ALLOWED and slug and not url:
         return "app"
     return "site"

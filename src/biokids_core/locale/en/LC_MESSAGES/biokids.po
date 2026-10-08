@@ -181,6 +181,13 @@ msgstr "We asked! We will tell you when there is an answer."
 msgid "shell.blocked.back"
 msgstr "Go back"
 
+# D-202: a search the browser refused; the page never repeats the word
+msgid "shell.blocked.search.title"
+msgstr "We can't search for that"
+
+msgid "shell.blocked.search.body"
+msgstr "You can ask a grown-up about it if you like."
+
 msgid "shell.break.title"
 msgstr "A little break"
 
@@ -1124,8 +1131,30 @@ msgstr "Harmful-site protection is not running. For safety the children's accoun
 msgid "internet.shared_browser"
 msgstr "This computer has one browser setting: if “Only the sites I choose” is set for any child, the browser works that way for every child."
 
+# D-202: the family's own words that cannot be searched
+msgid "internet.words.title"
+msgstr "Words that cannot be searched"
+
+msgid "internet.words.intro"
+msgstr "BioKids already stops adult and harmful searches with a built-in list: these words cannot be searched on Google, YouTube, Wikipedia or in other search boxes, and the search is never sent. If there are other words you want on the list, add them here."
+
+msgid "internet.words.label"
+msgstr "Your own words"
+
+msgid "internet.words.help"
+msgstr "One word or phrase per line. A word also closes the words that begin with it (gamble closes gambling); words of three letters or fewer are closed only on their own. At most {limit} words."
+
+msgid "internet.words.family"
+msgstr "This list applies to all your children and reaches the browser within a few minutes. What a child searches is not reported to anyone; if they want something that cannot be searched, they can ask you."
+
+msgid "internet.words.refused"
+msgstr "Some words were not added: they were too short or too long, or the list is full."
+
 msgid "audit.action.filter_mode_changed"
 msgstr "Internet setting changed"
+
+msgid "audit.action.search_words_changed"
+msgstr "Words that cannot be searched changed"
 
 msgid "remote.setup.installing.title"
 msgstr "Getting phone access ready…"
@@ -1219,11 +1248,20 @@ msgstr "{name} would like to open a site"
 msgid "requests.asks.app"
 msgstr "{name} would like an app"
 
+msgid "requests.asks.search"
+msgstr "{name} tried to search for something that is closed"
+
 msgid "requests.approve"
 msgstr "Allow"
 
 msgid "requests.deny"
 msgstr "Not now"
+
+msgid "requests.search.help"
+msgstr "BioKids does not know or tell anyone what was searched. It may be something your child is curious about; talk with them when you can."
+
+msgid "requests.search.answer"
+msgstr "OK, we'll talk"
 
 msgid "requests.recent"
 msgstr "Recently answered"

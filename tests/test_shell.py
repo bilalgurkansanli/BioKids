@@ -540,6 +540,20 @@ def test_the_kiosk_policy_closes_the_obvious_ways_out() -> None:
     assert policy["DnsOverHttpsMode"] == "off"
 
 
+def test_the_address_bar_searches_google_and_suggests_nothing() -> None:
+    """D-202: an address-bar search goes to SafeSearch Google, where the
+    extension's rules see it; suggestions, which the browser fetches itself
+    out of any extension's sight, are off, and nothing is loaded ahead."""
+    policy = kiosk_policy("127.0.0.1:7879", mode="blocklist")
+    assert policy["DefaultSearchProviderEnabled"] is True
+    assert str(policy["DefaultSearchProviderSearchURL"]).startswith(
+        "https://www.google.com/search?q={searchTerms}"
+    )
+    assert policy["ForceGoogleSafeSearch"] is True
+    assert policy["SearchSuggestEnabled"] is False
+    assert policy["NetworkPredictionOptions"] == 2
+
+
 def test_the_kiosk_policy_is_written_atomically(config: Config, tmp_path: Any) -> None:
     """A half-written policy is one Chromium ignores entirely."""
     supervisor = KioskSupervisor(
@@ -1126,6 +1140,87 @@ def test_another_extension_or_a_site_cannot_report_visits(
         )
         assert response.status_code == 403
     assert daemon.visits == []
+
+
+# ------------------------------------------------- forbidden searches (D-202)
+
+
+def test_the_launcher_serves_the_search_rules_with_the_parents_words(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    from biokids_core import search_filter
+
+    assert daemon.data is not None
+    daemon.data["search_words"] = ["kumar"]
+    response = client.get("/search-rules")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    body = response.json()
+    assert body == search_filter.payload(["kumar"])
+    assert body["complete"] is True
+    assert search_filter.address_blocked(
+        "https://www.google.com/search?q=kumarhane", body["patterns"]
+    )
+
+
+def test_without_the_daemon_the_launcher_serves_what_it_heard_last(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    from biokids_core import search_filter
+
+    assert daemon.data is not None
+    daemon.data["search_words"] = ["kumar"]
+    client.get("/search-rules")
+    daemon.data = None
+
+    body = client.get("/search-rules").json()
+    assert body["version"] == search_filter.payload(["kumar"])["version"]
+    assert body["complete"] is True
+
+
+def test_the_parents_words_are_not_a_page_in_the_childs_browser(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    """The launcher's address is open in the child's browser (D-202)."""
+    assert daemon.data is not None
+    daemon.data["search_words"] = ["kumar"]
+    typed = client.get("/search-rules", headers={"sec-fetch-mode": "navigate"})
+    assert typed.status_code == 404
+    assert "search_words" not in client.get("/state").json()
+    fetched = client.get("/search-rules", headers={"sec-fetch-mode": "cors"})
+    assert fetched.status_code == 200
+
+
+def test_never_having_heard_the_words_the_list_is_marked_incomplete(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    """The extension then keeps a fuller set it already has."""
+    daemon.data = None
+    body = client.get("/search-rules").json()
+    assert body["complete"] is False
+    assert body["patterns"], "the default list, never nothing"
+
+
+def test_a_refused_search_gets_its_own_page_without_the_word(client: TestClient) -> None:
+    page = client.get("/blocked?reason=search.blocked&url=https://x.test/?q=porno").text
+    text = _visible_text(page)
+
+    assert "Bunu arayamayız" in text
+    assert "büyüğüne sorabilirsin" in text
+    assert "porno" not in page, "the word is never repeated, not even in the form"
+    assert 'name="kind" value="search"' in page
+    assert 'name="url" value=""' in page
+    assert "/ask-a-parent" in page
+
+
+def test_asking_about_a_refused_search_files_a_search_request(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    response = client.post("/ask-a-parent", data={"url": "", "kind": "search"})
+    assert response.status_code == 200
+    assert daemon.asked_kinds == ["search"]
+    assert daemon.asked == [""]
 
 
 @pytest.mark.parametrize(

@@ -19,7 +19,10 @@ from biokids_daemon.base import log
 from biokids_daemon.filtering import web_tile_pattern
 from biokids_daemon.operations import OperationsMixin
 
-REQUEST_KINDS = ("time", "site", "app")
+REQUEST_KINDS = ("time", "site", "app", "search")
+"""`search` is a search the browser refused (D-202). It carries nothing - the
+words never leave the browser - and there is nothing to allow: the parent is
+asked to talk with the child, and answers that they will."""
 REQUESTS_PER_HOUR = 6
 """A child may ask this often. Asking again for the same thing while it is still
 waiting is the same request, not another one."""
@@ -40,7 +43,7 @@ class AccessRequestsMixin(OperationsMixin):
         """
         runtime = self._require(child_id)
         kind = kind if kind in REQUEST_KINDS else "site"
-        url = url[:1024] if kind != "time" else ""
+        url = url[:1024] if kind not in {"time", "search"} else ""
         self._expire_requests()
         waiting = self.session.scalar(
             select(AccessRequest).where(
@@ -122,6 +125,9 @@ class AccessRequestsMixin(OperationsMixin):
         if row is None or row.status != "pending":
             return {"ok": False, "error": "error.not_found"}
         runtime = self._require(row.child_id)
+        if row.kind == "search":
+            # Nothing to allow (D-202): the answer is "not now, we'll talk".
+            approve = False
         if approve and row.kind == "time" and not 0 < minutes <= 12 * 60:
             return {"ok": False, "error": "error.invalid_input"}
 

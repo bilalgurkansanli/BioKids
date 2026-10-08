@@ -21,6 +21,7 @@ parental-control tool that implies more protection than it provides is worse tha
 | Using the app bar's close to stop the launcher or Zio and Sio | it stops only a `biokids-app-*.scope`, checked by name and by its cgroup path under the child's own `user@<uid>.service`; a window claiming another process's `_NET_WM_PID` can at most stop another of the child's own apps (D-197) |
 | Opening a terminal | no terminal emulator installed, TTY switching disabled |
 | Typing a blocked URL | Chromium policy + the children's DNS filter (D-167); the extension turns the error into the launcher's block page (D-187) |
+| Searching for adult words (Google, YouTube, Wikipedia, the offline Vikipedi, the address bar) | the extension's `declarativeNetRequest` rules refuse the request before it is sent, suggestions included; the address bar searches SafeSearch Google and suggests nothing (D-202, section 5) |
 | Removing or switching off the BioKids extension | force-installed by policy, `chrome://extensions` closed, every other extension blocked (D-187) |
 | Opening a sibling's launcher, or posting to it | the `launchers` nftables chain: a launcher port accepts only its own child's uid (D-188) |
 | Changing the DNS server in settings | settings app hidden; nftables sends the children's port 53 to the filter whatever server is set |
@@ -71,7 +72,7 @@ Never add a claim to marketing copy that contradicts this list.
 | `biokids-voice-setup` | root by uid only, oneshot, only when the parent asks | downloads Piper and its Turkish voice into `/var/lib/biokids-voices`, each file pinned by SHA-256 (D-196); no capability, nothing else writable |
 | `biokids-provision@` | root, oneshot, one instance per child added | creates the child's account and session files: one fixed command, `biokids-admin provision-child %I`, because the panel's sandbox cannot write `/etc` or `/home` (D-142) |
 | `biokids-unprovision@` | root, oneshot, one instance per child removed | the reverse, `biokids-admin unprovision-child %I`: out of `biokids-child`, `SystemAccount=true` for AccountsService and a `nologin` shell, only BioKids' own session files removed; the account and its home stay (D-191) |
-| the BioKids extension | inside Chromium, every profile on the machine | `webNavigation` and `storage`, host permission `http://127.0.0.1/*` only; no content scripts, no `tabs` (D-187) |
+| the BioKids extension | inside Chromium, every profile on the machine | `webNavigation`, `storage`, `alarms` and `declarativeNetRequest` (block and allow only, D-202), host permission `http://127.0.0.1/*` only; no content scripts, no `tabs` (D-187) |
 
 Root services run with systemd hardening:
 
@@ -162,7 +163,8 @@ Zero telemetry. No crash reporting. No version ping. No analytics.
 
 The browser extension (D-187) adds no row. It connects only to the child's own launcher
 on `127.0.0.1`, its update manifest is a `file://` path on the machine, and the host
-names it reports go into the family's database and nowhere else. The offline Wikipedia
+names it reports go into the family's database and nowhere else. Its search rules
+(D-202) come from the same launcher, and a search they refuse is never sent at all. The offline Wikipedia
 (D-190) adds none either: `biokids-wiki` serves the files the assistant's download
 already fetched, on loopback, under `IPAddressDeny=any`.
 
@@ -279,6 +281,10 @@ and nftables already closes the port to every child (above). The policy is
   "DnsOverHttpsMode": "off",
   "ForceGoogleSafeSearch": true,
   "ForceYouTubeRestrict": 2,
+  "DefaultSearchProviderEnabled": true,
+  "DefaultSearchProviderSearchURL": "https://www.google.com/search?q={searchTerms}",
+  "SearchSuggestEnabled": false,
+  "NetworkPredictionOptions": 2,
   "IncognitoModeAvailability": 1,
   "DeveloperToolsAvailability": 2,
   "ExtensionInstallBlocklist": ["*"],
@@ -313,6 +319,55 @@ launcher accepts a host name and nothing else, and passes it to the daemon over
 `shell.sock`. A navigation closed by the policy or the DNS filter is sent to the
 launcher's `/blocked` page. It has no content scripts and no `tabs` permission, so it
 cannot read a page, a title or a form, and it never reports an address on the machine.
+
+### Searches (D-202)
+
+The DNS filter closes sites; it cannot close a question asked of a site it allows. So
+the extension also installs `declarativeNetRequest` dynamic rules that refuse a request
+whose address carries a word on BioKids' list, before it leaves the machine: the
+search engine never sees it.
+
+- **The rules** are regular expressions from `biokids_core.search_filter`, served by
+  the child's launcher at `GET /search-rules`: the default list
+  (`biokids_core/data/search_words.toml`, which says what it covers and what it leaves
+  out) and the words the parent added under Çocuklar → İnternet → Gelişmiş, one list
+  for the family. The extension checks each with `isRegexSupported` and builds the
+  rules itself: rule 1 *allows* the launcher's own origin, every other rule *blocks*;
+  action, priority and resource types (`main_frame`, `sub_frame`, `xmlhttprequest`,
+  `script`) are fixed in `background.js`, never taken from the answer. Blocking needs
+  no host permission; a redirect would need one on every site. The launcher refuses
+  `/search-rules` as a page and leaves the parent's words out of `/state`: its address
+  is open in the child's browser.
+- **What matches.** A term at the start of a word. A short one (five letters or fewer)
+  only in a search box's value - `q`, `query`, `search`, `search_query`, `text`,
+  `pattern`, `term`: Google, Bing, DuckDuckGo, YouTube, Wikipedia, Yandex, kiwix-serve,
+  and the suggestions each fetches while the child types - or in a title after
+  `/wiki/` or `/content/`. A longer one, or a phrase, after any `=` or `/`. Each letter
+  in any case, a Turkish letter also as its ASCII neighbour and its capital, look-alike
+  digits, held-down letters; a dotted "i" never as a dotless "ı".
+- **The page.** A refused page or frame fails with `ERR_BLOCKED_BY_CLIENT`; the
+  extension sends the tab to `/blocked?reason=search.blocked`, which says "Bunu
+  arayamayız. İstersen bir büyüğüne sorabilirsin." and offers "Büyüğüme sor". The word
+  is in neither: the launcher is told why, never what, and the request it files names
+  nothing. A page that searches without loading one (YouTube's in-page search, which
+  posts the words and then changes the address) is checked when its address changes.
+- **Fail safe.** The whole set is swapped in one `updateDynamicRules` call; dynamic
+  rules outlive a browser restart, so a launcher that does not answer leaves the last
+  set in force, and a set built without the parent's words never replaces one built
+  with them. No rules at all is logged as an error in the extension's console. The
+  launcher serves the default list even when the daemon is away.
+- **The address bar** searches Google (`DefaultSearchProvider*`), where SafeSearch is
+  forced and the rules see the search like any other. Its suggestions are off
+  (`SearchSuggestEnabled: false`): the browser fetches them itself, out of every
+  extension's sight. Nothing is preloaded (`NetworkPredictionOptions: 2`). One policy
+  for the machine, so the parent's Chromium searches the same way.
+- **Limits.** Chromium gives each expression 2 KB of RE2 memory and an extension at
+  most 1000 of them. `search_filter.re2_cost` estimates a pattern's instructions and
+  terms are packed up to `MAX_COST` (104); every pattern built at that budget and at
+  116 was accepted by Chromium 154. A form that posts its search, the words inside
+  YouTube's in-page search request, and a spelled-out word in a suggestion written
+  with `%20` are not seen. A determined child with a second browser is out of scope
+  (section 1).
 
 ### Config regeneration must be atomic
 
@@ -370,6 +425,9 @@ We do not build, and will not accept contributions for:
 - a record of the pages a child reads: the extension reports a site's host name,
   never its path, query, title or contents, and the child is told on their first
   run (D-187)
+- a record of what a child searches: a refused search is not reported or kept, not
+  even the fact that it happened, unless the child presses "Büyüğüme sor" - and that
+  request names nothing (D-202)
 - location tracking
 - reading the contents of private messages
 

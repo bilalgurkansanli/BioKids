@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from biokids_core import repo
+from biokids_core import repo, search_filter
 from biokids_core.catalog import ALWAYS_ON_TILES, enable_for_child, load_catalog, sync_catalog
 from biokids_core.db.models import CategoryLimit, Child, Policy
 from biokids_core.errors import IpcError
@@ -494,7 +494,52 @@ def internet_form(view: View, child_id: int) -> Response:
         policy=repo.get_or_create_policy(view.session, child_id),
         modes=[FilterMode.BLOCKLIST.value, FilterMode.ALLOWLIST.value],
         filter=status.get("dns_filter") or {"running": False},
+        search_words=repo.search_words(view.session),
+        search_limit=search_filter.MAX_PARENT_TERMS,
     )
+
+
+@router.post("/children/{child_id}/internet/words")
+def search_words_save(
+    view: View,
+    child_id: int,
+    words: Annotated[str, Form()] = "",
+    csrf_token: Annotated[str, Form()] = "",
+) -> Response:
+    """The words a parent adds to the search list, for every child (D-202).
+
+    Saved from a child's Internet screen, where a parent looks for it, and
+    said there to apply to the whole family: the browser and its policy are
+    one per machine (D-167). A word that cannot be one is left out and the
+    parent is told; the rest are kept.
+    """
+    page = f"/children/{child_id}/internet"
+    if blocked := view.guard_form(csrf_token, f"{page}?error=csrf"):
+        return blocked
+    session = view.session
+    if repo.get_child(session, child_id) is None:
+        return see_other("/children?error=1")
+    kept, refused = search_filter.parse_parent_terms(words)
+    before = repo.search_words(session)
+    if kept != before:
+        repo.set_search_words(session, kept)
+        repo.audit(
+            session,
+            actor=view.actor,
+            action="search_words_changed",
+            detail={
+                "added": [word for word in kept if word not in before],
+                "removed": [word for word in before if word not in kept],
+            },
+        )
+        session.commit()
+    # The launcher hears the words with the state, which the daemon re-reads
+    # on a reload; the extension asks the launcher every five minutes.
+    if not _call_daemon(view.ctx, Op.RELOAD):
+        return see_other(f"{page}?error=daemon")
+    if refused:
+        return see_other(f"{page}?error=internet.words.refused")
+    return see_other(f"{page}?saved=1")
 
 
 @router.post("/children/{child_id}/internet")
