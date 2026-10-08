@@ -399,7 +399,14 @@ def test_the_manifest_asks_for_nothing_more_than_it_needs() -> None:
 
     assert manifest["manifest_version"] == 3
     assert manifest["name"] == "BioKids"
-    assert sorted(manifest["permissions"]) == ["storage", "webNavigation"]
+    # declarativeNetRequest only blocks and allows (D-202): neither needs a host
+    # permission, and redirecting would need one on every site.
+    assert sorted(manifest["permissions"]) == [
+        "alarms",
+        "declarativeNetRequest",
+        "storage",
+        "webNavigation",
+    ]
     assert manifest["host_permissions"] == ["http://127.0.0.1/*"]
     assert "content_scripts" not in manifest
     assert "optional_permissions" not in manifest
@@ -451,3 +458,59 @@ def test_the_probe_range_and_the_healthz_contract_are_stated_once() -> None:
     assert re.search(r'^const HEALTHZ_VALUE = "launcher";$', source, flags=re.MULTILINE)
     assert "net::ERR_BLOCKED_BY_ADMINISTRATOR" in source
     assert "net::ERR_NAME_NOT_RESOLVED" in source
+
+
+# ------------------------------------------------------ the search rules (D-202)
+
+
+def test_the_version_was_raised_for_the_search_rules() -> None:
+    """Chromium installs a new CRX only when its version is higher."""
+    version = extension_pack.read_version(EXTENSION_DIR)
+    assert tuple(int(part) for part in version.split(".")) >= (1, 1, 0)
+
+
+def test_the_extension_only_ever_blocks_or_allows() -> None:
+    """The launcher sends expressions; the actions are fixed in this file.
+
+    No `redirect` (it would need a host permission on every site), no
+    `modifyHeaders`, and the rule's action never comes from the launcher's
+    answer.
+    """
+    source = BACKGROUND_JS.read_text(encoding="utf-8")
+    actions = re.findall(r'action:\s*\{\s*type:\s*"(\w+)"', source)
+    assert sorted(actions) == ["allow", "block"]
+    for forbidden in ('"redirect"', "modifyHeaders", "upgradeScheme", "fetched.rules"):
+        assert forbidden not in source, forbidden
+    assert re.search(r"regexFilter: regex,", source), "the expression, and only that"
+
+
+def test_a_refused_search_carries_no_words_to_the_launcher() -> None:
+    """SECURITY.md section 7: the block page is told why, never what."""
+    source = BACKGROUND_JS.read_text(encoding="utf-8")
+    calls = re.findall(r"showBlockedPage\(details\.tabId, ([^)]*)\)", source)
+    assert calls.count('"", SEARCH_BLOCKED_REASON') == 2
+    assert "details.url" in calls, "only the closed-site page names its address"
+    error = r'^const SEARCH_BLOCKED_ERROR = "net::ERR_BLOCKED_BY_CLIENT";$'
+    assert re.search(error, source, re.M)
+    assert re.search(r'^const SEARCH_BLOCKED_REASON = "search\.blocked";$', source, re.M)
+
+
+def test_the_search_rules_contract_matches_the_launcher() -> None:
+    from biokids_core import search_filter
+    from biokids_core.types import Reason
+
+    source = BACKGROUND_JS.read_text(encoding="utf-8")
+    assert re.search(r'^const SEARCH_RULES_PATH = "/search-rules";$', source, re.M)
+    value = re.search(r'^const SEARCH_RULES_VALUE = "([^"]+)";$', source, re.M)
+    assert value is not None and value.group(1) == search_filter.payload()["biokids"]
+    assert Reason.SEARCH_BLOCKED == "search.blocked"
+    # The regex rules Chromium allows, less the launcher's own allow rule.
+    limit = re.search(r"^const MAX_PATTERNS = (\d+);$", source, re.M)
+    assert limit is not None and int(limit.group(1)) < 1000
+
+
+def test_old_rules_stay_until_new_ones_replace_them() -> None:
+    """Fail safe: a launcher that does not answer never leaves the child with none."""
+    source = BACKGROUND_JS.read_text(encoding="utf-8")
+    assert source.count("updateDynamicRules(") == 1, "one atomic swap, nowhere a bare removal"
+    assert "NO search rules are installed" in source

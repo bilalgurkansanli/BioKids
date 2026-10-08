@@ -19,6 +19,7 @@ from collections.abc import Sequence
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from biokids_core import search_filter
 from biokids_core.db.models import (
     AccessRequest,
     AiAlert,
@@ -281,6 +282,26 @@ def get_flag(session: Session, key: str, default: bool = False) -> bool:
 
 def set_flag(session: Session, key: str, value: bool) -> None:
     set_setting(session, key, "1" if value else "0")
+
+
+def search_words(session: Session) -> list[str]:
+    """The words the parent added to the search list, for every child (D-202).
+
+    Only the text that is stored: `search_filter` decides again what each one
+    becomes, so a row edited by hand cannot reach the browser as anything else.
+    """
+    raw = get_setting(session, search_filter.SETTING_KEY)
+    try:
+        stored = json.loads(raw) if raw else []
+    except ValueError:
+        return []
+    return [str(word) for word in stored if isinstance(word, str)][
+        : search_filter.MAX_PARENT_TERMS
+    ]
+
+
+def set_search_words(session: Session, words: Sequence[str]) -> None:
+    set_setting(session, search_filter.SETTING_KEY, json.dumps(list(words), ensure_ascii=False))
 
 
 # ------------------------------------------------------- audit and events

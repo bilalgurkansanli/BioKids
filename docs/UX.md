@@ -144,6 +144,10 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
    bugünlük süresi bitti", a line telling the child to pick something else from the
    home screen, and only a way back — no ask button, because minutes a parent grants
    go to the day, not to games, and a "yes" would not open the app.
+   **A search the browser refused** (D-202) is a third: "Bunu arayamayız. İstersen bir
+   büyüğüne sorabilirsin." It never repeats the word - the page is not told it - and
+   "Büyüğüme sor" files a request that names nothing: the parent reads that the child
+   wanted to search something closed and is asked to talk with them.
 4. **Break** — a calm full-screen timer, a suggestion ("gözlerini dinlendir"), no
    dismiss button.
 5. **Time up** — friendly, a countdown, a note that unsaved work should be saved.
@@ -255,7 +259,16 @@ Ayarlar / Settings     → PIN, passphrase, email, phone access, language, and Z
 ```
 
 **İstekler / Requests** is not in the menu: it is one tap from Today, where the badge
-and the banner are, because a child is waiting at the computer.
+and the banner are, because a child is waiting at the computer. A request about a
+refused search (D-202) shows no word and offers no "İzin ver", only "Tamam,
+konuşacağız".
+
+**İnternet** has, under **Gelişmiş**, the words that cannot be searched (D-202): one
+sentence saying BioKids already stops adult and harmful searches with its own list,
+a box for the family's own words, one per line, and a line saying the list is the
+same for every child, because the browser is one per machine. A word that cannot be
+one (a single letter, more than 30 characters, past the hundredth) is left out and
+the parent is told.
 
 ### 3.2 The Today screen
 

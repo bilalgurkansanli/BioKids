@@ -1227,6 +1227,70 @@ height too low and well left of the window's corner.
   brings the same window back (D-197). Web tiles are not listed: each opens a window.
 
 
+**D-202 [owner] A forbidden search is never sent.** (2026-10-08)
+On the VM a child typed an adult word into Google: SafeSearch filtered the results, but
+the search went through and a results page came back. The owner wants such searches
+not to happen at all, in Wikipedia and the offline Vikipedi too. The extension (D-187)
+now installs `declarativeNetRequest` rules that refuse, before it is sent, any page,
+frame, script or background request whose address carries a listed word; the tab then
+shows the launcher's "Bunu arayamayız. İstersen bir büyüğüne sorabilirsin."
+- **The list** is `biokids_core/data/search_words.toml`, 89 terms: pornography and
+  explicit sexual searches in Turkish and English, the vulgar sexual words children
+  pick up, and first-person and method searches about self-harm. Left out on purpose,
+  and written down in the file: anatomy and sex education, sexual orientation,
+  violence, drugs and gambling, "intihar" on its own, and words a child searches
+  innocently ("am", "meme", "göt", "dick", "naked"). A term is a prefix, a whole word,
+  an exact word ("seks" must not become "seeks") or a spelled-out prefix ("p.o.r.n.o").
+- **Matching** is compiled into the patterns, because Chromium matches an address, not
+  the typed text: any case; a Turkish letter also as its ASCII neighbour and its
+  capital ("sikis", "SİKİŞ"); look-alike digits; held-down letters; any spaces or
+  punctuation between a phrase's words. A dotted "i" never matches a dotless "ı", so
+  "sık sık", "sıkışık" and "kaşık" stay searchable; "seksen", "seksek", "saksofon",
+  "milföy" and "fahiş fiyat" have tests of their own. Known false positive: capitals
+  with an ASCII "I" ("SIKIŞIK" reads as "sikiş...").
+- **Where a word counts.** A term of five letters or fewer only in a search box's value
+  (`q`, `query`, `search`, `search_query`, `text`, `pattern`, `term`) or a title after
+  `/wiki/` or `/content/` (kiwix-serve 3): random tokens in addresses spell short words
+  now and then. A longer term or a phrase after any `=` or `/`.
+- **Chromium's limits.** Each regex gets 2 KB of RE2 memory, about a hundred
+  instructions. `search_filter.re2_cost` estimates them and terms are packed up to 104,
+  measured against Chromium 154's own `isRegexSupported` (Edge 154): 804 patterns built
+  at 104 and 116 from the list and 400 heavy random parent words were all accepted. The
+  default list is 79 patterns; at most 990 are installed.
+- **Block, not redirect.** A redirect needs a host permission on every site searched;
+  a block needs none, so the extension's only host is still 127.0.0.1. The refused
+  navigation fails with `ERR_BLOCKED_BY_CLIENT`, which only our extension can cause
+  (every other is blocked), and the extension sends the tab to
+  `/blocked?reason=search.blocked`: why, never what. Rule 1 always lets the launcher's
+  own origin through. A page that searches without loading one (YouTube posts the words
+  in a body and then changes the address) is checked on `onHistoryStateUpdated`.
+- **Delivery.** `GET /search-rules` on the launcher serves the patterns, built from the
+  list and the parent's words, which the daemon adds to the shell state. The extension
+  asks on install, at start, every five minutes and when its launcher answers again;
+  it swaps the whole set in one `updateDynamicRules` call, and dynamic rules outlive a
+  browser restart, so a launcher that does not answer leaves the last set in force. A
+  set the launcher built without the parent's words (`complete: false`) never replaces
+  a complete one. No rules is logged as an error, never silently.
+- **The parent's words** are one list for the family, under **Çocuklar → İnternet →
+  Gelişmiş**, where a parent looks, with a sentence saying it covers every child and
+  that a list already exists: the browser and its policy are one per machine (D-167),
+  and a word a parent does not want one child of four to ten to search is rarely one
+  they want another to. Stored as the `search_words` setting, audited as
+  `search_words_changed`; a word under four letters closes only itself, a longer one
+  the words that begin with it.
+- **"Büyüğüme sor"** files a request of the new kind `search`, which carries nothing:
+  the parent reads "Elif kapalı bir şeyi aramak istedi" and answers "Tamam,
+  konuşacağız"; there is nothing to allow, and the child hears the kind "not now".
+- **The address bar** searches Google by policy (`DefaultSearchProvider*`), where
+  SafeSearch is forced and the rules see the search; its suggestions are off
+  (`SearchSuggestEnabled`), because the browser fetches them itself, where no extension
+  can see them; and nothing is preloaded (`NetworkPredictionOptions: 2`). The policy is
+  the machine's, so the parent's Chromium gets these too.
+Not closed: a site whose search box posts a form, the words inside YouTube's in-page
+search request (the results page is still closed once the address changes), and a
+spelled-out word in a suggestion request written with `%20`. Nothing about a search is
+recorded or reported: no new outbound connection, no new record.
+
 **D-203 [owner] Something new every day, more to learn with, and a Dünya that works.** (2026-10-08)
 The owner: a child who sees the same things every time gets bored. Three changes.
 - **Bugünün sürprizi.** A strip under the launcher's header with one card a day: a

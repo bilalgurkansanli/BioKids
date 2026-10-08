@@ -13,8 +13,14 @@
     <a class="big-btn" href="/">{{ _('shell.blocked.back') }}</a>
   </div>
   {% else %}
+  {# A refused search (D-202) never repeats the word: the page does not know it. #}
+  {% if reason == 'search.blocked' %}
+  <h1>{{ _('shell.blocked.search.title') }}</h1>
+  <p>{{ _('shell.blocked.search.body') }}</p>
+  {% else %}
   <h1>{{ _('shell.blocked.title') }}</h1>
   <p>{{ _('shell.blocked.body') }}</p>
+  {% endif %}
 
   <div class="btn-row">
     <form method="post" action="/ask-a-parent">

@@ -38,4 +38,28 @@
       <a class="btn btn--quiet" href="/children/{{ child.id }}/apps">{{ _('apps.title') }}</a>
     </div>
   </form>
+
+  {#
+    D-202. Searches for adult words are refused in the browser whatever is
+    here; this only adds the family's own. One list for every child, because
+    the browser is one per machine, and the page says so.
+  #}
+  <details class="card advanced" {% if search_words %}open{% endif %}>
+    <summary>{{ _('common.advanced') }}</summary>
+    <form method="post" action="/children/{{ child.id }}/internet/words">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <h2>{{ _('internet.words.title') }}</h2>
+      <p>{{ _('internet.words.intro') }}</p>
+      <div class="field">
+        <label for="search-words">{{ _('internet.words.label') }}</label>
+        <textarea id="search-words" name="words" rows="5" autocomplete="off"
+                  autocapitalize="none" spellcheck="false">{{ search_words|join('\n') }}</textarea>
+        <span class="help">{{ _('internet.words.help', limit=search_limit) }}</span>
+      </div>
+      <p class="help">{{ _('internet.words.family') }}</p>
+      <div class="actions">
+        <button class="btn btn--primary" type="submit">{{ _('common.save') }}</button>
+      </div>
+    </form>
+  </details>
 {% endblock %}

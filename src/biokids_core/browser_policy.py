@@ -114,6 +114,16 @@ def kiosk_policy(
         "ForceGoogleSafeSearch": True,
         "ForceYouTubeRestrict": 2,
         "ForceBingSafeSearch": 2,
+        # Searches (D-202). The address bar searches Google, where SafeSearch
+        # is forced, and the extension's rules see that search like any other.
+        # Its suggestions are off: the browser fetches them itself, where no
+        # extension can see them, one keystroke at a time. And nothing is
+        # loaded ahead of a click, so a page is fetched only when it is opened.
+        "DefaultSearchProviderEnabled": True,
+        "DefaultSearchProviderName": "Google",
+        "DefaultSearchProviderSearchURL": "https://www.google.com/search?q={searchTerms}",
+        "SearchSuggestEnabled": False,
+        "NetworkPredictionOptions": 2,
         "URLBlocklistExceptions": [],
         "DeveloperToolsAvailability": 2,
         "IncognitoModeAvailability": 1,

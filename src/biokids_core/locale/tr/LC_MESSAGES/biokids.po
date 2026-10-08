@@ -185,6 +185,13 @@ msgstr "Sorduk! Cevap gelince haber vereceğiz."
 msgid "shell.blocked.back"
 msgstr "Geri dön"
 
+# D-202: a search the browser refused; the page never repeats the word
+msgid "shell.blocked.search.title"
+msgstr "Bunu arayamayız"
+
+msgid "shell.blocked.search.body"
+msgstr "İstersen bir büyüğüne sorabilirsin."
+
 msgid "shell.break.title"
 msgstr "Biraz mola"
 
@@ -1128,8 +1135,30 @@ msgstr "Zararlı site koruması şu an çalışmıyor. Çocuk hesapları güvenl
 msgid "internet.shared_browser"
 msgstr "Bu bilgisayarın tarayıcı ayarı tektir: çocuklardan biri için “Sadece seçtiğim siteler” seçilirse tarayıcı tüm çocuklar için öyle çalışır."
 
+# D-202: the family's own words that cannot be searched
+msgid "internet.words.title"
+msgstr "Aranamayacak kelimeler"
+
+msgid "internet.words.intro"
+msgstr "BioKids yetişkin içerikli ve zararlı aramaları hazır bir listeyle zaten durdurur: Google'da, YouTube'da, Vikipedi'de ve başka arama kutularında bu kelimeler aranamaz, arama hiç gönderilmez. Listede olmasını istediğiniz başka kelimeler varsa buraya ekleyin."
+
+msgid "internet.words.label"
+msgstr "Sizin eklediğiniz kelimeler"
+
+msgid "internet.words.help"
+msgstr "Her satıra bir kelime ya da söz. Bir kelime onunla başlayanları da kapatır (kumar, kumarhaneyi de kapatır); üç harfli ve daha kısa kelimeler yalnızca tek başına yazılınca kapanır. En fazla {limit} kelime."
+
+msgid "internet.words.family"
+msgstr "Bu liste bütün çocuklarınız için geçerlidir ve birkaç dakika içinde tarayıcıya ulaşır. Çocuk ne aradığını kimseye bildirmez; aranamayan bir şeyi isterse size sorabilir."
+
+msgid "internet.words.refused"
+msgstr "Bazı kelimeler eklenmedi: çok kısa ya da çok uzundular, ya da liste doldu."
+
 msgid "audit.action.filter_mode_changed"
 msgstr "İnternet ayarı değiştirildi"
+
+msgid "audit.action.search_words_changed"
+msgstr "Aranamayacak kelimeler değiştirildi"
 
 msgid "remote.setup.installing.title"
 msgstr "Telefondan erişim hazırlanıyor…"
@@ -1223,11 +1252,20 @@ msgstr "{name} bir siteyi açmak istiyor"
 msgid "requests.asks.app"
 msgstr "{name} bir uygulama istiyor"
 
+msgid "requests.asks.search"
+msgstr "{name} kapalı bir şeyi aramak istedi"
+
 msgid "requests.approve"
 msgstr "İzin ver"
 
 msgid "requests.deny"
 msgstr "Şimdi değil"
+
+msgid "requests.search.help"
+msgstr "Ne arandığını BioKids bilmez ve kimseye söylemez. Merak ettiği bir şey olabilir; uygun bir zamanda onunla konuşun."
+
+msgid "requests.search.answer"
+msgstr "Tamam, konuşacağız"
 
 msgid "requests.recent"
 msgstr "Son cevaplananlar"

@@ -22,9 +22,14 @@
       {% if row.kind != 'time' and row.what %}
         <p><strong>{{ row.what }}</strong></p>
       {% endif %}
+      {% if row.kind == 'search' %}
+        {# D-202: what was searched is not known here, and nothing can be allowed. #}
+        <p>{{ _('requests.search.help') }}</p>
+      {% endif %}
       <p class="muted small">{{ row.created_at|when }}</p>
       <div class="row row--wrap">
-        {% if row.kind == 'time' %}
+        {% if row.kind == 'search' %}
+        {% elif row.kind == 'time' %}
           {% for minutes in grant_choices %}
             <form method="post" action="/requests/{{ row.id }}/decide">
               <input type="hidden" name="csrf_token" value="{{ csrf }}">
@@ -43,7 +48,9 @@
         <form method="post" action="/requests/{{ row.id }}/decide">
           <input type="hidden" name="csrf_token" value="{{ csrf }}">
           <input type="hidden" name="approve" value="no">
-          <button class="btn" type="submit">{{ _('requests.deny') }}</button>
+          <button class="btn" type="submit">
+            {{ _('requests.search.answer') if row.kind == 'search' else _('requests.deny') }}
+          </button>
         </form>
       </div>
     </div>

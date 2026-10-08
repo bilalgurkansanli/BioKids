@@ -170,4 +170,7 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
             "countdown_seconds": self._countdown_remaining(
                 runtime, day, reading.boot, reading.boot_id
             ),
+            # The parent's own search words (D-202), which the launcher adds to
+            # the default list it serves the browser extension.
+            "search_words": repo.search_words(self.session),
         }
