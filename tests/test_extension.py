@@ -514,3 +514,38 @@ def test_old_rules_stay_until_new_ones_replace_them() -> None:
     source = BACKGROUND_JS.read_text(encoding="utf-8")
     assert source.count("updateDynamicRules(") == 1, "one atomic swap, nowhere a bare removal"
     assert "NO search rules are installed" in source
+
+
+# ------------------------------------------------- the default search rules (D-202)
+
+
+def test_the_default_search_words_are_in_the_package_itself(tmp_path: Path) -> None:
+    """From the first page a fresh browser opens: on the VM the first search
+    went through in the seconds before the launcher's dynamic rules arrived."""
+    import json
+    import re
+
+    from biokids_core import search_filter
+
+    manifest = json.loads((EXTENSION_DIR / "manifest.json").read_text(encoding="utf-8"))
+    paths = [r["path"] for r in manifest["declarative_net_request"]["rule_resources"]]
+    assert paths == [extension_pack.DEFAULT_RULES_PATH]
+
+    key = tmp_path / "key.pem"
+    extension_pack.write_bundle(EXTENSION_DIR, tmp_path / "out", key)
+    archive = ParsedCrx((tmp_path / "out" / "biokids.crx").read_bytes()).archive
+    with zipfile.ZipFile(io.BytesIO(archive)) as packed:
+        rules = json.loads(packed.read(extension_pack.DEFAULT_RULES_PATH))
+
+    patterns = search_filter.build_patterns(search_filter.default_terms())
+    assert len(rules) == len(patterns) + 1
+    assert [r["condition"]["regexFilter"] for r in rules[1:]] == patterns
+    assert all(r["action"]["type"] == "block" for r in rules[1:])
+    assert len({r["id"] for r in rules}) == len(rules)
+
+    allow = re.compile(rules[0]["condition"]["regexFilter"])
+    assert rules[0]["action"]["type"] == "allow" and rules[0]["priority"] > rules[1]["priority"]
+    assert allow.match("http://127.0.0.1:7879/blocked?url=x")
+    assert allow.match("http://127.0.0.1:7978/")
+    assert not allow.match("http://127.0.0.1:7979/")
+    assert not allow.match("http://127.0.0.1:7877/search?pattern=x"), "Vikipedi stays filtered"

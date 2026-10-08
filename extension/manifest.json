@@ -1,13 +1,29 @@
 {
   "manifest_version": 3,
   "name": "BioKids",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Shows a friendly page when a site is closed, stops searches for words on the family's list, and tells the child's launcher which sites were visited (the name only).",
   "minimum_chrome_version": "120",
   "update_url": "file:///var/lib/biokids-ext/updates.xml",
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["webNavigation", "storage", "declarativeNetRequest", "alarms"],
-  "host_permissions": ["http://127.0.0.1/*"]
+  "permissions": [
+    "webNavigation",
+    "storage",
+    "declarativeNetRequest",
+    "alarms"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*"
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "biokids_defaults",
+        "enabled": true,
+        "path": "rules/defaults.json"
+      }
+    ]
+  }
 }

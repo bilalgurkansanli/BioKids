@@ -29,6 +29,7 @@ import struct
 import tempfile
 import zipfile
 from pathlib import Path
+from typing import Final
 from xml.sax.saxutils import escape
 
 from cryptography.hazmat.primitives import hashes, serialization
@@ -132,25 +133,91 @@ def deterministic_zip(source_dir: Path) -> bytes:
     """Zip every file under `source_dir`, the same way every time.
 
     Entries are sorted by path, carry a fixed timestamp and fixed Unix
-    permissions, and hidden files and `EXCLUDED_NAMES` are left out.
+    permissions, and hidden files and `EXCLUDED_NAMES` are left out. Files the
+    manifest names but the source does not hold - the default search rules -
+    are generated here (`generated_files`).
     """
     source_dir = Path(source_dir)
-    files = sorted(
-        (path.relative_to(source_dir).as_posix(), path)
+    contents: dict[str, bytes] = {
+        path.relative_to(source_dir).as_posix(): path.read_bytes()
         for path in source_dir.rglob("*")
         if path.is_file() and _packable(path.relative_to(source_dir))
-    )
-    if not files:
+    }
+    if not contents:
         raise ValueError(f"{source_dir} has nothing to pack")
+    for name, data in generated_files(source_dir).items():
+        contents.setdefault(name, data)
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
-        for name, path in files:
+        for name in sorted(contents):
             info = zipfile.ZipInfo(filename=name, date_time=ZIP_TIMESTAMP)
             info.compress_type = zipfile.ZIP_DEFLATED
             info.create_system = 3  # Unix, whatever host packs it
             info.external_attr = 0o100644 << 16
-            archive.writestr(info, path.read_bytes(), compresslevel=9)
+            archive.writestr(info, contents[name], compresslevel=9)
     return buffer.getvalue()
+
+
+DEFAULT_RULES_PATH: Final = "rules/defaults.json"
+"""The static ruleset with the default search words (D-202)."""
+
+SEARCHED_TYPES: Final = ("main_frame", "sub_frame", "xmlhttprequest", "script")
+"""As background.js's SEARCHED_TYPES: pages, frames and suggestion requests."""
+
+LAUNCHER_ALLOW: Final = r"^http://127\.0\.0\.1:(?:7879|78[89][0-9]|79[0-6][0-9]|797[0-8])/"
+"""Every child's launcher (7879-7978, D-188) and nothing else: not the offline
+Wikipedia on 7877, whose searches the rules must still see. A blocked site's
+address, carried to the launcher's block page, may hold a listed word."""
+
+
+def generated_files(source_dir: Path) -> dict[str, bytes]:
+    """What the manifest declares and the package cannot ship ready-made.
+
+    The default search words as a static DNR ruleset, so they hold from the
+    first page the browser opens. The same words also arrive as dynamic rules
+    from the launcher, with the parent's own; those take a few seconds after
+    the browser starts, and on the VM the first search of a fresh browser went
+    through in that gap (D-202).
+    """
+    try:
+        manifest = json.loads((Path(source_dir) / "manifest.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    dnr = manifest.get("declarative_net_request") if isinstance(manifest, dict) else None
+    resources = dnr.get("rule_resources", []) if isinstance(dnr, dict) else []
+    paths = {r.get("path") for r in resources if isinstance(r, dict)}
+    if DEFAULT_RULES_PATH not in paths:
+        return {}
+    return {DEFAULT_RULES_PATH: default_rules_json()}
+
+
+def default_rules_json() -> bytes:
+    from biokids_core import search_filter
+
+    patterns = search_filter.build_patterns(search_filter.default_terms())
+    rules: list[dict[str, object]] = [
+        {
+            "id": 1,
+            "priority": 2,
+            "action": {"type": "allow"},
+            "condition": {"regexFilter": LAUNCHER_ALLOW, "resourceTypes": list(SEARCHED_TYPES)},
+        }
+    ]
+    rules += [
+        {
+            "id": number,
+            "priority": 1,
+            "action": {"type": "block"},
+            "condition": {
+                "regexFilter": pattern,
+                "isUrlFilterCaseSensitive": False,
+                "resourceTypes": list(SEARCHED_TYPES),
+            },
+        }
+        for number, pattern in enumerate(patterns, start=2)
+    ]
+    text = json.dumps(rules, ensure_ascii=False, indent=1, sort_keys=True)
+    return (text + "\n").encode("utf-8")
 
 
 def _packable(relative: Path) -> bool:
