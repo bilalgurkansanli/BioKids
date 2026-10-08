@@ -1,0 +1,2 @@
+# The hidden boot menu (D-200), linked into /etc/default/grub.d by the postinst.
+debian/grub/biokids.cfg usr/share/biokids/grub/

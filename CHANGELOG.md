@@ -36,6 +36,8 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
   shipped by BioKids. Sio speaks it as it is and Zio a little higher; the voice
   service picks it up at the next sentence. `biokids-admin voice-setup
   status|remove`. New config key `paths.piper_dir`; new daemon op `voice_setup`.
+- **No boot menu** (D-200): biokids-desktop hides GRUB's menu; Esc at start shows it,
+  and `apt remove` brings it back.
 - **The launcher's sound at the top right** (D-199): two big buttons and a level bar
   instead of the footer slider.
 - **The app bar** (D-197). Over every app the child opens, four big buttons at the top

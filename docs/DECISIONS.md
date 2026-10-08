@@ -1168,3 +1168,14 @@ thin slider is a grown-up's gesture. Brightness stays in the footer. "Tablo"
 (LibreOffice Calc) leaves the catalogue and biokids-desktop's Suggests: a spreadsheet
 is of no use to a child of four to ten; "Yazı" (Writer) stays.
 
+**D-200 [owner] No boot menu in front of a child.** (2026-10-08)
+The owner asked why Debian's GRUB menu appears at every start. biokids-desktop now
+hides it: `/usr/share/biokids/grub/biokids.cfg` (`GRUB_TIMEOUT_STYLE=hidden`,
+`GRUB_TIMEOUT=1`), linked into `/etc/default/grub.d/90-biokids.cfg` by the postinst,
+which runs `update-grub`; the postrm removes the link and runs it again, so
+`apt remove` brings the menu back. A link rather than a conffile, because a conffile
+would outlive `apt remove`. Not a lock (principle 4): Esc during that second shows the
+menu and its recovery mode, and after a failed boot Debian's own 30-second menu still
+appears. Only where `/boot/grub` and `update-grub` exist; another bootloader is left
+alone. biokids (the packages on a parent's existing desktop) does not touch the boot.
+

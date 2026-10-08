@@ -1,0 +1,35 @@
+#!/bin/sh
+# biokids-desktop postinst: hide the boot menu (D-200).
+#
+# A link, not a conffile: grub reads only /etc/default/grub.d, and a conffile
+# would stay behind after "apt remove". Esc at boot still shows the menu and its
+# recovery mode (principle 4). Never fatal: a machine without GRUB (another
+# bootloader, a container) simply keeps what it has.
+
+set -e
+
+LINK=/etc/default/grub.d/90-biokids.cfg
+
+case "$1" in
+    configure)
+        if [ -d /boot/grub ] && command -v update-grub >/dev/null 2>&1; then
+            mkdir -p /etc/default/grub.d
+            if [ ! -e "$LINK" ] || [ -L "$LINK" ]; then
+                ln -sf /usr/share/biokids/grub/biokids.cfg "$LINK"
+                update-grub >/dev/null 2>&1 || echo "biokids-desktop: update-grub failed; the boot menu is unchanged" >&2
+            fi
+        fi
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0
