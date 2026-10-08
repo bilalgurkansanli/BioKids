@@ -111,6 +111,12 @@ class SupervisorBase:
     _notifier: Notifier | None = None
     _notified_at: float | None = None
     _pruned_at: float | None = None
+    _assistant_checked_at: float | None = None
+    assistant_ready: dict[str, bool] = field(default_factory=dict)
+    """What the assistant service last said it can do: `chat` (a model is
+    downloaded) and `voice` (speech recognition too). Empty when it is not
+    installed or did not answer, and then the launcher shows no "Sor Bana"
+    tile: a tile that can only say "I'm resting" is a broken toy (D-198)."""
 
     @property
     def session(self) -> Session:

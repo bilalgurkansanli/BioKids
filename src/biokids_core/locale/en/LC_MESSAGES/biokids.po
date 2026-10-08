@@ -1052,13 +1052,13 @@ msgid "assistant.panel.models"
 msgstr "Models on this computer"
 
 msgid "assistant.panel.not_installed"
-msgstr "The assistant package (biokids-ai) is not installed or not running on this computer."
+msgstr "The assistant is not installed on this computer, so \"Ask Me\" does not appear on your child's screen. It needs at least 8 GB of memory; in a terminal: sudo apt install biokids-ai"
 
 msgid "assistant.panel.ready"
 msgstr "The assistant is ready."
 
 msgid "assistant.panel.need_download"
-msgstr "The assistant needs its models downloaded once."
+msgstr "The assistant needs its models downloaded once. Until it is done, \"Ask Me\" does not appear on your child's screen."
 
 msgid "assistant.panel.download"
 msgstr "Download the models"
@@ -1722,3 +1722,10 @@ msgstr "More detail: github.com/bilalgurkansanli/BioKids"
 # Phone access from the settings (D-195)
 msgid "remote.intro"
 msgstr "To open the panel on your phone, away from home too, we use the free Tailscale app. Tailscale makes a private, encrypted link between your phone and this computer that only you can use; nothing is opened to the internet. The four steps below take about five minutes."
+
+# The launcher's sound control, top right (D-199)
+msgid "shell.volume.down"
+msgstr "Turn the sound down"
+
+msgid "shell.volume.up"
+msgstr "Turn the sound up"

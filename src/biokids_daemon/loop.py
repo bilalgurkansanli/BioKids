@@ -54,6 +54,8 @@ async def run_forever(supervisor: Supervisor, stop_event: asyncio.Event) -> None
                 await asyncio.wait_for(supervisor.notify_parent(now_boot), timeout=limit)
             with contextlib.suppress(TimeoutError):
                 await asyncio.wait_for(supervisor.housekeeping(now_boot), timeout=limit)
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(supervisor.refresh_assistant(now_boot), timeout=limit)
             # Only a tick that finished pings the watchdog; WatchdogSec= in
             # the unit kills a daemon whose ticks stopped finishing.
             notify.watchdog()

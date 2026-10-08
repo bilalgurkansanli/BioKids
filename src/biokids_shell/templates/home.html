@@ -14,6 +14,15 @@
       <span class="clock" id="clock" aria-hidden="true"></span>
     {% endif %}
 
+    {# The sound, top right where a child looks for it (D-199): two big
+       buttons and a bar, because a four-year-old cannot drag a slider. #}
+    {% set level = volume|default(70) %}
+    <div class="vol" id="vol" data-level="{{ level }}" role="group" aria-label="{{ _('shell.volume') }}">
+      <button class="vol__btn" type="button" data-step="-10" aria-label="{{ _('shell.volume.down') }}">🔉</button>
+      <span class="vol__bar" aria-hidden="true"><span class="vol__fill" id="vol-fill" style="width: {{ level }}%"></span></span>
+      <button class="vol__btn" type="button" data-step="10" aria-label="{{ _('shell.volume.up') }}">🔊</button>
+    </div>
+
     {% if state.supervision_indicator != 'hidden' %}
       <span class="badge-zio" id="supervision" title="{{ _('shell.supervision.badge') }}">
         <span aria-hidden="true">👀</span>
@@ -80,12 +89,6 @@
   </main>
 
   <footer class="foot">
-    <label class="slider">
-      <span aria-hidden="true">🔊</span>
-      <span class="visually-hidden">{{ _('shell.volume') }}</span>
-      <input type="range" id="volume" min="0" max="100" step="5" value="{{ volume|default(70) }}">
-    </label>
-
     <label class="slider">
       <span aria-hidden="true">☀️</span>
       <span class="visually-hidden">{{ _('shell.brightness') }}</span>

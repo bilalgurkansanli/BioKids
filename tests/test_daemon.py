@@ -1717,7 +1717,22 @@ async def test_the_launcher_is_told_whether_to_show_the_assistant(
 
     set_quota(session, 1, 60, assistant_enabled=True, assistant_voice=True)
     supervisor.reload()
+    supervisor.assistant_ready = {"chat": True, "voice": True}
     assert supervisor.shell_state(1)["assistant"] == {"enabled": True, "voice": True}
+
+
+async def test_no_tile_for_an_assistant_that_cannot_answer(
+    supervisor: Supervisor, session: Session, config: Config
+) -> None:
+    """D-198: on, but biokids-ai not installed or no model yet - no "Sor Bana"."""
+    set_quota(session, 1, 60, assistant_enabled=True, assistant_voice=True)
+    await supervisor.start()
+    await supervisor.refresh_assistant(0.0)
+    assert supervisor.assistant_ready == {}, "no socket: nothing installed"
+    assert supervisor.shell_state(1)["assistant"] == {"enabled": False, "voice": False}
+
+    supervisor.assistant_ready = {"chat": True, "voice": False}
+    assert supervisor.shell_state(1)["assistant"] == {"enabled": True, "voice": False}
 
 
 async def test_the_microphone_is_never_on_without_the_assistant(

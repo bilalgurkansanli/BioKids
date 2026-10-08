@@ -27,6 +27,7 @@ import contextlib
 import datetime as dt
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from biokids_core import repo, retention
@@ -89,6 +90,8 @@ __all__ = [
 
 log = logging.getLogger(__name__)
 
+ASSISTANT_CHECK_SECONDS = 300
+"""How often the assistant service is asked whether it is ready (D-198)."""
 PRUNE_EVERY_SECONDS = 24 * 3600
 PRUNE_FIRST_AFTER_SECONDS = 300
 
@@ -486,6 +489,29 @@ class Supervisor(
             log.exception("old records could not be deleted; trying again tomorrow")
             with contextlib.suppress(Exception):
                 self.session.rollback()
+
+    async def refresh_assistant(self, now_boot: float) -> None:
+        """Ask the assistant service what it can do, every few minutes (D-198).
+
+        Its socket exists only where biokids-ai is installed; without it there
+        is nothing to ask. The answer decides whether the launcher shows the
+        "Sor Bana" tile at all.
+        """
+        checked = self._assistant_checked_at
+        if checked is not None and now_boot - checked < ASSISTANT_CHECK_SECONDS:
+            return
+        self._assistant_checked_at = now_boot
+        from biokids_daemon.assistant import AI_SOCKET_NAME, AssistantGate
+
+        if not (Path(self.config.paths.ai_run_dir) / AI_SOCKET_NAME).exists():
+            self.assistant_ready = {}
+            return
+        status = await AssistantGate(self, self.bus, self.config).status()
+        self.assistant_ready = (
+            {"chat": bool(status.get("ready")), "voice": bool(status.get("voice"))}
+            if status.get("running")
+            else {}
+        )
 
     async def notify_parent(self, now_boot: float) -> None:
         """Mail what the parent should know, once a minute (D-177). Never raises:

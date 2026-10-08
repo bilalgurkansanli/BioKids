@@ -1052,13 +1052,13 @@ msgid "assistant.panel.models"
 msgstr "Bu bilgisayardaki modeller"
 
 msgid "assistant.panel.not_installed"
-msgstr "Asistan paketi (biokids-ai) bu bilgisayarda kurulu değil ya da çalışmıyor."
+msgstr "Asistan bu bilgisayarda kurulu değil, bu yüzden \"Sor Bana\" çocuğunuzun ekranında görünmüyor. Kurmak için en az 8 GB bellek gerekir; bir uçbirimde: sudo apt install biokids-ai"
 
 msgid "assistant.panel.ready"
 msgstr "Asistan hazır."
 
 msgid "assistant.panel.need_download"
-msgstr "Asistanın çalışması için modellerin bir kez indirilmesi gerekiyor."
+msgstr "Asistanın çalışması için modellerin bir kez indirilmesi gerekiyor. İndirme bitene kadar \"Sor Bana\" çocuğunuzun ekranında görünmez."
 
 msgid "assistant.panel.download"
 msgstr "Modelleri indir"
@@ -1722,3 +1722,10 @@ msgstr "Daha ayrıntılı bilgi: github.com/bilalgurkansanli/BioKids"
 # Phone access from the settings (D-195)
 msgid "remote.intro"
 msgstr "Paneli evin dışından, telefonunuzdan da açabilmek için ücretsiz Tailscale uygulamasını kullanıyoruz. Tailscale, telefonunuzla bu bilgisayar arasında yalnızca sizin kullanabildiğiniz şifreli bir bağlantı kurar; internete hiçbir kapı açılmaz. Aşağıdaki dört adım yaklaşık beş dakika sürer."
+
+# The launcher's sound control, top right (D-199)
+msgid "shell.volume.down"
+msgstr "Sesi kıs"
+
+msgid "shell.volume.up"
+msgstr "Sesi aç"

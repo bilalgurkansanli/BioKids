@@ -151,20 +151,6 @@ description_tr = "Ödev ve hikâye yazmak için."
 description_en = "For homework and stories."
 
 [[app]]
-slug = "libreoffice-calc"
-name_tr = "Tablo"
-name_en = "Calc"
-exec = ["libreoffice", "--calc"]
-package = "libreoffice-calc"
-kind = "app"
-icon = "table"
-default_category = "learning"
-min_age = 9
-max_age = 10
-description_tr = "Hesap tablosu."
-description_en = "A spreadsheet."
-
-[[app]]
 slug = "files"
 name_tr = "Dosyalarım"
 name_en = "My files"

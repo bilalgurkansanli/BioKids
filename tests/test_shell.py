@@ -1218,3 +1218,20 @@ def test_a_kiosk_that_already_fits_is_left_alone() -> None:
 
     asyncio.run(kiosk.keep_fullscreen(stop, fake))
     assert not any(call[0] == "windowsize" for call in ran)
+
+
+def test_the_sound_is_two_buttons_at_the_top_right(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-199: not a slider in the footer - a four-year-old taps, and looks up."""
+    from biokids_shell import device
+
+    async def level() -> int:
+        return 40
+
+    monkeypatch.setattr(device, "get_volume", level)
+    page = client.get("/").text
+    header = page[page.index('<header class="head">') : page.index("</header>")]
+    assert 'id="vol" data-level="40"' in header
+    assert 'data-step="-10"' in header and 'data-step="10"' in header
+    assert 'id="volume"' not in page, "the old footer slider is gone"

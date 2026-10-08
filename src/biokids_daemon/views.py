@@ -153,10 +153,19 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
             # not tell every child the computer is about to shut down.
             "end_action": policy.end_action.value if policy else "",
             # Whether to show the assistant's tile and its microphone button
-            # (D-165, D-166). The daemon re-checks both on every question.
+            # (D-165, D-166): switched on for this child *and* able to answer -
+            # installed, with a model downloaded (D-198). The daemon re-checks
+            # both on every question.
             "assistant": {
-                "enabled": bool(policy and policy.assistant_enabled),
-                "voice": bool(policy and policy.assistant_enabled and policy.assistant_voice),
+                "enabled": bool(
+                    policy and policy.assistant_enabled and self.assistant_ready.get("chat")
+                ),
+                "voice": bool(
+                    policy
+                    and policy.assistant_enabled
+                    and policy.assistant_voice
+                    and self.assistant_ready.get("voice")
+                ),
             },
             "countdown_seconds": self._countdown_remaining(
                 runtime, day, reading.boot, reading.boot_id

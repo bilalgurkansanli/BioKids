@@ -459,10 +459,17 @@
 
   /* --------------------------------------------------------- volume/light */
 
-  var volume = document.getElementById("volume");
-  if (volume) {
-    volume.addEventListener("input", function () {
-      fetch("/device/volume?value=" + volume.value, { method: "POST" }).catch(function () {});
+  var vol = document.getElementById("vol");
+  if (vol) {
+    var fill = document.getElementById("vol-fill");
+    vol.addEventListener("click", function (event) {
+      var button = event.target.closest("[data-step]");
+      if (!button) return;
+      var level = Number(vol.getAttribute("data-level")) || 0;
+      level = Math.max(0, Math.min(100, level + Number(button.getAttribute("data-step"))));
+      vol.setAttribute("data-level", String(level));
+      if (fill) fill.style.width = level + "%";
+      fetch("/device/volume?value=" + level, { method: "POST" }).catch(function () {});
     });
   }
 

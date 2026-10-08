@@ -766,3 +766,44 @@ svg {
 
 .ring-wrap[data-tone="warn"] .ring__sun { fill: #ff9f3d; }
 .ring-wrap[data-tone="danger"] .ring__sun { fill: #ff6b3d; }
+
+/* The sound, top right (D-199). Buttons, not a slider: a four-year-old taps. */
+.vol {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1);
+  border: 2px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+}
+
+.vol__btn {
+  width: var(--target-young);
+  height: var(--target-young);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.vol__btn:active { background: var(--line); }
+
+.vol__bar {
+  display: block;
+  width: 6rem;
+  height: 14px;
+  border-radius: var(--r-pill);
+  background: var(--line);
+  overflow: hidden;
+}
+
+.vol__fill {
+  display: block;
+  height: 100%;
+  background: var(--bio-indigo);
+  transition: width .15s;
+}
+
