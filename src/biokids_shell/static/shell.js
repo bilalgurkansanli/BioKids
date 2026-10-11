@@ -77,13 +77,31 @@
   /* A tap on an app opens it from here, with no screen in between: the tile
    * shows it is opening - a ring that breathes and "Açılıyor…" - and the rest
    * of the screen stays as it was. That ends when the app's window takes the
-   * focus from the launcher, when the launcher says no (the calm screen, as
-   * before), or after OPENING_MS, whichever comes first. A second tap on a
-   * tile that is opening does nothing. The links stay links: without this
-   * script they lead to the launching screen, which works without it too. */
+   * focus from the launcher, when the launcher says no or the app ends as it
+   * starts (the calm screen, as before), or after OPENING_MS, whichever comes
+   * first. A second tap on a tile that is opening does nothing. The links stay
+   * links: without this script they lead to the launching screen, which works
+   * without it too. */
   var OPENING_MS = 25000;
+  /* The launcher says yes as soon as the app is running, a moment before an
+   * app that cannot start has failed. It watches the app for the rest of
+   * SCOPE_REFUSAL_TIMEOUT_S (1.5 s) and forgets one that ended with an error;
+   * this long after the yes, /running says whether a tracked app is still
+   * there. */
+  var STILL_THERE_MS = 2000;
   var opening = Object.create(null); /* slug -> what is shown for it, and its timer */
   var tileGrid = document.querySelector(".tiles");
+
+  /* The app tiles whose app is running (D-201), or null when that is not known. */
+  var askRunning = function () {
+    return fetch("/running", { cache: "no-store", credentials: "same-origin" })
+      .then(function (response) {
+        return response.ok ? response.json() : null;
+      })
+      .then(function (data) {
+        return data && Array.isArray(data.running) ? data.running.map(String) : null;
+      });
+  };
 
   var launchTarget = function (node) {
     var link = node && node.closest ? node.closest('a[href^="/launch/"]') : null;
@@ -153,13 +171,36 @@
     });
   };
 
+  /* The calm screen, for a tap whose ring is still on its tile: not once the
+   * 25 seconds have run out or an app's window has taken the focus, and not
+   * over the ring of a later tap. The child has left those taps behind, and a
+   * screen about one of them would be about nothing they can see. */
   var refused = function (slug, entry, reason) {
+    var live = opening[slug] === entry && !entry.superseded;
     endOpening(slug, entry);
-    if (entry.superseded) return;
+    if (!live) return;
     window.location.href = reason === null
       ? "/blocked"
       : "/blocked?reason=" + encodeURIComponent(reason || "") +
         "&slug=" + encodeURIComponent(slug);
+  };
+
+  /* A tracked app no longer running this soon after the yes ended as it
+   * started: nothing is going to open, and the child is told so - the calm
+   * screen, as when the launcher said no - rather than left watching a ring
+   * breathe over nothing for 25 seconds, and again at every tap. Nothing when
+   * /running does not answer: the ring stays until its usual end. */
+  var checkStillThere = function (slug, entry) {
+    window.setTimeout(function () {
+      if (opening[slug] !== entry) return;
+      askRunning()
+        .then(function (running) {
+          if (running && running.indexOf(slug) === -1) {
+            refused(slug, entry, "error.unknown");
+          }
+        })
+        .catch(function () {});
+    }, STILL_THERE_MS);
   };
 
   var openApp = function (slug, link) {
@@ -179,9 +220,12 @@
           window.location.href = "/shutdown";
         } else if (result.builtin) {
           endOpening(slug, entry);
+        } else if (result.tracked) {
+          checkStillThere(slug, entry);
         }
         /* Otherwise the app is starting, or was brought back: the ring stays
-         * until its window is in front. */
+         * until its window is in front - or, for an app tile's app, until
+         * /running says it is gone. */
       })
       .catch(function () {
         refused(slug, entry, null);
@@ -215,6 +259,11 @@
   var launchSlug = document.getElementById("launch-slug");
   var launched = false;
   if (launchSlug) {
+    /* "… açılıyor" is true only where this script posts for the child; without
+     * it the screen is the icon, the name and an "Aç" button, which a child
+     * who cannot read yet understands without a sentence above it. */
+    var launchStatus = document.getElementById("launch-status");
+    if (launchStatus) launchStatus.hidden = false;
     /* Whenever the launcher is back in front - the child closed the app with
      * its big X - and the loading screen is still showing, it is stale. */
     var backHome = function () {
@@ -754,12 +803,9 @@
     };
 
     var refreshOpen = function () {
-      fetch("/running", { cache: "no-store", credentials: "same-origin" })
-        .then(function (response) {
-          return response.ok ? response.json() : null;
-        })
-        .then(function (data) {
-          if (data && Array.isArray(data.running)) paintOpen(data.running.map(String));
+      askRunning()
+        .then(function (running) {
+          if (running) paintOpen(running);
         })
         .catch(function () {});
     };

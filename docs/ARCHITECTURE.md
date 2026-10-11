@@ -434,12 +434,19 @@ an app will not close, to stop it; the launcher uses it to show an open app's wi
 again when its tile is tapped. The running bar is asked over its own socket,
 `$XDG_RUNTIME_DIR/biokids-appbar.sock` (mode 0600, one line each way, answered on the
 bar's GTK main loop, D-208); only where no bar is running does the launcher run the
-bar's code once as a helper, `--bring-back <unit>`. Taps on one tile are taken one at
-a time, and an app whose scope is running is never started a second time because the
-bar could not look; only a scope systemd says has ended, or one with no window 30 s
-after it started, is replaced. A launch is answered once `/proc/<pid>/exe` shows that
+bar's code once as a helper, `--bring-back <unit>`. The request carries the
+launcher's `time.monotonic_ns()` (CLOCK_MONOTONIC, one clock for the whole machine),
+and the bar does not act on one more than 10 s old by that stamp - also when it was
+frozen and read the line late. Taps on one tile are taken one at a time, and an app
+whose scope is running is never started a second time because the bar could not
+look; only a scope systemd says has ended, or one with no window 30 s after it
+started, is replaced. A launch is answered once `/proc/<pid>/exe` shows that
 `systemd-run` has become the app (the 1.5 s refusal wait is only the upper bound), and
-the activity report to the daemon goes after the answer.
+the activity report to the daemon goes after the answer. The app is still watched
+until those 1.5 s are over: one that exits with an error by then is forgotten at once,
+so `/running` stops listing it, and the page - told by the answer's `tracked` that it
+can follow the app - asks `/running` two seconds after the answer and gives a tile
+whose app is gone the calm Blocked screen instead of 25 seconds of "Açılıyor…".
 
 ---
 

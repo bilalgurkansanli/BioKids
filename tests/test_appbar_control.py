@@ -4,9 +4,10 @@ A second tap on an open app's tile used to start `python3 -m biokids_shell.appba
 --bring-back`, which loaded GTK from nothing each time: 1.5 s on the owner's VM,
 and on a busy one a timeout the launcher took for "not running". The bar
 already has libwnck loaded, so it answers on a socket of its own. These pin the
-protocol - one line in, the helper's exit code out, nothing but this child's own
-app scopes ever named - the bar's side without GTK (the work is handed to a
-stand-in for the main loop), and the launcher's side against a stand-in
+protocol - one line in, stamped with when it was sent so that a bar that read it
+late does not act on an old tap, the helper's exit code out, nothing but this
+child's own app scopes ever named - the bar's side without GTK (the work is
+handed to a stand-in for the main loop), and the launcher's side against a stand-in
 connection, so all of it runs on the Windows host too. A real socket is used on
 Linux only.
 """
@@ -18,6 +19,7 @@ import socket
 import stat
 import sys
 import threading
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -38,11 +40,14 @@ linux_only = pytest.mark.skipif(
 # ------------------------------------------------------------------ the lines
 
 
-def test_a_request_names_an_apps_scope() -> None:
-    assert control.request_line("biokids-app-frozen-bubble-3") == (
-        b"bring-back biokids-app-frozen-bubble-3.scope\n"
+def test_a_request_names_an_apps_scope_and_when_it_was_sent() -> None:
+    assert control.request_line("biokids-app-frozen-bubble-3", sent_ns=81234567890123) == (
+        b"bring-back biokids-app-frozen-bubble-3.scope 81234567890123\n"
     )
-    assert control.request_line(GAME) == f"bring-back {GAME}\n".encode()
+    before = time.monotonic_ns()
+    verb, scope, stamp = control.request_line(GAME).decode().rstrip("\n").split(" ")
+    assert (verb, scope) == ("bring-back", GAME)
+    assert before <= int(stamp) <= time.monotonic_ns(), "stamped with CLOCK_MONOTONIC, now"
 
 
 @pytest.mark.parametrize(
@@ -53,9 +58,14 @@ def test_nothing_but_an_app_can_be_asked_for(unit: str) -> None:
         control.request_line(unit)
 
 
-def test_the_bar_reads_the_scope_from_a_request() -> None:
-    assert control.parse_request(f"bring-back {GAME}".encode()) == GAME
-    assert control.parse_request(b"bring-back biokids-app-frozen-bubble-3\r") == GAME
+def test_the_bar_reads_the_scope_and_the_stamp_from_a_request() -> None:
+    assert control.parse_request(f"bring-back {GAME} 81234567890123".encode()) == (
+        control.Request(GAME, 81234567890123)
+    )
+    assert control.parse_request(control.request_line(GAME, sent_ns=7)) == (GAME, 7)
+    # Without a stamp, as old as when it is read.
+    assert control.parse_request(f"bring-back {GAME}".encode()) == (GAME, None)
+    assert control.parse_request(b"bring-back biokids-app-frozen-bubble-3\r") == (GAME, None)
 
 
 @pytest.mark.parametrize(
@@ -67,6 +77,12 @@ def test_the_bar_reads_the_scope_from_a_request() -> None:
         b"stop biokids-app-frozen-bubble-3.scope",
         b"bring-back  biokids-app-frozen-bubble-3.scope",
         b"bring-back biokids-app-frozen-bubble-3.scope extra",
+        b"bring-back biokids-app-frozen-bubble-3.scope -5",
+        b"bring-back biokids-app-frozen-bubble-3.scope 12a",
+        b"bring-back biokids-app-frozen-bubble-3.scope 1 2",
+        b"bring-back biokids-app-frozen-bubble-3.scope ",
+        b"bring-back biokids-app-frozen-bubble-3.scope " + b"9" * 21,
+        b"bring-back 81234567890123 biokids-app-frozen-bubble-3.scope",
         b"bring-back biokids-app-../../x.scope",
         "bring-back biokids-app-çizim-1.scope".encode(),
         b"bring-back biokids-app-" + b"a" * 300 + b".scope",
@@ -182,23 +198,74 @@ def test_a_main_loop_that_does_not_get_to_it_is_could_not_look(
     assert windows.asked == [GAME]
 
 
-def test_a_request_the_main_loop_reaches_much_later_is_dropped() -> None:
-    now = [100.0]
+def _answered_after(
+    line: bytes, *, read_at: float, main_loop_after: float
+) -> tuple[bytes, _Windows]:
+    """The bar's answer to `line`, read at `read_at` on its clock, when its main
+    loop gets to the request `main_loop_after` seconds later."""
+    now = [read_at]
     windows = _Windows(0)
     loop = _MainLoop(runs=False)
     server = _server(windows, loop, clock=lambda: now[0])
     seen: list[bytes] = []
-    thread = threading.Thread(
-        target=lambda: seen.append(server.answer(f"bring-back {GAME}".encode(), UID))
-    )
+    thread = threading.Thread(target=lambda: seen.append(server.answer(line, UID)))
     thread.start()
-    while not loop.waiting:
+    while not loop.waiting and thread.is_alive():
         thread.join(0.01)
-    now[0] += control.STALE_AFTER_S + 1
-    loop.waiting[0]()
+    now[0] += main_loop_after
+    if loop.waiting:
+        loop.waiting[0]()
     thread.join(5)
-    assert seen == [f"{EXIT_UNAVAILABLE}\n".encode()]
+    return seen[0], windows
+
+
+def _stamped(seconds: float) -> bytes:
+    """A request the launcher sent at `seconds` on the shared monotonic clock."""
+    return control.request_line(GAME, sent_ns=int(seconds * 1e9)).rstrip(b"\n")
+
+
+def test_a_request_the_main_loop_reaches_much_later_is_dropped() -> None:
+    answer, windows = _answered_after(
+        f"bring-back {GAME}".encode(), read_at=100.0, main_loop_after=control.STALE_AFTER_S + 1
+    )
+    assert answer == f"{EXIT_UNAVAILABLE}\n".encode()
     assert windows.asked == [], "a window jumped to the front long after the tap"
+
+
+def test_a_request_that_waited_for_a_frozen_bar_is_as_old_as_the_tap() -> None:
+    """The bar was stopped with the request in its socket's queue. Thawed, it
+    read the line and its main loop got to it soon after - but counted from
+    the read, a window jumped to the front long after the child tapped. It is
+    counted from the launcher's stamp."""
+    stale = control.STALE_AFTER_S + 1
+    answer, windows = _answered_after(
+        _stamped(1000.0 - stale), read_at=1000.0, main_loop_after=0
+    )
+    assert answer == f"{EXIT_UNAVAILABLE}\n".encode()
+    assert windows.asked == []
+
+    # Old at the read already, or only by the time the main loop looks.
+    half = control.STALE_AFTER_S / 2 + 1
+    answer, windows = _answered_after(
+        _stamped(1000.0 - half), read_at=1000.0, main_loop_after=half
+    )
+    assert answer == f"{EXIT_UNAVAILABLE}\n".encode()
+    assert windows.asked == []
+
+
+def test_a_request_sent_a_moment_ago_is_acted_on() -> None:
+    answer, windows = _answered_after(_stamped(998.0), read_at=1000.0, main_loop_after=1.0)
+    assert answer == b"0\n"
+    assert windows.asked == [GAME]
+
+
+def test_a_stamp_from_the_future_does_not_keep_a_request_fresh() -> None:
+    """No later than the read: a stamp an hour ahead is not an hour of grace."""
+    answer, windows = _answered_after(
+        _stamped(1000.0 + 3600), read_at=1000.0, main_loop_after=control.STALE_AFTER_S + 1
+    )
+    assert answer == f"{EXIT_UNAVAILABLE}\n".encode()
+    assert windows.asked == []
 
 
 def test_the_work_is_done_on_the_main_loop_not_the_sockets_thread() -> None:
@@ -293,6 +360,7 @@ def _opener(reader: _Reader, writer: _Writer, opened: list[str]) -> Any:
 
 async def test_the_launcher_asks_one_line_and_reads_one(tmp_path: Path) -> None:
     writer, opened = _Writer(), []
+    before = time.monotonic_ns()
     answer = await control.ask_bar(
         tmp_path / "bar.sock",
         "biokids-app-frozen-bubble-3",
@@ -301,7 +369,10 @@ async def test_the_launcher_asks_one_line_and_reads_one(tmp_path: Path) -> None:
     )
     assert answer == 0
     assert opened == [str(tmp_path / "bar.sock")]
-    assert writer.sent == f"bring-back {GAME}\n".encode()
+    assert writer.sent.endswith(b"\n") and writer.sent.count(b"\n") == 1
+    request = control.parse_request(writer.sent.rstrip(b"\n"))
+    assert request is not None and request.scope == GAME
+    assert request.sent_ns is not None and before <= request.sent_ns <= time.monotonic_ns()
     assert writer.closed
 
 

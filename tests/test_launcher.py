@@ -7,13 +7,16 @@ on one tile are taken one at a time; an app whose scope is running is not
 started again because the app bar could not look in time; "still opening"
 counts from the start of the copy being asked about; the running bar is asked
 before a helper is run; and a launch is answered when systemd-run is seen to
-have become the app, not a second and a half later. The page's half is in
-test_shell.py, the bar's socket in test_appbar_control.py.
+have become the app, not a second and a half later - while an app that fails
+in that second and a half is still noticed, and forgotten at once so that the
+page sees it gone. The page's half is in test_shell.py, the bar's socket in
+test_appbar_control.py.
 """
 
 from __future__ import annotations
 
 import asyncio
+import logging
 import shutil
 import sys
 from pathlib import Path
@@ -302,13 +305,22 @@ async def test_a_busy_bar_is_could_not_look_not_a_helper(
 
 
 async def test_without_a_bar_the_helper_is_run(
-    config: Config, monkeypatch: pytest.MonkeyPatch, helper: list[list[str]]
+    config: Config,
+    monkeypatch: pytest.MonkeyPatch,
+    helper: list[list[str]],
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     monkeypatch.setattr(control, "ask_bar", _Bar(control.BarNotRunning))
-    assert await AppLauncher(config).bring_back("biokids-app-palapeli-3") == EXIT_NOT_FOUND
+    with caplog.at_level(logging.INFO, logger=launcher_module.__name__):
+        assert await AppLauncher(config).bring_back("biokids-app-palapeli-3") == EXIT_NOT_FOUND
     assert helper == [
         [sys.executable, "-m", "biokids_shell.appbar", "--bring-back", "biokids-app-palapeli-3"]
     ]
+    # In the journal at the shell's usual level: VM-RUNBOOK §8.10 reads it there.
+    assert any(
+        record.levelno == logging.INFO and "no app bar to ask" in record.getMessage()
+        for record in caplog.records
+    )
 
 
 async def test_nothing_but_an_app_is_asked_for(
@@ -425,6 +437,118 @@ async def test_where_the_exec_cannot_be_seen_the_whole_wait_it_is(
 
     assert result.ok
     assert loop.time() - began >= 0.29
+
+
+# ------------------------------------------- an app that ends as it starts
+
+
+class _EndsBySelf:
+    """systemd-run that has become the app, which ends by itself `after` seconds
+    after it was started - however often, and from whenever, it is waited for."""
+
+    def __init__(self, code: int, after: float) -> None:
+        self.pid = 4242
+        self.returncode: int | None = None
+        self.code = code
+        self.ends_at = asyncio.get_running_loop().time() + after
+        self.stderr = _Says(b"palapeli: error while loading shared libraries")
+
+    async def wait(self) -> int:
+        await asyncio.sleep(max(0.0, self.ends_at - asyncio.get_running_loop().time()))
+        self.returncode = self.code
+        return self.code
+
+
+class _Says:
+    def __init__(self, text: bytes) -> None:
+        self.text = text
+
+    async def read(self) -> bytes:
+        return self.text
+
+
+async def _launched_then_watched(
+    config: Config, monkeypatch: pytest.MonkeyPatch, scope_start: Any, app: _EndsBySelf
+) -> AppLauncher:
+    """Launch it, check the tap was answered at the exec, then let the watch end."""
+    monkeypatch.setattr(launcher_module, "process_exe", _exe_after(1))
+    scope_start(app)
+    launcher = AppLauncher(config)
+    loop = asyncio.get_running_loop()
+    result = await asyncio.wait_for(launcher.launch(PUZZLE), timeout=5)
+    assert result.ok and result.tracked, "an app tile's app is followed by the page"
+    assert loop.time() < app.ends_at, "the tap was not answered at the exec"
+    assert launcher.running == {"palapeli": result.unit}
+    await asyncio.wait_for(asyncio.gather(*list(launcher._watches)), timeout=5)
+    return launcher
+
+
+async def test_an_app_that_fails_as_it_starts_is_forgotten_at_once(
+    config: Config,
+    monkeypatch: pytest.MonkeyPatch,
+    scope_start: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Answered at the exec, before a missing library had made it exit 1: the
+    tile said "Açılıyor…" for 25 seconds over nothing. Now /running drops it
+    as soon as it ends - also where systemd cannot be asked - which is what
+    the page asks two seconds after its answer."""
+    monkeypatch.setattr(launcher_module, "SCOPE_REFUSAL_TIMEOUT_S", 1.0)
+    with caplog.at_level(logging.DEBUG, logger=launcher_module.__name__):
+        launcher = await _launched_then_watched(
+            config, monkeypatch, scope_start, _EndsBySelf(code=1, after=0.4)
+        )
+
+    assert launcher.running == {} and launcher.started == {}
+
+    async def systemd_says_nothing(_units: Any) -> None:
+        return None
+
+    launcher.active_units = systemd_says_nothing  # type: ignore[method-assign]
+    assert await launcher.open_apps() == []
+    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    assert any("ended as it started, with exit status 1" in line for line in warnings)
+    assert any("error while loading shared libraries" in line for line in warnings)
+
+
+async def test_an_app_that_ends_cleanly_as_it_starts_is_left_to_systemd(
+    config: Config, monkeypatch: pytest.MonkeyPatch, scope_start: Any
+) -> None:
+    """Exit 0: a KDE app that handed the tap to a copy already running, or a
+    program that forked its window. Not a failure; systemd says what is open."""
+    monkeypatch.setattr(launcher_module, "SCOPE_REFUSAL_TIMEOUT_S", 1.0)
+    launcher = await _launched_then_watched(
+        config, monkeypatch, scope_start, _EndsBySelf(code=0, after=0.4)
+    )
+    assert launcher.running == {"palapeli": "biokids-app-palapeli-1"}
+
+
+async def test_an_app_is_watched_only_for_the_refusal_wait(
+    config: Config, monkeypatch: pytest.MonkeyPatch, scope_start: Any
+) -> None:
+    """After `SCOPE_REFUSAL_TIMEOUT_S` the watch lets go: an app that ends
+    later was played with, and systemd is what says it has closed."""
+    monkeypatch.setattr(launcher_module, "SCOPE_REFUSAL_TIMEOUT_S", 0.3)
+    app = _EndsBySelf(code=1, after=0.8)
+    launcher = await _launched_then_watched(config, monkeypatch, scope_start, app)
+    assert asyncio.get_running_loop().time() < app.ends_at, "the watch waited for the app"
+    assert launcher.running == {"palapeli": "biokids-app-palapeli-1"}
+    assert app.returncode is None
+
+
+async def test_what_the_page_follows(
+    config: Config, starts: _Starts, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An app tile's app, started or found open; never a web tile's window."""
+    monkeypatch.setattr(launcher_module, "prepare_browser_profile", lambda *_a: True)
+    launcher = AppLauncher(config)
+    site = LaunchRequest(slug="eba", name="EBA", kind="web", url="https://www.eba.gov.tr")
+
+    assert (await launcher.launch(PUZZLE)).tracked
+    assert not (await launcher.launch(site)).tracked
+    _Session(launcher, shown=0)
+    again = await launcher.launch(PUZZLE)
+    assert again.tracked and again.unit == "biokids-app-palapeli-1"
 
 
 def test_the_exec_is_systemd_run_becoming_something_else(

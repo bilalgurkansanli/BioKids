@@ -13,7 +13,14 @@ listens on a socket of its own, `$XDG_RUNTIME_DIR/biokids-appbar.sock`, mode
 0600 in a directory only the child can enter, and answers one line with one
 line:
 
-    bring-back biokids-app-palapeli-3\\n   ->   0\\n
+    bring-back biokids-app-palapeli-3.scope 81234567890123\\n   ->   0\\n
+
+The number is when the launcher asked, `time.monotonic_ns()`: CLOCK_MONOTONIC is
+one clock for every process on the machine, so the bar can tell how old the tap
+is however long the line waited to be read. A bar that was frozen reads it
+late, and a window jumping to the front long after the tap would be a surprise,
+not an answer (`STALE_AFTER_S`). A line without the number is as old as when it
+was read.
 
 The answer is the helper's exit code, so both ways read the same: 0 shown,
 `EXIT_NOT_FOUND` no window, `EXIT_BAD_UNIT` not an app of this child's,
@@ -44,7 +51,7 @@ import threading
 import time
 from collections.abc import Awaitable, Callable, Mapping
 from pathlib import Path
-from typing import Any, Final, cast
+from typing import Any, Final, NamedTuple, cast
 
 from biokids_shell.appbar import (
     EXIT_BAD_UNIT,
@@ -67,8 +74,11 @@ READ_TIMEOUT_S: Final = 1.0
 MAIN_LOOP_WAIT_S: Final = 4.0
 """How long the socket's thread waits for the main loop to have looked."""
 STALE_AFTER_S: Final = 10.0
-"""A request the main loop reaches later than this is not acted on: a window
-jumping to the front long after the tap would be a surprise, not an answer."""
+"""A request the main loop reaches later than this after it was sent is not
+acted on: a window jumping to the front long after the tap would be a
+surprise, not an answer."""
+MAX_STAMP_DIGITS: Final = 20
+"""`time.monotonic_ns()` as a decimal: an unsigned 64-bit number at most."""
 ANSWERS: Final = frozenset({0, EXIT_NOT_FOUND, EXIT_BAD_UNIT, EXIT_UNAVAILABLE})
 
 _AF_UNIX: int | None = getattr(socket, "AF_UNIX", None)
@@ -104,17 +114,28 @@ def socket_path(
 # ---------------------------------------------------------------- the lines
 
 
-def request_line(unit: str) -> bytes:
-    """What the launcher sends to bring `unit` back. Raises ValueError for
+class Request(NamedTuple):
+    """A request as the bar reads it."""
+
+    scope: str
+    sent_ns: int | None
+    """When the launcher sent it, `time.monotonic_ns()`; None from a line without it."""
+
+
+def request_line(unit: str, sent_ns: int | None = None) -> bytes:
+    """What the launcher sends to bring `unit` back, stamped with when it is
+    sent (now, unless `sent_ns` says otherwise). Raises ValueError for
     anything that is not a BioKids app's scope."""
     scope = scope_unit(unit.strip())
     if not is_app_scope(scope):
         raise ValueError(f"{unit!r} is not a BioKids app")
-    return f"{BRING_BACK} {scope}\n".encode("ascii")
+    stamp = time.monotonic_ns() if sent_ns is None else sent_ns
+    return f"{BRING_BACK} {scope} {stamp}\n".encode("ascii")
 
 
-def parse_request(line: bytes) -> str | None:
-    """The app scope a request names, or None for anything that is not one."""
+def parse_request(line: bytes) -> Request | None:
+    """The app scope a request names, and when it was sent if it says; None for
+    anything that is not a request."""
     if len(line) > MAX_LINE_BYTES:
         return None
     try:
@@ -122,10 +143,16 @@ def parse_request(line: bytes) -> str | None:
     except UnicodeDecodeError:
         return None
     parts = text.rstrip("\r\n").split(" ")
-    if len(parts) != 2 or parts[0] != BRING_BACK:
+    if len(parts) not in (2, 3) or parts[0] != BRING_BACK:
         return None
+    sent_ns: int | None = None
+    if len(parts) == 3:
+        stamp = parts[2]
+        if not (stamp.isdigit() and len(stamp) <= MAX_STAMP_DIGITS):
+            return None
+        sent_ns = int(stamp)
     scope = scope_unit(parts[1])
-    return scope if is_app_scope(scope) else None
+    return Request(scope, sent_ns) if is_app_scope(scope) else None
 
 
 def answer_line(code: int) -> bytes:
@@ -277,16 +304,30 @@ class ControlServer:
         if not self.from_this_child(peer):
             log.warning("a request from user %s was refused", peer)
             return answer_line(EXIT_BAD_UNIT)
-        scope = parse_request(line)
-        if scope is None:
+        read_at = self.clock()
+        request = parse_request(line)
+        if request is None:
             log.warning("a request that names no app was refused: %r", line[:60])
             return answer_line(EXIT_BAD_UNIT)
-        code = self.on_main_loop(lambda: self.bring_back(scope))
+        # The launcher's stamp, never later than now: a stamp from the future
+        # would keep a request fresh for ever.
+        sent = read_at if request.sent_ns is None else min(read_at, request.sent_ns / 1e9)
+        scope = request.scope
+        code = self.on_main_loop(lambda: self.bring_back(scope), sent=sent)
         return answer_line(EXIT_UNAVAILABLE if code is None else code)
 
-    def on_main_loop(self, work: Callable[[], int]) -> int | None:
-        """Run `work` on the main loop and wait for it; None if it did not run in time."""
-        received = self.clock()
+    def on_main_loop(self, work: Callable[[], int], *, sent: float | None = None) -> int | None:
+        """Run `work` on the main loop and wait for it; None if it did not run in time.
+
+        Not at all when the request is older than `STALE_AFTER_S` by the time
+        the main loop gets to it, counted from `sent` (this clock's seconds;
+        now when not given): a request that waited while the bar was frozen
+        is as old as the tap, not as the moment the bar read it.
+        """
+        received = self.clock() if sent is None else sent
+        if self.clock() - received > STALE_AFTER_S:
+            log.info("a bring-back was read too long after it was sent; not acted on")
+            return EXIT_UNAVAILABLE
         finished = threading.Event()
         result: list[int] = []
 
