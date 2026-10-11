@@ -1136,12 +1136,12 @@ journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep -i 'app
     Balonlar with 🏠 and their tiles, several times. **Pass:** over the web tile
     the whole bar at the screen's top right, over Balonlar the compact one at the
     game's top right, each the moment the app is in front — never the whole bar
-    over the game, not even for a moment, and never a bar standing off its corner
-    or with a gap after ✕. Drag Balonlar until half of it is off the screen's right
-    edge: the bar on what is left of its title bar - 🏠 and ✕ alone, as what is
-    left is under 520 pixels - all of it on the screen. A question an app asks in a
-    window narrower than that has only 🏠 and ✕ too. For each, the size the bar
-    picked:
+    over the game, not even for a moment, and never a bar standing off its corner,
+    with a gap after ✕, or with an empty gap between 🏠 and 🔉 where the minutes
+    go. Drag Balonlar until half of it is off the screen's right edge: the bar on
+    what is left of its title bar - 🏠 and ✕ alone, as what is left is under 520
+    pixels - all of it on the screen. A question an app asks in a window narrower
+    than that has only 🏠 and ✕ too. For each, the size the bar picked:
 
     ```bash
     as_elif systemctl --user set-environment BIOKIDS_LOG_LEVEL=debug
@@ -1155,12 +1155,18 @@ journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep -i 'app
     little wider than the bar - and open it, three times, closing it with ✕ in
     between. **Pass:** each time, within about two seconds of appearing, it fills
     the screen and stays so, with the whole bar in the screen's top right; it may
-    show at its own size for a moment first. Where it did, the journal says the bar
-    maximised it:
+    show at its own size for a moment first, but never with the bar on it. Where it
+    did, the journal says the bar maximised it, and where the app shrank it after
+    it had filled the screen, that the bar saw it do so:
 
     ```bash
-    journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep 'does not fill the screen'
+    journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep -E 'does not fill the screen|shrunk by its app'
     ```
+
+    A "does not fill the screen" about a second and a half after the window
+    appeared, with no "shrunk by its app" before it, is the bar's late look: the
+    window manager did not report the shrinking, and the bar sat on the small
+    window until then. Record it.
 
     The same with **Patates Kafa** (KTuberling) and **Haritalar** (KGeography),
     ticked the same way where they are not on her screen. Balonlar never gets that

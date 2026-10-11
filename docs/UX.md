@@ -222,7 +222,10 @@ sits on (D-205).
   brings the same window back, not a second copy.
 - **⏳ 12 dk** — the minutes left today, as the launcher's ring counts them; orange
   in the last five minutes, red in the last one. Under it, in the whole bar, the
-  clock, for every child (D-201).
+  clock, for every child (D-201). When the launcher cannot say the minutes - the
+  daemon restarting during an upgrade - they are not shown, and their box goes
+  where nothing else is left in it: the compact bar is then 🏠 🔉 🔊 ✕, with no gap
+  where the minutes were. The bar keeps its corner as it narrows and widens.
 - **🔉 / 🔊** turn this app's own sound down or up by a tenth, never the machine's,
   so Zio and Sio stay as loud as they were. In the whole bar the slider between them
   follows a finger dragged or tapped anywhere along the bar's height, with a knob as
@@ -237,9 +240,13 @@ sits on (D-205).
   a fixed size stays where it was put.
 - **A new window fills the screen** (D-205). Every app window is maximised as it
   opens (D-163); an app that then shrinks it back to the size it saved last time,
-  as KDE's apps do, is maximised again by the bar, in its first few seconds and at
-  most twice. The bar is not shown on the window until it has its size. After that
-  an app's own size is not fought, and nothing is maximised under a finger.
+  as KDE's apps do, is maximised again by the bar the moment the window is still,
+  in its first few seconds and at most twice. The bar is not shown on the window
+  until it has its size: the child may see the app fill the screen, shrink for a
+  moment and fill it again, never the bar on the small window in between. (Should
+  the window manager not report the shrinking, the bar looks again a second and a
+  half after the window appeared, and is on the small window until then.) After
+  that an app's own size is not fought, and nothing is maximised under a finger.
 - No words on the buttons; a screen reader hears "Ana ekran", "Sesi kıs", "Sesi
   aç", "Kapat", and the minutes left.
 

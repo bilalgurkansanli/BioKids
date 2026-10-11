@@ -428,6 +428,18 @@ def test_the_smallest_bar_keeps_the_way_home_and_the_way_out() -> None:
     assert not (minimal.volume or minimal.slider or minimal.clock or minimal.info_px)
 
 
+def test_the_box_of_the_minutes_is_shown_only_with_something_in_it() -> None:
+    """The daemon restarting during an upgrade: no minutes, and the compact bar
+    has no clock. An empty box there was a 92-pixel gap between 🏠 and 🔉."""
+    full, compact, minimal = BAR_TIERS[FULL], BAR_TIERS[COMPACT], BAR_TIERS[MINIMAL]
+    assert full.shows_info(minutes=True, clock=True)
+    assert full.shows_info(minutes=False, clock=True), "the clock alone"
+    assert not full.shows_info(minutes=False, clock=False), "the launcher did not answer"
+    assert compact.shows_info(minutes=True, clock=False)
+    assert not compact.shows_info(minutes=False, clock=True), "no clock in the compact bar"
+    assert not minimal.shows_info(minutes=True, clock=True), "no room for either"
+
+
 def test_a_compact_button_is_still_a_target_for_a_childs_finger() -> None:
     """UX.md section 2.4: 44 x 44 for 8-10, and never under 40. Its height is the
     title bar's, as the full bar's is, and its face sits as flush in it."""
@@ -899,6 +911,61 @@ def test_a_late_restore_is_caught_too_and_only_once() -> None:
     look(late, 100.0, maximized=True)
     assert not look(late, 100.0 + FILL_UNTIL_S)
     assert not late.due(9, 100.0 + FILL_UNTIL_S + 1)
+
+
+def test_an_app_seen_shrinking_its_new_window_has_it_looked_at_at_once() -> None:
+    """D-205: devilspie2 maximised Palapeli and Palapeli put back the size it had
+    saved. Seen doing it, the window is looked at again as soon as it is still -
+    not a second later, after the bar had been shown on the small window."""
+    filler = Filler()
+    assert not look(filler, 100.0, maximized=True), "devilspie2 got there first"
+    assert not filler.due(9, 100.7)
+    assert filler.shrunk(9, 100.7)
+    assert filler.due(9, 100.7) and filler.due(9, 101.0)
+    assert look(filler, 101.0)
+    # After that the window's size is the app's: never fought over.
+    assert not filler.shrunk(9, 101.5)
+    assert not filler.due(9, 101.5)
+    assert not look(filler, 100.0 + FILL_AGAIN_S)
+
+
+def test_a_window_seen_shrunk_twice_is_maximised_at_most_twice() -> None:
+    """The bar maximised the new window, the app shrank it, the bar maximised it
+    again: a third shrink is the app's to keep."""
+    filler = Filler()
+    assert look(filler, 100.0)
+    assert filler.shrunk(9, 100.5)
+    assert look(filler, 100.8)
+    assert not filler.shrunk(9, 101.2)
+    assert not look(filler, 101.5)
+
+
+def test_a_shrink_seen_under_a_finger_waits_for_it() -> None:
+    filler = Filler()
+    look(filler, 100.0, maximized=True)
+    assert filler.shrunk(9, 100.5)
+    assert not look(filler, 100.8, busy=True)
+    assert filler.due(9, 101.0), "due again as soon as the finger lets go"
+    assert look(filler, 101.0)
+    assert not filler.due(9, 102.0)
+
+
+def test_only_a_new_windows_shrinking_is_looked_at() -> None:
+    unseen = Filler()
+    assert not unseen.shrunk(9, 100.0), "not looked at yet: its first look comes anyway"
+    assert unseen.due(9, 100.0)
+    known = Filler()
+    known.known(9)
+    assert not known.shrunk(9, 100.0)
+    assert not known.due(9, 100.0), "open before the bar: left as it is"
+    old = Filler()
+    look(old, 100.0, maximized=True)
+    assert not old.shrunk(9, 100.0 + FILL_UNTIL_S)
+    assert not look(old, 100.0 + FILL_UNTIL_S), "its size is its app's by now"
+    question = Filler()
+    look(question, 100.0, normal=False)
+    assert not question.shrunk(9, 100.5)
+    assert not question.due(9, 100.5)
 
 
 def test_a_window_that_cannot_fill_the_screen_or_a_question_is_left_alone() -> None:
@@ -1612,6 +1679,73 @@ def test_the_bar_shows_the_minutes_left_and_the_clock(
     bar.shutdown()
 
 
+def test_the_compact_bar_keeps_no_empty_box_while_the_minutes_are_unknown(
+    fake_gtk: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The daemon restarting during an upgrade: the launcher says it is offline.
+    No minutes then, and the compact bar has no clock - so no box for them
+    either, not a 92-pixel gap between 🏠 and 🔉 - and the bar is placed by its
+    new width each time the box comes or goes."""
+    _measured(fake_gtk)
+    ui = fake_gtk.ui
+    kiosk = _Win(1, 7000, "biokids-kiosk")
+    game = _Win(2, 4242, "Frozen-bubble")  # 640 x 480 in the middle: the compact bar
+    browser = _filling(_Win(4, 6001, "Chromium"))
+    screen = _Screen(kiosk, game, browser)
+    answer: list[dict[str, Any]] = [{"offline": True}]
+    monkeypatch.setattr(ui, "read_audio", lambda target, scope_of: AudioState(True, 70))
+    monkeypatch.setattr(ui, "fetch_state", lambda _url: answer[0])
+    url = "http://127.0.0.1:7880/state"
+    bar = ui.AppBarUi(translator("tr"), screen, uid=UID, state_url=url)
+
+    def natural() -> tuple[Any, Any]:
+        """GTK's measure: the tier's width, less the box while it is hidden."""
+        layout = BAR_TIERS[bar.tier]
+        width = layout.width - (0 if bar._info_shown else layout.info_px)
+        size = mock.Mock(width=width, height=BUTTON_TARGET_PX)
+        return size, size
+
+    bar.window.get_preferred_size.side_effect = natural
+    compact = BAR_TIERS[COMPACT]
+    without_box = compact.width - compact.info_px
+
+    screen.active = game
+    screen.handlers["active-window-changed"](screen, kiosk)
+    assert bar.shown and bar.tier is BarTier.COMPACT
+    assert bar.origin == (640 + 640 - without_box, 300), "no box before the first answer"
+    _deliver(bar, fake_gtk.idle)
+    bar.time_label.set_text.assert_not_called()
+    bar.clock_label.set_visible.assert_called_with(False)
+    assert bar.info.set_visible.call_args_list == [mock.call(False)], "never an empty box"
+    assert bar.origin == (640 + 640 - without_box, 300), "🏠 right beside 🔉"
+
+    # The daemon is back: the minutes in their box, the bar placed by its new width.
+    answer[0] = {"remaining_seconds": 12 * 60, "managed": True}
+    bar._poll_time()
+    _deliver(bar, fake_gtk.idle)
+    bar.time_label.set_text.assert_called_with("⏳ 12 dk")
+    bar.info.set_visible.assert_called_with(True)
+    assert bar.origin == (640 + 640 - compact.width, 300)
+
+    # Offline again: the box goes with the minutes.
+    answer[0] = {"offline": True}
+    bar.window.resize.reset_mock()
+    bar._poll_time()
+    _deliver(bar, fake_gtk.idle)
+    bar.info.set_visible.assert_called_with(False)
+    bar.window.resize.assert_called_once_with(1, 1)
+    assert bar.origin == (640 + 640 - without_box, 300)
+
+    # The whole bar has the clock to show: its box is back, for the clock alone.
+    screen.active = browser
+    screen.handlers["active-window-changed"](screen, game)
+    assert bar.tier is BarTier.FULL
+    bar.clock_label.set_visible.assert_called_with(True)
+    bar.info.set_visible.assert_called_with(True)
+    assert bar.origin == (1920 - BAR_TIERS[FULL].width, 0)
+    bar.shutdown()
+
+
 def test_the_bar_follows_the_app_in_front_and_hides_for_the_launcher(
     fake_gtk: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1833,24 +1967,29 @@ def test_a_new_window_fills_the_screen_even_when_its_app_shrinks_it(
     _settled(fake_gtk, bar)
     assert bar.shown and bar.origin == (1920 - 304, 0)
 
-    # Palapeli puts its own size back. Not fought on the spot: no finger did it.
+    # Palapeli puts its own size back, no finger on it. Seen, and filled again
+    # the moment the window is still - before the bar is placed on it: the
+    # child never sees the bar on the small window.
     bar.test_clock[0] += 0.4
     _floating(puzzle, SAVED_SIZE)
     puzzle.handlers["state-changed"](puzzle, 1, 0)
     assert not bar.shown
-    _settled(fake_gtk, bar)
-    assert bar.shown and bar.origin == (SAVED_SIZE.x + SAVED_SIZE.width - 304, SAVED_SIZE.y)
-    assert puzzle.calls == ["maximize"]
-
-    # The second look.
-    bar.test_clock[0] = 100.0 + FILL_AGAIN_S
+    bar.test_clock[0] += 0.1
     bar._tick()
+    assert puzzle.calls == ["maximize"], "not while it may still be changing"
+    _settled(fake_gtk, bar, 0.2)
     assert puzzle.calls == ["maximize", "maximize"]
-    assert not bar.shown
+    assert not bar.shown, "never on the small window"
     _filling(puzzle)
     puzzle.handlers["geometry-changed"](puzzle)
     _settled(fake_gtk, bar)
     assert bar.shown and bar.origin == (1920 - 304, 0)
+
+    # The second look has nothing left to do.
+    bar.test_clock[0] = 100.0 + FILL_AGAIN_S
+    bar._tick()
+    assert puzzle.calls == ["maximize", "maximize"]
+    assert bar.shown
 
     # After that the window's size is the app's.
     bar.test_clock[0] += 5
@@ -1872,16 +2011,19 @@ def test_a_new_window_fills_the_screen_even_when_its_app_shrinks_it(
 def test_a_new_window_under_a_finger_waits_for_it(
     fake_gtk: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """The second look, for an app whose shrinking was not seen as a state
+    change: the child is holding a button down by then."""
     puzzle = _filling(_Win(9, 4242, "Palapeli"))
     bar = _new_window_over_the_launcher(fake_gtk, monkeypatch, puzzle)
     assert puzzle.calls == [], "devilspie2 got there first"
     assert bar.shown
 
-    # The app shrinks itself, and the child is already holding a button down.
+    # The app shrinks itself, and libwnck says only that its size changed.
     bar.test_clock[0] += 0.5
     _floating(puzzle, SAVED_SIZE)
-    puzzle.handlers["state-changed"](puzzle, 1, 0)
+    puzzle.handlers["geometry-changed"](puzzle)
     _settled(fake_gtk, bar)
+    assert puzzle.calls == [] and bar.shown, "nothing seen to make the look due early"
     bar.test_finger[0] = True
     bar.test_clock[0] = 100.0 + FILL_AGAIN_S
     bar._tick()
@@ -1890,6 +2032,26 @@ def test_a_new_window_under_a_finger_waits_for_it(
     bar.test_clock[0] += 0.5
     bar._tick()
     assert puzzle.calls == ["maximize"]
+    bar.shutdown()
+
+
+def test_a_new_window_a_finger_takes_out_of_filling_the_screen_is_a_drag(
+    fake_gtk: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Not its app shrinking it: the Filler's look stays where it was, and the
+    Follower fills the screen again when the finger lets go (D-201)."""
+    puzzle = _filling(_Win(9, 4242, "Palapeli"))
+    bar = _new_window_over_the_launcher(fake_gtk, monkeypatch, puzzle)
+    bar.test_finger[0] = True
+    bar.test_clock[0] += 0.5
+    _floating(puzzle, SAVED_SIZE)
+    puzzle.handlers["state-changed"](puzzle, 1, 0)
+    assert not bar.shown
+    assert not bar.filler.due(9, bar.test_clock[0])
+    bar.test_finger[0] = False
+    _settled(fake_gtk, bar)
+    assert puzzle.calls == ["maximize"]
+    assert not bar.shown
     bar.shutdown()
 
 

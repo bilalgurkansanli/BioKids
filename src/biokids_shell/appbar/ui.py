@@ -23,13 +23,16 @@ maximisation is maximised again when the finger lets go.
 of the window under it picks the tier (`bar_tier`): the widgets that tier does
 not show are hidden, the bar carries the tier's CSS class, and it is placed by
 its new width. Only a change of tier touches the widgets, and the tier follows
-the app window's width alone, so the bar's own new size cannot feed back.
+the app window's width alone, so the bar's own new size cannot feed back. The
+box of the minutes is shown only with something in it, and the bar is placed
+again when it comes or goes.
 
 **A new window fills the screen** (D-205). The first time a window is in front,
 and once more if its app shrinks it in the next few seconds, an ordinary window
 that could fill the screen and does not is maximised (`Filler`); the bar stays
 off it until it has settled, so it is not seen where the window was a moment
-before.
+before. An app seen shrinking it - libwnck's state change, no finger down - is
+maximised as soon as the window is still, before the bar is placed on it.
 
 **Nothing slow in the window's thread.** `pactl`, `systemctl` and the launcher's
 `/state` are asked on worker threads, and only plain values cross back;
@@ -243,6 +246,9 @@ class AppBarUi:
         self.origin: tuple[int, int] | None = None
         self.tier = BarTier.FULL
         self._clock_wanted = False
+        self._minutes_known = False
+        self._info_shown = False
+        """Whether the box of the minutes and the clock is on the bar."""
         self._time_text: str | None = None
         self._placed_width: int | None = None
         """The bar's width, in CSS pixels, the last time it was placed."""
@@ -334,8 +340,11 @@ class AppBarUi:
             Gdk.Screen.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
         box.show_all()
+        # Nothing to show until the launcher's first answer, and no empty box
+        # meanwhile (`_show_info`).
         self.time_label.hide()
         self.clock_label.hide()
+        self.info.set_visible(False)
         self._show_audio(NO_SOUND)
         return window
 
@@ -524,7 +533,7 @@ class AppBarUi:
         self.tier = tier
         if layout.info_px:
             self.info.set_size_request(layout.info_px, -1)
-        self.info.set_visible(layout.info_px > 0)
+        self._show_info()
         self.clock_label.set_visible(self._clock_wanted and layout.clock)
         self.quieter.set_visible(layout.volume)
         self.louder.set_visible(layout.volume)
@@ -550,6 +559,19 @@ class AppBarUi:
         # when the request shrinks: asked for 1 x 1, it takes its request.
         self.window.resize(1, 1)
 
+    def _show_info(self) -> bool:
+        """The box of the minutes and the clock, only while it holds one of them
+        in this tier (`TierLayout.shows_info`). True when it came or went: the
+        bar is then that much wider or narrower, and its caller resizes it."""
+        shown = BAR_TIERS[self.tier].shows_info(
+            minutes=self._minutes_known, clock=self._clock_wanted
+        )
+        if shown == self._info_shown:
+            return False
+        self._info_shown = shown
+        self.info.set_visible(shown)
+        return True
+
     def _allocated(self, _window: Any, allocation: Any) -> None:
         """The bar's size on screen changed. If it is not the width it was placed
         by - GTK measured the new tier only on its next frame, or when it showed
@@ -562,6 +584,12 @@ class AppBarUi:
 
     def _replace(self) -> bool:
         self._replacing = False
+        self._place_again()
+        return False
+
+    def _place_again(self) -> None:
+        """Place the bar by its new size, if it is on a window now; a hidden bar
+        is placed when it is shown, and one off a moving window when it stops."""
         window, target = self._watched, self.target
         if (
             self.shown
@@ -571,13 +599,18 @@ class AppBarUi:
             and not self.follower.hiding(target.xid, self.now())
         ):
             self._place(window)
-        return False
 
     # ------------------------------------------- a new window fills the screen
 
     def _fill(self, active: Any, info: WindowInfo, now: float) -> None:
-        """Maximise a new window that does not fill the screen (D-205)."""
-        if not self.filler.due(info.xid, now):
+        """Maximise a new window that does not fill the screen (D-205).
+
+        Not while it is still moving: its app may be halfway through putting
+        back its size, and would shrink it again after a maximise. It is looked
+        at once it is still, by the refresh `_settle` ends with - before the bar
+        is placed on it.
+        """
+        if not self.filler.due(info.xid, now) or self.follower.hiding(info.xid, now):
             return
         busy = self.follower.dragging(info.xid) or self.pointer_pressed()
         if not self.filler.look(
@@ -641,8 +674,22 @@ class AppBarUi:
         self._moved(window, unmaximized=False)
 
     def _state_changed(self, window: Any, changed: Any, new_state: Any) -> None:
-        if lost_maximize(int(changed), int(new_state), self._maximized_bits):
-            self._moved(window, unmaximized=True)
+        if not lost_maximize(int(changed), int(new_state), self._maximized_bits):
+            return
+        xid = int(window.get_xid())
+        if (
+            self.target is not None
+            and xid == self.target.xid
+            and not self.pointer_pressed()
+            and not self.follower.dragging(xid)
+            and self.filler.shrunk(xid, self.now())
+        ):
+            # No finger did it: the app shrank its own new window. Once it is
+            # still, the settle's refresh maximises it before the bar is placed,
+            # so the bar is never seen on it small (D-205). A finger's is a drag,
+            # and the Follower's.
+            log.info("window %#x was shrunk by its app; it fills the screen again", xid)
+        self._moved(window, unmaximized=True)
 
     def _moved(self, window: Any, *, unmaximized: bool) -> None:
         target = self.target
@@ -873,6 +920,8 @@ class AppBarUi:
         context = self.info.get_style_context()
         for tone in TimeTone:
             context.remove_class(tone.value)
+        resized = False
+        self._minutes_known = left is not None
         if left is None:
             self.time_label.hide()
         else:
@@ -883,8 +932,8 @@ class AppBarUi:
                 self.time_label.set_text(text)
                 # "120 min" is wider than the minutes' room and "99 min" is not:
                 # the bar may get narrower, which a GTK 3 window does not by
-                # itself. Its new size places it again (`_allocated`).
-                self.window.resize(1, 1)
+                # itself.
+                resized = True
             self.time_label.get_accessible().set_name(
                 f"{self.tr('shell.remaining_label')}: {minutes}"
             )
@@ -894,6 +943,16 @@ class AppBarUi:
         self._clock_wanted = shows_clock(state)
         # Not in the smaller bars, which keep their room for the minutes (D-205).
         self.clock_label.set_visible(self._clock_wanted and BAR_TIERS[self.tier].clock)
+        # The box goes with the last thing in it - the minutes, while the daemon
+        # restarts, in the compact bar that has no clock - and comes back with
+        # the first: never a gap where they were.
+        resized = self._show_info() or resized
+        if resized:
+            # Asked for 1 x 1, the bar takes its new size; placed by it at once,
+            # so it does not stand off its corner for a frame. `_allocated` is
+            # the net for a size GTK measures only later.
+            self.window.resize(1, 1)
+            self._place_again()
 
     def _tick_clock(self) -> bool:
         self.clock_label.set_text(clock_text(time.localtime()))
