@@ -1759,6 +1759,41 @@ async def test_no_tile_for_an_assistant_that_cannot_answer(
     assert supervisor.shell_state(1)["assistant"] == {"enabled": True, "voice": False}
 
 
+async def test_an_assistant_not_ready_yet_is_asked_again_soon(
+    supervisor: Supervisor, session: Session, config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """At boot the daemon asked before biokids-ai had opened its socket, and the
+    child found no "Sor Bana" tile for five minutes."""
+    from pathlib import Path
+
+    from biokids_daemon.assistant import AI_SOCKET_NAME, AssistantGate
+
+    answers = [{"running": True, "ready": True, "voice": False}]
+
+    async def status(_gate: AssistantGate) -> dict[str, object]:
+        return answers[-1]
+
+    monkeypatch.setattr(AssistantGate, "status", status)
+    set_quota(session, 1, 60, assistant_enabled=True)
+    await supervisor.start()
+    await supervisor.refresh_assistant(0.0)
+    assert supervisor.assistant_ready == {}, "no socket yet"
+
+    socket = Path(config.paths.ai_run_dir) / AI_SOCKET_NAME
+    socket.parent.mkdir(parents=True, exist_ok=True)
+    socket.touch()
+    await supervisor.refresh_assistant(10.0)
+    assert supervisor.assistant_ready == {}, "not asked again within the retry pause"
+    await supervisor.refresh_assistant(25.0)
+    assert supervisor.assistant_ready == {"chat": True, "voice": False}
+
+    answers.append({"running": False})
+    await supervisor.refresh_assistant(100.0)
+    assert supervisor.assistant_ready == {"chat": True, "voice": False}, "ready: every 5 min"
+    await supervisor.refresh_assistant(330.0)
+    assert supervisor.assistant_ready == {}
+
+
 async def test_the_microphone_is_never_on_without_the_assistant(
     supervisor: Supervisor, session: Session
 ) -> None:

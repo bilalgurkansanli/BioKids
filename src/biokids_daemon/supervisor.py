@@ -91,7 +91,11 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 ASSISTANT_CHECK_SECONDS = 300
-"""How often the assistant service is asked whether it is ready (D-198)."""
+"""How often a ready assistant service is asked whether it still is (D-198)."""
+ASSISTANT_RETRY_SECONDS = 20
+"""How often one that is not ready is asked again. At boot the daemon asks before
+biokids-ai has opened its socket, and at five minutes a child who had just logged
+in found no "Sor Bana" tile until the next check."""
 PRUNE_EVERY_SECONDS = 24 * 3600
 PRUNE_FIRST_AFTER_SECONDS = 300
 
@@ -498,7 +502,9 @@ class Supervisor(
         "Sor Bana" tile at all.
         """
         checked = self._assistant_checked_at
-        if checked is not None and now_boot - checked < ASSISTANT_CHECK_SECONDS:
+        ready = bool(self.assistant_ready.get("chat"))
+        wait = ASSISTANT_CHECK_SECONDS if ready else ASSISTANT_RETRY_SECONDS
+        if checked is not None and now_boot - checked < wait:
             return
         self._assistant_checked_at = now_boot
         from biokids_daemon.assistant import AI_SOCKET_NAME, AssistantGate

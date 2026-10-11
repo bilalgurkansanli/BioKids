@@ -1160,6 +1160,9 @@ daemon unit now has `SupplementaryGroups=biokids-ai` (biokids-core creates the g
 every machine), the narrow way in rather than the capability back. On the development
 VM the model then answered too slowly to be useful (about one token a second with the
 VM in the background); real hardware is the measure (D-165).
+Amended 2026-10-11: a service that is not ready is asked again every 20 seconds,
+not five minutes. At boot the daemon asked before biokids-ai had opened its socket,
+and a child who logged in straight away found no "Sor Bana" until the next check.
 
 **D-199 [owner] The launcher's sound at the top right; no spreadsheet.** (2026-10-08)
 The volume moves from a slider in the launcher's footer to the header's top right,
