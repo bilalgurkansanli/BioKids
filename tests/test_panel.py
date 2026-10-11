@@ -2388,6 +2388,129 @@ def test_another_day_of_history_and_a_bad_day_both_render(
     assert client.get("/history?day=2999-01-01").status_code == 200
 
 
+# ------------------------------------------------------------ insights (D-206)
+
+
+def _a_busy_month(db: Database) -> None:
+    """Three weeks of use ending yesterday, and the things a week can hold."""
+    from biokids_core.db.models import AccessRequest, LedgerDay, UsageHour, UsageTick
+
+    today = dt.date.today()
+    with db.session() as session:
+        for back in range(1, 22):
+            day = today - dt.timedelta(days=back)
+            session.add(LedgerDay(child_id=1, day=day, general_s=3600, earned_s=300))
+            session.add(
+                UsageTick(
+                    child_id=1, day=day, category="games", app_slug="supertux", seconds=2400
+                )
+            )
+            session.add(
+                UsageTick(
+                    child_id=1, day=day, category="learning", app_slug="gcompris", seconds=900
+                )
+            )
+            session.add(UsageHour(child_id=1, day=day, hour=17, seconds=2700))
+            session.add(UsageHour(child_id=1, day=day, hour=21, seconds=900))
+        for host in ("www.trt.net.tr", "tr.wikipedia.org"):
+            repo.record_event(session, kind="visit", child_id=1, payload={"host": host})
+        session.add(AccessRequest(child_id=1, url="", kind="time", status="approved"))
+        session.add(AccessRequest(child_id=1, url="", kind="time", status="denied"))
+        session.commit()
+
+
+def test_insights_need_a_signed_in_parent(client: TestClient, family_ready: None) -> None:
+    response = client.get("/insights", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"].startswith("/login")
+
+
+def test_insights_without_data_say_so_and_nothing_else(
+    client: TestClient, family_ready: None
+) -> None:
+    login(client)
+    page = client.get("/insights").text
+    assert "Henüz yeterli veri yok" in page
+    assert "hourbars" not in page and "Öne çıkanlar" not in page
+
+
+def test_insights_show_a_month_in_words_and_bars(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    _a_busy_month(db)
+    login(client)
+    page = html.unescape(client.get("/insights?child=1&period=30d").text)
+
+    assert 'aria-current="page">Son 30 gün' in page
+    assert "Öne çıkanlar" in page
+    assert "akşam 21:00 ile sabah 06:00 arasında" in page, "the late evenings"
+    assert "/children/1/time#windows" in page
+    assert "oyunlarda geçti" in page and "/children/1/time?more=1#limits" in page
+    assert page.count('class="daybars__day') == 30
+    assert page.count('class="hourbars__hour"') == 24
+    assert "supertux" in page and "gcompris" in page
+    assert "<code>trt.net.tr</code>" in page and "tr.wikipedia.org" in page
+    assert "Daha fazla süre" in page and "1 izin verildi · 1 şimdi değil" in page
+    assert "insights." not in page, "a catalogue key leaked onto the page"
+
+
+def test_insights_in_english_and_with_odd_parameters(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    _a_busy_month(db)
+    login(client)
+    page = client.get("/insights?period=last_week&lang=en").text
+    assert "Insights" in page and "insights." not in page
+    assert client.get("/insights?child=99&period=forever").status_code == 200
+    week = client.get("/insights?period=week").text
+    assert 'aria-current="page">Bu hafta' in week
+
+
+def test_insights_are_in_the_menu_and_a_tap_from_history(
+    client: TestClient, family_ready: None
+) -> None:
+    login(client)
+    assert 'href="/insights"' in client.get("/today").text
+    assert 'href="/insights?child=1"' in client.get("/history").text
+
+
+def test_today_carries_the_week_in_a_few_sentences(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    assert "Bu hafta için henüz söylenecek bir şey yok." in client.get("/today").text
+
+    _a_busy_month(db)
+    page = html.unescape(client.get("/today").text)
+    card = page[page.index("week-card") :]
+    assert 'href="/insights?child=1"' in card
+    assert card.count('class="highlight ') <= 3
+
+
+def test_today_renders_when_the_week_cannot_be_worked_out(
+    client: TestClient, family_ready: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A convenience failing must not take the screen that grants time with it."""
+    from biokids_core import insights
+
+    def broken(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("a bug in the insights")
+
+    monkeypatch.setattr(insights, "week_highlights", broken)
+    login(client)
+    response = client.get("/today")
+    assert response.status_code == 200
+    assert "week-card" not in response.text
+
+
+def test_a_suggestion_opens_the_advanced_time_settings(
+    client: TestClient, family_ready: None
+) -> None:
+    login(client)
+    assert 'class="advanced" open>' in client.get("/children/1/time?more=1").text
+    assert 'class="advanced" open>' not in client.get("/children/1/time").text
+
+
 # ---------------------------------------------------- limits by kind (D-193)
 
 

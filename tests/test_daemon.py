@@ -161,6 +161,28 @@ async def test_an_active_session_consumes_time(
     assert supervisor.ledger.state(1).general_used_s == 110, "the first tick sets a baseline"
 
 
+async def test_the_minutes_are_filed_under_the_hours_they_were_used(
+    supervisor: Supervisor, clock: FakeClock, source: FakeSessionSource, db: Database
+) -> None:
+    """D-206: the insights screen's time of day comes from the very tick that
+    counts the minutes, so the two can never disagree."""
+    from sqlalchemy import select
+
+    from biokids_core.db import LedgerDay, UsageHour
+
+    clock.wall = dt.datetime(2026, 9, 21, 16, 59, 0)
+    await supervisor.start()
+    source.log_in("elif")
+    await run_for(supervisor, clock, 120)
+
+    with db.session() as check:
+        hours = {row.hour: row.seconds for row in check.scalars(select(UsageHour))}
+        day = check.get(LedgerDay, {"child_id": 1, "day": dt.date(2026, 9, 21)})
+        assert day is not None
+        assert sum(hours.values()) == day.general_s == 110
+    assert hours == {16: 50, 17: 60}
+
+
 async def test_locking_the_screen_stops_the_clock(
     supervisor: Supervisor, clock: FakeClock, source: FakeSessionSource
 ) -> None:

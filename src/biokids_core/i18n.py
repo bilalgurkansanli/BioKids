@@ -164,6 +164,21 @@ def _unquote(chunk: str) -> str:
     )
 
 
+def duration_text(seconds: int, tr: Translator) -> str:
+    """`5700` -> "1 sa 35 dk": hours and minutes, never seconds (UX.md §3.3).
+
+    Rounded up to the minute, as everywhere in the panel: thirty seconds of use
+    is "1 dk", not "0 dk", which would read as "not used at all".
+    """
+    minutes = -(-max(0, seconds) // 60)
+    hours, rest = divmod(minutes, 60)
+    if hours and rest:
+        return tr("duration.hm", hours=hours, minutes=rest)
+    if hours:
+        return tr("duration.h", hours=hours)
+    return tr("duration.m", minutes=rest)
+
+
 @lru_cache(maxsize=8)
 def translator(locale: str = DEFAULT_LOCALE) -> Translator:
     """Cached per locale. Translators are immutable."""

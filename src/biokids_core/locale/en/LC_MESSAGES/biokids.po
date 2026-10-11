@@ -1879,3 +1879,320 @@ msgstr "Turn the sound down"
 
 msgid "shell.volume.up"
 msgstr "Turn the sound up"
+
+# Durations, for every screen: never seconds (UX.md 3.3, D-206)
+msgid "duration.hm"
+msgstr "{hours} h {minutes} min"
+
+msgid "duration.h"
+msgstr "{hours} h"
+
+msgid "duration.m"
+msgstr "{minutes} min"
+
+msgid "day.short.0"
+msgstr "Mon"
+
+msgid "day.short.1"
+msgstr "Tue"
+
+msgid "day.short.2"
+msgstr "Wed"
+
+msgid "day.short.3"
+msgstr "Thu"
+
+msgid "day.short.4"
+msgstr "Fri"
+
+msgid "day.short.5"
+msgstr "Sat"
+
+msgid "day.short.6"
+msgstr "Sun"
+
+
+# The insights screen (D-206)
+msgid "nav.insights"
+msgstr "Insights"
+
+msgid "insights.title"
+msgstr "Insights"
+
+msgid "insights.intro"
+msgstr "How {name} uses the computer, in short. It is all worked out on this computer and sent nowhere."
+
+msgid "insights.period.label"
+msgstr "Period"
+
+msgid "insights.period.week"
+msgstr "This week"
+
+msgid "insights.period.last_week"
+msgstr "Last week"
+
+msgid "insights.period.30d"
+msgstr "Last 30 days"
+
+msgid "insights.so_far"
+msgstr "so far"
+
+msgid "insights.empty"
+msgstr "Not enough to go on yet. As {name} uses the computer, a summary will appear here."
+
+msgid "insights.highlights"
+msgstr "Highlights"
+
+msgid "insights.highlights.none"
+msgstr "Nothing in particular to point out for this period."
+
+msgid "insights.screen"
+msgstr "Screen time"
+
+msgid "insights.stat.total"
+msgstr "In total"
+
+msgid "insights.stat.average"
+msgstr "A day, on average"
+
+msgid "insights.stat.used_days"
+msgstr "Days used"
+
+msgid "insights.stat.ran_out"
+msgstr "Days the time ran out"
+
+msgid "insights.stat.weekday"
+msgstr "On a weekday"
+
+msgid "insights.stat.weekend"
+msgstr "On a weekend day"
+
+msgid "insights.stat.earned"
+msgstr "Earned by learning"
+
+msgid "insights.stat.granted"
+msgstr "Added by you"
+
+msgid "insights.percent"
+msgstr "{percent}%"
+
+msgid "insights.delta.down"
+msgstr "↓ {percent}%"
+
+msgid "insights.delta.up"
+msgstr "↑ {percent}%"
+
+msgid "insights.delta.same"
+msgstr "≈ the same"
+
+msgid "insights.average.today"
+msgstr "Today is not over yet, so it is left out of the average and the comparison."
+
+msgid "insights.average.none"
+msgstr "An average needs at least one finished day."
+
+msgid "insights.days"
+msgstr "Day by day"
+
+msgid "insights.days.help"
+msgstr "Each bar is a day; on the orange ones the day's time ran out. Tap a day to open it in History."
+
+msgid "insights.kinds"
+msgstr "Where did the time go?"
+
+msgid "insights.kinds.other"
+msgstr "Home screen and other"
+
+msgid "insights.kinds.help"
+msgstr "To give one kind a daily limit of its own: Time rules → Advanced."
+
+msgid "insights.apps"
+msgstr "Most used apps"
+
+msgid "insights.apps.help"
+msgstr "The mark beside each app says whether it was used more or less than in the period before."
+
+msgid "insights.trend.new"
+msgstr "new"
+
+msgid "insights.trend.up"
+msgstr "↑ more"
+
+msgid "insights.trend.down"
+msgstr "↓ less"
+
+msgid "insights.trend.same"
+msgstr "≈ same"
+
+msgid "insights.hours"
+msgstr "At what time of day?"
+
+msgid "insights.hours.help"
+msgstr "Each bar is an hour of the day: how long the computer was used at that hour over the period, in total."
+
+msgid "insights.hours.none"
+msgstr "No times of day yet. BioKids keeps them from this version on."
+
+msgid "insights.hours.partial"
+msgstr "Times of day are kept from this version on; earlier days are not in this chart."
+
+msgid "insights.req.time"
+msgstr "More time"
+
+msgid "insights.req.site"
+msgstr "A closed site"
+
+msgid "insights.req.app"
+msgstr "An app"
+
+msgid "insights.req.search"
+msgstr "A closed search"
+
+msgid "insights.req.approved"
+msgstr "{count} allowed"
+
+msgid "insights.req.denied"
+msgstr "{count} not now"
+
+msgid "insights.req.unanswered"
+msgstr "{count} unanswered"
+
+msgid "insights.req.none"
+msgstr "No requests in this period."
+
+msgid "insights.sites"
+msgstr "Most opened sites"
+
+msgid "insights.sites.col.site"
+msgstr "Site"
+
+msgid "insights.sites.col.days"
+msgstr "Days"
+
+msgid "insights.sites.more"
+msgstr "and {count} more"
+
+msgid "insights.sites.none"
+msgstr "No sites were opened in this period."
+
+msgid "insights.sites.help"
+msgstr "Only a site's name is kept, and it is deleted after {days} days, so older sites do not appear."
+
+msgid "insights.from_history"
+msgstr "This week's insights"
+
+msgid "insights.today.title"
+msgstr "This week"
+
+msgid "insights.today.none"
+msgstr "Nothing to point out this week yet."
+
+msgid "insights.today.more"
+msgstr "All insights"
+
+msgid "insights.mail.highlights"
+msgstr "Highlights:"
+
+msgid "insights.l.windows"
+msgstr "Allowed hours"
+
+msgid "insights.vs.week_so_far"
+msgstr "compared with the same days last week"
+
+msgid "insights.vs.week"
+msgstr "compared with last week"
+
+msgid "insights.vs.last_week"
+msgstr "compared with the week before"
+
+msgid "insights.vs.30d"
+msgstr "compared with the 30 days before"
+
+msgid "insights.share.all"
+msgstr "Nearly all"
+
+msgid "insights.share.most"
+msgstr "Most"
+
+msgid "insights.share.half"
+msgstr "About half"
+
+msgid "insights.share.third"
+msgstr "About a third"
+
+msgid "insights.share.quarter"
+msgstr "About a quarter"
+
+
+# Highlights: one sentence each, a fact and never a verdict (D-206)
+msgid "insights.h.assistant"
+msgstr "Asked the assistant {count} question(s) the family should know about."
+
+msgid "insights.h.search"
+msgstr "Wanted to search for something closed and asked you about it {count} time(s)."
+
+msgid "insights.h.less"
+msgstr "Average daily screen time is down {percent}% {vs}."
+
+msgid "insights.h.more"
+msgstr "Average daily screen time is up {percent}% {vs}."
+
+msgid "insights.h.same"
+msgstr "Average daily screen time is about the same {vs}."
+
+msgid "insights.h.ran_out"
+msgstr "The day's time ran out on {days} days."
+
+msgid "insights.h.never_ran_out"
+msgstr "The day's time never ran out."
+
+msgid "insights.h.late"
+msgstr "Used between 21:00 and 06:00 on {days} day(s)."
+
+msgid "insights.h.unanswered"
+msgstr "{count} requests went unanswered."
+
+msgid "insights.h.share.learning"
+msgstr "{share} of the screen time went to learning apps."
+
+msgid "insights.h.share.games"
+msgstr "{share} of the screen time went to games."
+
+msgid "insights.h.share.web"
+msgstr "{share} of the screen time was spent on the web."
+
+msgid "insights.h.share.free"
+msgstr "{share} of the screen time went to free apps."
+
+msgid "insights.h.earned"
+msgstr "Earned {duration} of extra time with learning apps."
+
+msgid "insights.h.weekend"
+msgstr "Used {weekend} a day on weekends on average, and {weekday} on weekdays."
+
+msgid "insights.h.time_requests"
+msgstr "Asked for more time {count} times."
+
+msgid "insights.h.peak"
+msgstr "Used most between {start} and {end}."
+
+msgid "insights.s.assistant"
+msgstr "You can read them on the assistant page. Talking it over together at a good moment can help."
+
+msgid "insights.s.ran_out"
+msgstr "If the time often runs out, you could look at the daily time and the breaks together with your child."
+
+msgid "insights.s.late"
+msgstr "If you like, you can choose the hours the computer may be used in Time rules."
+
+msgid "insights.s.mail"
+msgstr "To hear about requests straight away, you can turn on email notifications."
+
+msgid "insights.s.earn"
+msgstr "Time in learning apps can also earn extra game time. You can turn this on in Time rules → Advanced."
+
+msgid "insights.s.games"
+msgstr "If you like, games can have a daily limit of their own; the rest of the day stays for other things."
+
+msgid "insights.s.web"
+msgstr "You can see which sites were opened further down."

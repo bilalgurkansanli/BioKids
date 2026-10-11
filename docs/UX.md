@@ -243,7 +243,8 @@ that changes every Monday.
 
 ### 3.1 Information architecture
 
-The menu has five entries (`templates/base.html`):
+The menu has six entries (`templates/base.html`), which still fit the phone's
+bottom bar at 360 px:
 
 ```
 Bugün / Today          ← default, the only screen most parents open; a badge
@@ -252,6 +253,7 @@ Bugün / Today          ← default, the only screen most parents open; a badge
                          (D-164), İnternet (D-167), Asistan (D-165), Düzenle (D-191)
 Geçmiş / History       → fourteen days of minutes, and one day's apps, sites and
                          requests (D-192)
+Analiz / Insights      → a week or a month in plain words, then the numbers (D-206)
 Kayıtlar / Audit log
 Ayarlar / Settings     → PIN, passphrase, email, phone access, language, and Zio
                          and Sio's voice: the natural voice to download (D-196)
@@ -272,7 +274,7 @@ the parent is told.
 
 ### 3.2 The Today screen
 
-One card per child, and nothing else:
+One card per child, and under them one card for the week (D-206):
 
 ```
 ┌────────────────────────────────────────────┐
@@ -295,6 +297,12 @@ time-sensitive — a child is standing at the computer waiting.
 A question the assistant refused (D-165) appears the same way, as a banner that
 names the child and the count and opens **Çocuklar → Asistan**, where each one is
 listed with the child's words and the reason, and can be marked as seen.
+
+Under the children, **Bu hafta**: for each child at most three of the week's
+highlights (§3.9), one sentence each, and "Analizin tamamı →". It is read from the
+database, so it is there when the daemon is not answering, and a failure to work it
+out costs the card and never the screen. It is not live and needs no glance to be
+understood; it is for the evening, not for the child waiting at the computer.
 
 ### 3.3 Complexity rules
 
@@ -384,6 +392,64 @@ day for Oyun, Eğitim, İnternet and Serbest, with one line of help ("for exampl
 most 30 minutes a day of games"). An empty field is no limit of its own; the day's time
 still applies. The child sees a used-up kind as the second form of the Blocked screen
 (§2.5).
+
+### 3.9 Insights
+
+**Analiz** (`/insights`, D-206) answers the questions a parent asks over a week: is it
+more than before, where does the time go, is there anything I should do? One child at a
+time (a button per child, as in History), and the period as three links that read as
+one control: **Bu hafta** (the default), **Geçen hafta**, **Son 30 gün**.
+
+```
+┌──────────────────────────────────────────┐
+│ [ Bu hafta ]  Geçen hafta   Son 30 gün   │
+│ 05.10 – 11.10.2026 · bugüne kadar        │
+│                                          │
+│ Öne çıkanlar                             │
+│ ▌📉 Geçen haftanın aynı günlerine göre   │
+│ ▌   günlük ortalama ekran süresi %18     │
+│ ▌   azaldı.                              │
+│ ▌🌙 1 gün, akşam 21:00 ile sabah 06:00   │
+│ ▌   arasında da kullanıldı.              │
+│ ▌   İsterseniz … Kullanım saatleri →     │
+│                                          │
+│ Ekran süresi                             │
+│ [Toplam 4 sa 54 dk] [Günde ortalama 49 dk│
+│                      ↓ %18 …]            │
+│ ▁▃▅▂▇█▁  (a bar per day, quota dashed)   │
+│ Zaman nereye gitti?  ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬   │
+│ En çok kullanılan uygulamalar            │
+│ Günün hangi saatlerinde?  ▁▁▁▃▇▅▁ (24)   │
+│ İstekler · En çok açılan siteler         │
+└──────────────────────────────────────────┘
+```
+
+- **Öne çıkanlar** first, because they are what a parent came for: at most five
+  sentences, the most important first, each a fact and never a verdict about the
+  child — "Ekran süresinin çoğu oyunlarda geçti", never "çok oyun oynadı". A parent
+  may read them out with the child beside them. Some carry one gentle suggestion and
+  a link to the setting that acts on it (a games limit, earned time, the allowed
+  hours, email notifications); the link opens that setting, with **Gelişmiş** open
+  where it lives there (`?more=1`).
+- Then the numbers, as tiles (two across on a phone, four on a wider screen): total,
+  a day on average with its change, days used, days the time ran out, weekdays and
+  weekends, minutes earned and added. Today counts in the total but not in an
+  average or a comparison, and a line under the tiles says so; a week so far is
+  compared with the same days of the week before.
+- Bars drawn by the server — the days (each a link to that day in **Geçmiş**, the
+  day's quota as a dashed line, warm where the time ran out), the kinds of app as
+  one bar in parts with a legend that names each and gives minutes and percent, the
+  apps with a thin bar and "↑ daha çok", "↓ daha az", "≈ aynı" or "yeni", and the 24
+  hours of the day. Each kind of app has one brand colour wherever it appears, and
+  every bar's number is also written. No script, no chart library (D-129).
+- The requests by kind with how they were answered, and the sites the browser
+  reported, ranked by the days they were opened (at most eight, then "ve 3 site
+  daha"), with the note that only the name is kept, for 30 days.
+- Before there is anything to show: "Henüz yeterli veri yok. Elif bilgisayarı
+  kullandıkça burada bir özet belirecek." and nothing else.
+
+The same highlights, at most three per child and without links, end each child's
+part of the Sunday mail (D-177). A mail never names a site.
 
 ---
 

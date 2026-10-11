@@ -1879,3 +1879,320 @@ msgstr "Sesi kıs"
 
 msgid "shell.volume.up"
 msgstr "Sesi aç"
+
+# Durations, for every screen: never seconds (UX.md 3.3, D-206)
+msgid "duration.hm"
+msgstr "{hours} sa {minutes} dk"
+
+msgid "duration.h"
+msgstr "{hours} sa"
+
+msgid "duration.m"
+msgstr "{minutes} dk"
+
+msgid "day.short.0"
+msgstr "Pzt"
+
+msgid "day.short.1"
+msgstr "Sal"
+
+msgid "day.short.2"
+msgstr "Çar"
+
+msgid "day.short.3"
+msgstr "Per"
+
+msgid "day.short.4"
+msgstr "Cum"
+
+msgid "day.short.5"
+msgstr "Cmt"
+
+msgid "day.short.6"
+msgstr "Paz"
+
+
+# The insights screen (D-206)
+msgid "nav.insights"
+msgstr "Analiz"
+
+msgid "insights.title"
+msgstr "Analiz"
+
+msgid "insights.intro"
+msgstr "{name} bilgisayarı nasıl kullanıyor, kısaca. Hepsi bu bilgisayarda hesaplanır, hiçbir yere gönderilmez."
+
+msgid "insights.period.label"
+msgstr "Dönem"
+
+msgid "insights.period.week"
+msgstr "Bu hafta"
+
+msgid "insights.period.last_week"
+msgstr "Geçen hafta"
+
+msgid "insights.period.30d"
+msgstr "Son 30 gün"
+
+msgid "insights.so_far"
+msgstr "bugüne kadar"
+
+msgid "insights.empty"
+msgstr "Henüz yeterli veri yok. {name} bilgisayarı kullandıkça burada bir özet belirecek."
+
+msgid "insights.highlights"
+msgstr "Öne çıkanlar"
+
+msgid "insights.highlights.none"
+msgstr "Bu dönem için özellikle söylenecek bir şey yok."
+
+msgid "insights.screen"
+msgstr "Ekran süresi"
+
+msgid "insights.stat.total"
+msgstr "Toplam"
+
+msgid "insights.stat.average"
+msgstr "Günde ortalama"
+
+msgid "insights.stat.used_days"
+msgstr "Kullanılan gün"
+
+msgid "insights.stat.ran_out"
+msgstr "Sürenin dolduğu gün"
+
+msgid "insights.stat.weekday"
+msgstr "Hafta içi, günde"
+
+msgid "insights.stat.weekend"
+msgstr "Hafta sonu, günde"
+
+msgid "insights.stat.earned"
+msgstr "Öğrenerek kazandığı"
+
+msgid "insights.stat.granted"
+msgstr "Sizin eklediğiniz"
+
+msgid "insights.percent"
+msgstr "%{percent}"
+
+msgid "insights.delta.down"
+msgstr "↓ %{percent}"
+
+msgid "insights.delta.up"
+msgstr "↑ %{percent}"
+
+msgid "insights.delta.same"
+msgstr "≈ aynı"
+
+msgid "insights.average.today"
+msgstr "Bugün henüz bitmediği için ortalamaya ve karşılaştırmaya katılmaz."
+
+msgid "insights.average.none"
+msgstr "Ortalama için en az bir günün bitmesi gerekiyor."
+
+msgid "insights.days"
+msgstr "Gün gün"
+
+msgid "insights.days.help"
+msgstr "Her çubuk bir gün; turuncu olanlarda günlük süre doldu. Bir güne dokunun, Geçmiş'te o günün ayrıntısı açılsın."
+
+msgid "insights.kinds"
+msgstr "Zaman nereye gitti?"
+
+msgid "insights.kinds.other"
+msgstr "Ana ekran ve diğer"
+
+msgid "insights.kinds.help"
+msgstr "Bir türe ayrıca günlük sınır koymak isterseniz: Süre kuralları → Gelişmiş."
+
+msgid "insights.apps"
+msgstr "En çok kullanılan uygulamalar"
+
+msgid "insights.apps.help"
+msgstr "Yanındaki işaret, önceki döneme göre daha çok mu daha az mı kullanıldığını gösterir."
+
+msgid "insights.trend.new"
+msgstr "yeni"
+
+msgid "insights.trend.up"
+msgstr "↑ daha çok"
+
+msgid "insights.trend.down"
+msgstr "↓ daha az"
+
+msgid "insights.trend.same"
+msgstr "≈ aynı"
+
+msgid "insights.hours"
+msgstr "Günün hangi saatlerinde?"
+
+msgid "insights.hours.help"
+msgstr "Her çubuk günün bir saati: bu dönemde o saatte toplam ne kadar kullanıldığı."
+
+msgid "insights.hours.none"
+msgstr "Saat bilgisi henüz yok. BioKids her saatin süresini bu sürümden itibaren tutuyor."
+
+msgid "insights.hours.partial"
+msgstr "Saat bilgisi bu sürümle tutulmaya başlandı; daha önceki günler bu grafikte yok."
+
+msgid "insights.req.time"
+msgstr "Daha fazla süre"
+
+msgid "insights.req.site"
+msgstr "Kapalı bir site"
+
+msgid "insights.req.app"
+msgstr "Bir uygulama"
+
+msgid "insights.req.search"
+msgstr "Kapalı bir arama"
+
+msgid "insights.req.approved"
+msgstr "{count} izin verildi"
+
+msgid "insights.req.denied"
+msgstr "{count} şimdi değil"
+
+msgid "insights.req.unanswered"
+msgstr "{count} cevapsız"
+
+msgid "insights.req.none"
+msgstr "Bu dönemde istek yok."
+
+msgid "insights.sites"
+msgstr "En çok açılan siteler"
+
+msgid "insights.sites.col.site"
+msgstr "Site"
+
+msgid "insights.sites.col.days"
+msgstr "Gün"
+
+msgid "insights.sites.more"
+msgstr "ve {count} site daha"
+
+msgid "insights.sites.none"
+msgstr "Bu dönemde site açılmamış."
+
+msgid "insights.sites.help"
+msgstr "Yalnızca sitenin adı kaydedilir ve {days} gün sonra silinir; daha eski siteler bu yüzden görünmez."
+
+msgid "insights.from_history"
+msgstr "Haftanın analizi"
+
+msgid "insights.today.title"
+msgstr "Bu hafta"
+
+msgid "insights.today.none"
+msgstr "Bu hafta için henüz söylenecek bir şey yok."
+
+msgid "insights.today.more"
+msgstr "Analizin tamamı"
+
+msgid "insights.mail.highlights"
+msgstr "Öne çıkanlar:"
+
+msgid "insights.l.windows"
+msgstr "Kullanım saatleri"
+
+msgid "insights.vs.week_so_far"
+msgstr "Geçen haftanın aynı günlerine göre"
+
+msgid "insights.vs.week"
+msgstr "Geçen haftaya göre"
+
+msgid "insights.vs.last_week"
+msgstr "Bir önceki haftaya göre"
+
+msgid "insights.vs.30d"
+msgstr "Önceki 30 güne göre"
+
+msgid "insights.share.all"
+msgstr "neredeyse tamamı"
+
+msgid "insights.share.most"
+msgstr "çoğu"
+
+msgid "insights.share.half"
+msgstr "yaklaşık yarısı"
+
+msgid "insights.share.third"
+msgstr "yaklaşık üçte biri"
+
+msgid "insights.share.quarter"
+msgstr "yaklaşık dörtte biri"
+
+
+# Highlights: one sentence each, a fact and never a verdict (D-206)
+msgid "insights.h.assistant"
+msgstr "Asistana, ailenin bilmesi gereken {count} soru sordu."
+
+msgid "insights.h.search"
+msgstr "Kapalı bir şeyi aramak istedi ve {count} kez size sordu."
+
+msgid "insights.h.less"
+msgstr "{vs} günlük ortalama ekran süresi %{percent} azaldı."
+
+msgid "insights.h.more"
+msgstr "{vs} günlük ortalama ekran süresi %{percent} arttı."
+
+msgid "insights.h.same"
+msgstr "{vs} günlük ortalama ekran süresi hemen hemen aynı."
+
+msgid "insights.h.ran_out"
+msgstr "Günlük süre {days} gün doldu."
+
+msgid "insights.h.never_ran_out"
+msgstr "Günlük süre hiç dolmadı."
+
+msgid "insights.h.late"
+msgstr "{days} gün, akşam 21:00 ile sabah 06:00 arasında da kullanıldı."
+
+msgid "insights.h.unanswered"
+msgstr "{count} istek cevapsız kaldı."
+
+msgid "insights.h.share.learning"
+msgstr "Ekran süresinin {share} eğitim uygulamalarında geçti."
+
+msgid "insights.h.share.games"
+msgstr "Ekran süresinin {share} oyunlarda geçti."
+
+msgid "insights.h.share.web"
+msgstr "Ekran süresinin {share} internette geçti."
+
+msgid "insights.h.share.free"
+msgstr "Ekran süresinin {share} serbest uygulamalarda geçti."
+
+msgid "insights.h.earned"
+msgstr "Eğitim uygulamalarıyla {duration} ek süre kazandı."
+
+msgid "insights.h.weekend"
+msgstr "Hafta sonu günde ortalama {weekend}, hafta içi {weekday} kullanıldı."
+
+msgid "insights.h.time_requests"
+msgstr "{count} kez daha fazla süre istedi."
+
+msgid "insights.h.peak"
+msgstr "En çok {start} ile {end} arasında kullanıldı."
+
+msgid "insights.s.assistant"
+msgstr "Soruları Asistan sayfasında görebilirsiniz. Uygun bir anda birlikte konuşmak iyi gelebilir."
+
+msgid "insights.s.ran_out"
+msgstr "Süre sık doluyorsa, günlük süreyi ve molaları çocuğunuzla birlikte gözden geçirebilirsiniz."
+
+msgid "insights.s.late"
+msgstr "İsterseniz bilgisayarın hangi saatlerde açık olacağını Süre kurallarından seçebilirsiniz."
+
+msgid "insights.s.mail"
+msgstr "İsteklerden hemen haberiniz olsun diye e-posta bildirimlerini açabilirsiniz."
+
+msgid "insights.s.earn"
+msgstr "Eğitim uygulamalarında geçen süre ek oyun süresi de kazandırabilir. İsterseniz Süre kuralları → Gelişmiş'ten açabilirsiniz."
+
+msgid "insights.s.games"
+msgstr "İsterseniz oyunlara ayrıca günlük bir sınır koyabilirsiniz; günün geri kalanı başka şeylere kalır."
+
+msgid "insights.s.web"
+msgstr "Hangi sitelerin açıldığını aşağıda görebilirsiniz."

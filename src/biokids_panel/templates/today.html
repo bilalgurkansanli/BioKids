@@ -36,6 +36,40 @@
   <div id="cards">
     {% include "partials/child_cards.html" %}
   </div>
+
+  {#
+    D-206: the week in a few sentences, under the live cards and outside
+    #cards, which live.js replaces. The full screen is one tap away.
+  #}
+  {% if week %}
+    <section class="card week-card" aria-labelledby="week-title">
+      <h2 id="week-title"><span aria-hidden="true">📈</span> {{ _('insights.today.title') }}</h2>
+      {% for item in week %}
+        <div class="week-card__child">
+          {% if week|length > 1 %}
+            <h3 class="week-card__name">
+              <span aria-hidden="true">{{ item.child.avatar|avatar }}</span> {{ item.child.display_name }}
+            </h3>
+          {% endif %}
+          {% if item.highlights %}
+            <ul class="highlights highlights--compact">
+              {% for h in item.highlights %}
+                <li class="highlight highlight--{{ h.tone }}">
+                  <span class="highlight__icon" aria-hidden="true">{{ h.icon }}</span>
+                  <p class="highlight__text">{{ h.text }}</p>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="muted small">{{ _('insights.today.none') }}</p>
+          {% endif %}
+          <a class="week-card__more" href="/insights?child={{ item.child.id }}">
+            {{ _('insights.today.more') }}{% if week|length > 1 %} · {{ item.child.display_name }}{% endif %} →
+          </a>
+        </div>
+      {% endfor %}
+    </section>
+  {% endif %}
 {% endblock %}
 
 {% block scripts %}

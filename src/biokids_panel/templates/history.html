@@ -24,6 +24,13 @@
       </nav>
     {% endif %}
 
+    {# The week in plain words is one tap away (D-206). #}
+    <p>
+      <a class="history-insights" href="/insights?child={{ child.id }}">
+        <span aria-hidden="true">📈</span> {{ _('insights.from_history') }} →
+      </a>
+    </p>
+
     <section class="card">
       <h2>{{ _('history.days', name=child.display_name) }}</h2>
       <ol class="bars" aria-label="{{ _('history.days', name=child.display_name) }}">

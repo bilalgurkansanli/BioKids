@@ -62,6 +62,7 @@ from biokids_panel.routes import (
     audit,
     children,
     history,
+    insights,
     login,
     misc,
     requests,
@@ -84,6 +85,7 @@ ROUTERS = (
     children.router,
     audit.router,
     history.router,
+    insights.router,
     settings.router,
 )
 """Every screen but the wizard's, in the order they are matched."""

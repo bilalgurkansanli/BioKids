@@ -20,7 +20,9 @@ from __future__ import annotations
 import argparse
 import contextlib
 import datetime as dt
+import json
 import os
+import random
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -36,7 +38,15 @@ from biokids_core import repo  # noqa: E402
 from biokids_core.catalog import enable_for_child, sync_catalog  # noqa: E402
 from biokids_core.config import ENV_PREFIX_DIR, Config, set_config  # noqa: E402
 from biokids_core.db import Child, Database, Family, Parent, utcnow  # noqa: E402
-from biokids_core.db.models import CategoryLimit  # noqa: E402
+from biokids_core.db.models import (  # noqa: E402
+    AccessRequest,
+    AuditLog,
+    CategoryLimit,
+    LedgerDay,
+    UsageEvent,
+    UsageHour,
+    UsageTick,
+)
 from biokids_core.security import (  # noqa: E402
     generate_recovery_code,
     hash_secret,
@@ -211,6 +221,127 @@ def _seed_child(session: Session, spec: ChildSpec, today: dt.date, locale: str) 
     ]
 
 
+USAGE_WEEKS: Final = 5
+SITES: Final = ("tr.wikipedia.org", "www.trt.net.tr", "www.youtube.com", "scratch.mit.edu")
+
+
+def seed_usage(session: Session, today: dt.date, *, seed: int = 206) -> list[str]:
+    """Five weeks of made-up use per child, ending today (`--usage`).
+
+    For looking at History (D-192) and Insights (D-206) on a development
+    machine without waiting five weeks. Written as the daemon writes it - the
+    ledger's minutes, the apps' seconds, the hours of the day, a `quota_exhausted`
+    entry when a day's time ran out - plus a few visited sites and requests.
+    Deterministic, so the same bars come back for the next screenshot.
+    """
+    rng = random.Random(seed)
+    names = []
+    for child in repo.list_children(session):
+        names.append(child.display_name)
+        policy = repo.load_policy(session, child, today=today)
+        apps = [
+            (link.app_slug, repo.child_app_category(link, app).value)
+            for link, app in repo.list_child_apps(session, child.id)
+            if app.kind != "builtin"
+        ][:5]
+        for back in range(USAGE_WEEKS * 7):
+            day = today - dt.timedelta(days=back)
+            quota = (policy.quota_minutes(day) if policy else 60) * 60
+            used = 0 if rng.random() < 0.08 else int(quota * rng.uniform(0.5, 1.0))
+            if back == 0:
+                used //= 3  # today is under way
+            ran_out = back > 0 and used > 0 and rng.random() < 0.3
+            if ran_out:
+                used = quota
+            earned = 600 if child.age_on(today) >= 8 and used and rng.random() < 0.5 else 0
+            session.add(LedgerDay(child_id=child.id, day=day, general_s=used, earned_s=earned))
+            _spread_over_apps(session, rng, child.id, day, used, apps)
+            _spread_over_hours(session, rng, child.id, day, used)
+            if ran_out:
+                session.add(
+                    AuditLog(
+                        actor="daemon",
+                        action="quota_exhausted",
+                        target=f"child:{child.id}",
+                        ts=_utc(day, 18),
+                        detail_json='{"reason": "quota.exhausted"}',
+                    )
+                )
+            if back < 20 and used:
+                for host in rng.sample(SITES, rng.randint(0, 2)):
+                    session.add(
+                        UsageEvent(
+                            child_id=child.id,
+                            kind="visit",
+                            ts_wall=_utc(day, 17, rng.randint(0, 59)),
+                            payload_json=json.dumps({"host": host}),
+                        )
+                    )
+            if back < 14 and rng.random() < 0.25:
+                session.add(
+                    AccessRequest(
+                        child_id=child.id,
+                        url="",
+                        kind="time",
+                        created_at=_utc(day, 18, 30),
+                        status=rng.choice(("approved", "denied", "expired")),
+                        minutes=10,
+                    )
+                )
+    session.commit()
+    return [f"usage        {USAGE_WEEKS} weeks of made-up use for {', '.join(names)}"]
+
+
+def _spread_over_apps(
+    session: Session,
+    rng: random.Random,
+    child_id: int,
+    day: dt.date,
+    seconds: int,
+    apps: list[tuple[str, str]],
+) -> None:
+    """Most of a day's time in two or three of the child's apps; the rest at home."""
+    if not seconds or not apps:
+        return
+    chosen = rng.sample(apps, min(len(apps), rng.randint(1, 3)))
+    weights = [rng.random() + 0.2 for _ in chosen]
+    in_apps = int(seconds * 0.9)
+    for (slug, category), weight in zip(chosen, weights, strict=True):
+        session.add(
+            UsageTick(
+                child_id=child_id,
+                day=day,
+                category=category,
+                app_slug=slug,
+                seconds=int(in_apps * weight / sum(weights)),
+            )
+        )
+
+
+def _spread_over_hours(
+    session: Session, rng: random.Random, child_id: int, day: dt.date, seconds: int
+) -> None:
+    """After school on weekdays, mornings and afternoons at the weekend, and
+    now and then a little after nine in the evening."""
+    hour = rng.choice((10, 15)) if day.weekday() >= 5 else rng.choice((16, 17))
+    late = 600 if seconds > 1800 and rng.random() < 0.15 else 0
+    left = seconds - late
+    filed: dict[int, int] = {21: late} if late else {}
+    while left > 0:
+        take = min(left, rng.randint(1200, 3000))
+        filed[hour] = filed.get(hour, 0) + take
+        left -= take
+        hour = min(hour + 1, 20)
+    for hour_of_day, value in filed.items():
+        session.add(UsageHour(child_id=child_id, day=day, hour=hour_of_day, seconds=value))
+
+
+def _utc(day: dt.date, hour: int, minute: int = 0) -> dt.datetime:
+    """Local wall-clock time on `day`, as the naive UTC the tables store."""
+    local = dt.datetime.combine(day, dt.time(hour, minute)).astimezone()
+    return local.astimezone(dt.UTC).replace(tzinfo=None)
+
+
 def wipe(session: Session) -> None:
     """Remove the existing family. The catalog stays: it is data, not a family's."""
     for child in repo.list_children(session):
@@ -239,6 +370,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--timezone", default="Europe/Istanbul")
     parser.add_argument(
         "--prefix", default=None, help="scratch root; sets BIOKIDS_PREFIX for this run"
+    )
+    parser.add_argument(
+        "--usage",
+        action="store_true",
+        help=f"also write {USAGE_WEEKS} weeks of made-up use, for History and Insights",
     )
     return parser.parse_args(argv)
 
@@ -290,6 +426,8 @@ def main(argv: list[str] | None = None) -> int:
                 locale=args.locale,
                 timezone=args.timezone,
             )
+            if args.usage:
+                lines += seed_usage(session, dt.date.today())
             for line in lines:
                 print(line)
     finally:

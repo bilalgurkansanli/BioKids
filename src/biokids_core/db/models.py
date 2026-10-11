@@ -428,6 +428,33 @@ class UsageTick(Base):
     __table_args__ = (Index("ix_usage_tick_day", "day"),)
 
 
+class UsageHour(Base):
+    """Screen time per hour of the day, for the insights screen (D-206).
+
+    Nothing else says *when* a child used the computer: `ledger_day` knows the
+    day and `usage_tick` the day and the app. One row per child, day and local
+    wall-clock hour, filed by the same tick that adds to `general_s`, so a day's
+    hours add up to its screen time. An aggregate, never a timeline: the minute
+    a session started is not kept. Kept as long as `usage_tick` (D-189), and
+    nothing that enforces anything reads it.
+    """
+
+    __tablename__ = "usage_hour"
+
+    child_id: Mapped[int] = mapped_column(
+        ForeignKey("child.id", ondelete="CASCADE"), primary_key=True
+    )
+    day: Mapped[dt.date] = mapped_column(Date, primary_key=True)
+    hour: Mapped[int] = mapped_column(Integer, primary_key=True)
+    """0-23, the machine's local time, the clock the day's quota is read with."""
+    seconds: Mapped[int] = mapped_column(Integer, default=0)
+
+    __table_args__ = (
+        CheckConstraint("hour >= 0 AND hour <= 23", name="ck_usage_hour_hour"),
+        Index("ix_usage_hour_day", "day"),
+    )
+
+
 class UsageEvent(Base):
     """An append-only stream of what happened, kept 30 days."""
 

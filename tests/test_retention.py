@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from biokids_core.config import Config
 from biokids_core.db import AccessRequest, AiAlert, AuditLog, Child, LedgerDay
-from biokids_core.db.models import BootEpoch, UsageEvent, UsageTick, utcnow
+from biokids_core.db.models import BootEpoch, UsageEvent, UsageHour, UsageTick, utcnow
 from biokids_core.retention import BOOT_EPOCHS_KEPT, prune
 
 NOW = dt.datetime(2026, 10, 7, 12, 0)
@@ -51,12 +51,15 @@ def test_minutes_per_day_are_kept_for_the_history_screen(
         session.add(
             UsageTick(child_id=child.id, day=day, category="games", app_slug="x", seconds=600)
         )
+        # The hours of the day go with the day they belong to (D-206).
+        session.add(UsageHour(child_id=child.id, day=day, hour=16, seconds=600))
     session.commit()
 
-    prune(session, config, NOW)
+    deleted = prune(session, config, NOW)
     session.commit()
 
     assert count(session, LedgerDay) == 1 and count(session, UsageTick) == 1
+    assert count(session, UsageHour) == 1 and deleted["usage_hour"] == 1
 
 
 def test_the_audit_log_and_requests_have_windows_of_their_own(

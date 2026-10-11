@@ -112,6 +112,15 @@ of `ledger_day` minutes as bars, and for one day the `usage_tick` seconds per ap
 `visit` events as one line per host, and the day's `access_request` rows. Plain HTML,
 no script.
 
+**Insights** (`/insights`, D-206) is the same kind of reader over a week or a month.
+`biokids_core.insights` loads, per child and period, the `ledger_day`, `usage_tick` and
+`usage_hour` rows (with the period before, for comparing), the `visit` events, the
+requests, the assistant's alerts and the daemon's `quota_exhausted` audit rows, one
+indexed query each; a pure `summarize` turns them into numbers and a pure, rule-based
+`highlights` into at most five sentences as catalogue keys with parameters. Today's
+"Bu hafta" card and the Sunday mail (`notifier.weekly_summary`) call the same
+functions. Nothing is stored; no model is involved.
+
 ### `biokids-shell` (child user, user service)
 
 A small FastAPI app serving the launcher UI, plus a supervisor that starts the kiosk
@@ -234,6 +243,13 @@ remaining = (daily_quota + earned_today) - general_used
 
 Persisted every 30 s and on every state change, so a hard power cut loses at most 30 s.
 
+Every second added to `general` is also filed under its local wall-clock hour
+(`usage_hour`, D-206), split at the hour, and never across midnight, so a day's
+hours add up to its `general`. Those rows are written after the ledger's commit, in a
+transaction of their own: they feed the insights screen's chart, nothing that
+enforces reads them, and a failure to write them is logged once and costs only the
+chart.
+
 ### 3.4 Earned time
 
 ```
@@ -325,6 +341,7 @@ access_request(id, child_id, kind, url, minutes, created_at, status, decided_at)
 boot_epoch(id, boot_id, first_seen_wall, last_seen_wall, last_boot_offset)
 ledger_day(child_id, day, general_s, earned_s, granted_s, penalty_remaining_s, ...)
 usage_tick(child_id, day, category, app_slug, seconds)
+usage_hour(child_id, day, hour, seconds)                 -- hour 0-23, local (D-206)
 usage_event(id, child_id, ts_wall, ts_boot, kind, payload_json)  -- "visit": {"host": …}
 ai_alert(id, child_id, ts, score, category, reason_key, text, notified, dismissed)
 audit_log(id, ts, actor, action, target, detail_json, severity)
@@ -344,7 +361,7 @@ transaction; a failure is logged and tried again the next day. The windows are
 | Key | Default | Deletes |
 |---|---|---|
 | `activity_days` | 30 | `usage_event` (visited sites, ledger gaps) and `ai_alert` |
-| `usage_days` | 400 | `usage_tick` and `ledger_day` |
+| `usage_days` | 400 | `usage_tick`, `usage_hour` and `ledger_day` |
 | `audit_days` | 365 | `audit_log` |
 | `requests_days` | 90 | `access_request` |
 

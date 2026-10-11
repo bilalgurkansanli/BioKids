@@ -28,6 +28,11 @@ the process was frozen, or the machine hibernated in a way the suspend
 subtraction missed, the gap is recorded as a gap and clamped. Crediting an
 unexplained four-hour gap as four hours of screen time would be the single
 worst bug this file could have.
+
+**Every counted second is also filed under its hour of the day** (`usage_hour`,
+D-206), for the parent's insights screen. That record is written after the
+ledger's own commit, in a transaction of its own, so nothing about it can stop
+or change the accounting.
 """
 
 from __future__ import annotations
@@ -43,7 +48,7 @@ from sqlalchemy.orm import Session
 
 from biokids_core.clock import Clock, ClockReading
 from biokids_core.config import Config, get_config
-from biokids_core.db.models import BootEpoch, LedgerDay, UsageTick
+from biokids_core.db.models import BootEpoch, LedgerDay, UsageHour, UsageTick
 from biokids_core.types import Category, ChildPolicy, LedgerState
 
 log = logging.getLogger(__name__)
@@ -111,6 +116,32 @@ class _ChildRuntime:
     """The fraction of a second each interval leaves over. Dropping it every
     tick undercounted by up to a second in ten, a few percent of every day."""
     pending_category_seconds: dict[tuple[Category, str], int] = field(default_factory=dict)
+    pending_hour_seconds: dict[tuple[dt.date, int], int] = field(default_factory=dict)
+    """(day, hour) -> seconds counted since the last write (D-206)."""
+
+
+def file_by_hour(
+    hours: dict[tuple[dt.date, int], int], ended: dt.datetime, seconds: int
+) -> None:
+    """Add `seconds` that ended at `ended` to the hours of the day they fell in.
+
+    A tick that straddles 17:00 puts the part before it under 16 and the rest
+    under 17, so a child who stops at five is not shown at the computer at
+    five. Never across midnight: the ledger files a whole tick under the day it
+    ended on, and a day's hours must add up to that day's `general_s`, so the
+    few seconds before midnight stay in hour 0 of the day they were billed to.
+    """
+    day = ended.date()
+    hour = ended.hour
+    room = ended.minute * 60 + ended.second
+    left = seconds
+    while left > 0:
+        take = left if hour == 0 or room >= left else room
+        if take > 0:
+            hours[(day, hour)] = hours.get((day, hour), 0) + take
+            left -= take
+        hour -= 1
+        room = 3600
 
 
 class TimeLedger:
@@ -135,6 +166,7 @@ class TimeLedger:
         self._days: dict[tuple[int, dt.date], LedgerDay] = {}
         self._boot_id: str | None = None
         self._last_persist_boot: float = 0.0
+        self._hours_failing = False
         self.anomalies: list[ClockAnomaly] = []
 
     # ------------------------------------------------------------- lifecycle
@@ -251,7 +283,7 @@ class TimeLedger:
         if day_rolled:
             self._carry_over(item.child_id, previous.wall.date(), row)
 
-        result = self._apply(item, row, elapsed, day)
+        result = self._apply(item, row, elapsed, reading.wall)
         return TickResult(
             child_id=item.child_id,
             day=day,
@@ -310,8 +342,9 @@ class TimeLedger:
         penalty_finished: bool = False
 
     def _apply(
-        self, item: TickInput, row: LedgerDay, elapsed: int, day: dt.date
+        self, item: TickInput, row: LedgerDay, elapsed: int, wall: dt.datetime
     ) -> TimeLedger._Applied:
+        """Count `elapsed` seconds that ended at `wall` on `row`, the day's row."""
         out = TimeLedger._Applied()
         if elapsed <= 0:
             return out
@@ -350,6 +383,8 @@ class TimeLedger:
         row.seconds_since_break_s += elapsed
         out.counted = elapsed
         runtime.dirty = True
+        # ...and so the one place it is filed by hour, for the insights screen.
+        file_by_hour(runtime.pending_hour_seconds, wall, elapsed)
 
         category = item.category
         if category is not None:
@@ -737,6 +772,48 @@ class TimeLedger:
             # Cleared only now that they are on disk; a failed commit keeps
             # them for the next attempt.
             runtime.pending_category_seconds.clear()
+        self._persist_hours()
+
+    def _persist_hours(self) -> None:
+        """Write the hour-of-day totals, in a transaction of their own (D-206).
+
+        After the ledger's commit and never inside it: these rows feed a chart
+        on the parent's insights screen, and a chart must not be able to fail a
+        tick - three failed ticks lock every child (D-139). What can fail here
+        and not above is the table itself, missing when the daemon restarted
+        between unpacking an upgrade and its migration. Such a failure is
+        logged once, those seconds are left out of the chart rather than kept
+        for ever, and the ledger, already on disk, is untouched.
+        """
+        if not any(runtime.pending_hour_seconds for runtime in self._runtime.values()):
+            return
+        try:
+            for child_id, runtime in self._runtime.items():
+                for (day, hour), seconds in runtime.pending_hour_seconds.items():
+                    key = {"child_id": child_id, "day": day, "hour": hour}
+                    row = self._session.get(UsageHour, key)
+                    if row is None:
+                        row = UsageHour(**key, seconds=0)
+                        self._session.add(row)
+                    row.seconds += seconds
+            self._session.commit()
+        except Exception:
+            if not self._hours_failing:
+                log.exception("could not write the hours of the day; the ledger is unaffected")
+            self._hours_failing = True
+            with contextlib.suppress(Exception):
+                self._session.rollback()
+            # The rollback expired the cached day rows; read them again, as the
+            # ledger's own failure path does, rather than refresh one whose
+            # child was removed in the meantime.
+            self._days.clear()
+        else:
+            if self._hours_failing:
+                log.info("the hours of the day are written again")
+            self._hours_failing = False
+        finally:
+            for runtime in self._runtime.values():
+                runtime.pending_hour_seconds.clear()
 
     def _flush_category_seconds(self, day: dt.date) -> None:
         for child_id, runtime in self._runtime.items():

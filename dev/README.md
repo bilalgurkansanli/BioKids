@@ -6,7 +6,7 @@ testing BioKids and waiting for BioKids.
 | Script | What it is for |
 |---|---|
 | [`fakeclock.py`](fakeclock.py) | Run a three-hour session in three seconds |
-| [`seed.py`](seed.py) | A family, two children and the app catalogue in one command |
+| [`seed.py`](seed.py) | A family, two children and the app catalogue in one command; `--usage` adds five weeks of made-up use for History and Insights |
 | [`reset.sh`](reset.sh) | Drop everything and start again |
 | [`check_i18n.py`](check_i18n.py) | Fail when the two catalogues have drifted apart |
 | [`check_licenses.py`](check_licenses.py) | Fail when a dependency's licence is not permissive (D-30) |

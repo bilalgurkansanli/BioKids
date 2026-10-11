@@ -20,12 +20,13 @@ from __future__ import annotations
 import datetime as dt
 
 import pytest
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from biokids_core.clock import FakeClock
 from biokids_core.config import Config
-from biokids_core.db import Database, LedgerDay
-from biokids_core.ledger import TickInput, TimeLedger
+from biokids_core.db import Database, LedgerDay, UsageHour
+from biokids_core.ledger import TickInput, TimeLedger, file_by_hour
 from biokids_core.policy import general_allowance_seconds
 from biokids_core.types import Category
 from helpers import make_policy
@@ -558,3 +559,130 @@ def test_a_day_first_written_in_a_failed_commit_is_not_lost(
     with db.session() as reread:
         row = reread.get(LedgerDay, {"child_id": 1, "day": new_day})
         assert row is not None and row.general_s >= 300
+
+
+# ------------------------------------------------- hours of the day (D-206)
+
+
+def hours_of(session: Session, child_id: int = 1) -> dict[tuple[dt.date, int], int]:
+    """What `usage_hour` says, read fresh from the database."""
+    session.expire_all()
+    rows = session.scalars(select(UsageHour).where(UsageHour.child_id == child_id))
+    return {(row.day, row.hour): row.seconds for row in rows}
+
+
+def test_every_counted_second_is_filed_under_its_hour(
+    ledger: TimeLedger, clock: FakeClock, session: Session, child: object
+) -> None:
+    clock.wall = dt.datetime(2026, 9, 21, 16, 30, 0)
+    prime(ledger, 1)
+    run(ledger, clock, 1, 3600)
+    ledger.persist()
+
+    day = dt.date(2026, 9, 21)
+    assert hours_of(session) == {(day, 16): 1800, (day, 17): 1800}
+
+
+def test_a_tick_across_the_hour_is_split_between_the_two(
+    ledger: TimeLedger, clock: FakeClock, session: Session, child: object
+) -> None:
+    """A child who stops at five is not shown at the computer at five."""
+    clock.wall = dt.datetime(2026, 9, 21, 16, 59, 55)
+    prime(ledger, 1)
+    run(ledger, clock, 1, 10)
+    ledger.persist()
+
+    day = dt.date(2026, 9, 21)
+    assert hours_of(session) == {(day, 16): 5, (day, 17): 5}
+
+
+def test_the_hours_of_a_day_add_up_to_its_screen_time(
+    ledger: TimeLedger, clock: FakeClock, session: Session, child: object
+) -> None:
+    """Across midnight too, where the ledger bills a whole tick to the new day."""
+    clock.wall = dt.datetime(2026, 9, 21, 23, 58, 55)
+    prime(ledger, 1)
+    run(ledger, clock, 1, 300)
+    ledger.persist()
+
+    hours = hours_of(session)
+    session.expire_all()
+    for day in (dt.date(2026, 9, 21), dt.date(2026, 9, 22)):
+        row = session.get(LedgerDay, {"child_id": 1, "day": day})
+        assert row is not None
+        assert sum(s for (d, _h), s in hours.items() if d == day) == row.general_s
+    # Six ticks end before midnight; the one ending at 00:00:05 is billed,
+    # five seconds from the day before included, to the new day.
+    assert hours == {(dt.date(2026, 9, 21), 23): 60, (dt.date(2026, 9, 22), 0): 240}
+
+
+def test_time_away_from_the_machine_is_filed_nowhere(
+    ledger: TimeLedger, clock: FakeClock, session: Session, child: object
+) -> None:
+    prime(ledger, 1)
+    run(ledger, clock, 1, 600, active=False)
+    ledger.start_penalty(1, 300)
+    run(ledger, clock, 1, 300)
+    ledger.persist()
+    assert hours_of(session) == {}
+
+
+def test_hours_are_written_once_however_often_the_ledger_persists(
+    ledger: TimeLedger, clock: FakeClock, session: Session, child: object
+) -> None:
+    prime(ledger, 1)
+    run(ledger, clock, 1, 60)
+    ledger.persist()
+    ledger.persist()
+    run(ledger, clock, 1, 60)
+    ledger.persist()
+    assert sum(hours_of(session).values()) == 120 == ledger.state(1).general_used_s
+
+
+def test_the_hours_failing_to_save_never_touch_the_ledger(
+    db: Database,
+    clock: FakeClock,
+    config: Config,
+    child: object,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The table is missing when the daemon restarts between unpacking an
+    upgrade and its migration. The chart loses those minutes; the accounting,
+    and the child's limits with it, lose nothing (D-206, D-139)."""
+    with db.session() as session:
+        session.execute(text("DROP TABLE usage_hour"))
+        session.commit()
+        ledger = TimeLedger(session, clock, config)
+        ledger.begin()
+        prime(ledger, 1)
+        run(ledger, clock, 1, 600)
+        ledger.persist()
+        run(ledger, clock, 1, 600)
+        ledger.persist()
+        assert ledger.state(1).general_used_s == 1200
+
+    with db.session() as reread:
+        row = reread.get(LedgerDay, {"child_id": 1, "day": clock.wall.date()})
+        assert row is not None and row.general_s == 1200
+    failures = [r for r in caplog.records if "hours of the day" in r.getMessage()]
+    assert len(failures) == 1, "said once, not every thirty seconds"
+
+
+@pytest.mark.parametrize(
+    ("ended", "seconds", "expected"),
+    [
+        (dt.time(16, 30, 0), 10, {16: 10}),
+        (dt.time(17, 0, 5), 10, {16: 5, 17: 5}),
+        (dt.time(17, 0, 0), 10, {16: 10}),
+        (dt.time(0, 0, 4), 10, {0: 10}),
+        (dt.time(2, 0, 30), 7230, {0: 3600, 1: 3600, 2: 30}),
+        (dt.time(1, 0, 0), 7200, {0: 7200}),
+        (dt.time(9, 0, 0), 0, {}),
+    ],
+)
+def test_filing_seconds_by_hour(ended: dt.time, seconds: int, expected: dict[int, int]) -> None:
+    day = dt.date(2026, 9, 21)
+    hours: dict[tuple[dt.date, int], int] = {}
+    file_by_hour(hours, dt.datetime.combine(day, ended), seconds)
+    assert hours == {(day, hour): s for hour, s in expected.items()}
+    assert sum(hours.values()) == seconds, "nothing lost, nothing invented"

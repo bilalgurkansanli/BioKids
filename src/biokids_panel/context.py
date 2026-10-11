@@ -23,7 +23,13 @@ from sqlalchemy.orm import Session
 from biokids_core import repo
 from biokids_core.config import Config, get_config
 from biokids_core.db.session import Database
-from biokids_core.i18n import Translator, normalise_locale, translator
+from biokids_core.i18n import (
+    DEFAULT_LOCALE,
+    Translator,
+    duration_text,
+    normalise_locale,
+    translator,
+)
 from biokids_core.ipc import DaemonClient
 from biokids_panel.auth import AuthState, csrf_token
 
@@ -120,18 +126,12 @@ def filter_minutes(seconds: object) -> int:
 
 
 def filter_duration(seconds: object, tr: Translator | None = None) -> str:
-    """`95` -> "1 sa 35 dk". Hours and minutes only, never a timestamp."""
-    minutes = filter_minutes(seconds)
-    hours, rest = divmod(minutes, 60)
-    if hours and rest:
-        return f"{hours} sa {rest} dk" if _is_tr(tr) else f"{hours} h {rest} min"
-    if hours:
-        return f"{hours} sa" if _is_tr(tr) else f"{hours} h"
-    return f"{rest} dk" if _is_tr(tr) else f"{rest} min"
+    """`5700` -> "1 sa 35 dk". Hours and minutes only, never a timestamp.
 
-
-def _is_tr(tr: Translator | None) -> bool:
-    return tr is None or tr.locale.startswith("tr")
+    The words come from the catalogue (`duration.*`); without a translator,
+    Turkish, the product's primary voice.
+    """
+    return duration_text(filter_minutes(seconds) * 60, tr or translator(DEFAULT_LOCALE))
 
 
 def filter_when(value: object) -> str:

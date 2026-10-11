@@ -7,7 +7,8 @@ Once a minute, from the supervisor's loop:
   daemon giving up - every request a child filed, and every assistant alert.
   Only what is new: the first run starts from the present, so turning mail on
   does not send a family its history.
-* **The week**, on Sunday from 19:00: each child's time per day.
+* **The week**, on Sunday from 19:00: each child's time per day, and the top
+  three highlights of the insights screen (D-206).
 
 A mail that cannot be sent is tried again later, with a growing pause, and
 nothing is marked sent until it was (principle 5: offline is a queue, not a
@@ -26,7 +27,7 @@ from typing import Final
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from biokids_core import mail, repo
+from biokids_core import insights, mail, repo
 from biokids_core.config import Config
 from biokids_core.db.models import AiAlert, AuditLog, Child, LedgerDay
 from biokids_core.i18n import Translator, normalise_locale, translator
@@ -40,6 +41,8 @@ MAILED_ACTIONS: Final = frozenset({"access_requested"})
 BACKOFF: Final = (60, 300, 900, 3600)
 MAX_ROWS: Final = 40
 WEEKLY_HOUR: Final = 19
+MAIL_HIGHLIGHTS: Final = 3
+"""Per child in the Sunday mail: the rest is on the insights screen."""
 
 
 @dataclass
@@ -152,7 +155,8 @@ class Notifier:
 
 
 def weekly_summary(session: Session, tr: Translator, last_day: dt.date) -> str:
-    """Each child's time on each of the last seven days, and the total."""
+    """Each child's time on each of the last seven days, the total, and the
+    week's top highlights from the insights screen (D-206)."""
     first = last_day - dt.timedelta(days=6)
     paragraphs: list[str] = [tr("mail.weekly.intro")]
     for child in session.scalars(select(Child).order_by(Child.id)):
@@ -171,13 +175,37 @@ def weekly_summary(session: Session, tr: Translator, last_day: dt.date) -> str:
             f"  {tr(f'day.{day.weekday()}')}: {_minutes(rows.get(day, 0), tr)}"
             for day in (first + dt.timedelta(days=n) for n in range(7))
         ]
-        paragraphs.append(
-            tr("mail.weekly.child", name=child.display_name, total=_minutes(total, tr))
-            + "\n"
-            + "\n".join(days)
-        )
+        lines = [tr("mail.weekly.child", name=child.display_name, total=_minutes(total, tr))]
+        lines += days
+        highlights = _highlights(session, child, tr, first, last_day)
+        if highlights:
+            lines.append("  " + tr("insights.mail.highlights"))
+            lines += [f"  - {text}" for text in highlights]
+        paragraphs.append("\n".join(lines))
     paragraphs.append(tr("mail.footer"))
     return "\n\n".join(paragraphs)
+
+
+def _highlights(
+    session: Session, child: Child, tr: Translator, first: dt.date, last_day: dt.date
+) -> list[str]:
+    """The week's top highlights for one child, as the panel words them.
+
+    Only the sentences: a mail has no setting to link to, and none of them
+    names a site or repeats what a child typed (D-177), so nothing the panel
+    keeps to itself goes into a mailbox. A failure costs the highlights, never
+    the mail: the minutes above are what the parent signed up for.
+    """
+    try:
+        span = insights.Span(first, last_day)
+        found = insights.insights_for(session, child, insights.Period.WEEK, last_day, span)
+        chosen = insights.highlights(
+            found, insights.context_for(session, child), MAIL_HIGHLIGHTS
+        )
+    except Exception:
+        log.exception("could not work out the week's highlights for child %s", child.id)
+        return []
+    return [insights.say(tr, h.key, h.params) for h in chosen]
 
 
 def _minutes(seconds: int, tr: Translator) -> str:

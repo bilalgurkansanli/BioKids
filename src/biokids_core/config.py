@@ -158,7 +158,8 @@ class RetentionConfig:
     activity_days: int = 30
     """Usage events (sites visited, gaps in the ledger) and the assistant's alerts."""
     usage_days: int = 400
-    """Minutes per day and per app, for the history screen and its year."""
+    """Minutes per day, per app and per hour of the day, for the history and
+    insights screens and their year."""
     audit_days: int = 365
     requests_days: int = 90
 
