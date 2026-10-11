@@ -11,7 +11,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light">
-  <meta name="referrer" content="no-referrer">
+  {# same-origin, not no-referrer: no other site learns the launcher's address
+     either way, but under no-referrer Chromium sends "Origin: null" with every
+     form the page posts, and the launcher refused its own "Büyüğüme sor",
+     "Kapat" and "Biraz daha süre iste" as forged (D-204). #}
+  <meta name="referrer" content="same-origin">
   <title>{% block title %}BioKids{% endblock %}</title>
   <link rel="stylesheet" href="/static/shared/tokens.css?v={{ asset_version }}">
   <link rel="stylesheet" href="/static/shell.css?v={{ asset_version }}">

@@ -159,6 +159,10 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
 
 ### Fixed
 
+- **"Büyüğüme sor", "Biraz daha süre iste" and "Evet, kapat" showed a blank page**
+  (D-204). The launcher's pages told Chromium to send no referrer, so their forms
+  arrived with `Origin: null` and the launcher refused them as forged. They now send
+  the launcher's own origin, and nothing to other sites.
 - **"Dünya" showed only "WebGL is not supported"** on a machine without graphics
   acceleration (D-203). Dünya is now the Marble globe, which needs neither a graphics
   card nor the internet. The web tile stays as "Google Earth", offered from 8 and not

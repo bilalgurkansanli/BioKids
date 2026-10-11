@@ -985,6 +985,37 @@ def test_the_launchers_own_page_still_works(client: TestClient) -> None:
     assert response.status_code == 200
 
 
+@pytest.mark.parametrize("path", ["/shutdown", "/ask-a-parent", "/first-run"])
+def test_a_form_the_launcher_posts_itself_is_not_refused(
+    client: TestClient, daemon: FakeShellDaemon, path: str
+) -> None:
+    """What Chromium sent for "Büyüğüme sor" on the VM (D-204): a form posted by
+    a page under no-referrer carries "Origin: null". The launcher answered 403,
+    a blank page, and the child's question went nowhere."""
+    chromium = {"origin": "null", "sec-fetch-site": "same-origin"}
+    response = client.post(path, data={"kind": "search"}, headers=chromium)
+    assert response.status_code == 200
+
+
+@pytest.mark.parametrize("site", ["cross-site", "same-site", None])
+def test_a_null_origin_from_anywhere_else_is_refused(
+    client: TestClient, site: str | None
+) -> None:
+    """A sandboxed frame on a website also says "Origin: null"; only the
+    browser's own Sec-Fetch-Site tells the two apart."""
+    headers = {"origin": "null"} | ({"sec-fetch-site": site} if site else {})
+    response = client.post("/shutdown", headers=headers)
+    assert response.status_code == 403
+
+
+def test_the_launchers_pages_send_their_origin_with_a_form(client: TestClient) -> None:
+    """no-referrer made every form post "Origin: null" (D-204); same-origin keeps
+    the launcher's address from other sites just the same."""
+    page = client.get("/blocked?reason=search.blocked").text
+    assert '<meta name="referrer" content="same-origin">' in page
+    assert 'content="no-referrer"' not in page
+
+
 # -------------------------------------------------- D-173 asking for things
 
 

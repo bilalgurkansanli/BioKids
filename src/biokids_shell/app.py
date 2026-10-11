@@ -719,6 +719,12 @@ def _same_origin(request: Request) -> bool:
     Chromium sends Sec-Fetch-Site and Origin with every POST it makes. A request
     with neither did not come from a browser, and the child has no other program
     that could send one.
+
+    "Origin: null" is what Chromium sends for a form posted by a page whose
+    referrer policy is no-referrer - the launcher's own pages until D-204, and
+    any copy of one still open after an upgrade. Sec-Fetch-Site, which no page
+    can set, still says where it came from: same-origin is the launcher, and a
+    sandboxed frame on a website says cross-site.
     """
     origin = request.headers.get("origin")
     if origin is not None and origin == _extension_origin(request):
@@ -729,6 +735,8 @@ def _same_origin(request: Request) -> bool:
         return False
     if origin is None:
         return True
+    if origin == "null":
+        return site == "same-origin"
     host = request.headers.get("host", "")
     return origin in {f"http://{host}", f"https://{host}"}
 

@@ -1335,3 +1335,18 @@ The owner: a child who sees the same things every time gets bored. Three changes
   category, in the audit log as a change by the system. It happens once per database:
   a parent who unticks it is not overruled by the next upgrade. Nobody loses a tile;
   the old one stays where it was.
+
+**D-204 [claude] The launcher's own forms are not refused as forged.** (2026-10-11)
+On the VM the owner pressed "Büyüğüme sor" under a refused search and got a blank
+page. Every launcher page said `<meta name="referrer" content="no-referrer">`, and
+under that policy Chromium sends `Origin: null` with a form the page posts; the
+launcher's same-origin check (D-171's guard against websites posting to
+127.0.0.1) refused it with a 403. Every plain form was affected: "Büyüğüme sor", "Biraz
+daha süre iste", "Evet, kapat" and the first-run screen. The `fetch` calls (launching,
+the sound, the assistant) send their origin whatever the policy and kept working,
+which is why it went unseen. The pages now say `same-origin`: other sites still learn
+nothing of the launcher's address, and a form carries the launcher's origin. The check
+also accepts `Origin: null` when Sec-Fetch-Site, which no page can set, says
+same-origin, so a page left open across the upgrade works too; a sandboxed frame on a
+website says cross-site and is still refused. Found by posting the form in a real
+Chromium, which the tests' client never did; the tests now send what Chromium sent.
