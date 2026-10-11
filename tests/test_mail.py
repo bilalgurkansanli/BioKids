@@ -159,24 +159,28 @@ def _two_weeks(session: Session, child: Child) -> None:
     session.commit()
 
 
-def test_the_week_comes_with_its_highlights(session: Session, family: Child) -> None:
+def test_the_week_comes_with_its_highlights(
+    session: Session, config: Config, family: Child
+) -> None:
     _two_weeks(session, family)
     repo.record_event(session, kind="visit", child_id=family.id, payload={"host": "trt.net.tr"})
     session.commit()
 
-    body = weekly_summary(session, translator("tr"), SUNDAY_EVENING.date())
+    body = weekly_summary(session, translator("tr"), SUNDAY_EVENING.date(), config)
 
     assert "Öne çıkanlar:" in body
     assert "Geçen haftanın aynı günlerine göre günlük ortalama ekran süresi %100 arttı." in body
     assert "trt.net.tr" not in body, "a mail names no site"
-    english = weekly_summary(session, translator("en"), SUNDAY_EVENING.date())
+    english = weekly_summary(session, translator("en"), SUNDAY_EVENING.date(), config)
     assert "Highlights:" in english and "up 100%" in english
 
 
-def test_a_week_without_highlights_is_mailed_as_before(session: Session, family: Child) -> None:
+def test_a_week_without_highlights_is_mailed_as_before(
+    session: Session, config: Config, family: Child
+) -> None:
     session.add(LedgerDay(child_id=family.id, day=dt.date(2026, 10, 7), general_s=45 * 60))
     session.commit()
-    body = weekly_summary(session, translator("tr"), SUNDAY_EVENING.date())
+    body = weekly_summary(session, translator("tr"), SUNDAY_EVENING.date(), config)
     assert "Öne çıkanlar" not in body and "Çarşamba: 45 dk" in body
 
 

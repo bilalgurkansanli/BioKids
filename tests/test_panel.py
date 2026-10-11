@@ -2618,10 +2618,12 @@ def test_insights_show_a_month_in_words_and_bars(
 
     assert 'aria-current="page">Son 30 gün' in page
     assert "Öne çıkanlar" in page
-    assert "akşam 21:00 ile sabah 06:00 arasında" in page, "the late evenings"
+    assert "saat 21:00 ile 06:00 arasında" in page, "the late evenings"
     assert "/children/1/time#windows" in page
     assert "oyunlarda geçti" in page and "/children/1/time?more=1#limits" in page
     assert page.count('class="daybars__day') == 30
+    # Thirty bars are a few pixels each on a phone: not links, nor offered as such.
+    assert "/history?child=1&day=" not in page and "Bir güne dokunun" not in page
     assert page.count('class="hourbars__hour"') == 24
     assert "supertux" in page and "gcompris" in page
     assert "<code>trt.net.tr</code>" in page and "tr.wikipedia.org" in page
@@ -2637,8 +2639,70 @@ def test_insights_in_english_and_with_odd_parameters(
     page = client.get("/insights?period=last_week&lang=en").text
     assert "Insights" in page and "insights." not in page
     assert client.get("/insights?child=99&period=forever").status_code == 200
-    week = client.get("/insights?period=week").text
+    week = html.unescape(client.get("/insights?period=week").text)
     assert 'aria-current="page">Bu hafta' in week
+    assert "/history?child=1&day=" in week and "Bir güne dokunun" in week, "a week's bars"
+
+
+def test_the_average_tile_says_a_large_rise_in_words() -> None:
+    """The tile and the highlight share one rule: beyond tripling, no "%900"."""
+    from biokids_core import insights
+    from biokids_core.i18n import translator
+    from biokids_panel.routes.insights import _delta
+
+    monday, thursday = dt.date(2026, 10, 5), dt.date(2026, 10, 8)
+    general = {monday - dt.timedelta(days=7 - n): 900 for n in range(3)}
+    general |= {monday + dt.timedelta(days=n): 3600 for n in range(3)}
+    span = insights.span_for(insights.Period.WEEK, thursday)
+    found = insights.summarize(
+        insights.Facts(general=general), insights.Period.WEEK, span, thursday
+    )
+    assert _delta(found, translator("tr")) == {
+        "text": "↑ iki katından fazla",
+        "vs": "Geçen haftanın aynı günlerine göre",
+    }
+    assert _delta(found, translator("en"))["text"] == "↑ more than double"  # type: ignore[index]
+
+
+def test_insights_tell_a_waiting_request_from_an_unanswered_one(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    from biokids_core.db.models import AccessRequest
+
+    _a_busy_month(db)
+    with db.session() as session:
+        session.add(AccessRequest(child_id=1, url="", kind="time", status="pending"))
+        session.add(AccessRequest(child_id=1, url="", kind="time", status="pending"))
+        session.commit()
+    login(client)
+    page = html.unescape(client.get("/insights").text)
+    assert "1 izin verildi · 1 şimdi değil · 2 bekliyor" in page
+    assert "cevapsız" not in page, "a request still open was not left unanswered"
+
+
+def test_insights_say_where_the_sentences_go(
+    client: TestClient, family_ready: None, db: Database, config: Config
+) -> None:
+    """ "Sent nowhere" is true until the Sunday mail carries the highlights."""
+    from biokids_core import mail
+
+    _a_busy_month(db)
+    login(client)
+    assert "hiçbir yere gönderilmez" in html.unescape(client.get("/insights").text)
+    with db.session() as session:
+        mail.save_settings(
+            session,
+            config,
+            mail.MailSettings(
+                host="smtp.example.com",
+                username="anne@example.com",
+                recipients=("anne@example.com",),
+            ),
+        )
+        session.commit()
+    page = html.unescape(client.get("/insights").text)
+    assert "hiçbir yere gönderilmez" not in page
+    assert "Pazar akşamı haftalık e-postayla" in page
 
 
 def test_insights_are_in_the_menu_and_a_tap_from_history(

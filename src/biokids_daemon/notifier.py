@@ -147,14 +147,14 @@ class Notifier:
         week = now_wall.date().isoformat()
         if repo.get_setting(session, LAST_WEEK, "") == week:
             return False
-        body = weekly_summary(session, tr, now_wall.date())
+        body = weekly_summary(session, tr, now_wall.date(), self.config)
         await asyncio.to_thread(mail.send, settings, tr("mail.weekly.subject"), body)
         repo.set_setting(session, LAST_WEEK, week)
         session.commit()
         return True
 
 
-def weekly_summary(session: Session, tr: Translator, last_day: dt.date) -> str:
+def weekly_summary(session: Session, tr: Translator, last_day: dt.date, config: Config) -> str:
     """Each child's time on each of the last seven days, the total, and the
     week's top highlights from the insights screen (D-206)."""
     first = last_day - dt.timedelta(days=6)
@@ -177,7 +177,7 @@ def weekly_summary(session: Session, tr: Translator, last_day: dt.date) -> str:
         ]
         lines = [tr("mail.weekly.child", name=child.display_name, total=_minutes(total, tr))]
         lines += days
-        highlights = _highlights(session, child, tr, first, last_day)
+        highlights = _highlights(session, child, tr, first, last_day, config)
         if highlights:
             lines.append("  " + tr("insights.mail.highlights"))
             lines += [f"  - {text}" for text in highlights]
@@ -187,7 +187,12 @@ def weekly_summary(session: Session, tr: Translator, last_day: dt.date) -> str:
 
 
 def _highlights(
-    session: Session, child: Child, tr: Translator, first: dt.date, last_day: dt.date
+    session: Session,
+    child: Child,
+    tr: Translator,
+    first: dt.date,
+    last_day: dt.date,
+    config: Config,
 ) -> list[str]:
     """The week's top highlights for one child, as the panel words them.
 
@@ -200,7 +205,7 @@ def _highlights(
         span = insights.Span(first, last_day)
         found = insights.insights_for(session, child, insights.Period.WEEK, last_day, span)
         chosen = insights.highlights(
-            found, insights.context_for(session, child), MAIL_HIGHLIGHTS
+            found, insights.context_for(session, child, config), MAIL_HIGHLIGHTS
         )
     except Exception:
         log.exception("could not work out the week's highlights for child %s", child.id)

@@ -1260,14 +1260,21 @@ minute). Then, on the phone, **Analiz** in the bottom bar:
    numbers as tiles (two across on the phone, nothing wider than the screen), a
    bar per day with the day's quota as a dashed line, the kinds of app as one bar
    with a legend, the apps, the hours of the day, the requests and the sites.
-   A day bar opens that day in **Geçmiş**.
+   In a week a day bar opens that day in **Geçmiş**; in **Son 30 gün** the bars
+   are not links and "Bir güne dokunun" is not shown.
 3. A suggestion's link opens the setting it names: "Türlere göre günlük süre"
-   lands on **Süre kuralları** with **Gelişmiş** open at the limits.
-4. **Bugün** shows a "Bu hafta" card under the children with at most three
+   lands on **Süre kuralları** with **Gelişmiş** open at the limits. Have Elif ask
+   twice and leave both waiting - more time, and a closed site: **Analiz** shows
+   "1 bekliyor" on each line under the requests and no sentence about requests
+   left unanswered.
+4. On a laptop, narrow the browser window to about 650 px: the menu stays one row
+   with **Analiz** in it, and no panel page scrolls sideways (in English too,
+   `?lang=en`).
+5. **Bugün** shows a "Bu hafta" card under the children with at most three
    sentences each and "Analizin tamamı". With Elif logged out, `sudo systemctl
    stop biokids-daemon`: the live cards say the service is not answering and the
    week's card is still there. `sudo systemctl start biokids-daemon` afterwards.
-5. Sunday after 19:00, with mail set up (D-177), the week's mail ends each child's
+6. Sunday after 19:00, with mail set up (D-177), the week's mail ends each child's
    days with "Öne çıkanlar:" and at most three sentences, and names no site.
 
 ### 8.11 The apps an upgrade brought (D-207)

@@ -30,6 +30,10 @@ router = APIRouter()
 DAY_LABELS_UP_TO = 14
 """Up to two weeks every bar is labelled with its day; a month only its Mondays."""
 
+DAY_LINKS_UP_TO = 14
+"""Up to two weeks every bar opens its day in History. Thirty bars on a phone are
+six pixels wide each: not something to tap, and not offered as one."""
+
 HOUR_LABELS = (0, 6, 12, 18)
 
 
@@ -50,7 +54,8 @@ def insights_view(
 
     today = dt.date.today()
     found = insights.insights_for(session, chosen, picked, today)
-    context = insights.context_for(session, chosen)
+    context = insights.context_for(session, chosen, view.ctx.config)
+    day_rows = _day_rows(session, chosen, found, tr)
     return view.render(
         "insights.html",
         children=children,
@@ -59,9 +64,13 @@ def insights_view(
         periods=list(insights.Period),
         ins=found,
         managed=context.managed,
+        # The intro says where these sentences go, and with the Sunday mail on
+        # that is not "nowhere".
+        mail_weekly=context.mail_weekly,
         highlights=[insights.render(h, tr) for h in insights.highlights(found, context)],
         delta=_delta(found, tr),
-        day_rows=_day_rows(session, chosen, found, tr),
+        day_rows=day_rows,
+        days_linked=len(day_rows) <= DAY_LINKS_UP_TO,
         hour_rows=_hour_rows(found),
         app_rows=_app_rows(session, found, tr.locale),
         request_rows=_request_rows(found, tr),
@@ -70,18 +79,18 @@ def insights_view(
 
 
 def _delta(found: insights.Insights, tr: Translator) -> dict[str, str] | None:
-    """The average's change, as the stat card shows it: an arrow and a percent."""
+    """The average's change, as the stat card shows it: an arrow and a percent,
+    or words beyond tripling, by the same rule as the highlight."""
     comparison = found.comparison
     if comparison is None:
         return None
-    difference = abs(comparison.average_s - comparison.previous_average_s)
-    if (
-        abs(comparison.percent) < insights.CHANGE_MIN_PERCENT
-        or difference < insights.CHANGE_MIN_SECONDS
-    ):
+    change = comparison.change
+    if change is insights.Change.SAME:
         text = tr("insights.delta.same")
-    elif comparison.percent < 0:
+    elif change is insights.Change.LESS:
         text = tr("insights.delta.down", percent=-comparison.percent)
+    elif change is insights.Change.MUCH_MORE:
+        text = tr("insights.delta.much_more")
     else:
         text = tr("insights.delta.up", percent=comparison.percent)
     return {
@@ -158,6 +167,8 @@ def _request_rows(found: insights.Insights, tr: Translator) -> list[dict[str, An
                     (line.approved, "insights.req.approved"),
                     (line.denied, "insights.req.denied"),
                     (line.unanswered, "insights.req.unanswered"),
+                    # Still open: "bekliyor", in the present, never "cevapsız".
+                    (line.waiting, "insights.req.waiting"),
                 )
                 if count
             ]

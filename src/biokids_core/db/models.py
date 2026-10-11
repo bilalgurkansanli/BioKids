@@ -435,8 +435,11 @@ class UsageHour(Base):
     day and `usage_tick` the day and the app. One row per child, day and local
     wall-clock hour, filed by the same tick that adds to `general_s`, so a day's
     hours add up to its screen time. An aggregate, never a timeline: the minute
-    a session started is not kept. Kept as long as `usage_tick` (D-189), and
-    nothing that enforces anything reads it.
+    a session started is not kept. Still, *when* a child used the computer is
+    the most personal of the usage records, and no screen reads more than
+    thirty days of it: it is kept for `retention.activity_days`, with the sites
+    visited, not for `usage_days` with the minutes (D-189). Nothing that
+    enforces anything reads it.
     """
 
     __tablename__ = "usage_hour"

@@ -29,9 +29,11 @@ Three rules shape the arithmetic:
 * **Days before BioKids are not zeros.** A child added on Thursday did not
   spend Monday to Wednesday away from the computer; those days are left out of
   every average (`Facts.tracked_from`).
-* **Small numbers are not news.** A comparison needs ten minutes on the other
-  side, a change is reported from ten percent and five minutes a day, and a
-  share from about a third of the time.
+* **Small numbers are not news.** A comparison needs ten minutes a day on the
+  other side, over at least three days the child was known (or as many as have
+  finished on this side); a change is reported from ten percent and five
+  minutes a day, and beyond tripling in words rather than as a number; a share
+  is said from about a third of the time.
 
 And one for the words: a highlight says what happened, never what it says
 about the child. "Ekran süresinin çoğu oyunlarda geçti", never "çok oyun
@@ -50,6 +52,8 @@ from typing import Final
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from biokids_core import mail
+from biokids_core.config import Config
 from biokids_core.db.models import (
     AccessRequest,
     AiAlert,
@@ -57,13 +61,14 @@ from biokids_core.db.models import (
     CategoryLimit,
     Child,
     LedgerDay,
-    Parent,
     Policy,
     UsageEvent,
     UsageHour,
     UsageTick,
+    utcnow,
 )
 from biokids_core.i18n import Translator, duration_text
+from biokids_core.repo import REQUEST_EXPIRY
 from biokids_core.types import Category, Reason
 
 MONTH_DAYS: Final = 30
@@ -73,21 +78,35 @@ USED_SECONDS: Final = 60
 """A day with less than a minute of screen time was not a day the computer was used."""
 
 COMPARE_MIN_SECONDS: Final = 10 * 60
-"""A comparison needs this much screen time on the days it compares against:
-from two minutes, any week is "up 900%"."""
+"""A comparison needs this much screen time *a day*, on average, on the days it
+compares against. Not in total: a child added last Friday and tried for six
+minutes made any week after it "up 900%"."""
+
+COMPARE_MIN_DAYS: Final = 3
+"""...and this many of those days that BioKids knew the child, or as many as have
+finished on this side if fewer: one evening of setting up is not a week."""
 
 CHANGE_MIN_PERCENT: Final = 10
 CHANGE_MIN_SECONDS: Final = 5 * 60
 """A change in the daily average is news from 10% *and* five minutes a day."""
 
+CHANGE_WORDS_PERCENT: Final = 200
+"""Beyond this the change is said in words, "more than double", and not as a
+number: "up 900%" is a figure nobody pictures, and it says more about a quiet
+week before than about this one."""
+
 TREND_MIN_PERCENT: Final = 25
 TREND_MIN_SECONDS: Final = 3 * 60
 """An app is "more" or "less" from 25% and three minutes a day."""
 
-LATE_HOURS: Final = frozenset({21, 22, 23, 0, 1, 2, 3, 4, 5})
+LATE_FROM: Final = 21
+LATE_UNTIL: Final = 6
+LATE_HOURS: Final = frozenset((*range(LATE_FROM, 24), *range(LATE_UNTIL)))
 LATE_MIN_SECONDS: Final = 5 * 60
-"""A day counts as late use with five minutes between 21:00 and 06:00. Children
-of four to ten are mostly asleep by then; the sentence names the hours."""
+"""A night counts as late use with five minutes between 21:00 and 06:00. Children
+of four to ten are mostly asleep by then; the sentence names the hours. The
+hours after midnight belong to the evening before: 22:00 to 00:30 is one late
+night, not two late days."""
 
 PEAK_MIN_SECONDS: Final = 30 * 60
 """The busiest hours are worth saying from half an hour of use."""
@@ -188,7 +207,8 @@ class Facts:
     Plain values, so that `summarize` - where every rule lives - is tested
     without a database. Every day is a local calendar day: the rows stored in
     UTC have been converted already. The ledger and the apps cover the span
-    and the one before it; the rest only the days shown.
+    and the one before it; the hours the days shown and the morning after the
+    last of them; the rest only the days shown.
     """
 
     general: Mapping[dt.date, int] = field(default_factory=dict)
@@ -203,35 +223,47 @@ class Facts:
     visits: Sequence[tuple[dt.date, str]] = ()
     """(day, host), one per visit the extension reported (D-187)."""
     requests: Sequence[tuple[str, str]] = ()
-    """(kind, status) of each request the child filed."""
+    """(kind, status) of each request the child filed. One still `pending` after
+    `REQUEST_EXPIRY` is `expired` here, as the daemon will mark it."""
     assistant_alerts: int = 0
     tracked_from: dt.date | None = None
     """The first day BioKids knew this child. Earlier days are not zeros."""
 
 
-def utc_bounds(span: Span) -> tuple[dt.datetime, dt.datetime]:
+def utc_bounds(span: Span, tz: dt.tzinfo | None = None) -> tuple[dt.datetime, dt.datetime]:
     """[start, end) of a run of local days, as the naive UTC the rows store.
 
     The same conversion as the audit screen's (`_utc_bounds_of_local_day`): a
     row at 01:30 in Istanbul is 22:30 UTC the evening before, and belongs to
-    the day the parent lived it.
+    the day the parent lived it. `tz` is the machine's zone unless given; the
+    tests give one, so that they test the conversion on a machine set to UTC.
     """
-    start = dt.datetime.combine(span.first, dt.time.min).astimezone(dt.UTC)
-    end = dt.datetime.combine(span.last + dt.timedelta(days=1), dt.time.min).astimezone(dt.UTC)
-    return start.replace(tzinfo=None), end.replace(tzinfo=None)
+    start = dt.datetime.combine(span.first, dt.time.min, tzinfo=tz).astimezone(dt.UTC)
+    end = dt.datetime.combine(span.last + dt.timedelta(days=1), dt.time.min, tzinfo=tz)
+    return start.replace(tzinfo=None), end.astimezone(dt.UTC).replace(tzinfo=None)
 
 
-def local_day(utc_naive: dt.datetime) -> dt.date:
-    """The local calendar day of a naive UTC timestamp."""
-    return utc_naive.replace(tzinfo=dt.UTC).astimezone().date()
+def local_day(utc_naive: dt.datetime, tz: dt.tzinfo | None = None) -> dt.date:
+    """The local calendar day of a naive UTC timestamp, in `tz` or the machine's zone."""
+    return utc_naive.replace(tzinfo=dt.UTC).astimezone(tz).date()
 
 
-def load_facts(session: Session, child_id: int, span: Span, today: dt.date) -> Facts:
+def load_facts(
+    session: Session,
+    child_id: int,
+    span: Span,
+    today: dt.date,
+    *,
+    now: dt.datetime | None = None,
+    tz: dt.tzinfo | None = None,
+) -> Facts:
     """Read what `summarize` needs, with one indexed query per table.
 
     Every query is bounded by the child and by the days, which every table here
-    has an index for; a month of a busy child is a few hundred rows.
+    has an index for; a month of a busy child is a few hundred rows. `now` (naive
+    UTC) is what tells a request still waiting from one nobody answered.
     """
+    expired_before = (now or utcnow()) - REQUEST_EXPIRY
     previous = span.shift(-span.days)
     general: dict[dt.date, int] = {}
     earned: dict[dt.date, int] = {}
@@ -256,24 +288,27 @@ def load_facts(session: Session, child_id: int, span: Span, today: dt.date) -> F
             )
         )
     }
-    tracked_from = _tracked_from(session, child_id)
+    tracked_from = _tracked_from(session, child_id, tz)
     shown = span.until(today)
     if shown is None:
         return Facts(general, earned, granted, apps, tracked_from=tracked_from)
 
+    # The morning after the last day too: the small hours belong to the night
+    # that began on the evening before (LATE_HOURS), and a night is counted in
+    # the period its evening fell in.
     hours = {
         (row.day, row.hour): row.seconds
         for row in session.scalars(
             select(UsageHour).where(
                 UsageHour.child_id == child_id,
                 UsageHour.day >= shown.first,
-                UsageHour.day <= shown.last,
+                UsageHour.day <= shown.last + dt.timedelta(days=1),
             )
         )
     }
-    since, until = utc_bounds(shown)
+    since, until = utc_bounds(shown, tz)
     visits = [
-        (local_day(event.ts_wall), host)
+        (local_day(event.ts_wall, tz), host)
         for event in session.scalars(
             select(UsageEvent).where(
                 UsageEvent.child_id == child_id,
@@ -285,7 +320,7 @@ def load_facts(session: Session, child_id: int, span: Span, today: dt.date) -> F
         if (host := str(event.payload.get("host", "")).strip().lower().removeprefix("www."))
     ]
     ran_out = frozenset(
-        local_day(entry.ts)
+        local_day(entry.ts, tz)
         for entry in session.scalars(
             select(AuditLog).where(
                 AuditLog.action == "quota_exhausted",
@@ -299,7 +334,12 @@ def load_facts(session: Session, child_id: int, span: Span, today: dt.date) -> F
         if entry.detail.get("reason", Reason.QUOTA_EXHAUSTED) == Reason.QUOTA_EXHAUSTED
     )
     requests = [
-        (row.kind, row.status)
+        (
+            row.kind,
+            "expired"
+            if row.status == "pending" and row.created_at < expired_before
+            else row.status,
+        )
         for row in session.scalars(
             select(AccessRequest).where(
                 AccessRequest.child_id == child_id,
@@ -332,7 +372,7 @@ def load_facts(session: Session, child_id: int, span: Span, today: dt.date) -> F
     )
 
 
-def _tracked_from(session: Session, child_id: int) -> dt.date | None:
+def _tracked_from(session: Session, child_id: int, tz: dt.tzinfo | None) -> dt.date | None:
     """The day the child was added, or the first day on record if earlier."""
     child = session.get(Child, child_id)
     first_day = session.scalar(
@@ -340,7 +380,7 @@ def _tracked_from(session: Session, child_id: int) -> dt.date | None:
     )
     known = [day for day in (first_day,) if day is not None]
     if child is not None:
-        known.append(local_day(child.created_at))
+        known.append(local_day(child.created_at, tz))
     return min(known) if known else None
 
 
@@ -391,7 +431,9 @@ class RequestLine:
     approved: int
     denied: int
     unanswered: int
-    """Expired, or still waiting: nobody said yes or no."""
+    """Expired: nobody said yes or no while it could still be answered."""
+    waiting: int = 0
+    """Still open, and still answerable: not "unanswered", only not yet."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -400,6 +442,16 @@ class SiteLine:
     days: int
     """On how many days it was opened, which says more than how often."""
     visits: int
+
+
+class Change(StrEnum):
+    """What a comparison says, before it is put into words."""
+
+    SAME = "same"
+    LESS = "less"
+    MORE = "more"
+    MUCH_MORE = "much_more"
+    """Up by more than CHANGE_WORDS_PERCENT: "more than double", not a number."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -414,6 +466,16 @@ class Comparison:
     """Signed and rounded: -18 is "down 18%"."""
     partial: bool
     """The period is not over, so it is "the same days last week"."""
+
+    @property
+    def change(self) -> Change:
+        """One rule for the highlight and the stat tile, so they never disagree."""
+        difference = abs(self.average_s - self.previous_average_s)
+        if abs(self.percent) < CHANGE_MIN_PERCENT or difference < CHANGE_MIN_SECONDS:
+            return Change.SAME
+        if self.percent < 0:
+            return Change.LESS
+        return Change.MUCH_MORE if self.percent > CHANGE_WORDS_PERCENT else Change.MORE
 
 
 @dataclass(frozen=True)
@@ -448,7 +510,9 @@ class Insights:
     hours_total_s: int
     peak: tuple[int, int] | None
     """The busiest hour or two, (start, end), end exclusive and possibly 24."""
-    late_days: int
+    late_nights: int
+    """Evenings in the period with use between 21:00 and 06:00, the small hours
+    counted with the evening before."""
 
     @property
     def includes_today(self) -> bool:
@@ -498,7 +562,7 @@ def summarize(facts: Facts, period: Period, span: Span, today: dt.date) -> Insig
     weekend = [day for day in finished if day.weekday() >= 5]
     comparison, previous_days = _compare(facts, span, today, finished, tracked)
     sites, more_sites = _sites(facts.visits, shown_set)
-    hours, peak, late_days = _hours(facts.hours, shown_set)
+    hours, peak, late_nights = _hours(facts.hours, shown_set)
 
     return Insights(
         period=period,
@@ -515,7 +579,13 @@ def summarize(facts: Facts, period: Period, span: Span, today: dt.date) -> Insig
         comparison=comparison,
         ran_out_days=len(ran_out_shown),
         shares=_shares(facts, shown_set, total),
-        apps=_apps(facts, shown_set, finished, previous_days if comparison else None),
+        apps=_apps(
+            facts,
+            shown_set,
+            finished,
+            previous_days if comparison else None,
+            set(span.shift(-span.days).dates()),
+        ),
         earned_s=sum(max(0, facts.earned.get(day, 0)) for day in shown),
         granted_s=sum(max(0, facts.granted.get(day, 0)) for day in shown),
         requests=_requests(facts.requests),
@@ -525,7 +595,7 @@ def summarize(facts: Facts, period: Period, span: Span, today: dt.date) -> Insig
         hours=hours,
         hours_total_s=sum(hours),
         peak=peak,
-        late_days=late_days,
+        late_nights=late_nights,
     )
 
 
@@ -539,16 +609,19 @@ def _compare(
     """This period's finished days against the same days one period back.
 
     Also returns those earlier days, which the apps' trends compare against.
+    Nothing to compare with, unless the earlier side has enough days the child
+    was known and enough time on each of them (COMPARE_MIN_DAYS,
+    COMPARE_MIN_SECONDS): a few minutes of trying BioKids out is not a week to
+    measure the next one by.
     """
     previous = [day - dt.timedelta(days=span.days) for day in finished]
     previous = [day for day in previous if tracked(day)]
-    if not finished or not previous:
+    if not finished or len(previous) < min(COMPARE_MIN_DAYS, len(finished)):
         return None, previous
-    before = sum(max(0, facts.general.get(day, 0)) for day in previous)
-    if before < COMPARE_MIN_SECONDS:
+    before_average = sum(max(0, facts.general.get(day, 0)) for day in previous) / len(previous)
+    if before_average < COMPARE_MIN_SECONDS:
         return None, previous
     now_average = sum(max(0, facts.general.get(day, 0)) for day in finished) / len(finished)
-    before_average = before / len(previous)
     return (
         Comparison(
             days=len(finished),
@@ -591,13 +664,20 @@ def _apps(
     days: set[dt.date],
     finished: list[dt.date],
     previous: list[dt.date] | None,
+    previous_span: set[dt.date],
 ) -> tuple[AppLine, ...]:
-    """The most used apps, each with how it compares with the period before."""
+    """The most used apps, each with how it compares with the period before.
+
+    "More" and "less" compare the same days as the screen time does; "new" is
+    decided against the whole period before. A game played only at the weekend
+    is not new every Thursday because last Monday to Wednesday went without it.
+    """
     now_days, before_days = set(finished), set(previous or ())
     seconds: dict[str, int] = {}
     per_kind: dict[tuple[str, str], int] = {}
     now: dict[str, int] = {}
     before: dict[str, int] = {}
+    earlier: dict[str, int] = {}
     for (day, category, slug), value in facts.apps.items():
         if day in days:
             seconds[slug] = seconds.get(slug, 0) + value
@@ -606,6 +686,8 @@ def _apps(
             now[slug] = now.get(slug, 0) + value
         if day in before_days:
             before[slug] = before.get(slug, 0) + value
+        if day in previous_span:
+            earlier[slug] = earlier.get(slug, 0) + value
     ranked = sorted(
         (item for item in seconds.items() if item[1] >= USED_SECONDS),
         key=lambda item: (-item[1], item[0]),
@@ -621,7 +703,13 @@ def _apps(
             slug=slug,
             category=kind[slug],
             seconds=total,
-            trend=_trend(now.get(slug, 0), len(now_days), before.get(slug, 0), len(before_days))
+            trend=_trend(
+                now.get(slug, 0),
+                len(now_days),
+                before.get(slug, 0),
+                len(before_days),
+                used_before=earlier.get(slug, 0) >= USED_SECONDS,
+            )
             if previous
             else Trend.NONE,
         )
@@ -629,10 +717,17 @@ def _apps(
     )
 
 
-def _trend(now_s: int, now_days: int, before_s: int, before_days: int) -> Trend:
+def _trend(
+    now_s: int, now_days: int, before_s: int, before_days: int, *, used_before: bool
+) -> Trend:
+    """`used_before`: the app had a minute or more anywhere in the period before."""
     if not now_days or not before_days or (now_s <= 0 and before_s <= 0):
         return Trend.NONE
     if before_s <= 0:
+        # Not on the days compared. New only if not on the others either;
+        # otherwise there is nothing on the same days to set it against.
+        if used_before:
+            return Trend.NONE
         return Trend.NEW if now_s >= USED_SECONDS else Trend.NONE
     per_day_now, per_day_before = now_s / now_days, before_s / before_days
     change = per_day_now - per_day_before
@@ -645,7 +740,12 @@ def _trend(now_s: int, now_days: int, before_s: int, before_days: int) -> Trend:
 
 
 def _requests(rows: Sequence[tuple[str, str]]) -> tuple[RequestLine, ...]:
-    """One line per kind the child asked for, in a fixed order."""
+    """One line per kind the child asked for, in a fixed order.
+
+    A request still waiting is not "unanswered": the parent may be reading the
+    "2 istek bekliyor" banner on the same screen. Only one that expired with
+    nobody saying yes or no was left unanswered.
+    """
     lines = []
     for wanted in (*REQUEST_KINDS, *sorted({k for k, _ in rows} - set(REQUEST_KINDS))):
         statuses = [status for kind, status in rows if kind == wanted]
@@ -656,7 +756,8 @@ def _requests(rows: Sequence[tuple[str, str]]) -> tuple[RequestLine, ...]:
                     asked=len(statuses),
                     approved=statuses.count("approved"),
                     denied=statuses.count("denied"),
-                    unanswered=sum(1 for s in statuses if s not in ("approved", "denied")),
+                    unanswered=statuses.count("expired"),
+                    waiting=statuses.count("pending"),
                 )
             )
     return tuple(lines)
@@ -683,20 +784,28 @@ def _sites(
 def _hours(
     hours: Mapping[tuple[dt.date, int], int], days: set[dt.date]
 ) -> tuple[tuple[int, ...], tuple[int, int] | None, int]:
-    """Seconds per hour of the day, the busiest hours, and the late days.
+    """Seconds per hour of the day, the busiest hours, and the late nights.
 
     The busiest hours are the busiest two in a row, unless the second adds
     less than a quarter to the first: a child who uses the computer from five
     to six is not shown "between four and six" because four came first.
+
+    A night is named by its evening: 01:00 on Tuesday is Monday's night. So a
+    night belongs to the period its evening is in - the small hours of the
+    first day shown are the night before, which is not counted, and those of
+    the morning after the last are, when `hours` has them.
     """
     per_hour = [0] * 24
     late: dict[dt.date, int] = {}
     for (day, hour), seconds in hours.items():
-        if day not in days or not 0 <= hour <= 23 or seconds <= 0:
+        if not 0 <= hour <= 23 or seconds <= 0:
             continue
-        per_hour[hour] += seconds
+        if day in days:
+            per_hour[hour] += seconds
         if hour in LATE_HOURS:
-            late[day] = late.get(day, 0) + seconds
+            night = day - dt.timedelta(days=1) if hour < LATE_UNTIL else day
+            if night in days:
+                late[night] = late.get(night, 0) + seconds
     peak: tuple[int, int] | None = None
     if sum(per_hour) >= PEAK_MIN_SECONDS:
         busiest = max(range(24), key=lambda h: (per_hour[h], -h))
@@ -704,8 +813,8 @@ def _hours(
         pair = per_hour[start] + per_hour[start + 1]
         alone = pair - per_hour[busiest] < PEAK_SECOND_HOUR * per_hour[busiest]
         peak = (busiest, busiest + 1) if alone else (start, start + 2)
-    late_days = sum(1 for seconds in late.values() if seconds >= LATE_MIN_SECONDS)
-    return tuple(per_hour), peak, late_days
+    late_nights = sum(1 for seconds in late.values() if seconds >= LATE_MIN_SECONDS)
+    return tuple(per_hour), peak, late_nights
 
 
 def round_half_up(value: float) -> int:
@@ -783,21 +892,44 @@ class Context:
     """BioKids manages the child: there is a day's time that can run out."""
     games_limited: bool = False
     earning_on: bool = False
-    mail_on: bool = False
+    windows_set: bool = False
+    """Allowed hours are set, for every day or for some: the parent has already
+    chosen when the computer may be used, so late use is not a cue to suggest it."""
+    mail_alerts: bool = False
+    """The parent gets the alert mail (D-177), which tells them of every request
+    at once. A family with only the Sunday summary does not."""
+    mail_weekly: bool = False
+    """The Sunday mail goes out, and with it the week's highlights."""
 
 
-def context_for(session: Session, child: Child) -> Context:
-    """The settings the suggestions depend on, read in three small queries."""
+def context_for(session: Session, child: Child, config: Config) -> Context:
+    """The settings the suggestions depend on, read in a few small queries.
+
+    The mail settings are decrypted to read two switches; nothing else of them
+    (the server, the password) leaves this function.
+    """
     policy = session.get(Policy, child.id)
     games = session.get(CategoryLimit, {"child_id": child.id, "category": Category.GAMES.value})
-    mail = session.scalar(select(Parent.smtp_json_encrypted).order_by(Parent.id).limit(1))
+    settings = mail.load_settings(session, config)
+    alerts = weekly = False
+    if settings is not None and settings.usable:
+        alerts, weekly = settings.alerts, settings.weekly
     return Context(
         child_id=child.id,
         managed=bool(child.enabled and policy is not None and policy.enabled),
         games_limited=games is not None,
         earning_on=bool(policy is not None and policy.earn_enabled),
-        mail_on=bool(mail),
+        windows_set=policy is not None and _windows_set(policy),
+        mail_alerts=alerts,
+        mail_weekly=weekly,
     )
+
+
+def _windows_set(policy: Policy) -> bool:
+    """Any allowed hours: the weekday or weekend ones, or a day's own (D-176)."""
+    if any(policy.windows.values()):
+        return True
+    return any(day.get("windows") for day in policy.schedule.values())
 
 
 SHARE_WORDS: Final = (
@@ -836,8 +968,8 @@ def highlights(ins: Insights, ctx: Context, limit: int = MAX_HIGHLIGHTS) -> list
      90 a search the browser refused, and the child asked about it
      80 screen time changed against the period before
      70 the day's time ran out on several days
-     65 used between 21:00 and 06:00
-     60 requests nobody answered
+     65 used between 21:00 and 06:00, counted in nights
+     60 requests that expired with nobody answering (not those still waiting)
      55 about a third or more of the time in learning apps
      50 half or more in games / 45 on the web / 35 in free apps
      45 minutes earned by learning
@@ -902,17 +1034,20 @@ def highlights(ins: Insights, ctx: Context, limit: int = MAX_HIGHLIGHTS) -> list
     ):
         found.append(Highlight("insights.h.never_ran_out", 15, "✅", Tone.GOOD))
 
-    if ins.late_days:
+    if ins.late_nights:
+        # With allowed hours already set, the parent has made this choice;
+        # the sentence is then only the fact, said calmly.
+        offer = not ctx.windows_set
         found.append(
             Highlight(
                 "insights.h.late",
                 65,
                 "🌙",
-                Tone.ATTENTION,
-                {"days": ins.late_days},
-                suggestion="insights.s.late",
-                link=f"{time_page}#windows",
-                link_label="insights.l.windows",
+                Tone.ATTENTION if offer else Tone.INFO,
+                {"nights": ins.late_nights},
+                suggestion="insights.s.late" if offer else "",
+                link=f"{time_page}#windows" if offer else "",
+                link_label="insights.l.windows" if offer else "",
             )
         )
 
@@ -925,9 +1060,9 @@ def highlights(ins: Insights, ctx: Context, limit: int = MAX_HIGHLIGHTS) -> list
                 "⌛",
                 Tone.ATTENTION,
                 {"count": unanswered},
-                suggestion="" if ctx.mail_on else "insights.s.mail",
-                link="" if ctx.mail_on else "/settings#mail",
-                link_label="" if ctx.mail_on else "mail.panel.title",
+                suggestion="" if ctx.mail_alerts else "insights.s.mail",
+                link="" if ctx.mail_alerts else "/settings#mail",
+                link_label="" if ctx.mail_alerts else "mail.panel.title",
             )
         )
 
@@ -978,13 +1113,15 @@ def highlights(ins: Insights, ctx: Context, limit: int = MAX_HIGHLIGHTS) -> list
 
 def _change(ins: Insights, comparison: Comparison) -> Highlight:
     vs = Phrase(comparison_phrase(ins.period, comparison.partial))
-    difference = abs(comparison.average_s - comparison.previous_average_s)
-    if abs(comparison.percent) < CHANGE_MIN_PERCENT or difference < CHANGE_MIN_SECONDS:
+    change = comparison.change
+    if change is Change.SAME:
         return Highlight("insights.h.same", 30, "↔️", Tone.INFO, {"vs": vs})
-    if comparison.percent < 0:
+    if change is Change.LESS:
         return Highlight(
             "insights.h.less", 80, "📉", Tone.INFO, {"vs": vs, "percent": -comparison.percent}
         )
+    if change is Change.MUCH_MORE:
+        return Highlight("insights.h.much_more", 80, "📈", Tone.INFO, {"vs": vs})
     return Highlight(
         "insights.h.more", 80, "📈", Tone.INFO, {"vs": vs, "percent": comparison.percent}
     )
@@ -1101,8 +1238,9 @@ def insights_for(
 
 
 def week_highlights(
-    session: Session, child: Child, tr: Translator, today: dt.date, limit: int
+    session: Session, child: Child, tr: Translator, today: dt.date, limit: int, config: Config
 ) -> list[Said]:
     """This week's top highlights for one child, in words: the Today card's."""
     found = insights_for(session, child, Period.WEEK, today)
-    return [render(h, tr) for h in highlights(found, context_for(session, child), limit)]
+    chosen = highlights(found, context_for(session, child, config), limit)
+    return [render(h, tr) for h in chosen]

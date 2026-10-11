@@ -113,8 +113,9 @@ of `ledger_day` minutes as bars, and for one day the `usage_tick` seconds per ap
 no script.
 
 **Insights** (`/insights`, D-206) is the same kind of reader over a week or a month.
-`biokids_core.insights` loads, per child and period, the `ledger_day`, `usage_tick` and
-`usage_hour` rows (with the period before, for comparing), the `visit` events, the
+`biokids_core.insights` loads, per child and period, the `ledger_day` and `usage_tick`
+rows (with the period before, for comparing), the `usage_hour` rows (with the morning
+after, so a late night is counted with its evening), the `visit` events, the
 requests, the assistant's alerts and the daemon's `quota_exhausted` audit rows, one
 indexed query each; a pure `summarize` turns them into numbers and a pure, rule-based
 `highlights` into at most five sentences as catalogue keys with parameters. Today's
@@ -360,8 +361,8 @@ transaction; a failure is logged and tried again the next day. The windows are
 
 | Key | Default | Deletes |
 |---|---|---|
-| `activity_days` | 30 | `usage_event` (visited sites, ledger gaps) and `ai_alert` |
-| `usage_days` | 400 | `usage_tick`, `usage_hour` and `ledger_day` |
+| `activity_days` | 30 | `usage_event` (visited sites, ledger gaps), `ai_alert` and `usage_hour` (D-206) |
+| `usage_days` | 400 | `usage_tick` and `ledger_day` |
 | `audit_days` | 365 | `audit_log` |
 | `requests_days` | 90 | `access_request` |
 

@@ -182,8 +182,8 @@ from `[retention]` in `/etc/biokids/config.toml`:
 
 | Records | Key | Default |
 |---|---|---|
-| usage events, which include the sites visited, and the assistant's alerts | `activity_days` | 30 days |
-| minutes per day, per app and per hour of the day (`usage_tick`, `ledger_day`, `usage_hour`, D-206) | `usage_days` | 400 days |
+| usage events, which include the sites visited, the assistant's alerts, and the hours of the day the computer was used (`usage_hour`, D-206) | `activity_days` | 30 days |
+| minutes per day and per app (`usage_tick`, `ledger_day`) | `usage_days` | 400 days |
 | the audit log | `audit_days` | 365 days |
 | the children's requests | `requests_days` | 90 days |
 

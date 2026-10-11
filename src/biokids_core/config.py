@@ -156,10 +156,11 @@ class RetentionConfig:
     they visited are the most personal and go first."""
 
     activity_days: int = 30
-    """Usage events (sites visited, gaps in the ledger) and the assistant's alerts."""
+    """Usage events (sites visited, gaps in the ledger), the assistant's alerts,
+    and the hours of the day the computer was used (`usage_hour`, D-206)."""
     usage_days: int = 400
-    """Minutes per day, per app and per hour of the day, for the history and
-    insights screens and their year."""
+    """Minutes per day and per app, for the history and insights screens and
+    their year."""
     audit_days: int = 365
     requests_days: int = 90
 
