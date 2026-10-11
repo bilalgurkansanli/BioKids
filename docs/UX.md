@@ -270,6 +270,16 @@ same for every child, because the browser is one per machine. A word that cannot
 one (a single letter, more than 30 characters, past the hundredth) is left out and
 the parent is told.
 
+**Uygulamalar ve siteler** says what an upgrade brought (D-207). A child who already
+exists keeps exactly the tiles their parent chose, so a new app reaches them only
+when it is ticked. For thirty days after the upgrade each new tile carries a small
+**Yeni**, and one line at the top names those that suit the child's age, can start
+on this machine and are not ticked yet: "2 yeni uygulama bu çocuğun yaşına uygun:
+Patates Kafa, Hafıza." The same line, as a link to the screen, sits under the child
+on **Çocuklar**. Saving the screen answers it: a parent who looked and left them
+unticked is not asked again, though the **Yeni** stays. A fresh install marks
+nothing new, and the child's own screen never changes by itself.
+
 ### 3.2 The Today screen
 
 One card per child, and nothing else:

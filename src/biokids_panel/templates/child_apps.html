@@ -5,10 +5,18 @@
   D-164. Which tiles a child sees. Until this screen existed only the wizard
   asked, so a site added to the catalog later could never reach a child who
   was already set up. A ticked box is a tile; nothing unticked ever appears.
+
+  D-207. A tile an upgrade added in the last thirty days says "Yeni", and one
+  line at the top names those that suit this child and are not ticked yet,
+  until the parent has saved this screen once since they arrived.
 #}
 {% block content %}
   <h1>{{ child.display_name }} — {{ _('apps.title') }}</h1>
   <p class="muted">{{ _('apps.help', name=child.display_name) }}</p>
+
+  {% if new_line %}
+    <p class="notice">{{ new_line }}</p>
+  {% endif %}
 
   <form method="post" action="/children/{{ child.id }}/apps">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
@@ -25,7 +33,10 @@
                        {% if app.slug in enabled and available %}checked{% endif %}
                        {% if not available %}disabled{% endif %}>
                 <span class="pick-row__text">
-                  <strong>{{ app.name_tr if locale == 'tr' else app.name_en }}</strong>
+                  <strong>
+                    {{ app.name_tr if locale == 'tr' else app.name_en }}
+                    {% if app.slug in new %}<span class="badge-new">{{ _('apps.new') }}</span>{% endif %}
+                  </strong>
                   <span class="help">
                     {{ app.description_tr if locale == 'tr' else app.description_en }}
                   </span>

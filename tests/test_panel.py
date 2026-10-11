@@ -1654,6 +1654,116 @@ def test_panel_static_files_are_checked_before_every_use(client: TestClient) -> 
     assert client.get("/static/panel.css").headers["cache-control"] == "no-cache"
 
 
+# ------------------------------------------- what an upgrade added (D-207)
+
+D203 = frozenset(
+    {
+        "marble",
+        "ktuberling",
+        "blinken",
+        "palapeli",
+        "kgeography",
+        "kbruch",
+        "kturtle",
+        "gnome-chess",
+    }
+)
+
+
+def _upgraded(db: Database, *, age: int = 5) -> None:
+    """Elif, set up with Boya before D-203, after the upgrade that brought its
+    eight apps."""
+    from biokids_core.catalog import BUNDLED_CATALOG, Catalog, enable_for_child, sync_catalog
+
+    bundled = load_catalog(BUNDLED_CATALOG)
+    with db.session() as session:
+        child = repo.get_child(session, 1)
+        assert child is not None
+        child.birth_year = dt.date.today().year - age
+        before = Catalog(tuple(e for e in bundled if e.slug not in D203))
+        sync_catalog(session, before, now=utcnow() - dt.timedelta(days=90))
+        enable_for_child(session, 1, ["tuxpaint"])
+        sync_catalog(session, bundled, now=utcnow() - dt.timedelta(hours=1))
+
+
+def test_the_apps_screen_marks_what_an_upgrade_added(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    _upgraded(db)
+    login(client)
+
+    page = html.unescape(client.get("/children/1/apps").text)
+
+    assert "2 yeni uygulama bu çocuğun yaşına uygun: Patates Kafa, Hafıza." in page
+    assert page.count('class="badge-new"') == len(D203), "every new tile says so"
+    tuxpaint = page[page.index('value="tuxpaint"') : page.index('value="tuxmath"')]
+    assert "badge-new" not in tuxpaint, "an old tile does not"
+
+
+def test_the_children_screen_says_which_child_has_new_apps(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    from biokids_core.catalog import enable_for_child
+
+    _upgraded(db)
+    with db.session() as session:
+        # Hafıza reached her another way: a request the parent said yes to.
+        enable_for_child(session, 1, ["blinken"], replace=False)
+    login(client)
+
+    page = html.unescape(client.get("/children").text)
+
+    assert "Yeni bir uygulama bu çocuğun yaşına uygun: Patates Kafa." in page
+    assert 'href="/children/1/apps">Yeni bir uygulama' in page
+
+
+def test_a_parent_who_saved_the_apps_is_not_asked_again(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """Leaving them unticked is an answer; the "Yeni" on each tile stays."""
+    _upgraded(db)
+    login(client)
+    client.post(
+        "/children/1/apps",
+        data={"apps": ["tuxpaint"], "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+
+    apps = client.get("/children/1/apps").text
+    assert "yaşına uygun" not in apps
+    assert apps.count('class="badge-new"') == len(D203)
+    assert "yaşına uygun" not in client.get("/children").text
+
+
+def test_the_line_is_in_the_familys_language(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    _upgraded(db, age=10)
+    with db.session() as session:
+        family = repo.get_family(session)
+        assert family is not None
+        family.locale = "en"
+    login(client)
+
+    page = html.unescape(client.get("/children/1/apps").text)
+
+    assert "3 new apps suit this child's age: Globe, Maps, Fractions." in page
+    assert ">New</span>" in page
+
+
+def test_a_fresh_install_marks_nothing_new(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    from biokids_core.catalog import sync_catalog
+
+    with db.session() as session:
+        sync_catalog(session, load_catalog())
+    login(client)
+
+    assert "badge-new" not in client.get("/children/1/apps").text
+    assert "yaşına uygun" not in client.get("/children").text
+
+
 # --------------------------------------------------------- internet (D-167)
 
 

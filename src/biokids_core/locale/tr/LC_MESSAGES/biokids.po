@@ -530,6 +530,16 @@ msgstr "{min}–{max} yaş için"
 msgid "apps.always_on"
 msgstr "Ses, parlaklık ve Kapat düğmeleri her zaman görünür."
 
+# Tiles an upgrade added in the last thirty days (D-207)
+msgid "apps.new"
+msgstr "Yeni"
+
+msgid "apps.new.line.one"
+msgstr "Yeni bir uygulama bu çocuğun yaşına uygun: {names}."
+
+msgid "apps.new.line.many"
+msgstr "{count} yeni uygulama bu çocuğun yaşına uygun: {names}."
+
 msgid "time.title"
 msgstr "Süre kuralları"
 
