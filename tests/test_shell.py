@@ -192,6 +192,72 @@ def test_the_grid_shows_nothing_a_parent_did_not_enable(
     assert "hiç uygulaman yok" in page
 
 
+def _css_rule(css: str, selectors: str) -> str:
+    """The declarations of the rule whose selector list is exactly `selectors`."""
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
+    wanted = [s.strip() for s in selectors.split(",")]
+    for match in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
+        if [s.strip() for s in match.group(1).split(",")] == wanted:
+            return match.group(2)
+    raise AssertionError(f"no rule for {selectors}")
+
+
+def _css_px(css: str, name: str) -> int:
+    match = re.search(rf"{re.escape(name)}:\s*(\d+)px", css)
+    assert match is not None, name
+    return int(match.group(1))
+
+
+def _per_row(screen: int, tile: int, gap: int, side: int) -> int:
+    """How many tiles a wrapping row holds between the grid's side paddings."""
+    return (screen - 2 * side + gap) // (tile + gap)
+
+
+def test_a_row_that_does_not_fill_is_centred(client: TestClient) -> None:
+    """Sixteen tiles six a row ended in four and two holes on the right, and
+    the owner said it looked empty (D-210). Every row is centred now, the last
+    one too, on the home screen and on the browser's start page alike; and the
+    grid still scrolls inside itself, with the tiles in the page's order."""
+    css = (STATIC / "shell.css").read_text(encoding="utf-8")
+    grid = _css_rule(css, ".tiles, .start-grid")
+    for declaration in (
+        "display: flex",
+        "flex-wrap: wrap",
+        "justify-content: center",
+        "align-content: safe center",
+        "overflow-y: auto",
+        "min-height: 0",
+    ):
+        assert declaration in grid, declaration
+    assert "grid-template-columns" not in grid, "a grid's columns hold the last row left"
+    assert not re.search(r"(^|[\s;])order:", grid), "Tab follows the page's order"
+    assert "flex: none" in _css_rule(css, ".tiles > .tile, .start-grid > .tile"), (
+        "a tile keeps its size; the row wraps"
+    )
+    assert '<main class="tiles">' in client.get("/").text
+    assert '<main class="start-grid">' in client.get("/start").text
+
+
+def test_the_rows_hold_six_at_home_and_seven_on_the_start_page() -> None:
+    """On the owner's 1600-pixel screen, as before D-210: six 220-pixel tiles a
+    row at home, and seven on the start page, where seven sites put the young
+    band's 220-pixel tiles in columns of 203, touching - so there they are 200,
+    with a gap."""
+    css = (STATIC / "shell.css").read_text(encoding="utf-8")
+    tokens = (pathlib.Path(shell_app.SHARED_STATIC_DIR) / "tokens.css").read_text(
+        encoding="utf-8"
+    )
+    side = _css_px(tokens, "--sp-5")
+    young = _css_rule(css, '.screen[data-band="4-7"]')
+    assert _css_px(young, "--tile-size") == 220
+    assert _per_row(1600, 220, _css_px(tokens, "--sp-4"), side) == 6
+
+    start = _css_px(_css_rule(css, '.screen[data-band="4-7"] .start-grid'), "--tile-size")
+    assert "gap: var(--sp-3)" in _css_rule(css, ".start-grid")
+    assert _per_row(1600, start, _css_px(tokens, "--sp-3"), side) == 7
+    assert start >= 3 * _css_px(tokens, "--target-young"), "still a big target for 4-7"
+
+
 def test_the_young_band_gets_no_clock_but_the_minutes_in_the_ring(
     client: TestClient, daemon: FakeShellDaemon
 ) -> None:

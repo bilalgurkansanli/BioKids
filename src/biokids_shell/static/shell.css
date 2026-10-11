@@ -157,19 +157,31 @@ svg {
 
 /* -------------------------------------------------------------------- tiles */
 
-.tiles {
-  display: grid;
+/* The home screen's tiles, and the browser's start page (/start), which shows
+ * the child's own sites the same way. Rows of tiles of one fixed size, each row
+ * centred, so a last row that does not fill the width sits in the middle under
+ * the others instead of leaving holes on the right (D-210): sixteen tiles at
+ * 1600 pixels are 6, 6 and a centred 4, which looks meant. A wrapping flexbox,
+ * not a grid, because a grid's columns hold the last row to the left. The
+ * order is the page's, so Tab still goes along each row, top to bottom. */
+.tiles,
+.start-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: var(--sp-4);
   /* More tiles than fit scroll inside the grid, with the head and the foot
    * staying put; "safe" keeps the first row reachable when they overflow. */
   align-content: safe center;
-  justify-content: center;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: var(--sp-3) var(--sp-5);
-  grid-template-columns: repeat(auto-fit, var(--tile-size));
 }
+
+/* A tile keeps its size; a row that has no room for it wraps instead. */
+.tiles > .tile,
+.start-grid > .tile { flex: none; }
 
 /* 4-7: 220px tiles, at most eight of them. 8-10: 150px, up to twenty. */
 .screen[data-band="4-7"] { --tile-size: 220px; --tile-label: 28px; }
@@ -584,12 +596,14 @@ svg {
 
 /* ------------------------------------------------------------- start page */
 
-.start-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: var(--sp-3);
-  padding: var(--sp-5);
-}
+/* Laid out with the home screen's tiles (above). Seven a row on a 1600-pixel
+ * screen, as before D-210, when seven sites put the young band's 220-pixel
+ * tiles in 203-pixel columns, touching. Here they are 200 with a gap: still
+ * three times a young target, in a browser window its own bars make shorter
+ * than the launcher. */
+.start-grid { gap: var(--sp-3); }
+
+.screen[data-band="4-7"] .start-grid { --tile-size: 200px; }
 
 /* --------------------------------------------------------------- assistant */
 /* D-165. Zio on the left, the conversation beside it, the question at the

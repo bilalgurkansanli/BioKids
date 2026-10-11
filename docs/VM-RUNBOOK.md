@@ -1281,18 +1281,18 @@ minute). Then, on the phone, **Analiz** in the bottom bar:
 
 ### 8.12 The apps an upgrade brought (D-207)
 
-On this machine nothing is marked new, and that is right. A tile is new only when
-an upgrade's `sync-catalog` adds its slug to a database that already had tiles.
-§7's machine was a fresh install, and a machine that already had D-203's apps gets
-no new slug from this build:
+A tile is new only when an upgrade's `sync-catalog` adds its slug to a database that
+already had tiles. §7's machine was a fresh install, so nothing there is new until
+the upgrade that brings D-210's two tiles, Elmaslar and Müzik Atölyesi (§8.13):
 
 ```bash
 sudo biokids-admin sync-catalog      # catalog: 0 added, …
-sudo bkq "select value from setting where key='catalog_new_apps'"   # nothing
+sudo bkq "select value from setting where key='catalog_new_apps'"
 ```
 
-**Pass:** no row, no **Yeni** on any **Uygulamalar ve siteler**, no line under any
-child on **Çocuklar**.
+**Pass:** after a fresh install, no row, no **Yeni** on any **Uygulamalar ve
+siteler** and no line under any child on **Çocuklar**; after the upgrade to D-210,
+`kdiamond` and `chrome-music-lab` alone, and §8.13's line.
 
 To see the feature, make two tiles new by hand. `dpkg -l ktuberling blinken` must
 show both installed (a box that cannot be ticked is not named). Take a child who is
@@ -1330,6 +1330,32 @@ line, so unticking them after writing the setting would hide it.
 3. Save that screen without ticking them. **Pass:** the line is gone from both
    screens and the two **Yeni** stay. They go by themselves thirty days after the
    time written above.
+
+### 8.13 Rows that look full (D-210)
+
+On the machine of §8.12, upgraded to the build with D-210, at 1600 × 900.
+`dpkg -l kdiamond tuxpaint-stamps-default` must show both installed: they are new
+Recommends of biokids-desktop, which `apt upgrade` installs and `apt-get upgrade`
+does not (`sudo apt install kdiamond tuxpaint-stamps-default` then).
+
+**Pass, in order:**
+
+1. **Çocuklar**: under a child of 4–10 who has neither, "Bu çocuğun yaşına uygun 2
+   yeni uygulama henüz ekranında yok: Elmaslar, Müzik Atölyesi." Tick both on that
+   child's screen and save; a new child of six gets both without a tick.
+2. The child's home screen: **Elmaslar** (💎) and **Müzik Atölyesi** (🎹) are
+   there. Every row is centred, the last one too: with sixteen tiles before, the
+   screen is three full rows of six; untick one tile and the last row is five, in
+   the middle, with no holes on the right. Tab walks the tiles along each row, the
+   open-app dot and the opening ring of §8.10 look as before.
+3. Tap **Elmaslar**. **Pass:** KDiamond opens in Turkish, filling the screen under
+   its title bar with the app bar on it, and a game is already running.
+4. **İnternet**: the start page has seven tiles a row; with Müzik Atölyesi the row
+   that had six is full. Tap it: Chrome Music Lab's experiments; **Song Maker**
+   opens and plays. With **Çocuklar → İnternet** on "only the sites I choose", the
+   same, Song Maker included.
+5. **Boya**: the stamp tool (the rubber stamp) has animals, food, vehicles and
+   plants, not only Tux.
 
 ---
 
