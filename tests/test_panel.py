@@ -1694,7 +1694,11 @@ def test_the_apps_screen_marks_what_an_upgrade_added(
 
     page = html.unescape(client.get("/children/1/apps").text)
 
-    assert "2 yeni uygulama bu çocuğun yaşına uygun: Patates Kafa, Hafıza." in page
+    # Not news: they are not on her screen, and the boxes below are how to add them.
+    assert (
+        "Bu çocuğun yaşına uygun 2 yeni uygulama henüz ekranında yok: Patates Kafa, Hafıza."
+        " Eklemek için işaretleyin." in page
+    )
     assert page.count('class="badge-new"') == len(D203), "every new tile says so"
     tuxpaint = page[page.index('value="tuxpaint"') : page.index('value="tuxmath"')]
     assert "badge-new" not in tuxpaint, "an old tile does not"
@@ -1713,8 +1717,10 @@ def test_the_children_screen_says_which_child_has_new_apps(
 
     page = html.unescape(client.get("/children").text)
 
-    assert "Yeni bir uygulama bu çocuğun yaşına uygun: Patates Kafa." in page
-    assert 'href="/children/1/apps">Yeni bir uygulama' in page
+    # A link to the boxes rather than "tick it", which has nothing to tick here.
+    line = "Bu çocuğun yaşına uygun yeni bir uygulama henüz ekranında yok: Patates Kafa."
+    assert f'<a href="/children/1/apps">{line}</a>' in page
+    assert "işaretleyin" not in page
 
 
 def test_a_parent_who_saved_the_apps_is_not_asked_again(
@@ -1730,9 +1736,65 @@ def test_a_parent_who_saved_the_apps_is_not_asked_again(
     )
 
     apps = client.get("/children/1/apps").text
-    assert "yaşına uygun" not in apps
+    assert "henüz ekranında yok" not in apps
     assert apps.count('class="badge-new"') == len(D203)
-    assert "yaşına uygun" not in client.get("/children").text
+    assert "henüz ekranında yok" not in client.get("/children").text
+
+
+def test_only_her_own_save_since_the_upgrade_answers_the_line(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """A save from before the upgrade could not have looked at apps that were
+    not there yet, and her brother's save was about his tiles, not hers: the
+    line about Elif's stays until Elif's apps are saved again."""
+    from sqlalchemy import select
+
+    from biokids_core.catalog import new_apps
+    from biokids_core.db import Child
+
+    _upgraded(db)
+    with db.session() as session:
+        arrived = min(new_apps(session).values())
+        can = Child(unix_user="can", display_name="Can", birth_year=dt.date.today().year - 5)
+        session.add(can)
+        session.flush()
+        session.add(Policy(child_id=can.id))
+        can_id = can.id
+    login(client)
+    line = "Bu çocuğun yaşına uygun 2 yeni uygulama henüz ekranında yok: Patates Kafa, Hafıza."
+
+    # Elif's apps saved on the panel, as it was the day before the upgrade.
+    client.post(
+        "/children/1/apps",
+        data={"apps": ["tuxpaint"], "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    saved_before = arrived - dt.timedelta(days=1)
+    with db.session() as session:
+        saved = session.scalars(
+            select(AuditLog).where(
+                AuditLog.action == "apps_changed", AuditLog.target == "child:1"
+            )
+        ).one()
+        assert saved.actor == "parent:1"
+        saved.ts = saved_before
+    children = html.unescape(client.get("/children").text)
+    assert children.count("henüz ekranında yok") == 2, "one line each, Elif's still there"
+    # Can's apps saved now, after it.
+    client.post(
+        f"/children/{can_id}/apps",
+        data={"apps": ["tuxpaint"], "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+
+    with db.session() as session:
+        assert repo.apps_saved_at(session, 1) == saved_before, "not Can's save"
+        can_saved = repo.apps_saved_at(session, can_id)
+        assert can_saved is not None and can_saved > arrived
+    assert line in html.unescape(client.get("/children/1/apps").text)
+    children = html.unescape(client.get("/children").text)
+    assert f'<a href="/children/1/apps">{line}</a>' in children
+    assert children.count("henüz ekranında yok") == 1, "Can's own save answered his"
 
 
 def test_the_line_is_in_the_familys_language(
@@ -1747,7 +1809,10 @@ def test_the_line_is_in_the_familys_language(
 
     page = html.unescape(client.get("/children/1/apps").text)
 
-    assert "3 new apps suit this child's age: Globe, Maps, Fractions." in page
+    assert (
+        "3 new apps suit this child's age but are not on their screen yet:"
+        " Globe, Maps, Fractions. Tick them to add them." in page
+    )
     assert ">New</span>" in page
 
 
@@ -1761,7 +1826,7 @@ def test_a_fresh_install_marks_nothing_new(
     login(client)
 
     assert "badge-new" not in client.get("/children/1/apps").text
-    assert "yaşına uygun" not in client.get("/children").text
+    assert "henüz ekranında yok" not in client.get("/children").text
 
 
 # --------------------------------------------------------- internet (D-167)

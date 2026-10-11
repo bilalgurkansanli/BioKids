@@ -542,11 +542,20 @@ msgstr "Ses, parlaklık ve Kapat düğmeleri her zaman görünür."
 msgid "apps.new"
 msgstr "Yeni"
 
+# Said on the apps screen and, as a link to it, on Çocuklar: the apps are not
+# on the child's screen until the parent ticks them, so it must not read as news.
 msgid "apps.new.line.one"
-msgstr "Yeni bir uygulama bu çocuğun yaşına uygun: {names}."
+msgstr "Bu çocuğun yaşına uygun yeni bir uygulama henüz ekranında yok: {names}."
 
 msgid "apps.new.line.many"
-msgstr "{count} yeni uygulama bu çocuğun yaşına uygun: {names}."
+msgstr "Bu çocuğun yaşına uygun {count} yeni uygulama henüz ekranında yok: {names}."
+
+# After the line, on the apps screen only, where the boxes are
+msgid "apps.new.tick.one"
+msgstr "Eklemek için işaretleyin."
+
+msgid "apps.new.tick.many"
+msgstr "Eklemek için işaretleyin."
 
 msgid "time.title"
 msgstr "Süre kuralları"
