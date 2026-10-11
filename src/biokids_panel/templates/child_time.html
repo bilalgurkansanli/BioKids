@@ -87,8 +87,11 @@
         <span class="help">{{ _('time.windows.help_pickers') }}</span>
       </fieldset>
     {% endmacro %}
-    {{ pickers('weekday', windows.weekday) }}
-    {{ pickers('weekend', windows.weekend) }}
+    {# `#windows` is where the insights screen's "late use" suggestion lands (D-206). #}
+    <div id="windows">
+      {{ pickers('weekday', windows.weekday) }}
+      {{ pickers('weekend', windows.weekend) }}
+    </div>
 
     <fieldset>
       <legend>{{ _('time.end_action') }}</legend>
@@ -112,7 +115,9 @@
       </label>
     </div>
 
-    <details class="advanced">
+    {# Opened by `?more=1`, which the insights screen's suggestions link with,
+       so "set a limit for games" lands on the field rather than a closed box. #}
+    <details class="advanced" {% if request.query_params.get('more') %}open{% endif %}>
       <summary>{{ _('common.advanced') }}</summary>
 
       {# A different rule for some days of the week (D-176). Unticked days
@@ -166,7 +171,7 @@
         </div>
       </div>
 
-      <div class="checkline">
+      <div class="checkline" id="earn">
         <input type="checkbox" id="earn_enabled" name="earn_enabled"
                {% if policy.earn_enabled %}checked{% endif %}>
         <label for="earn_enabled">
@@ -189,7 +194,7 @@
 
       {# D-44: a cap on one kind of app inside the day's time. Empty is no cap
          of its own; the day's time still applies. #}
-      <fieldset>
+      <fieldset id="limits">
         <legend>{{ _('time.categories.title') }}</legend>
         <span class="help">{{ _('time.categories.help') }}</span>
         <div class="row row--wrap">

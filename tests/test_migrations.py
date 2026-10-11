@@ -14,6 +14,7 @@ from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config as AlembicConfig
 from alembic.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine
 
 from biokids_core.config import Config
@@ -50,3 +51,15 @@ def test_every_migration_can_be_undone(config: Config) -> None:
     command.upgrade(alembic, "head")
     command.downgrade(alembic, "base")
     command.upgrade(alembic, "head")
+
+
+def test_the_migrations_are_one_line() -> None:
+    """Two branches that each add a migration after the same parent give two
+    heads, and `alembic upgrade head` then refuses to run in the postinst: the
+    second to merge rebases its `down_revision` onto the first."""
+    alembic = AlembicConfig(str(ROOT / "alembic.ini"))
+    alembic.set_main_option(
+        "script_location", str(ROOT / "src" / "biokids_core" / "migrations")
+    )
+    heads = ScriptDirectory.from_config(alembic).get_heads()
+    assert len(heads) == 1, f"more than one head: {heads}"

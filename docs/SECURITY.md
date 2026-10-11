@@ -183,10 +183,12 @@ from `[retention]` in `/etc/biokids/config.toml`:
 | Records | Key | Default |
 |---|---|---|
 | usage events, which include the sites visited, and the assistant's alerts | `activity_days` | 30 days |
-| minutes per day and per app (`usage_tick`, `ledger_day`) | `usage_days` | 400 days |
+| minutes per day, per app and per hour of the day (`usage_tick`, `ledger_day`, `usage_hour`, D-206) | `usage_days` | 400 days |
 | the audit log | `audit_days` | 365 days |
 | the children's requests | `requests_days` | 90 days |
 
+The insights screen and the Sunday mail's highlights (D-206) are computed from these
+when they are read and store nothing of their own; the mail names no site.
 Panel sessions are deleted a day after their idle timeout, and only the 20 newest boot
 epochs are kept. Removing a child deletes everything recorded for them except the audit
 log (D-191); purging `biokids-core` deletes the database, if the parent says yes.

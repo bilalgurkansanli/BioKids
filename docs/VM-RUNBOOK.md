@@ -1210,6 +1210,38 @@ scopes() { as_elif systemctl --user list-units --plain --no-legend 'biokids-app-
 6. No bar. `sudo kill -KILL $B` and, before it is back, tap the tile of an open app.
    **Pass:** the app comes back (the helper, a few seconds) and `scopes` lists one.
 
+### 8.10 Insights: the week in plain words (D-206)
+
+The upgrade's migration adds one table; the daemon fills it from the tick that
+counts the minutes. With Elif logged in and using an app for a few minutes:
+
+```bash
+sudo bkq "select version_num from alembic_version"          # 077ca4545f23
+sudo bkq "select day, hour, seconds from usage_hour order by day desc, hour desc limit 5"
+sudo bkq "select day, general_s from ledger_day order by day desc limit 1"
+journalctl -u biokids-daemon -b --no-pager | grep -i 'hours of the day'   # nothing
+```
+
+**Pass:** rows for the current hour, growing every thirty seconds, and today's
+`usage_hour` seconds add up to today's `general_s` (to within the last half
+minute). Then, on the phone, **Analiz** in the bottom bar:
+
+1. **Bu hafta**, **Geçen hafta**, **Son 30 gün** each open, the chosen one filled.
+   On a fresh machine the screen says "Henüz yeterli veri yok…" and nothing else.
+2. With a day or two of use: up to five sentences under **Öne çıkanlar**, the
+   numbers as tiles (two across on the phone, nothing wider than the screen), a
+   bar per day with the day's quota as a dashed line, the kinds of app as one bar
+   with a legend, the apps, the hours of the day, the requests and the sites.
+   A day bar opens that day in **Geçmiş**.
+3. A suggestion's link opens the setting it names: "Türlere göre günlük süre"
+   lands on **Süre kuralları** with **Gelişmiş** open at the limits.
+4. **Bugün** shows a "Bu hafta" card under the children with at most three
+   sentences each and "Analizin tamamı". With Elif logged out, `sudo systemctl
+   stop biokids-daemon`: the live cards say the service is not answering and the
+   week's card is still there. `sudo systemctl start biokids-daemon` afterwards.
+5. Sunday after 19:00, with mail set up (D-177), the week's mail ends each child's
+   days with "Öne çıkanlar:" and at most three sentences, and names no site.
+
 ---
 
 ## 9. After the run

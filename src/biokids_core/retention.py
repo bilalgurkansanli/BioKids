@@ -13,7 +13,8 @@ The windows are in `[retention]` of config.toml:
 * activity (usage events, which include the sites visited, and the assistant's
   alerts): `activity_days`, a month by default - the most personal records go
   first;
-* minutes per day and per app, for the history screen: `usage_days`;
+* minutes per day, per app and per hour of the day, for the history and
+  insights screens: `usage_days`;
 * the audit log: `audit_days`;
 * children's requests: `requests_days`;
 * parent sessions that have expired, and boot epochs from long ago, which no
@@ -40,6 +41,7 @@ from biokids_core.db.models import (
     LedgerDay,
     PanelSession,
     UsageEvent,
+    UsageHour,
     UsageTick,
     utcnow,
 )
@@ -69,6 +71,7 @@ def prune(session: Session, config: Config, now: dt.datetime | None = None) -> d
         "usage_event": _run(session, delete(UsageEvent).where(UsageEvent.ts_wall < activity)),
         "ai_alert": _run(session, delete(AiAlert).where(AiAlert.ts < activity)),
         "usage_tick": _run(session, delete(UsageTick).where(UsageTick.day < usage_day)),
+        "usage_hour": _run(session, delete(UsageHour).where(UsageHour.day < usage_day)),
         "ledger_day": _run(session, delete(LedgerDay).where(LedgerDay.day < usage_day)),
         "audit_log": _run(
             session,

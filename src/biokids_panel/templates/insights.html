@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% block title %}{{ _('insights.title') }} · {{ _('panel.title') }}{% endblock %}
+
+{#
+  D-206. One child, one period: the highlights first, because they are what a
+  parent came for, then the numbers behind them. Every bar is an element with a
+  height or a width drawn by the server, and every number it stands for is also
+  written out, for a screen reader and for a parent who wants the number. No
+  script, no chart library (D-129); a tap is a link.
+#}
+{% macro kind_name(category) -%}
+  {{ _('insights.kinds.other') if category == 'other' else _('category.' ~ category) }}
+{%- endmacro %}
+
+{% block content %}
+  <h1>{{ _('insights.title') }}</h1>
+
+  {% if not child %}
+    <div class="card card--flat"><p>{{ _('today.no_children') }}</p></div>
+  {% else %}
+    {% if children|length > 1 %}
+      <nav class="row row--wrap history-children" aria-label="{{ _('nav.children') }}">
+        {% for c in children %}
+          <a class="btn {% if c.id == child.id %}btn--primary{% else %}btn--quiet{% endif %}"
+             href="/insights?child={{ c.id }}&period={{ period.value }}"
+             {% if c.id == child.id %}aria-current="page"{% endif %}>
+            <span aria-hidden="true">{{ c.avatar|avatar }}</span> {{ c.display_name }}
+          </a>
+        {% endfor %}
+      </nav>
+    {% endif %}
+
+    <nav class="segmented" aria-label="{{ _('insights.period.label') }}">
+      {% for p in periods %}
+        <a href="/insights?child={{ child.id }}&period={{ p.value }}"
+           {% if p == period %}aria-current="page"{% endif %}>{{ _('insights.period.' ~ p.value) }}</a>
+      {% endfor %}
+    </nav>
+    <p class="muted small insights-range">
+      {{ ins.span.first.strftime('%d.%m') }} – {{ ins.span.last.strftime('%d.%m.%Y') }}{% if ins.includes_today %} · {{ _('insights.so_far') }}{% endif %}
+    </p>
+
+    {% if not ins.has_data %}
+      <div class="card card--flat insights-empty">
+        <p class="insights-empty__icon" aria-hidden="true">🌱</p>
+        <p>{{ _('insights.empty', name=child.display_name) }}</p>
+      </div>
+    {% else %}
+      <p class="muted">{{ _('insights.intro', name=child.display_name) }}</p>
+
+      {# ------------------------------------------------------ highlights #}
+      <section class="card" aria-labelledby="h-highlights">
+        <h2 id="h-highlights">{{ _('insights.highlights') }}</h2>
+        {% if highlights %}
+          <ul class="highlights">
+            {% for h in highlights %}
+              <li class="highlight highlight--{{ h.tone }}">
+                <span class="highlight__icon" aria-hidden="true">{{ h.icon }}</span>
+                <div class="highlight__body">
+                  <p class="highlight__text">{{ h.text }}</p>
+                  {% if h.suggestion %}
+                    <p class="highlight__more">
+                      {{ h.suggestion }}
+                      {% if h.link %}<a href="{{ h.link }}">{{ h.link_label }} →</a>{% endif %}
+                    </p>
+                  {% endif %}
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">{{ _('insights.highlights.none') }}</p>
+        {% endif %}
+      </section>
+
+      {# ---------------------------------------------------- screen time #}
+      <section class="card" aria-labelledby="h-screen">
+        <h2 id="h-screen">{{ _('insights.screen') }}</h2>
+        <dl class="stats">
+          <div class="stat">
+            <dt>{{ _('insights.stat.total') }}</dt>
+            <dd class="stat__value">{{ ins.total_s|duration(_) }}</dd>
+          </div>
+          <div class="stat">
+            <dt>{{ _('insights.stat.average') }}</dt>
+            <dd class="stat__value">
+              {% if ins.average_s is not none %}{{ ins.average_s|duration(_) }}{% else %}–{% endif %}
+            </dd>
+            {% if delta %}
+              <dd class="stat__delta">{{ delta.text }}</dd>
+              <dd class="stat__note">{{ delta.vs }}</dd>
+            {% endif %}
+          </div>
+          <div class="stat">
+            <dt>{{ _('insights.stat.used_days') }}</dt>
+            <dd class="stat__value">{{ ins.used_days }} / {{ ins.counted_days }}</dd>
+          </div>
+          {% if managed %}
+            <div class="stat">
+              <dt>{{ _('insights.stat.ran_out') }}</dt>
+              <dd class="stat__value">{{ ins.ran_out_days }}</dd>
+            </div>
+          {% endif %}
+          {% if ins.weekday_average_s is not none and ins.weekend_average_s is not none %}
+            <div class="stat">
+              <dt>{{ _('insights.stat.weekday') }}</dt>
+              <dd class="stat__value">{{ ins.weekday_average_s|duration(_) }}</dd>
+            </div>
+            <div class="stat">
+              <dt>{{ _('insights.stat.weekend') }}</dt>
+              <dd class="stat__value">{{ ins.weekend_average_s|duration(_) }}</dd>
+            </div>
+          {% endif %}
+          {% if ins.earned_s %}
+            <div class="stat">
+              <dt>{{ _('insights.stat.earned') }}</dt>
+              <dd class="stat__value">{{ ins.earned_s|duration(_) }}</dd>
+            </div>
+          {% endif %}
+          {% if ins.granted_s %}
+            <div class="stat">
+              <dt>{{ _('insights.stat.granted') }}</dt>
+              <dd class="stat__value">{{ ins.granted_s|duration(_) }}</dd>
+            </div>
+          {% endif %}
+        </dl>
+        {% if ins.includes_today %}
+          <p class="muted small">
+            {% if ins.average_s is none %}{{ _('insights.average.none') }}{% else %}{{ _('insights.average.today') }}{% endif %}
+          </p>
+        {% endif %}
+
+        <h3>{{ _('insights.days') }}</h3>
+        <ol class="daybars" style="--n: {{ day_rows|length }}">
+          {% for row in day_rows %}
+            <li class="daybars__day{% if row.future %} is-future{% endif %}{% if row.today %} is-today{% endif %}">
+              {% if row.future %}
+                <span class="daybars__track" aria-hidden="true"></span>
+                <span class="daybars__label" aria-hidden="true">{{ row.label }}</span>
+              {% else %}
+                <a href="/history?child={{ child.id }}&day={{ row.day.isoformat() }}"
+                   title="{{ row.day.strftime('%d.%m') }} · {{ row.seconds|duration(_) }}">
+                  <span class="daybars__track">
+                    {% if row.quota_percent %}
+                      <span class="daybars__quota" style="bottom: {{ row.quota_percent }}%"></span>
+                    {% endif %}
+                    <span class="daybars__fill{% if row.ran_out %} is-over{% endif %}"
+                          style="height: {{ row.percent }}%"></span>
+                  </span>
+                  <span class="daybars__label" aria-hidden="true">{{ row.label }}</span>
+                  <span class="visually-hidden">{{ row.day.strftime('%d.%m') }}: {{ row.seconds|duration(_) }}</span>
+                </a>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ol>
+        <p class="muted small">{{ _('insights.days.help') }}</p>
+      </section>
+
+      {# ----------------------------------------------------- kinds of app #}
+      {% if ins.shares %}
+        <section class="card" aria-labelledby="h-kinds">
+          <h2 id="h-kinds">{{ _('insights.kinds') }}</h2>
+          <div class="sharebar" aria-hidden="true">
+            {% for share in ins.shares %}
+              {% if share.percent %}
+                <span class="sharebar__part kind--{{ share.category }}" style="width: {{ share.percent }}%"></span>
+              {% endif %}
+            {% endfor %}
+          </div>
+          <ul class="legend">
+            {% for share in ins.shares %}
+              <li>
+                <span class="legend__swatch kind--{{ share.category }}" aria-hidden="true"></span>
+                <span class="legend__name">{{ kind_name(share.category) }}</span>
+                <span class="legend__value">{{ share.seconds|duration(_) }}</span>
+                <span class="legend__pct">{{ _('insights.percent', percent=share.percent) }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+          <p class="muted small">
+            {{ _('insights.kinds.help') }}
+            <a href="/children/{{ child.id }}/time?more=1#limits">{{ _('time.categories.title') }} →</a>
+          </p>
+        </section>
+      {% endif %}
+
+      {# ------------------------------------------------------------ apps #}
+      {% if app_rows %}
+        <section class="card" aria-labelledby="h-apps">
+          <h2 id="h-apps">{{ _('insights.apps') }}</h2>
+          <ol class="apps">
+            {% for app in app_rows %}
+              <li class="apps__row">
+                <div class="apps__line">
+                  <span class="apps__name">{{ app.name if app.slug else _('history.apps.home') }}</span>
+                  {% if app.trend %}
+                    <span class="trend trend--{{ app.trend }}">{{ _('insights.trend.' ~ app.trend) }}</span>
+                  {% endif %}
+                  <span class="apps__time">{{ app.seconds|duration(_) }}</span>
+                </div>
+                <span class="apps__bar" aria-hidden="true">
+                  <span class="apps__fill kind--{{ app.category }}" style="width: {{ app.percent }}%"></span>
+                </span>
+              </li>
+            {% endfor %}
+          </ol>
+          {% if ins.comparison %}<p class="muted small">{{ _('insights.apps.help') }}</p>{% endif %}
+        </section>
+      {% endif %}
+
+      {# ----------------------------------------------------- time of day #}
+      <section class="card" aria-labelledby="h-hours">
+        <h2 id="h-hours">{{ _('insights.hours') }}</h2>
+        {% if ins.hours_total_s %}
+          <ol class="hourbars">
+            {% for row in hour_rows %}
+              <li class="hourbars__hour" title="{{ '%02d' % row.hour }}:00 · {{ row.seconds|duration(_) }}">
+                <span class="hourbars__track" aria-hidden="true">
+                  <span class="hourbars__fill" style="height: {{ row.percent }}%"></span>
+                </span>
+                <span class="hourbars__label" aria-hidden="true">{{ row.label }}</span>
+                {% if row.seconds %}
+                  <span class="visually-hidden">{{ '%02d' % row.hour }}:00–{{ '%02d' % ((row.hour + 1) % 24) }}:00: {{ row.seconds|duration(_) }}</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ol>
+          <p class="muted small">{{ _('insights.hours.help') }}</p>
+          {% if ins.hours_total_s < ins.total_s * 0.9 %}
+            <p class="muted small">{{ _('insights.hours.partial') }}</p>
+          {% endif %}
+        {% else %}
+          <p class="muted">{{ _('insights.hours.none') }}</p>
+        {% endif %}
+      </section>
+
+      {# -------------------------------------------------------- requests #}
+      <section class="card" aria-labelledby="h-requests">
+        <h2 id="h-requests">{{ _('requests.title') }}</h2>
+        {% if request_rows %}
+          <ul class="tally">
+            {% for row in request_rows %}
+              <li>
+                <span class="tally__name">{{ row.name }}</span>
+                <span class="tally__count">{{ row.asked }}</span>
+                {% if row.detail %}<span class="tally__detail muted small">{{ row.detail }}</span>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">{{ _('insights.req.none') }}</p>
+        {% endif %}
+      </section>
+
+      {# ----------------------------------------------------------- sites #}
+      <section class="card" id="sites" aria-labelledby="h-sites">
+        <h2 id="h-sites">{{ _('insights.sites') }}</h2>
+        {% if ins.sites %}
+          <div class="table-wrap">
+            <table class="sites-table">
+              <thead>
+                <tr>
+                  <th scope="col">{{ _('insights.sites.col.site') }}</th>
+                  <th scope="col" class="num">{{ _('insights.sites.col.days') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for site in ins.sites %}
+                  <tr>
+                    <td><code>{{ site.host }}</code></td>
+                    <td class="num">{{ site.days }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% if ins.more_sites %}
+            <p class="muted small">{{ _('insights.sites.more', count=ins.more_sites) }}</p>
+          {% endif %}
+        {% else %}
+          <p class="muted">{{ _('insights.sites.none') }}</p>
+        {% endif %}
+        <p class="muted small">{{ _('insights.sites.help', days=kept_days) }}</p>
+      </section>
+    {% endif %}
+  {% endif %}
+{% endblock %}

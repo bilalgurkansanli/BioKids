@@ -8,10 +8,11 @@ from typing import Any
 import pytest
 from sqlalchemy.orm import Session
 
-from biokids_core import mail, repo
+from biokids_core import insights, mail, repo
 from biokids_core.config import Config
 from biokids_core.db import AiAlert, Child, Family, LedgerDay, Parent
-from biokids_daemon.notifier import Notifier
+from biokids_core.i18n import translator
+from biokids_daemon.notifier import Notifier, weekly_summary
 
 SUNDAY_EVENING = dt.datetime(2026, 10, 11, 19, 30)
 MONDAY = dt.datetime(2026, 10, 12, 9, 0)
@@ -140,3 +141,60 @@ async def test_the_week_is_summed_up_once_on_sunday_evening(
     assert len(weekly) == 1
     assert "Ahmet" in weekly[0] and "75 dk" in weekly[0]
     assert "Çarşamba: 45 dk" in weekly[0]
+
+
+# --------------------------------------------------- highlights (D-206)
+
+
+def _two_weeks(session: Session, child: Child) -> None:
+    """An hour a day last week, two this week: a change worth saying."""
+    monday = dt.date(2026, 10, 5)
+    for n in range(7):
+        session.add(
+            LedgerDay(child_id=child.id, day=monday - dt.timedelta(days=7 - n), general_s=3600)
+        )
+        session.add(
+            LedgerDay(child_id=child.id, day=monday + dt.timedelta(days=n), general_s=7200)
+        )
+    session.commit()
+
+
+def test_the_week_comes_with_its_highlights(session: Session, family: Child) -> None:
+    _two_weeks(session, family)
+    repo.record_event(session, kind="visit", child_id=family.id, payload={"host": "trt.net.tr"})
+    session.commit()
+
+    body = weekly_summary(session, translator("tr"), SUNDAY_EVENING.date())
+
+    assert "Öne çıkanlar:" in body
+    assert "Geçen haftanın aynı günlerine göre günlük ortalama ekran süresi %100 arttı." in body
+    assert "trt.net.tr" not in body, "a mail names no site"
+    english = weekly_summary(session, translator("en"), SUNDAY_EVENING.date())
+    assert "Highlights:" in english and "up 100%" in english
+
+
+def test_a_week_without_highlights_is_mailed_as_before(session: Session, family: Child) -> None:
+    session.add(LedgerDay(child_id=family.id, day=dt.date(2026, 10, 7), general_s=45 * 60))
+    session.commit()
+    body = weekly_summary(session, translator("tr"), SUNDAY_EVENING.date())
+    assert "Öne çıkanlar" not in body and "Çarşamba: 45 dk" in body
+
+
+async def test_highlights_that_cannot_be_worked_out_do_not_stop_the_mail(
+    session: Session,
+    config: Config,
+    family: Child,
+    outbox: Outbox,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _two_weeks(session, family)
+
+    def broken(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("a bug in the insights")
+
+    monkeypatch.setattr(insights, "insights_for", broken)
+    await Notifier(config).run(session, SUNDAY_EVENING, 0.0)
+
+    weekly = [body for subject, body in outbox.sent if "özet" in subject]
+    assert len(weekly) == 1
+    assert "Pazartesi: 120 dk" in weekly[0] and "Öne çıkanlar" not in weekly[0]

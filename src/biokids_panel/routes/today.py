@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import datetime as dt
 import json
 import logging
 from collections.abc import AsyncIterator, Sequence
@@ -12,7 +13,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 
-from biokids_core import repo
+from biokids_core import insights, repo
 from biokids_core.clock import read_boot_id
 from biokids_core.errors import IpcError
 from biokids_core.i18n import Translator
@@ -49,7 +50,41 @@ def today(view: View) -> Response:
             if (child := repo.get_child(view.session, child_id)) is not None
         ],
         restart_needed=restart_needed(view),
+        week=week_cards(view),
     )
+
+
+TODAY_HIGHLIGHTS = 3
+"""Highlights per child on Today: the screen is for glancing (UX.md section 3.2)."""
+
+
+def week_cards(view: View) -> list[dict[str, Any]]:
+    """This week's top highlights per child, for the card under the children (D-206).
+
+    Read from the database alone, so the card is there with the daemon down.
+    A convenience, so a failure here costs the card and nothing else: Today is
+    the screen a parent opens to grant time or lock a screen, and must render.
+    """
+    cards: list[dict[str, Any]] = []
+    try:
+        today = dt.date.today()
+        for child in repo.list_children(view.session):
+            cards.append(
+                {
+                    "child": child,
+                    "highlights": insights.week_highlights(
+                        view.session, child, view.tr, today, TODAY_HIGHLIGHTS
+                    ),
+                }
+            )
+    except Exception:
+        log.exception("could not work out this week's highlights; Today is shown without them")
+        # Only reads happened; the rollback leaves the session clean for the
+        # rest of the page.
+        with contextlib.suppress(Exception):
+            view.session.rollback()
+        return []
+    return cards
 
 
 def restart_needed(view: View) -> bool:
