@@ -35,9 +35,15 @@ hidden the moment the window starts to move and comes back on its title bar a
 quarter of a second after it stops, and a window that was dragged out of
 filling the screen fills it again (D-201).
 
+The bar fits the window it sits on (D-205): over a window too narrow for all of
+it, smaller buttons and the sound by its two buttons alone, and over a very
+narrow one only home and close. And a new app window fills the screen even when
+the app shrinks it back to the size it saved last time, as KDE's apps do.
+
 This module is the part that can be tested anywhere: which scope a process is
 in, which sound streams belong to an app, how a volume steps, when a close
-becomes a stop, where a window's frame is and when a moving window has stopped.
+becomes a stop, where a window's frame is and when a moving window has stopped,
+how much of the bar fits over a window and when a new window is maximised.
 The window itself is `ui.py`, in GTK 3 and libwnck 3, imported only when the
 bar runs (`python3 -m biokids_shell.appbar`), so the test suite needs neither.
 """
@@ -58,6 +64,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urlsplit
 
@@ -248,6 +255,25 @@ INFO_PX: Final = 120
 """The minutes and the clock: a fixed width, wide enough for "⏳ 120 dk", so the
 bar does not move as they change."""
 
+COMPACT_TARGET_PX: Final = 48
+"""A button of the compact bar across, to the finger (D-205); its height is still
+the title bar's 64. More than the 44 x 44 UX.md section 2.4 asks for 8-10 and
+never under 40: a child's finger target still, over a window with no room for 64."""
+COMPACT_FACE_PX: Final = 44
+"""A compact button's rounded square, to the eye: 44 pixels, where 56 were."""
+COMPACT_INFO_PX: Final = 92
+"""The minutes in the compact bar, in a smaller type and without the clock. Wide
+enough for "⏳ 120 dk"; a wider text - English's "min" - widens it a little, and
+the bar is placed by its new width."""
+
+_COMPACT_FACE_TOP = (BUTTON_TARGET_PX - TITLE_LINE_PX - COMPACT_FACE_PX) // 2
+_COMPACT_FACE_BOTTOM = BUTTON_TARGET_PX - COMPACT_FACE_PX - _COMPACT_FACE_TOP
+_COMPACT_FACE_SIDE = (COMPACT_TARGET_PX - COMPACT_FACE_PX) // 2
+_COMPACT_BORDER = " ".join(
+    f"{px}px"
+    for px in (_COMPACT_FACE_TOP, _COMPACT_FACE_SIDE, _COMPACT_FACE_BOTTOM, _COMPACT_FACE_SIDE)
+)
+
 BAR_CSS: Final = f"""
 #{BAR_NAME} {{
   background-color: {BAR_BACKGROUND};
@@ -341,12 +367,32 @@ BAR_CSS: Final = f"""
 #{BAR_NAME} box.info.warn label {{ color: #3A2A00; }}
 #{BAR_NAME} box.info.danger {{ background-color: #E04A3F; }}
 #{BAR_NAME} box.info.danger label {{ color: #FFFFFF; }}
+#{BAR_NAME}.compact button,
+#{BAR_NAME}.minimal button {{
+  min-width: {COMPACT_FACE_PX}px;
+  min-height: {COMPACT_FACE_PX}px;
+  border-width: {_COMPACT_BORDER};
+  border-radius: 14px;
+  font-size: 24px;
+}}
+#{BAR_NAME}.compact button.close,
+#{BAR_NAME}.minimal button.close {{ font-size: 26px; }}
+#{BAR_NAME}.compact box.info {{
+  margin: 7px 2px 9px 2px;
+  padding: 0 4px;
+}}
+#{BAR_NAME}.compact box.info label.time {{ font-size: 15px; }}
 """.encode()
 """GTK 3 CSS. The launcher's colours (UX.md section 1): an indigo tint for home,
 a teal tint for the sound, and for close the title bar's own red (`--danger`,
 white on it 4:1), so the way out looks as it did. The minutes turn `--warn` with
 dark text, then `--danger` with white, as the launcher's banners do. Every
-property here is one GTK 3 knows: an unknown one fails the whole sheet."""
+property here is one GTK 3 knows: an unknown one fails the whole sheet.
+
+The bar's tier (D-205) is a class on the bar itself, `compact` or `minimal`; the
+rules for it come last, so they win over the full bar's of the same weight. A
+compact face sits in the title bar as a full one does: as far from the top as
+from the line."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -378,6 +424,106 @@ def bar_origin(
         top = max(top, window.y)
     x = max(monitor.x, right - bar_width)
     return x, min(top, monitor.y + max(0, monitor.height - bar_height))
+
+
+# --------------------------------------------------------- the bar's size
+
+
+class BarTier(StrEnum):
+    """How much of the bar is shown: what fits over the window in front (D-205).
+
+    The owner opened Palapeli in a window a little wider than the bar, and the
+    bar covered nearly all of its title bar; Frozen Bubble's fixed 640 x 480
+    window lost most of its own. The bar now fits the window it sits on. The
+    value is the CSS class the bar carries.
+    """
+
+    FULL = "full"
+    """Home, the minutes and the clock, quieter, the slider, louder, close."""
+    COMPACT = "compact"
+    """Smaller buttons, the minutes without the clock, the sound by its two
+    buttons alone: about half as wide."""
+    MINIMAL = "minimal"
+    """Home and close: the way back to the launcher and the way out."""
+
+
+@dataclass(frozen=True, slots=True)
+class TierLayout:
+    """What a tier of the bar shows, in CSS pixels. Always as tall as the title bar."""
+
+    button_px: int
+    """Each button across, to the finger."""
+    face_px: int
+    """Each button's rounded square, to the eye."""
+    info_px: int
+    """The minutes; 0 where they are not shown."""
+    clock: bool
+    volume: bool
+    """🔉 and 🔊."""
+    slider: bool
+
+    @property
+    def width(self) -> int:
+        """The bar's natural width: home and close, and what else this tier shows."""
+        buttons = 4 if self.volume else 2
+        slider = SLIDER_PX if self.slider else 0
+        return buttons * self.button_px + self.info_px + slider
+
+
+BAR_TIERS: Final[Mapping[BarTier, TierLayout]] = MappingProxyType(
+    {
+        BarTier.FULL: TierLayout(
+            BUTTON_TARGET_PX, BUTTON_FACE_PX, INFO_PX, clock=True, volume=True, slider=True
+        ),
+        BarTier.COMPACT: TierLayout(
+            COMPACT_TARGET_PX,
+            COMPACT_FACE_PX,
+            COMPACT_INFO_PX,
+            clock=False,
+            volume=True,
+            slider=False,
+        ),
+        BarTier.MINIMAL: TierLayout(
+            COMPACT_TARGET_PX, COMPACT_FACE_PX, 0, clock=False, volume=False, slider=False
+        ),
+    }
+)
+"""The whole bar, 544 pixels wide; the compact one, 284; home and close, 96."""
+
+FULL_FROM_PX: Final = 1000
+"""The narrowest window, in CSS pixels, with the whole bar over it. The bar's 544
+pixels are 54% of that: about half, so a window that fills a screen 1024 pixels
+wide keeps every control - and over a maximised app the bar covers only its
+title, never the app. Narrower, and the whole bar would take more than about
+half of the window's title bar."""
+COMPACT_FROM_PX: Final = 520
+"""The narrowest window with the compact bar over it: its 284 pixels are 55% of
+that. Frozen Bubble's 648-pixel window gets it, at 44%. Under this, home and
+close alone: 96 pixels, half of a window 192 wide, narrower than any app's."""
+
+
+def bar_tier(width: int, scale: int = 1) -> BarTier:
+    """The tier for a window `width` device pixels wide, at the screen's scale factor.
+
+    Only the window's width decides, never what is in front of it, so a bar that
+    changes its own size cannot change its tier back: nothing feeds back.
+    """
+    css_width = width // max(1, scale)
+    if css_width >= FULL_FROM_PX:
+        return BarTier.FULL
+    if css_width >= COMPACT_FROM_PX:
+        return BarTier.COMPACT
+    return BarTier.MINIMAL
+
+
+def visible_width(window: Rect, monitor: Rect) -> int:
+    """How much of a window's width is on the monitor: what the bar must fit on.
+
+    A game dragged half off the screen has half a title bar left to hold it.
+    """
+    left = max(window.x, monitor.x)
+    right = min(window.x + window.width, monitor.x + monitor.width)
+    return max(0, right - left)
 
 
 # ------------------------------------------------------------ the frame
@@ -506,7 +652,8 @@ class Follower:
     maximised window out of maximisation when it is dragged; a child never
     needs a floating window, so one that was maximised before a drag with a
     finger is maximised again when the finger lets go. An app that changes its
-    own size is not fought with: without a finger, nothing is maximised.
+    own size is not fought with: without a finger, nothing is maximised - except
+    in a new window's first moments, which are the `Filler`'s (D-205).
     """
 
     xid: int | None = None
@@ -545,6 +692,10 @@ class Follower:
         limit = HELD_AT_MOST_S if self.pressed else RESTLESS_S
         return now - self.since < limit
 
+    def dragging(self, xid: int) -> bool:
+        """Whether a finger is moving or resizing this window: it is the child's then."""
+        return self.xid == xid and self.pressed
+
     def settle(
         self, now: float, *, maximized: bool, can_maximize: bool, pressed: bool
     ) -> tuple[FollowStep, float]:
@@ -573,6 +724,105 @@ class Follower:
     def forget(self) -> None:
         self.xid = None
         self.pressed = self.was_maximized = self.remaximized = False
+
+
+FILL_AGAIN_S: Final = 1.5
+"""From when a new window is looked at again. KDE's apps put back the size they
+saved last time a moment after they appear: sometimes after a first look has
+already found them filling the screen."""
+FILL_UNTIL_S: Final = 6.0
+"""Until when. A window that does not fill the screen this long after it first
+came to the front is left as it is: its size is its app's, or the child's."""
+FILL_MEMORY: Final = 512
+"""Windows remembered at most. A closed one is forgotten at once."""
+
+
+@dataclass
+class _Sighting:
+    first: float
+    looked: bool = False
+    done: bool = False
+
+
+class Filler:
+    """A new app window fills the screen, even when its app shrinks it back (D-205).
+
+    devilspie2 maximises every ordinary window as it appears (D-163), and some
+    apps then undo it: KDE's restore the size and place they saved last time
+    just after their window is shown. The owner's Palapeli opened in a window
+    not much wider than the bar, with the launcher all around it.
+
+    So the bar looks at each new window the first time it is in front: an
+    ordinary window that could fill the screen and does not is maximised. From
+    `FILL_AGAIN_S` on it looks again, for an app that restores its size late -
+    on a slow machine, later than a fixed second look would - and maximises the
+    window once more the first time it finds it not filling the screen; at
+    `FILL_UNTIL_S`, or after that second time, it leaves the window alone. At
+    most twice, so an app that insists is never fought. Never a dialog, which
+    stays the size of a question; never a window that cannot be maximised
+    (Frozen Bubble's fixed size), which is only followed; never while a button
+    is down or the window is being dragged, which is the child's doing. And
+    never a window that was open before the bar started: one the bar finds when
+    it is restarted is not new, and is as the child has been using it.
+    """
+
+    def __init__(self) -> None:
+        self._seen: dict[int, _Sighting] = {}
+
+    def known(self, xid: int) -> None:
+        """A window that was there before the bar: left as it is."""
+        self._remember(xid, _Sighting(0.0, looked=True, done=True))
+
+    def forget(self, xid: int) -> None:
+        """The window has closed."""
+        self._seen.pop(xid, None)
+
+    def due(self, xid: int, now: float) -> bool:
+        """Whether there is anything to look at in this window now."""
+        sighting = self._seen.get(xid)
+        if sighting is None:
+            return True
+        if sighting.done:
+            return False
+        return not sighting.looked or now - sighting.first >= FILL_AGAIN_S
+
+    def look(
+        self,
+        xid: int,
+        now: float,
+        *,
+        normal: bool,
+        can_maximize: bool,
+        maximized: bool,
+        busy: bool,
+    ) -> bool:
+        """The window is in front: True when it is to be maximised now.
+
+        `normal` is libwnck's window type, `busy` a button down or the window
+        under a finger (`Follower.dragging`).
+        """
+        if not self.due(xid, now):
+            return False
+        sighting = self._seen.get(xid) or self._remember(xid, _Sighting(now))
+        if not normal:
+            sighting.done = True
+            return False
+        fill = can_maximize and not maximized and not busy
+        if not sighting.looked:
+            sighting.looked = True
+            return fill
+        if now - sighting.first >= FILL_UNTIL_S:
+            sighting.done = True
+            return False
+        sighting.done = fill
+        return fill
+
+    def _remember(self, xid: int, sighting: _Sighting) -> _Sighting:
+        if xid not in self._seen and len(self._seen) >= FILL_MEMORY:
+            # The oldest: long since looked at, and likely closed unseen.
+            del self._seen[next(iter(self._seen))]
+        self._seen[xid] = sighting
+        return sighting
 
 
 # ------------------------------------------------------------------- sound

@@ -1,11 +1,12 @@
-"""D-197, D-201: the app bar - home, the app's own volume, and a close that works.
+"""D-197, D-201, D-205: the app bar - home, the app's own volume, and a close that works.
 
 The owner opened Frozen Bubble and could not close it: its window cannot be
 maximised, so the title bar's close button was not where a child looks, and a
 title bar's close button only asks. These pin what can be pinned without an X
 server: which scope a window's process is in, which sound streams are the app's
 and how they step or slide, when a close becomes a stop and what may be
-stopped, where a window's frame is and when a dragged window has stopped, the
+stopped, where a window's frame is and when a dragged window has stopped, how
+much of the bar fits over a window and when a new window is maximised, the
 minutes and the clock, how the launcher's tile brings a sent-away app back and
 which apps it lists as open, and that none of it needs GTK. The window itself
 (`biokids_shell/appbar/ui.py`) is checked on the VM (`docs/VM-RUNBOOK.md` §8.9).
@@ -34,14 +35,24 @@ from biokids_shell import appbar
 from biokids_shell import launcher as launcher_module
 from biokids_shell.appbar import (
     BAR_CSS,
+    BAR_TIERS,
     BUTTON_FACE_PX,
     BUTTON_TARGET_PX,
     CLOSE_GRACE_S,
+    COMPACT_FACE_PX,
+    COMPACT_FROM_PX,
+    COMPACT_INFO_PX,
+    COMPACT_TARGET_PX,
     DOUBLE_TAP_S,
     EXIT_BAD_UNIT,
     EXIT_NOT_FOUND,
     EXIT_UNAVAILABLE,
+    FILL_AGAIN_S,
+    FILL_MEMORY,
+    FILL_UNTIL_S,
+    FULL_FROM_PX,
     HELD_AT_MOST_S,
+    INFO_PX,
     KNOB_PX,
     NO_EXTENTS,
     NO_SOUND,
@@ -55,10 +66,12 @@ from biokids_shell.appbar import (
     TRACK_PX,
     AppTarget,
     AudioState,
+    BarTier,
     CloseAction,
     Closer,
     CloseStep,
     Extents,
+    Filler,
     Follower,
     FollowStep,
     LevelSender,
@@ -69,6 +82,7 @@ from biokids_shell.appbar import (
     WindowInfo,
     app_inputs,
     bar_origin,
+    bar_tier,
     change_volume,
     clock_text,
     decode_cardinals,
@@ -94,6 +108,7 @@ from biokids_shell.appbar import (
     stop_command,
     stop_scope,
     time_left,
+    visible_width,
     window_extents,
 )
 from biokids_shell.appbar import __main__ as appbar_main
@@ -347,6 +362,115 @@ def test_the_buttons_have_names_a_screen_reader_can_say() -> None:
     assert translator("tr")("appbar.home") == "Ana ekran"
     assert translator("tr")("shell.open_apps") == "Açık"
     assert translator("en")("shell.open_apps") == "Open"
+
+
+# --------------------------------------------------------- the bar's size
+
+FULL, COMPACT, MINIMAL = BarTier.FULL, BarTier.COMPACT, BarTier.MINIMAL
+FROZEN_BUBBLE_PX = 640 + 4 + 4
+"""Frozen Bubble's fixed 640 x 480 window, in xfwm4's 4-pixel borders."""
+
+
+def test_each_bar_is_as_wide_as_what_it_shows() -> None:
+    assert BAR_TIERS[FULL].width == 4 * BUTTON_TARGET_PX + INFO_PX + SLIDER_PX == 544
+    assert BAR_TIERS[COMPACT].width == 4 * COMPACT_TARGET_PX + COMPACT_INFO_PX
+    assert BAR_TIERS[MINIMAL].width == 2 * COMPACT_TARGET_PX
+
+
+def test_the_compact_bar_is_about_half_the_whole_one() -> None:
+    assert 0.45 <= BAR_TIERS[COMPACT].width / BAR_TIERS[FULL].width <= 0.55
+
+
+@pytest.mark.parametrize(
+    ("width", "tier"),
+    [
+        (1920, FULL),
+        (1280, FULL),
+        (1024, FULL),
+        (FULL_FROM_PX, FULL),
+        (FULL_FROM_PX - 1, COMPACT),
+        (FROZEN_BUBBLE_PX, COMPACT),
+        (COMPACT_FROM_PX, COMPACT),
+        (COMPACT_FROM_PX - 1, MINIMAL),
+        (300, MINIMAL),
+        (0, MINIMAL),
+    ],
+)
+def test_the_bar_fits_the_window_it_sits_on(width: int, tier: BarTier) -> None:
+    """D-205: "on some small things this bar stays far too big"."""
+    assert bar_tier(width) is tier
+
+
+def test_a_hidpi_screen_is_measured_in_css_pixels() -> None:
+    assert bar_tier(2 * 1280, scale=2) is FULL
+    assert bar_tier(1280, scale=2) is COMPACT, "640 of the bar's own pixels"
+    assert bar_tier(2 * FROZEN_BUBBLE_PX, scale=2) is COMPACT
+    assert bar_tier(1000, scale=2) is MINIMAL
+    assert bar_tier(1000, scale=0) is FULL, "a scale that cannot be is 1"
+
+
+def test_no_bar_takes_much_more_than_half_of_its_window() -> None:
+    """Each tier's threshold is the narrowest window it is shown over. There it
+    takes at most 55%; and a window one pixel narrower would have more than half
+    of it covered, so no tier is held back for nothing."""
+    for tier, narrowest in ((FULL, FULL_FROM_PX), (COMPACT, COMPACT_FROM_PX)):
+        width = BAR_TIERS[tier].width
+        assert width <= 0.55 * narrowest, tier
+        assert width > (narrowest - 1) / 2, tier
+    assert BAR_TIERS[MINIMAL].width <= 0.5 * 192
+    assert BAR_TIERS[COMPACT].width / FROZEN_BUBBLE_PX < 0.45, "the owner's own game"
+
+
+def test_the_smallest_bar_keeps_the_way_home_and_the_way_out() -> None:
+    full, compact, minimal = BAR_TIERS[FULL], BAR_TIERS[COMPACT], BAR_TIERS[MINIMAL]
+    assert full.slider and full.volume and full.clock and full.info_px == INFO_PX
+    assert compact.volume and compact.info_px and not compact.slider and not compact.clock
+    assert not (minimal.volume or minimal.slider or minimal.clock or minimal.info_px)
+
+
+def test_a_compact_button_is_still_a_target_for_a_childs_finger() -> None:
+    """UX.md section 2.4: 44 x 44 for 8-10, and never under 40. Its height is the
+    title bar's, as the full bar's is, and its face sits as flush in it."""
+    for layout in BAR_TIERS.values():
+        assert layout.button_px >= 44 and layout.face_px >= 40
+    rule = re.search(
+        r"\.compact button,\s*#[\w-]+\.minimal button \{([^}]*)\}", BAR_CSS.decode()
+    )
+    assert rule is not None, "the compact rule, for both smaller bars"
+    widths = re.search(r"border-width: (\d+)px (\d+)px (\d+)px (\d+)px;", rule.group(1))
+    assert widths is not None
+    top, right, bottom, left = (int(value) for value in widths.groups())
+    assert top + COMPACT_FACE_PX + bottom == BUTTON_TARGET_PX
+    assert bottom == top + TITLE_LINE_PX
+    assert left + COMPACT_FACE_PX + right == COMPACT_TARGET_PX
+    assert f"min-width: {COMPACT_FACE_PX}px" in rule.group(1)
+    assert f"min-height: {COMPACT_FACE_PX}px" in rule.group(1)
+
+
+def test_the_smaller_bars_rules_come_after_the_whole_ones() -> None:
+    """Of two GTK rules equally specific, the later wins: `.compact button` must
+    come after `button.close` to give the close button its smaller type too."""
+    css = BAR_CSS.decode()
+    assert css.index("button.close {") < css.index(".compact button,")
+    assert ".compact button.close" in css
+
+
+def test_every_bar_sits_at_its_windows_top_right() -> None:
+    screen = Rect(0, 0, 1280, 800)
+    game = Rect(316, 126, FROZEN_BUBBLE_PX, 548)
+    for tier in BarTier:
+        width = BAR_TIERS[tier].width
+        assert bar_origin(screen, width, game) == (game.x + game.width - width, game.y)
+        assert bar_origin(screen, width, screen) == (1280 - width, 0)
+
+
+def test_the_bar_fits_what_is_left_of_a_window_on_the_screen() -> None:
+    screen = Rect(0, 0, 1920, 1080)
+    assert visible_width(Rect(640, 300, FROZEN_BUBBLE_PX, 548), screen) == FROZEN_BUBBLE_PX
+    assert visible_width(Rect(1600, 300, FROZEN_BUBBLE_PX, 548), screen) == 320
+    assert visible_width(Rect(-400, 0, FROZEN_BUBBLE_PX, 548), screen) == 248
+    assert visible_width(Rect(2000, 0, FROZEN_BUBBLE_PX, 548), screen) == 0
+    assert visible_width(Rect(1900, 0, 648, 548), Rect(1920, 0, 1280, 1024)) == 628
 
 
 # ------------------------------------------------------------------- sound
@@ -717,6 +841,125 @@ def test_another_window_starts_afresh() -> None:
     follower.changed(8, 100.2, maximized=False, pressed=False)
     step, _ = follower.settle(100.6, maximized=False, can_maximize=True, pressed=False)
     assert step is FollowStep.SHOW, "8 was never maximised, nor dragged"
+
+
+def test_a_window_under_a_finger_is_the_childs() -> None:
+    follower = Follower()
+    assert not follower.dragging(7)
+    follower.changed(7, 100.0, maximized=False, pressed=False)
+    assert not follower.dragging(7), "moving by itself"
+    follower.changed(7, 100.1, maximized=False, pressed=True)
+    assert follower.dragging(7) and not follower.dragging(8)
+    follower.forget()
+    assert not follower.dragging(7)
+
+
+# --------------------------------------------- a new window fills the screen
+
+
+def look(filler: Filler, now: float, **facts: bool) -> bool:
+    """A normal, resizable window that does not fill the screen, unless told otherwise."""
+    values = {"normal": True, "can_maximize": True, "maximized": False, "busy": False}
+    values.update(facts)
+    return filler.look(9, now, **values)
+
+
+def test_a_new_window_that_does_not_fill_the_screen_is_maximised() -> None:
+    filler = Filler()
+    assert look(filler, 100.0)
+    assert not filler.due(9, 100.0 + FILL_AGAIN_S - 0.1)
+    assert not look(filler, 101.0), "not asked twice in a row"
+
+
+def test_an_app_that_puts_back_its_own_size_is_maximised_once_more() -> None:
+    """D-205: devilspie2 maximised Palapeli as it appeared; Palapeli then put
+    back the size it had saved, after the bar had first seen it filling the
+    screen."""
+    filler = Filler()
+    assert not look(filler, 100.0, maximized=True), "devilspie2 got there first"
+    assert not filler.due(9, 101.0)
+    assert filler.due(9, 100.0 + FILL_AGAIN_S)
+    assert look(filler, 100.0 + FILL_AGAIN_S)
+    # After that the window's size is the app's: never fought over.
+    assert not filler.due(9, 101.0 + FILL_AGAIN_S)
+    assert not look(filler, 101.0 + FILL_AGAIN_S)
+
+
+def test_a_late_restore_is_caught_too_and_only_once() -> None:
+    """A slow machine: the app puts back its size seconds after it appeared."""
+    filler = Filler()
+    assert not look(filler, 100.0, maximized=True)
+    assert not look(filler, 100.0 + FILL_AGAIN_S, maximized=True), "still filling it"
+    assert filler.due(9, 102.0)
+    assert look(filler, 104.0)
+    assert not filler.due(9, 104.5)
+    assert not look(filler, 105.0), "never a third time"
+    # A window still not filled when the time is up is left as it is.
+    late = Filler()
+    look(late, 100.0, maximized=True)
+    assert not look(late, 100.0 + FILL_UNTIL_S)
+    assert not late.due(9, 100.0 + FILL_UNTIL_S + 1)
+
+
+def test_a_window_that_cannot_fill_the_screen_or_a_question_is_left_alone() -> None:
+    fixed = Filler()
+    assert not look(fixed, 100.0, can_maximize=False), "Frozen Bubble's fixed size"
+    assert not look(fixed, 100.0 + FILL_AGAIN_S, can_maximize=False)
+    assert not look(fixed, 100.0 + FILL_UNTIL_S, can_maximize=False)
+    assert not fixed.due(9, 300.0)
+    question = Filler()
+    assert not look(question, 100.0, normal=False)
+    assert not question.due(9, 100.0 + FILL_AGAIN_S), "a question stays its own size"
+
+
+def test_a_window_that_can_be_maximised_only_by_the_second_look_is() -> None:
+    """libwnck may not know a window's actions the moment it is first in front."""
+    filler = Filler()
+    assert not look(filler, 100.0, can_maximize=False)
+    assert look(filler, 100.0 + FILL_AGAIN_S)
+
+
+def test_nothing_is_maximised_under_a_finger() -> None:
+    """A button down or a window being dragged is the child's doing (D-201)."""
+    filler = Filler()
+    assert not look(filler, 100.0, busy=True)
+    assert not look(filler, 100.0 + FILL_AGAIN_S, busy=True), "waits for the finger"
+    assert filler.due(9, 100.0 + FILL_AGAIN_S + 0.5)
+    assert look(filler, 100.0 + FILL_AGAIN_S + 0.5)
+    assert not filler.due(9, 200.0)
+
+
+def test_a_second_look_put_off_too_long_is_not_taken() -> None:
+    held = Filler()
+    look(held, 100.0, busy=True)
+    assert not look(held, 100.0 + FILL_AGAIN_S, busy=True)
+    assert not look(held, 100.0 + FILL_UNTIL_S, busy=True)
+    assert not held.due(9, 100.0 + FILL_UNTIL_S + 1)
+    # Nor one that comes late because the window was not in front meanwhile.
+    away = Filler()
+    look(away, 100.0, maximized=True)
+    assert not look(away, 100.0 + FILL_UNTIL_S + 60)
+    assert not away.due(9, 100.0 + FILL_UNTIL_S + 61)
+
+
+def test_a_window_that_was_there_before_the_bar_is_left_as_it_is() -> None:
+    """A bar that was restarted finds the windows the child has been using."""
+    filler = Filler()
+    filler.known(9)
+    assert not filler.due(9, 100.0)
+    assert not look(filler, 100.0)
+    filler.forget(9)  # it closed; X may give its id to a new window
+    assert filler.due(9, 200.0)
+    assert look(filler, 200.0)
+
+
+def test_the_windows_remembered_are_bounded() -> None:
+    filler = Filler()
+    for xid in range(FILL_MEMORY + 10):
+        filler.known(xid)
+    assert not filler.due(FILL_MEMORY + 9, 100.0)
+    assert filler.due(0, 100.0), "the oldest went first"
+    assert len(filler._seen) == FILL_MEMORY
 
 
 # --------------------------------------------------------- time and clock
@@ -1112,6 +1355,42 @@ MAXIMIZED_FRAME = Extents(left=0, right=0, top=64, bottom=0)
 """xfwm4 with `borderless_maximize`: a maximised window keeps only its title bar."""
 
 
+def _filling(window: _Win) -> _Win:
+    """The window maximised, as devilspie2 or the bar left it."""
+    window.frame, window.extents, window.maximized = (
+        Rect(0, 0, 1920, 1080),
+        MAXIMIZED_FRAME,
+        True,
+    )
+    return window
+
+
+def _floating(window: _Win, frame: Rect) -> _Win:
+    """The window out of maximisation, at `frame`, in xfwm4's frame."""
+    window.frame, window.extents, window.maximized = frame, XFWM4_FRAME, False
+    return window
+
+
+SAVED_SIZE = Rect(560, 300, 800, 600)
+"""Where Palapeli puts its window back: the size and place it saved last time."""
+
+
+def _measured(fake_gtk: Any) -> None:
+    """Widgets of their own, and a bar as wide as its tier: GTK, measuring it."""
+    gtk = fake_gtk.repo.Gtk
+    for name in ("Button", "Label", "Box", "EventBox"):
+        getattr(gtk, name).side_effect = lambda *_a, **_k: mock.MagicMock()
+    window = gtk.Window.return_value
+    context = window.get_style_context.return_value
+
+    def natural() -> tuple[Any, Any]:
+        tier = BarTier(context.add_class.call_args.args[0])
+        size = mock.Mock(width=BAR_TIERS[tier].width, height=BUTTON_TARGET_PX)
+        return size, size
+
+    window.get_preferred_size.side_effect = natural
+
+
 def _bar_over(
     fake_gtk: Any, monkeypatch: pytest.MonkeyPatch, window: _Win, **kwargs: Any
 ) -> Any:
@@ -1232,7 +1511,8 @@ def test_the_slider_follows_the_finger_and_the_sound_follows_the_slider(
         return AudioState(True, level)
 
     monkeypatch.setattr(ui, "set_volume", set_level)
-    bar = _bar_over(fake_gtk, monkeypatch, _Win(2, 4242, "Frozen-bubble"))
+    bar = _bar_over(fake_gtk, monkeypatch, _filling(_Win(2, 4242, "Palapeli")))
+    assert bar.tier is BarTier.FULL, "the slider is the whole bar's"
     assert bar.audio == AudioState(True, 70)
     bar.slider.get_allocation.return_value = mock.Mock(x=0, width=SLIDER_PX)
     bar.slider_box.get_allocation.return_value = mock.Mock(x=0)
@@ -1310,11 +1590,25 @@ def test_the_bar_shows_the_minutes_left_and_the_clock(
 
     monkeypatch.setattr(fake_gtk.ui, "fetch_state", state)
     url = "http://127.0.0.1:7880/state"
-    bar = _bar_over(fake_gtk, monkeypatch, _Win(2, 4242, "Frozen-bubble"), state_url=url)
+    app = _filling(_Win(2, 4242, "Palapeli"))
+    bar = _bar_over(fake_gtk, monkeypatch, app, state_url=url)
     assert asked == [url]
     bar.time_label.set_text.assert_called_with("⏳ 5 dk")
     bar.info.get_style_context().add_class.assert_any_call("warn")
     bar.clock_label.set_visible.assert_called_with(clock_shown)
+    # New words may be narrower: the bar may shrink with them.
+    bar.window.resize.assert_called_once_with(1, 1)
+
+    # Over a window too narrow for the whole bar, the minutes stay; the clock goes.
+    _floating(app, Rect(640, 300, 640, 480))
+    bar.refresh(raise_bar=False)
+    assert bar.tier is BarTier.COMPACT
+    bar.clock_label.set_visible.assert_called_with(False)
+    bar.info.set_visible.assert_called_with(True)
+    bar._poll_time()
+    _deliver(bar, fake_gtk.idle)
+    bar.time_label.set_text.assert_called_once_with("⏳ 5 dk")  # the same minutes
+    bar.clock_label.set_visible.assert_called_with(False)
     bar.shutdown()
 
 
@@ -1380,6 +1674,272 @@ def test_home_sends_the_app_away_with_its_dialog_and_shows_the_launcher(
     assert game.calls == ["minimize"]
     assert kiosk.calls == [("activate", 1234)]
     assert not bar.shown
+    bar.shutdown()
+
+
+def test_the_bar_is_as_big_as_the_window_under_it_allows(
+    fake_gtk: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-205: over a window a little wider than the bar, the owner's Palapeli, the
+    bar covered nearly all of its title bar."""
+    _measured(fake_gtk)
+    ui = fake_gtk.ui
+    kiosk = _Win(1, 7000, "biokids-kiosk")
+    game = _Win(2, 4242, "Frozen-bubble")  # 640 x 480 in the middle: a fixed size
+    browser = _filling(_Win(4, 6001, "Chromium"))
+    question = _Win(5, 4242, "Frozen-bubble", kind="dialog")
+    question.frame = Rect(800, 400, 360, 200)
+    screen = _Screen(kiosk, game, browser, question)
+    monkeypatch.setattr(ui, "read_audio", lambda target, scope_of: AudioState(True, 70))
+    bar = ui.AppBarUi(translator("tr"), screen, uid=UID)
+    context = bar.window.get_style_context()
+
+    screen.active = game
+    screen.handlers["active-window-changed"](screen, kiosk)
+    assert bar.shown and bar.tier is BarTier.COMPACT
+    context.add_class.assert_called_with("compact")
+    assert bar.origin == (640 + 640 - BAR_TIERS[COMPACT].width, 300), "its own top right"
+    bar.slider_box.set_visible.assert_called_with(False)
+    bar.quieter.set_visible.assert_called_with(True)
+    bar.louder.set_visible.assert_called_with(True)
+    bar.info.set_size_request.assert_called_with(COMPACT_INFO_PX, -1)
+    bar.clock_label.set_visible.assert_called_with(False)
+    bar.window.resize.assert_called_with(1, 1)
+
+    screen.active = browser
+    screen.handlers["active-window-changed"](screen, game)
+    assert bar.tier is BarTier.FULL
+    context.remove_class.assert_called_with("compact")
+    context.add_class.assert_called_with("full")
+    assert bar.origin == (1920 - BAR_TIERS[FULL].width, 0), "the screen's top right"
+    bar.slider_box.set_visible.assert_called_with(True)
+    bar.info.set_size_request.assert_called_with(INFO_PX, -1)
+
+    screen.active = question
+    screen.handlers["active-window-changed"](screen, browser)
+    assert bar.tier is BarTier.MINIMAL
+    assert bar.origin == (800 + 360 - BAR_TIERS[MINIMAL].width, 400)
+    bar.info.set_visible.assert_called_with(False)
+    bar.quieter.set_visible.assert_called_with(False)
+    bar.slider_box.set_visible.assert_called_with(False)
+    bar.home.set_visible.assert_not_called()
+    bar.close.set_visible.assert_not_called()
+
+    # The same window, again and again: the bar is not laid out again.
+    changes, moves = context.add_class.call_count, bar.window.move.call_count
+    for _ in range(3):
+        bar._tick()
+        screen.handlers["window-stacking-changed"](screen)
+    assert context.add_class.call_count == changes
+    assert bar.window.move.call_count == moves
+    bar.shutdown()
+
+
+def test_a_slider_that_goes_away_under_the_finger_keeps_its_level(
+    fake_gtk: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ui = fake_gtk.ui
+    sent: list[int] = []
+
+    def set_level(target: AppTarget, level: int, scope_of: Any) -> AudioState:
+        sent.append(level)
+        return AudioState(True, level)
+
+    monkeypatch.setattr(ui, "set_volume", set_level)
+    app = _filling(_Win(2, 4242, "Palapeli"))
+    bar = _bar_over(fake_gtk, monkeypatch, app)
+    bar.slider.get_allocation.return_value = mock.Mock(x=0, width=SLIDER_PX)
+    bar.slider_box.get_allocation.return_value = mock.Mock(x=0)
+    bar._on_slide_press(None, mock.Mock(x=SLIDER_PX / 2))
+    assert bar._sliding
+
+    _floating(app, Rect(640, 300, 640, 480))
+    bar._place(app)
+    assert bar.tier is BarTier.COMPACT and not bar._sliding
+    _fire(fake_gtk.timers, "_send_level")
+    _deliver(bar, fake_gtk.idle)
+    assert sent == [50]
+    bar.shutdown()
+
+
+def test_the_bar_is_placed_again_when_gtk_measures_it_a_frame_late(
+    fake_gtk: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """GTK applies a new class on its next frame. If the bar was placed by the
+    old width, its new size on the screen places it again - once."""
+    game = _Win(2, 4242, "Frozen-bubble")
+    game.actions = 0
+    bar = _bar_over(fake_gtk, monkeypatch, game)
+    assert bar.origin == (640 + 640 - 304, 300)
+    natural = mock.Mock(width=284, height=BUTTON_TARGET_PX)
+    bar.window.get_preferred_size.return_value = (natural, natural)
+
+    bar._allocated(bar.window, mock.Mock(width=284))
+    bar._allocated(bar.window, mock.Mock(width=284))
+    assert len(fake_gtk.idle) == 1, "one placing, however many allocations"
+    _deliver(bar, fake_gtk.idle)
+    assert bar.origin == (640 + 640 - 284, 300)
+
+    bar._allocated(bar.window, mock.Mock(width=284))
+    assert fake_gtk.idle == [], "the width it was placed by: nothing to do"
+    bar._hide()
+    bar.window.move.reset_mock()
+    bar._allocated(bar.window, mock.Mock(width=300))
+    _deliver(bar, fake_gtk.idle)
+    bar.window.move.assert_not_called()  # a hidden bar is placed when it is shown
+    bar.shutdown()
+
+
+def _new_window_over_the_launcher(
+    fake_gtk: Any, monkeypatch: pytest.MonkeyPatch, window: _Win
+) -> Any:
+    """The bar running over the launcher, and then `window` opening in front."""
+    ui = fake_gtk.ui
+    kiosk = _Win(1, 7000, "biokids-kiosk")
+    screen = _Screen(kiosk)
+    screen.active = kiosk
+    monkeypatch.setattr(ui, "read_audio", lambda target, scope_of: AudioState(True, 70))
+    bar = ui.AppBarUi(translator("tr"), screen, uid=UID)
+    clock, finger = [100.0], [False]
+    bar.now = lambda: clock[0]
+    bar.pointer_pressed = lambda: finger[0]
+    bar.test_clock, bar.test_finger, bar.test_screen = clock, finger, screen
+    bar.refresh(raise_bar=True)
+    assert not bar.shown
+    screen.windows.append(window)
+    screen.active = window
+    screen.handlers["active-window-changed"](screen, kiosk)
+    return bar
+
+
+def _settled(fake_gtk: Any, bar: Any, seconds: float = 0.3) -> None:
+    bar.test_clock[0] += seconds
+    _fire(fake_gtk.timers, "_settle")
+
+
+def test_a_new_window_fills_the_screen_even_when_its_app_shrinks_it(
+    fake_gtk: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-205: devilspie2 maximised Palapeli as it appeared and Palapeli put back
+    the size it had saved - a puzzle in a window not much wider than the bar."""
+    puzzle = _Win(9, 4242, "Palapeli")
+    puzzle.frame = SAVED_SIZE
+    bar = _new_window_over_the_launcher(fake_gtk, monkeypatch, puzzle)
+    assert puzzle.calls == ["maximize"]
+    assert not bar.shown, "never seen where the window was a moment before"
+
+    _filling(puzzle)
+    puzzle.handlers["geometry-changed"](puzzle)
+    _settled(fake_gtk, bar)
+    assert bar.shown and bar.origin == (1920 - 304, 0)
+
+    # Palapeli puts its own size back. Not fought on the spot: no finger did it.
+    bar.test_clock[0] += 0.4
+    _floating(puzzle, SAVED_SIZE)
+    puzzle.handlers["state-changed"](puzzle, 1, 0)
+    assert not bar.shown
+    _settled(fake_gtk, bar)
+    assert bar.shown and bar.origin == (SAVED_SIZE.x + SAVED_SIZE.width - 304, SAVED_SIZE.y)
+    assert puzzle.calls == ["maximize"]
+
+    # The second look.
+    bar.test_clock[0] = 100.0 + FILL_AGAIN_S
+    bar._tick()
+    assert puzzle.calls == ["maximize", "maximize"]
+    assert not bar.shown
+    _filling(puzzle)
+    puzzle.handlers["geometry-changed"](puzzle)
+    _settled(fake_gtk, bar)
+    assert bar.shown and bar.origin == (1920 - 304, 0)
+
+    # After that the window's size is the app's.
+    bar.test_clock[0] += 5
+    _floating(puzzle, SAVED_SIZE)
+    puzzle.handlers["state-changed"](puzzle, 1, 0)
+    _settled(fake_gtk, bar)
+    bar._tick()
+    assert puzzle.calls == ["maximize", "maximize"]
+    assert bar.shown
+
+    # Closed, and forgotten.
+    bar.test_screen.windows.remove(puzzle)
+    bar.test_screen.active = None
+    bar.test_screen.handlers["window-closed"](bar.test_screen, puzzle)
+    assert bar.filler.due(9, bar.test_clock[0]) and not bar.shown
+    bar.shutdown()
+
+
+def test_a_new_window_under_a_finger_waits_for_it(
+    fake_gtk: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    puzzle = _filling(_Win(9, 4242, "Palapeli"))
+    bar = _new_window_over_the_launcher(fake_gtk, monkeypatch, puzzle)
+    assert puzzle.calls == [], "devilspie2 got there first"
+    assert bar.shown
+
+    # The app shrinks itself, and the child is already holding a button down.
+    bar.test_clock[0] += 0.5
+    _floating(puzzle, SAVED_SIZE)
+    puzzle.handlers["state-changed"](puzzle, 1, 0)
+    _settled(fake_gtk, bar)
+    bar.test_finger[0] = True
+    bar.test_clock[0] = 100.0 + FILL_AGAIN_S
+    bar._tick()
+    assert puzzle.calls == [], "not under a finger"
+    bar.test_finger[0] = False
+    bar.test_clock[0] += 0.5
+    bar._tick()
+    assert puzzle.calls == ["maximize"]
+    bar.shutdown()
+
+
+def test_a_window_its_app_shrinks_late_is_caught_too(
+    fake_gtk: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A slow machine: Palapeli puts its size back seconds after it appeared,
+    after a look at the 1.5-second mark found it filling the screen."""
+    puzzle = _filling(_Win(9, 4242, "Palapeli"))
+    bar = _new_window_over_the_launcher(fake_gtk, monkeypatch, puzzle)
+    bar.test_clock[0] = 100.0 + FILL_AGAIN_S
+    bar._tick()
+    assert puzzle.calls == []
+
+    bar.test_clock[0] = 103.0
+    _floating(puzzle, SAVED_SIZE)
+    puzzle.handlers["state-changed"](puzzle, 1, 0)
+    _settled(fake_gtk, bar)
+    assert puzzle.calls == ["maximize"]
+    assert not bar.shown, "off the window until it fills the screen"
+    _filling(puzzle)
+    puzzle.handlers["geometry-changed"](puzzle)
+    _settled(fake_gtk, bar)
+    assert bar.shown and bar.origin == (1920 - 304, 0)
+    bar.shutdown()
+
+
+def test_a_window_that_cannot_fill_the_screen_is_never_asked_to(
+    fake_gtk: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    game = _Win(2, 4242, "Frozen-bubble")
+    game.actions = 0
+    bar = _new_window_over_the_launcher(fake_gtk, monkeypatch, game)
+    assert bar.shown and bar.origin == (640 + 640 - 304, 300), "shown at once"
+    bar.test_clock[0] = 100.0 + FILL_AGAIN_S
+    bar._tick()
+    assert game.calls == []
+    bar.shutdown()
+
+
+def test_a_window_open_before_the_bar_started_is_left_as_it_is(
+    fake_gtk: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The launcher restarts a bar that died; the child's windows are not new."""
+    app = _Win(9, 4242, "Palapeli")
+    bar = _bar_over(fake_gtk, monkeypatch, app)
+    bar.test_clock[0] += FILL_AGAIN_S
+    bar._tick()
+    assert app.calls == []
+    assert bar.shown
     bar.shutdown()
 
 

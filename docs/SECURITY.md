@@ -63,7 +63,7 @@ Never add a claim to marketing copy that contradicts this list.
 | `biokids-daemon` | root | needs logind control, nftables, service reloads, shutdown |
 | `biokids-panel` | root | writes config that only root may write |
 | `biokids-shell` | child | runs in the child session; no privilege. Reaches the daemon only over `/run/biokids/shell.sock`, where every operation is scoped to the calling uid's own child (D-123) |
-| the app bar (`biokids_shell.appbar`) | child, a child process of `biokids-shell` | reads windows through libwnck, steps the volume of the active app's own sound streams (`pactl`), and stops an app that would not close with `systemctl --user stop` - only ever a `biokids-app-*.scope` in the child's own user manager, never the launcher's or the voice's unit (D-197). No privilege: nothing it does is beyond what the child's own session may do |
+| the app bar (`biokids_shell.appbar`) | child, a child process of `biokids-shell` | reads windows through libwnck and maximises an app window that does not fill the screen (D-201, D-205), steps the volume of the active app's own sound streams (`pactl`), and stops an app that would not close with `systemctl --user stop` - only ever a `biokids-app-*.scope` in the child's own user manager, never the launcher's or the voice's unit (D-197). No privilege: nothing it does is beyond what the child's own session may do |
 | `biokids-voice` | child | audio only |
 | `biokids-ai` | `biokids-ai` system user | runs the local models for the assistant (D-165); no network, no home, no devices |
 | `biokids-wiki` | `biokids-ai` system user | serves the offline Wikipedia on `127.0.0.1:7877` once a parent downloaded it (D-190); no capabilities, `IPAddressDeny=any` except localhost |

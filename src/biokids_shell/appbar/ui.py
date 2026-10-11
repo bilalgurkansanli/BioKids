@@ -19,6 +19,18 @@ bar trailed the window across the screen. It is hidden at the window's first
 still for a quarter of a second (`Follower`); a maximised window dragged out of
 maximisation is maximised again when the finger lets go.
 
+**As big as the window allows** (D-205). Each time the bar is placed, the width
+of the window under it picks the tier (`bar_tier`): the widgets that tier does
+not show are hidden, the bar carries the tier's CSS class, and it is placed by
+its new width. Only a change of tier touches the widgets, and the tier follows
+the app window's width alone, so the bar's own new size cannot feed back.
+
+**A new window fills the screen** (D-205). The first time a window is in front,
+and once more if its app shrinks it in the next few seconds, an ordinary window
+that could fill the screen and does not is maximised (`Filler`); the bar stays
+off it until it has settled, so it is not seen where the window was a moment
+before.
+
 **Nothing slow in the window's thread.** `pactl`, `systemctl` and the launcher's
 `/state` are asked on worker threads, and only plain values cross back;
 libwnck and GTK are touched from the main loop alone.
@@ -40,6 +52,7 @@ from biokids_core.i18n import Translator
 from biokids_shell.appbar import (
     BAR_CSS,
     BAR_NAME,
+    BAR_TIERS,
     BUTTON_TARGET_PX,
     CLOCK_TICK_S,
     CLOSE_GLYPH,
@@ -63,10 +76,12 @@ from biokids_shell.appbar import (
     VOLUME_STEP,
     AppTarget,
     AudioState,
+    BarTier,
     CloseAction,
     Closer,
     CloseStep,
     Extents,
+    Filler,
     Follower,
     FollowStep,
     LevelSender,
@@ -74,6 +89,7 @@ from biokids_shell.appbar import (
     TimeTone,
     WindowInfo,
     bar_origin,
+    bar_tier,
     change_volume,
     clock_text,
     decode_cardinals,
@@ -92,6 +108,7 @@ from biokids_shell.appbar import (
     stepped,
     stop_scope,
     time_left,
+    visible_width,
     window_extents,
 )
 
@@ -215,11 +232,21 @@ class AppBarUi:
         self.state_url = state_url
         self.closer = Closer()
         self.follower = Follower()
+        self.filler = Filler()
+        for window in screen.get_windows() or []:
+            # Open before the bar was - it was restarted: not new, left as it is.
+            self.filler.known(int(window.get_xid()))
         self.sender = LevelSender()
         self.target: AppTarget | None = None
         self.audio = NO_SOUND
         self.shown = False
         self.origin: tuple[int, int] | None = None
+        self.tier = BarTier.FULL
+        self._clock_wanted = False
+        self._time_text: str | None = None
+        self._placed_width: int | None = None
+        """The bar's width, in CSS pixels, the last time it was placed."""
+        self._replacing = False
         self._scopes: dict[tuple[int, int], str | None] = {}
         self._polling = False
         self._time_polling = False
@@ -254,7 +281,7 @@ class AppBarUi:
 
         screen.connect("active-window-changed", self._changed)
         screen.connect("window-stacking-changed", self._changed)
-        screen.connect("window-closed", self._changed)
+        screen.connect("window-closed", self._window_closed)
         gdk_screen = Gdk.Screen.get_default()
         gdk_screen.connect("monitors-changed", self._changed)
         gdk_screen.connect("size-changed", self._changed)
@@ -270,6 +297,8 @@ class AppBarUi:
         window.set_name(BAR_NAME)
         window.set_accept_focus(False)
         window.set_title("BioKids")
+        window.get_style_context().add_class(self.tier.value)
+        window.connect("size-allocate", self._allocated)
 
         self.home = self._button(HOME_GLYPH, "home", "appbar.home", self._on_home)
         self.info = self._build_info()
@@ -365,6 +394,11 @@ class AppBarUi:
     def _changed(self, *_args: Any) -> None:
         self.refresh(raise_bar=True)
 
+    def _window_closed(self, _screen: Any, window: Any) -> None:
+        with contextlib.suppress(Exception):
+            self.filler.forget(int(window.get_xid()))
+        self.refresh(raise_bar=True)
+
     def refresh(self, *, raise_bar: bool) -> None:
         active = self.screen.get_active_window()
         info = window_info(active) if active is not None else None
@@ -382,7 +416,9 @@ class AppBarUi:
             self.sender = LevelSender()
             self._sliding = False
             self._show_audio(NO_SOUND)
-        if self.follower.hiding(info.xid, self.now()):
+        now = self.now()
+        self._fill(active, info, now)
+        if self.follower.hiding(info.xid, now):
             # Being moved or resized: the bar comes back where it stops.
             self._hide()
             return
@@ -441,31 +477,125 @@ class AppBarUi:
             self._logged_frame = (xid, frame, reported)
         return frame
 
-    def _place(self, active: Any) -> None:
-        scale = max(1, int(self.window.get_scale_factor() or 1))
-        frame = self._frame(active, scale)
+    def _monitor(self, frame: Rect, scale: int) -> Rect:
+        """The monitor the window is on, in the root window's pixels."""
         display = Gdk.Display.get_default()
         monitor = display.get_monitor_at_point(
             (frame.x + frame.width // 2) // scale, (frame.y + frame.height // 2) // scale
         )
         if monitor is not None:
             geometry = monitor.get_geometry()
-            area = Rect(
+            return Rect(
                 int(geometry.x) * scale,
                 int(geometry.y) * scale,
                 int(geometry.width) * scale,
                 int(geometry.height) * scale,
             )
-        else:
-            root = Gdk.get_default_root_window()
-            area = Rect(0, 0, int(root.get_width()) * scale, int(root.get_height()) * scale)
+        root = Gdk.get_default_root_window()
+        return Rect(0, 0, int(root.get_width()) * scale, int(root.get_height()) * scale)
+
+    def _place(self, active: Any) -> None:
+        scale = max(1, int(self.window.get_scale_factor() or 1))
+        frame = self._frame(active, scale)
+        area = self._monitor(frame, scale)
+        width = visible_width(frame, area)
+        self._set_tier(bar_tier(width, scale), width)
         _minimum, natural = self.window.get_preferred_size()
+        self._placed_width = int(natural.width)
         origin = bar_origin(
-            area, int(natural.width) * scale, frame, bar_height=BUTTON_TARGET_PX * scale
+            area, self._placed_width * scale, frame, bar_height=BUTTON_TARGET_PX * scale
         )
         if origin != self.origin:
             self.window.move(origin[0] // scale, origin[1] // scale)
             self.origin = origin
+
+    # ------------------------------------------------------- the bar's size
+
+    def _set_tier(self, tier: BarTier, window_width: int) -> None:
+        """Show what fits over the window in front (D-205); nothing when that is
+        what is shown already."""
+        if tier is self.tier:
+            return
+        log.debug("a window %d pixels wide: the %s bar", window_width, tier)
+        layout = BAR_TIERS[tier]
+        context = self.window.get_style_context()
+        context.remove_class(self.tier.value)
+        context.add_class(tier.value)
+        self.tier = tier
+        if layout.info_px:
+            self.info.set_size_request(layout.info_px, -1)
+        self.info.set_visible(layout.info_px > 0)
+        self.clock_label.set_visible(self._clock_wanted and layout.clock)
+        self.quieter.set_visible(layout.volume)
+        self.louder.set_visible(layout.volume)
+        self.slider_box.set_visible(layout.slider)
+        if self._sliding and not layout.slider:
+            # The slider went away under the finger: the level it was at holds.
+            self._sliding = False
+            self._send_later(0)
+        # The class is applied on GTK's next frame; a widget measured before
+        # then would give its old size from its cache. Measured afresh instead.
+        for widget in (
+            self.home,
+            self.info,
+            self.time_label,
+            self.clock_label,
+            self.quieter,
+            self.slider_box,
+            self.louder,
+            self.close,
+        ):
+            widget.queue_resize()
+        # A GTK 3 window grows to a larger request by itself but keeps its size
+        # when the request shrinks: asked for 1 x 1, it takes its request.
+        self.window.resize(1, 1)
+
+    def _allocated(self, _window: Any, allocation: Any) -> None:
+        """The bar's size on screen changed. If it is not the width it was placed
+        by - GTK measured the new tier only on its next frame, or when it showed
+        the bar - it is placed again, once the main loop is idle. Moving the bar
+        does not change its size, so this cannot repeat itself."""
+        if self._replacing or int(allocation.width) == self._placed_width:
+            return
+        self._replacing = True
+        GLib.idle_add(self._replace)
+
+    def _replace(self) -> bool:
+        self._replacing = False
+        window, target = self._watched, self.target
+        if (
+            self.shown
+            and window is not None
+            and target is not None
+            and self._watched_xid == target.xid
+            and not self.follower.hiding(target.xid, self.now())
+        ):
+            self._place(window)
+        return False
+
+    # ------------------------------------------- a new window fills the screen
+
+    def _fill(self, active: Any, info: WindowInfo, now: float) -> None:
+        """Maximise a new window that does not fill the screen (D-205)."""
+        if not self.filler.due(info.xid, now):
+            return
+        busy = self.follower.dragging(info.xid) or self.pointer_pressed()
+        if not self.filler.look(
+            info.xid,
+            now,
+            normal=info.kind == "normal",
+            can_maximize=self._can_maximize(active),
+            maximized=bool(active.is_maximized()),
+            busy=busy,
+        ):
+            return
+        log.info("window %#x does not fill the screen; it is maximised", info.xid)
+        active.maximize()
+        # Off the window until it has its new size, rather than seen for a
+        # moment where it was: the window manager's answer is a geometry change,
+        # which the Follower waits out; no answer, and the bar is back in 250 ms.
+        self.follower.changed(info.xid, now, maximized=False, pressed=False)
+        self._settle_later(SETTLE_MS)
 
     def _scope(self, info: WindowInfo) -> str | None:
         key = (info.xid, info.pid)
@@ -747,14 +877,23 @@ class AppBarUi:
             self.time_label.hide()
         else:
             minutes = self.tr("shell.remaining_minutes", minutes=left.minutes)
-            self.time_label.set_text(f"{TIME_GLYPH} {minutes}")
+            text = f"{TIME_GLYPH} {minutes}"
+            if text != self._time_text:
+                self._time_text = text
+                self.time_label.set_text(text)
+                # "120 min" is wider than the minutes' room and "99 min" is not:
+                # the bar may get narrower, which a GTK 3 window does not by
+                # itself. Its new size places it again (`_allocated`).
+                self.window.resize(1, 1)
             self.time_label.get_accessible().set_name(
                 f"{self.tr('shell.remaining_label')}: {minutes}"
             )
             if left.tone is not TimeTone.OK:
                 context.add_class(left.tone.value)
             self.time_label.show()
-        self.clock_label.set_visible(shows_clock(state))
+        self._clock_wanted = shows_clock(state)
+        # Not in the smaller bars, which keep their room for the minutes (D-205).
+        self.clock_label.set_visible(self._clock_wanted and BAR_TIERS[self.tier].clock)
 
     def _tick_clock(self) -> bool:
         self.clock_label.set_text(clock_text(time.localtime()))
