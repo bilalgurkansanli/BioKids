@@ -933,3 +933,81 @@ svg {
   white-space: nowrap;
   border: 0;
 }
+
+/* ------------------------------------------------------------ opening (D-208) */
+/* A tapped tile while its app opens: a teal ring breathing around it, the icon
+ * nodding, and "Açılıyor…" where its name was - big enough for a four-year-old
+ * to see from across the room - until the app's window is in front. Nothing
+ * else on the screen changes, and every other tile still works. Without motion,
+ * a still ring and the word say the same. */
+.tile.is-opening {
+  position: relative;
+  border-color: var(--bio-teal);
+  box-shadow: var(--shadow-2);
+}
+
+/* Over the tile's own edge, not outside it: the grid scrolls, and with the day's
+ * card above it has four pixels of padding, which would cut a ring outside off. */
+.tile.is-opening::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border: 7px solid var(--bio-teal);
+  border-radius: var(--r-lg);
+  pointer-events: none;
+  animation: tile-opening 1.4s ease-in-out infinite;
+}
+
+.tile.is-opening .tile__icon {
+  animation: tile-opening-icon 1.4s ease-in-out infinite;
+}
+
+.tile.is-opening .tile__label { visibility: hidden; }
+
+.tile__opening {
+  position: absolute;
+  left: var(--sp-2);
+  right: var(--sp-2);
+  bottom: var(--sp-3);
+  padding: var(--sp-1) var(--sp-2);
+  border: 2px solid var(--bio-teal);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--bio-teal) 22%, var(--surface));
+  color: var(--ink);
+  font-size: var(--tile-label);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The round "Açık" buttons and the day's card have no room for words: the ring. */
+.open-app.is-opening,
+.daily__go.is-opening {
+  box-shadow: 0 0 0 4px var(--bio-teal);
+  animation: opening-glow 1.4s ease-in-out infinite;
+}
+
+@keyframes tile-opening {
+  0%, 100% { opacity: .3; }
+  50% { opacity: 1; }
+}
+
+@keyframes tile-opening-icon {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+@keyframes opening-glow {
+  0%, 100% { box-shadow: 0 0 0 2px var(--bio-teal); }
+  50% { box-shadow: 0 0 0 7px var(--bio-teal); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile.is-opening::before,
+  .tile.is-opening .tile__icon,
+  .open-app.is-opening,
+  .daily__go.is-opening { animation: none; }
+}

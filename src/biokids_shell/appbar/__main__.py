@@ -118,7 +118,14 @@ def main(argv: list[str] | None = None) -> int:
         return code
     config = Config.load(args.config)
     tr = translator(child_locale(config))
-    code = ui.run_bar(tr, uid=own_uid(), ready=announce_ready, state_url=state_url(config))
+    # Listening before the bar says it is ready: a tile tapped from then on
+    # brings its app back through the bar itself, not a new helper (D-208).
+    channel = ui.serve_control(uid=own_uid())
+    try:
+        code = ui.run_bar(tr, uid=own_uid(), ready=announce_ready, state_url=state_url(config))
+    finally:
+        if channel is not None:
+            channel.close()
     return code
 
 

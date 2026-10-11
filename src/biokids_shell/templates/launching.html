@@ -2,9 +2,18 @@
 {% block title %}{{ _('shell.launching', app=tile.name) }}{% endblock %}
 {% block inner %}
   {# The app's own icon, not a spinner: the child sees that the thing they
-     tapped is the thing that is happening (UX.md §2.4). #}
+     tapped is the thing that is happening (UX.md §2.4). The home page opens
+     apps without this screen (D-208); it is the way for a page that runs no
+     script, and for any link that still leads here. #}
   <div class="tile__icon" style="font-size:6rem" aria-hidden="true">{{ tile.icon|icon }}</div>
   <h1>{{ tile.name }}</h1>
   <p id="launch-status">{{ _('shell.launching', app=tile.name) }}</p>
   <div id="launch-slug" hidden data-slug="{{ tile.slug }}"></div>
+  <noscript>
+    {# Without JavaScript nothing posts for the child, so they do: the answer is
+       home while the app opens, or the calm screen that says why it did not. #}
+    <form method="post" action="/launch/{{ tile.slug }}">
+      <button class="big-btn" type="submit">{{ _('shell.launching.open') }}</button>
+    </form>
+  </noscript>
 {% endblock %}

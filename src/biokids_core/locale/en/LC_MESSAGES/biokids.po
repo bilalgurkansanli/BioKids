@@ -138,6 +138,14 @@ msgstr "Never mind"
 msgid "shell.launching"
 msgstr "Opening {app}"
 
+# Over a tapped tile while its app opens (D-208); short, the tile is small.
+msgid "shell.opening"
+msgstr "Opening…"
+
+# The launching screen's button where the page runs no script (D-208).
+msgid "shell.launching.open"
+msgstr "Open"
+
 # The app bar (D-197): its buttons carry no words; these are what a screen reader says.
 msgid "appbar.home"
 msgstr "Home screen"

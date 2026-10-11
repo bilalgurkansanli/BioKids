@@ -884,3 +884,11 @@ def bring_back(scope: str, *, uid: int | None) -> int:
     # left this process before the process does.
     display.sync()
     return 0
+
+
+def serve_control(*, uid: int | None) -> Any:
+    """The running bar answers the launcher's "bring this app back" (D-208):
+    `bring_back` above, on this main loop, asked over `control`'s socket."""
+    from biokids_shell.appbar import control
+
+    return control.serve(lambda scope: bring_back(scope, uid=uid), GLib.idle_add, uid=uid)

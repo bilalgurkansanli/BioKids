@@ -138,6 +138,14 @@ msgstr "Vazgeç"
 msgid "shell.launching"
 msgstr "{app} açılıyor"
 
+# Over a tapped tile while its app opens (D-208); short, the tile is small.
+msgid "shell.opening"
+msgstr "Açılıyor…"
+
+# The launching screen's button where the page runs no script (D-208).
+msgid "shell.launching.open"
+msgstr "Aç"
+
 # Uygulama çubuğu (D-197): düğmelerde yazı yok, bunlar ekran okuyucunun söylediği adlar.
 msgid "appbar.home"
 msgstr "Ana ekran"

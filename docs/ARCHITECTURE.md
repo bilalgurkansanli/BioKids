@@ -413,8 +413,16 @@ Focus tracking on X11: `_NET_ACTIVE_WINDOW` via python-xlib, mapped to a PID via
 The app bar (D-197, `biokids_shell/appbar/`) already walks that chain in the child's
 session, through libwnck: the active window, its `_NET_WM_PID`, its
 `biokids-app-*.scope`. It uses the scope to find the app's own sound streams and, when
-an app will not close, to stop it; the launcher uses it, through the bar's
-`--bring-back`, to show an open app's window again when its tile is tapped.
+an app will not close, to stop it; the launcher uses it to show an open app's window
+again when its tile is tapped. The running bar is asked over its own socket,
+`$XDG_RUNTIME_DIR/biokids-appbar.sock` (mode 0600, one line each way, answered on the
+bar's GTK main loop, D-208); only where no bar is running does the launcher run the
+bar's code once as a helper, `--bring-back <unit>`. Taps on one tile are taken one at
+a time, and an app whose scope is running is never started a second time because the
+bar could not look; only a scope systemd says has ended, or one with no window 30 s
+after it started, is replaced. A launch is answered once `/proc/<pid>/exe` shows that
+`systemd-run` has become the app (the 1.5 s refusal wait is only the upper bound), and
+the activity report to the daemon goes after the answer.
 
 ---
 

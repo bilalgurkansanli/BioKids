@@ -7,8 +7,8 @@ file, and there is no address bar to type anything else into.
 Two rules run through all of it.
 
 **Feedback within 100 ms, always** (UX.md §2.4). A tile that does nothing for two
-seconds gets tapped eight more times, so a tap paints the launching screen first
-and asks the daemon second.
+seconds gets tapped eight more times, so a tap shows its tile opening first and
+asks the daemon second (D-208); without JavaScript, the launching screen does.
 
 **Never blame the child.** Every refusal renders the same calm screen with a way
 to ask a grown-up. A four-year-old who meets a red error page learns that the
@@ -29,10 +29,10 @@ import math
 import re
 import shlex
 import socket
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Coroutine
 from pathlib import Path
 from typing import Annotated, Any
-from urllib.parse import urlsplit
+from urllib.parse import urlencode, urlsplit
 
 from fastapi import Depends, FastAPI, Form, Request, Response
 from fastapi.responses import (
@@ -165,6 +165,25 @@ class ShellState:
         self.search_words: list[str] | None = None
         """The parent's own search terms as the daemon last sent them (D-202),
         kept for a moment the daemon does not answer."""
+        self.background: set[asyncio.Task[Any]] = set()
+        """Work an answer does not wait for (D-208). Held, because the event
+        loop keeps only a weak reference to a task and could collect one
+        mid-flight."""
+
+    def in_background(self, work: Coroutine[Any, Any, Any], name: str) -> asyncio.Task[Any]:
+        """Run `work` after the answer has gone; a failure is logged, never raised."""
+        task = asyncio.create_task(work, name=name)
+        self.background.add(task)
+        task.add_done_callback(self._background_done)
+        return task
+
+    def _background_done(self, task: asyncio.Task[Any]) -> None:
+        self.background.discard(task)
+        if task.cancelled():
+            return
+        error = task.exception()
+        if error is not None:
+            log.error("%s failed: %s", task.get_name(), error, exc_info=error)
 
     def remember_spoken(self, card: dict[str, Any]) -> None:
         self.spoken = dict(card)
@@ -369,7 +388,9 @@ def register_routes(app: FastAPI) -> None:
 
         The loading screen shows the app's own icon and name rather than a
         spinner, so the child can see that the thing they tapped is the thing
-        that is happening (UX.md §2.4).
+        that is happening (UX.md §2.4). Since D-208 the home page opens an app
+        without coming here; this screen is for a launcher without JavaScript,
+        whose button posts a plain form, and for any link that still leads here.
         """
         data = await shell.client.state()
         tile = _find_tile(data, slug)
@@ -380,20 +401,40 @@ def register_routes(app: FastAPI) -> None:
         return await render(shell, request, "launching.html", data, tile=tile)
 
     @app.post("/launch/{slug}")
-    async def launch(request: Request, shell: Shell, slug: str) -> JSONResponse:
-        data = await shell.client.state()
+    async def launch(request: Request, shell: Shell, slug: str) -> Response:
+        """Start the app, or bring it back; answered as soon as that is settled.
+
+        The page shows the tile opening from the tap on (D-208), so this answer
+        matters for a refusal, which sends the child to the calm screen. The
+        tile and the permission are asked of the daemon together - the daemon
+        decides the permission on its own list, never this one - and the
+        activity is reported after the answer has gone. A plain form (the
+        launching screen without JavaScript) gets a page back instead of JSON.
+        """
+        as_page = _is_form_post(request)
+        if slug in BUILTIN_TILES:
+            data = await shell.client.state()
+            permission: tuple[bool, str] = (True, "")
+        else:
+            data, permission = await asyncio.gather(
+                shell.client.state(), shell.client.may_launch(slug)
+            )
         tile = _find_tile(data, slug)
         if tile is None:
-            return JSONResponse({"ok": False, "reason": Reason.APP_NOT_ALLOWED})
+            return _launch_answer(as_page, slug, ok=False, reason=Reason.APP_NOT_ALLOWED)
 
         if slug in BUILTIN_TILES:
             # Volume and brightness are the launcher's own controls; shutdown has
             # its own confirmation screen. None of them starts a process.
+            if as_page:
+                return RedirectResponse(
+                    "/shutdown" if slug == "shutdown" else "/", status_code=303
+                )
             return JSONResponse({"ok": True, "builtin": slug})
 
-        allowed, reason = await shell.client.may_launch(slug)
+        allowed, reason = permission
         if not allowed:
-            return JSONResponse({"ok": False, "reason": reason})
+            return _launch_answer(as_page, slug, ok=False, reason=reason)
 
         result = await shell.launcher.launch(
             LaunchRequest(
@@ -407,10 +448,13 @@ def register_routes(app: FastAPI) -> None:
             )
         )
         if result.ok:
-            await shell.client.report_activity(
-                slug, str(tile.get("name", slug)), str(tile.get("category", ""))
+            shell.in_background(
+                shell.client.report_activity(
+                    slug, str(tile.get("name", slug)), str(tile.get("category", ""))
+                ),
+                "report-activity",
             )
-        return JSONResponse({"ok": result.ok, "reason": result.error})
+        return _launch_answer(as_page, slug, ok=result.ok, reason=result.error)
 
     # ------------------------------------------------------------ screens
 
@@ -805,6 +849,8 @@ def _browser_strings(tr: Translator) -> dict[str, str]:
         "request_approved_time": tr("shell.request.approved_time", minutes="{minutes}"),
         "request_denied": tr("shell.request.denied"),
         "timeup": tr("shell.timeup.title"),
+        # Over a tapped tile until its app's window is in front (D-208).
+        "opening": tr("shell.opening"),
         # What a screen reader says for the ring, kept in step with the number.
         "remaining": tr("shell.remaining_label")
         + ": "
@@ -844,6 +890,27 @@ def _find_tile(data: dict[str, Any] | None, slug: str) -> dict[str, Any] | None:
         if isinstance(tile, dict) and tile.get("slug") == slug:
             return dict(tile)
     return None
+
+
+FORM_TYPES = frozenset({"application/x-www-form-urlencoded", "multipart/form-data"})
+
+
+def _is_form_post(request: Request) -> bool:
+    """A form the launching screen posts without JavaScript, not the page's fetch."""
+    sent = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    return sent in FORM_TYPES
+
+
+def _launch_answer(as_page: bool, slug: str, *, ok: bool, reason: str) -> Response:
+    """JSON for the page's script; for a plain form, where the child goes next:
+    home while the app opens, or the calm screen that says why it did not."""
+    if not as_page:
+        return JSONResponse({"ok": ok, "reason": reason})
+    if ok:
+        return RedirectResponse("/", status_code=303)
+    return RedirectResponse(
+        "/blocked?" + urlencode({"reason": reason, "slug": slug}), status_code=303
+    )
 
 
 async def _event_stream(shell: ShellState, request: Request) -> AsyncIterator[bytes]:

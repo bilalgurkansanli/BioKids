@@ -113,7 +113,16 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
 - **No double-click anywhere.** Single tap or click, always.
 - Every action gives feedback within 100 ms, even if the app takes 3 seconds to start.
   A tile that does nothing for two seconds will be tapped eight more times.
-- Launching an app shows a full-screen loading state with the app's icon, not a spinner.
+- **Opening an app happens on its tile** (D-208). From the tap until the app's window
+  is in front, the tile has a teal ring breathing around it and "Açılıyor…" where its
+  name was; nothing else on the screen changes, and the other tiles keep working. A
+  second tap on that tile does nothing, and the launcher never starts a second copy
+  of an app that is still opening or already open. The ring goes when the app's
+  window takes the screen, after 25 seconds, or when the launcher says no - then the
+  calm Blocked screen, as always. Not a spinner and not a screen of its own: a slow
+  game kept the child on "Yapboz açılıyor" for many seconds, with nothing to do.
+  Without JavaScript the tile leads to the loading screen with the app's icon and an
+  "Aç" button (screen 2).
 - No modal that a child cannot dismiss. The only unskippable screen is the first-run
   explanation.
 - **Every app has a way out a child can find** (D-163, D-197). Over every app
@@ -133,7 +142,10 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
 ### 2.5 Screens
 
 1. **Home** — the tile grid, and above it the day's surprise (§2.7).
-2. **Launching** — big icon, app name, a progress bar.
+2. **Launching** — big icon, app name, "… açılıyor", and where the page runs no
+   script an "Aç" button. Only for a launcher without JavaScript and any link that
+   still leads here: with JavaScript the home screen opens apps on their tiles (§2.4,
+   D-208).
 3. **Blocked** — Zio or Sio looking concerned, one sentence ("Burası senin için
    değil"), and a large **"Büyüğüme sor"** button: it names no parent, because the
    request goes to whoever holds the one parent account (D-135). Never a URL, never an

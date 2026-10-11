@@ -1467,8 +1467,10 @@ def starts(monkeypatch: pytest.MonkeyPatch) -> _Starts:
 
 
 class _Answers:
+    """What the app bar and systemd say about the tile's app."""
+
     def __init__(
-        self, launcher: AppLauncher, *, shown: int | None, active: bool = True
+        self, launcher: AppLauncher, *, shown: int | None, active: bool | None = True
     ) -> None:
         self.shown = shown
         self.active = active
@@ -1479,7 +1481,7 @@ class _Answers:
             self.brought.append(unit)
             return self.shown
 
-        async def unit_active(_unit: str) -> bool:
+        async def unit_state(_unit: str) -> bool | None:
             return self.active
 
         async def stop_unit(unit: str) -> bool:
@@ -1487,7 +1489,7 @@ class _Answers:
             return True
 
         launcher.bring_back = bring_back  # type: ignore[method-assign]
-        launcher.unit_active = unit_active  # type: ignore[method-assign]
+        launcher.unit_state = unit_state  # type: ignore[method-assign]
         launcher.stop_unit = stop_unit  # type: ignore[method-assign]
 
 
@@ -1533,7 +1535,7 @@ async def test_a_scope_left_with_no_window_is_stopped_before_starting_again(
 ) -> None:
     launcher = AppLauncher(config)
     first = await launcher.launch(GAME_TILE)
-    launcher.started["frozen-bubble"] -= launcher_module.STILL_OPENING_S + 1
+    launcher.started[first.unit] -= launcher_module.STILL_OPENING_S + 1
     answers = _Answers(launcher, shown=EXIT_NOT_FOUND, active=True)
 
     again = await launcher.launch(GAME_TILE)
@@ -1542,15 +1544,51 @@ async def test_a_scope_left_with_no_window_is_stopped_before_starting_again(
     assert again.ok and starts.count == 2
 
 
-async def test_without_the_helper_the_tile_starts_the_app_as_before(
+@pytest.mark.parametrize("shown", [None, EXIT_UNAVAILABLE, 70])
+async def test_a_bar_that_could_not_look_never_starts_a_second_copy(
+    config: Config, starts: _Starts, shown: int | None
+) -> None:
+    """D-208, the owner's journal: palapeli-3, -4 and -5 running at once. The bar
+    took too long to look (None), or could not (no GTK); the launcher took that
+    for "not running" and started another copy each time."""
+    launcher = AppLauncher(config)
+    first = await launcher.launch(GAME_TILE)
+    launcher.started[first.unit] -= launcher_module.STILL_OPENING_S + 1
+    answers = _Answers(launcher, shown=shown, active=True)
+
+    again = await launcher.launch(GAME_TILE)
+
+    assert again.ok and again.unit == first.unit
+    assert starts.count == 1, "a second copy of a running app was started"
+    assert answers.stopped == [], "an app nobody could look at was stopped"
+    assert launcher.running == {"frozen-bubble": first.unit}
+
+
+async def test_a_bar_that_could_not_look_at_a_closed_app_starts_it_again(
     config: Config, starts: _Starts
 ) -> None:
     launcher = AppLauncher(config)
-    await launcher.launch(GAME_TILE)
-    _Answers(launcher, shown=EXIT_UNAVAILABLE)
+    first = await launcher.launch(GAME_TILE)
+    _Answers(launcher, shown=None, active=False)
 
-    assert (await launcher.launch(GAME_TILE)).ok
+    again = await launcher.launch(GAME_TILE)
+
+    assert again.ok and again.unit != first.unit
     assert starts.count == 2
+
+
+async def test_when_systemd_does_not_say_the_app_is_not_started_twice(
+    config: Config, starts: _Starts
+) -> None:
+    """`systemctl is-active` that does not answer says nothing about the app."""
+    launcher = AppLauncher(config)
+    first = await launcher.launch(GAME_TILE)
+    launcher.started[first.unit] -= launcher_module.STILL_OPENING_S + 1
+    answers = _Answers(launcher, shown=EXIT_NOT_FOUND, active=None)
+
+    assert (await launcher.launch(GAME_TILE)).unit == first.unit
+    assert starts.count == 1
+    assert answers.stopped == []
 
 
 async def test_a_web_tile_opens_a_window_every_time(
@@ -1571,9 +1609,10 @@ async def test_a_web_tile_opens_a_window_every_time(
 
 
 async def test_the_helper_is_the_app_bar_run_once(
-    config: Config, monkeypatch: pytest.MonkeyPatch
+    config: Config, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    launcher = AppLauncher(config)
+    """Where no bar is listening (D-208): its code, run once."""
+    launcher = AppLauncher(config, appbar_socket=tmp_path / "no-bar.sock")
     ran: list[list[str]] = []
 
     async def exit_code(argv: list[str], _within: float) -> int:

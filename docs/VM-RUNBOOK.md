@@ -516,7 +516,9 @@ greeter.
    `/usr/share/biokids/characters/` is missing (D-150).
 4. `Alt+F4` does nothing. `Ctrl+Alt+F2` does nothing (properly checked in §6).
 5. Tapping a tile opens the app **and the launcher responds immediately** — the
-   loading screen must not stay up until you close the app (D-149). A web tile
+   tile shows it is opening at once, with no loading screen in between, and stops
+   when the app's window is in front, never only when you close the app (D-149,
+   D-208). A web tile
    (TRT Çocuk, EBA) must open the site: Chromium's "This page is blocked" means
    the daemon's policy does not name it (D-156) — check
    `/etc/chromium/policies/managed/biokids-kiosk.json`. No window may ask the child
@@ -1126,6 +1128,48 @@ journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep -i 'app
 13. The launcher's own sound bar: drag its knob, tap the bar's ends, and with Tab
     focus it and press ← and →. **Pass:** `as_elif wpctl get-volume
     @DEFAULT_AUDIO_SINK@` follows each.
+
+### 8.10 Opening an app at once, and never twice
+
+D-208. With the helpers of §8.9, and the launcher's port of §8.4 in `$PORT`:
+
+```bash
+as_elif ls -l $R/biokids-appbar.sock      # srw------- elif: the bar listens
+scopes() { as_elif systemctl --user list-units --plain --no-legend 'biokids-app-*' | awk '{print $1}'; }
+```
+
+**Pass, in order:**
+
+1. Tap **Yapboz** (Palapeli, slow to start). **Pass:** at the tap, the tile has a
+   teal ring breathing around it and "Açılıyor…" where its name was; there is no
+   "Yapboz açılıyor" screen, and the other tiles and the sound bar still work. The
+   ring goes when Palapeli's window comes up, or after 25 seconds.
+2. While it is still opening, tap its tile five more times. **Pass:** `scopes` lists
+   one `biokids-app-palapeli-*`, not several.
+3. Tap 🏠, then the Yapboz tile. **Pass:** the same window is back within a moment,
+   `scopes` still lists one, and the journal says "is open already" with no line
+   about running the bar's helper.
+4. Time the answers, as Elif (only her processes reach her launcher):
+
+   ```bash
+   as_elif curl -s -o /dev/null -w '%{time_total}\n' -X POST http://127.0.0.1:$PORT/launch/palapeli
+   ```
+
+   **Pass:** with Palapeli open, well under half a second (1.46 s before D-208);
+   with it closed, under half a second too (1.59 s before), the window following
+   in its own time.
+5. A busy bar. Freeze it, tap the tile of an app that is open, and thaw it:
+
+   ```bash
+   B=$(pgrep -u elif -f -- '-m biokids_shell.appbar$')
+   sudo kill -STOP $B; sleep 8; sudo kill -CONT $B    # tap the tile during the sleep
+   ```
+
+   **Pass:** no second scope; the journal says the window "could not be looked for;
+   not starting it twice", and once the bar is thawed the app's window comes to
+   the front.
+6. No bar. `sudo kill -KILL $B` and, before it is back, tap the tile of an open app.
+   **Pass:** the app comes back (the helper, a few seconds) and `scopes` lists one.
 
 ---
 
