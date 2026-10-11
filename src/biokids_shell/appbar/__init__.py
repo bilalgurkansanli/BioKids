@@ -21,8 +21,9 @@ app window the child is in, and never over the launcher:
 * 🔉, a slider and 🔊 set the app's own volume - the app's sound streams, not
   the machine's, so Zio and Sio's warnings stay as loud as they were. The
   buttons step by ten percent; the slider follows a finger (D-201).
-* The minutes left today and, for 8-10, the clock, read from the launcher's own
-  `/state` (D-201): orange in the last five minutes, red in the last one.
+* The minutes left today and, in the whole bar, the clock, read from the
+  launcher's own `/state` (D-201): orange in the last five minutes, red in the
+  last one. Neither, and no room kept for them, while the launcher cannot say.
 * ✕ asks the window to close, as the title bar's button did. If it is still
   there three seconds later - and has not answered with a question of its own,
   "save your drawing?" - or the child taps ✕ again, its scope is stopped:
@@ -38,7 +39,8 @@ filling the screen fills it again (D-201).
 The bar fits the window it sits on (D-205): over a window too narrow for all of
 it, smaller buttons and the sound by its two buttons alone, and over a very
 narrow one only home and close. And a new app window fills the screen even when
-the app shrinks it back to the size it saved last time, as KDE's apps do.
+the app shrinks it back to the size it saved last time, as KDE's apps do, before
+the bar is ever placed on it small.
 
 This module is the part that can be tested anywhere: which scope a process is
 in, which sound streams belong to an app, how a volume steps, when a close
@@ -464,10 +466,25 @@ class TierLayout:
 
     @property
     def width(self) -> int:
-        """The bar's natural width: home and close, and what else this tier shows."""
+        """The bar's natural width: home and close, and what else this tier shows.
+        With the box of the minutes; without it, `info_px` narrower, while there
+        is nothing to put in it (`shows_info`)."""
         buttons = 4 if self.volume else 2
         slider = SLIDER_PX if self.slider else 0
         return buttons * self.button_px + self.info_px + slider
+
+    def shows_info(self, *, minutes: bool, clock: bool) -> bool:
+        """Whether the box of the minutes and the clock is shown: only with
+        something in it.
+
+        `minutes` is whether the launcher said how many are left, `clock` whether
+        the clock is wanted, which only a tier with room for it shows. While the
+        daemon restarts - an upgrade - the launcher cannot say the minutes, and
+        the compact bar has no clock: an empty box there was a 92-pixel gap
+        between 🏠 and 🔉, as it was in every bar before the launcher's first
+        answer.
+        """
+        return self.info_px > 0 and (minutes or (clock and self.clock))
 
 
 BAR_TIERS: Final[Mapping[BarTier, TierLayout]] = MappingProxyType(
@@ -729,7 +746,8 @@ class Follower:
 FILL_AGAIN_S: Final = 1.5
 """From when a new window is looked at again. KDE's apps put back the size they
 saved last time a moment after they appear: sometimes after a first look has
-already found them filling the screen."""
+already found them filling the screen. An app seen doing it is looked at as soon
+as the window is still (`Filler.shrunk`); this is for one that was not seen."""
 FILL_UNTIL_S: Final = 6.0
 """Until when. A window that does not fill the screen this long after it first
 came to the front is left as it is: its size is its app's, or the child's."""
@@ -742,6 +760,9 @@ class _Sighting:
     first: float
     looked: bool = False
     done: bool = False
+    shrunk: bool = False
+    """Its app was seen taking it out of filling the screen: the second look is
+    due now, not at `FILL_AGAIN_S`."""
 
 
 class Filler:
@@ -753,17 +774,21 @@ class Filler:
     not much wider than the bar, with the launcher all around it.
 
     So the bar looks at each new window the first time it is in front: an
-    ordinary window that could fill the screen and does not is maximised. From
-    `FILL_AGAIN_S` on it looks again, for an app that restores its size late -
-    on a slow machine, later than a fixed second look would - and maximises the
-    window once more the first time it finds it not filling the screen; at
-    `FILL_UNTIL_S`, or after that second time, it leaves the window alone. At
-    most twice, so an app that insists is never fought. Never a dialog, which
-    stays the size of a question; never a window that cannot be maximised
-    (Frozen Bubble's fixed size), which is only followed; never while a button
-    is down or the window is being dragged, which is the child's doing. And
-    never a window that was open before the bar started: one the bar finds when
-    it is restarted is not new, and is as the child has been using it.
+    ordinary window that could fill the screen and does not is maximised. Then
+    it looks again, and maximises the window once more the first time it finds
+    it not filling the screen: at once when the app is seen shrinking it
+    (`shrunk`), so the window fills the screen again as soon as it is still and
+    the bar is never placed on it small in between; and from `FILL_AGAIN_S` on
+    whatever was seen, for an app that restores its size late - on a slow
+    machine, later than a fixed second look would - or without the window
+    manager saying so. At `FILL_UNTIL_S`, or after that second time, it leaves
+    the window alone. At most twice, so an app that insists is never fought.
+    Never a dialog, which stays the size of a question; never a window that
+    cannot be maximised (Frozen Bubble's fixed size), which is only followed;
+    never while a button is down or the window is being dragged, which is the
+    child's doing. And never a window that was open before the bar started: one
+    the bar finds when it is restarted is not new, and is as the child has been
+    using it.
     """
 
     def __init__(self) -> None:
@@ -784,7 +809,27 @@ class Filler:
             return True
         if sighting.done:
             return False
-        return not sighting.looked or now - sighting.first >= FILL_AGAIN_S
+        return not sighting.looked or sighting.shrunk or now - sighting.first >= FILL_AGAIN_S
+
+    def shrunk(self, xid: int, now: float) -> bool:
+        """The window's app took it out of filling the screen, no finger on it.
+
+        devilspie2 maximised a KDE app's window and the app put back the size it
+        saved: the window is looked at again at once, not at `FILL_AGAIN_S`. The
+        `Follower` waits until it is still and the look maximises it before the
+        bar is placed - where a look a second later showed the child the screen
+        filled, a small window with the bar on it, and the screen filled again.
+        True when that look is now due: a window already looked at, not yet
+        left alone, younger than `FILL_UNTIL_S`. A window the bar has not looked
+        at yet gets its first look anyway.
+        """
+        sighting = self._seen.get(xid)
+        if sighting is None or not sighting.looked or sighting.done:
+            return False
+        if now - sighting.first >= FILL_UNTIL_S:
+            return False
+        sighting.shrunk = True
+        return True
 
     def look(
         self,
