@@ -133,6 +133,9 @@ BUILTIN_TILES = {"volume", "brightness", "shutdown"}
 DEFAULT_VOLUME = 70
 """Where the volume slider starts when the sound's own level cannot be read."""
 """Drawn by the launcher and handled in the browser; they start no process."""
+HEALTHZ_DAEMON_S = 0.5
+"""How long /healthz waits to say whether the daemon answers. The extension only
+needs to know this is the launcher, and it gives up on a slow answer."""
 
 
 class ShellState:
@@ -591,10 +594,15 @@ def register_routes(app: FastAPI) -> None:
     @app.get("/healthz")
     async def healthz(shell: Shell) -> JSONResponse:
         # `biokids: launcher` is how the extension recognises its own launcher
-        # among the launcher ports (D-187); nftables refuses it the others.
-        return JSONResponse(
-            {"biokids": "launcher", "ok": True, "daemon": await shell.client.available()}
-        )
+        # among the launcher ports (D-187); nftables refuses it the others. It
+        # answers at once: a daemon slow to answer (up to its five-second
+        # timeout) made the extension's probe give up, and a refused search
+        # stayed on Chromium's own error page.
+        try:
+            daemon = await asyncio.wait_for(shell.client.available(), HEALTHZ_DAEMON_S)
+        except TimeoutError:
+            daemon = False
+        return JSONResponse({"biokids": "launcher", "ok": True, "daemon": daemon})
 
     @app.post("/visit")
     async def visit(request: Request, shell: Shell) -> Response:

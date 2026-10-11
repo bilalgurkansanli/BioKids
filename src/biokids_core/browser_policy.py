@@ -129,6 +129,11 @@ def kiosk_policy(
         "IncognitoModeAvailability": 1,
         "ExtensionInstallBlocklist": ["*"],
         "BrowserSignin": 0,
+        # With sign-in off, a new profile still offered "Chromium'da oturum
+        # açmak istiyor musunuz?" next to the address bar after the first visit
+        # to Google; these two close what is left of the invitation.
+        "SigninInterceptionEnabled": False,
+        "PromotionsEnabled": False,
         "SyncDisabled": True,
         "PasswordManagerEnabled": False,
         "DownloadRestrictions": 3,

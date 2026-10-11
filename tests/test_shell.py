@@ -540,6 +540,15 @@ def test_the_kiosk_policy_closes_the_obvious_ways_out() -> None:
     assert policy["DnsOverHttpsMode"] == "off"
 
 
+def test_no_invitation_to_sign_in() -> None:
+    """A new profile offered "Chromium'da oturum açmak istiyor musunuz?" on the
+    VM although sign-in itself was off."""
+    policy = kiosk_policy("127.0.0.1:7879")
+    assert policy["BrowserSignin"] == 0
+    assert policy["SigninInterceptionEnabled"] is False
+    assert policy["PromotionsEnabled"] is False
+
+
 def test_the_address_bar_searches_google_and_suggests_nothing() -> None:
     """D-202: an address-bar search goes to SafeSearch Google, where the
     extension's rules see it; suggestions, which the browser fetches itself
@@ -1149,6 +1158,25 @@ def test_the_policy_names_every_launcher_and_forces_the_extension() -> None:
 
 def test_the_extension_finds_its_launcher_by_healthz(client: TestClient) -> None:
     assert client.get("/healthz").json()["biokids"] == "launcher"
+
+
+def test_healthz_does_not_wait_for_a_slow_daemon(
+    client: TestClient, daemon: FakeShellDaemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The extension gives up on a slow answer, and then a refused search stays
+    on Chromium's own error page instead of the launcher's (D-204)."""
+    import time
+
+    async def slow() -> bool:
+        await asyncio.sleep(30)
+        return True
+
+    monkeypatch.setattr(daemon, "available", slow)
+    started = time.monotonic()
+    body = client.get("/healthz").json()
+    assert time.monotonic() - started < 5
+    assert body["biokids"] == "launcher"
+    assert body["daemon"] is False
 
 
 def write_extension_id(config: Config, ext_id: str = "b" * 32) -> str:

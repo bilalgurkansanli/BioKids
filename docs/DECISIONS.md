@@ -1336,22 +1336,28 @@ The owner: a child who sees the same things every time gets bored. Three changes
   a parent who unticks it is not overruled by the next upgrade. Nobody loses a tile;
   the old one stays where it was.
 
-**D-204 [claude] The launcher's own forms are not refused as forged.** (2026-10-11)
-On the VM the owner pressed "Büyüğüme sor" under a refused search and got a blank
-page. Every launcher page said `<meta name="referrer" content="no-referrer">`, and
-under that policy Chromium sends `Origin: null` with a form the page posts; the
-launcher's same-origin check (D-171's guard against websites posting to
-127.0.0.1) refused it with a 403. Every plain form was affected: "Büyüğüme sor", "Biraz
-daha süre iste", "Evet, kapat" and the first-run screen. The `fetch` calls (launching,
-the sound, the assistant) send their origin whatever the policy and kept working,
-which is why it went unseen. The pages now say `same-origin`: other sites still learn
-nothing of the launcher's address, and a form carries the launcher's origin. The check
-also accepts `Origin: null` when Sec-Fetch-Site, which no page can set, says
-same-origin, so a page left open across the upgrade works too; a sandboxed frame on a
-website says cross-site and is still refused. Found by posting the form in a real
-Chromium, which the tests' client never did; the tests now send what Chromium sent.
-In the same place, "Geri dön" on a block page in the child's browser (a closed site or a
-refused search, which the extension sends there) went to `/`, and the launcher's whole
-home screen opened inside a browser tab. There it now goes to the child's start page,
-`/start`; not the browser's own Back, which leads to the error page of the address that
-was just closed and closes it again. After asking, the same.
+**D-204 [claude] The block page in the child's browser works, end to end.** (2026-10-11)
+On the VM the owner searched for a listed word and pressed "Büyüğüme sor": a blank page.
+Four faults, each found by doing it in a real Chromium, which the tests' client never did:
+- **The launcher refused its own forms.** Every launcher page said `<meta name="referrer"
+  content="no-referrer">`, and under that policy Chromium sends `Origin: null` with a form
+  a page posts; the same-origin guard (D-171) answered 403. "Büyüğüme sor", "Biraz daha
+  süre iste", "Evet, kapat" and the first-run screen were all affected; the `fetch` calls
+  (launching, the sound, the assistant) send their origin whatever the policy, which is
+  why it went unseen. The pages now say `same-origin`, so other sites still learn nothing
+  of the launcher's address and a form carries its origin. The guard also accepts
+  `Origin: null` when Sec-Fetch-Site, which no page can set, says same-origin (a page left
+  open across the upgrade); a sandboxed frame on a website says cross-site and is refused.
+- **"Geri dön" opened the launcher inside a browser tab.** In the browser (a closed site
+  or a refused search, which the extension sends there) it now goes to the child's start
+  page, `/start`, and so does the button after asking. Not the browser's Back: the entry
+  before is the error page of the address just closed, which closes it again.
+- **A refused search could stay on Chromium's "blocked by an extension" page.** The
+  extension finds its launcher by asking every launcher port for `/healthz` within 1.5 s,
+  and the launcher's `/healthz` waited for the daemon first; on a busy machine starting
+  the browser it missed, backed off for 15 s, and left Chromium's page. `/healthz` now
+  answers at once (the daemon gets half a second), the probe waits 5 s, and a block page
+  waiting for its launcher asks again after 1, 3 and 6 s, past the back-off. Extension
+  1.2.1.
+- **A new profile invited the child to sign in to Chromium** although sign-in was off;
+  the policy also sets `SigninInterceptionEnabled` and `PromotionsEnabled` to false.

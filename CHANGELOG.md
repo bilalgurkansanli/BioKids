@@ -163,6 +163,11 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
   (D-204). The launcher's pages told Chromium to send no referrer, so their forms
   arrived with `Origin: null` and the launcher refused them as forged. They now send
   the launcher's own origin, and nothing to other sites.
+- **The block page in the child's browser** (D-204): "Geri dön" goes to the child's
+  start page instead of opening the launcher inside a browser tab; a search refused
+  while the browser was still starting no longer stays on Chromium's "blocked by an
+  extension" page (extension 1.2.1); a new profile no longer invites the child to
+  sign in to Chromium.
 - **"Dünya" showed only "WebGL is not supported"** on a machine without graphics
   acceleration (D-203). Dünya is now the Marble globe, which needs neither a graphics
   card nor the internet. The web tile stays as "Google Earth", offered from 8 and not

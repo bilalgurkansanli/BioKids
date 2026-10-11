@@ -26,9 +26,16 @@
 // the uid, so it asks every port in the range and keeps the one that answers.
 const PROBE_FIRST_PORT = 7879;
 const PROBE_LAST_PORT = 7978;
-const PROBE_TIMEOUT_MS = 1500;
+// Long enough for a busy machine: the ports that are not a launcher refuse at
+// once, so only the launcher's own answer is waited for. At 1.5 s a VM still
+// starting the browser missed it, and the child was left on Chromium's
+// "blocked by an extension" page instead of the launcher's.
+const PROBE_TIMEOUT_MS = 5000;
 // After a probe that found nothing, wait this long before probing again.
 const PROBE_BACKOFF_MS = 15 * 1000;
+// A block page waiting for the launcher asks again after these pauses, past
+// the back-off: a child is looking at the error page meanwhile.
+const BLOCK_PAGE_RETRY_MS = [1000, 3000, 6000];
 
 // The healthz contract: GET <origin>/healthz answers JSON, and the launcher's
 // body carries {"biokids": "launcher", ...}. Nothing else counts.
@@ -161,10 +168,10 @@ let lastEmptyProbe = 0;
 
 // One probe at a time, shared by everyone who asks while it runs; the result
 // is cached for the rest of the browser session.
-function probeOnce() {
+function probeOnce({ urgent = false } = {}) {
   if (probing === null) {
     probing = (async () => {
-      if (Date.now() - lastEmptyProbe < PROBE_BACKOFF_MS) {
+      if (!urgent && Date.now() - lastEmptyProbe < PROBE_BACKOFF_MS) {
         return "";
       }
       const origin = await probe();
@@ -187,7 +194,8 @@ function probeOnce() {
 
 // The launcher's origin, such as "http://127.0.0.1:7880", or "" when there is
 // none. With `verify`, a cached origin is asked /healthz again before use.
-async function findLauncher({ verify = false } = {}) {
+// `urgent` probes even inside the back-off, for a child waiting on a block page.
+async function findLauncher({ verify = false, urgent = false } = {}) {
   const stored = await chrome.storage.session.get(STORAGE_LAUNCHER);
   const cached = stored[STORAGE_LAUNCHER];
   if (typeof cached === "string" && cached !== "") {
@@ -196,7 +204,7 @@ async function findLauncher({ verify = false } = {}) {
     }
     await forgetLauncher(cached);
   }
-  return probeOnce();
+  return probeOnce({ urgent });
 }
 
 async function forgetLauncher(origin) {
@@ -211,7 +219,15 @@ async function forgetLauncher(origin) {
 // The launcher's page for a closed site, given its address, or for a refused
 // search, given only the reason: the words of a search never leave the browser.
 async function showBlockedPage(tabId, url, reason = "") {
-  const origin = await findLauncher({ verify: true });
+  let origin = await findLauncher({ verify: true });
+  for (const pause of BLOCK_PAGE_RETRY_MS) {
+    if (origin) {
+      break;
+    }
+    // The launcher may be slow to answer while the browser is still starting.
+    await new Promise((resolve) => setTimeout(resolve, pause));
+    origin = await findLauncher({ urgent: true });
+  }
   if (!origin) {
     // No launcher to ask: Chromium's own error page stays, which still
     // shows nothing of the closed site.
