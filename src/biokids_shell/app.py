@@ -408,7 +408,9 @@ def register_routes(app: FastAPI) -> None:
         """Start the app, or bring it back; answered as soon as that is settled.
 
         The page shows the tile opening from the tap on (D-208), so this answer
-        matters for a refusal, which sends the child to the calm screen. The
+        matters for a refusal, which sends the child to the calm screen - and,
+        with `tracked`, for an app that ends as it starts, which the page then
+        sees missing from /running and treats the same. The
         tile and the permission are asked of the daemon together - the daemon
         decides the permission on its own list, never this one - and the
         activity is reported after the answer has gone. A plain form (the
@@ -457,7 +459,13 @@ def register_routes(app: FastAPI) -> None:
                 ),
                 "report-activity",
             )
-        return _launch_answer(as_page, slug, ok=result.ok, reason=result.error)
+        return _launch_answer(
+            as_page,
+            slug,
+            ok=result.ok,
+            reason=result.error,
+            tracked=result.ok and result.tracked,
+        )
 
     # ------------------------------------------------------------ screens
 
@@ -925,11 +933,21 @@ def _is_form_post(request: Request) -> bool:
     return sent in FORM_TYPES
 
 
-def _launch_answer(as_page: bool, slug: str, *, ok: bool, reason: str) -> Response:
+def _launch_answer(
+    as_page: bool, slug: str, *, ok: bool, reason: str, tracked: bool = False
+) -> Response:
     """JSON for the page's script; for a plain form, where the child goes next:
-    home while the app opens, or the calm screen that says why it did not."""
+    home while the app opens, or the calm screen that says why it did not.
+
+    `tracked`: an app tile's app, which /running lists for as long as it runs.
+    The yes comes as soon as the app is running, a moment before one that
+    cannot start has failed; the page asks /running a little later, and ends
+    the tile's opening with the calm screen when it is gone (D-208)."""
     if not as_page:
-        return JSONResponse({"ok": ok, "reason": reason})
+        answer: dict[str, object] = {"ok": ok, "reason": reason}
+        if tracked:
+            answer["tracked"] = True
+        return JSONResponse(answer)
     if ok:
         return RedirectResponse("/", status_code=303)
     return RedirectResponse(

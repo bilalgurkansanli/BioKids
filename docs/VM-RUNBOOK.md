@@ -1193,7 +1193,12 @@ scopes() { as_elif systemctl --user list-units --plain --no-legend 'biokids-app-
    one `biokids-app-palapeli-*`, not several.
 3. Tap 🏠, then the Yapboz tile. **Pass:** the same window is back within a moment,
    `scopes` still lists one, and the journal says "is open already" with no line
-   about running the bar's helper.
+   "no app bar to ask … running its helper" (that one is logged at INFO, so its
+   absence means the bar answered):
+
+   ```bash
+   journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep -E 'open already|no app bar to ask'
+   ```
 4. Time the answers, as Elif (only her processes reach her launcher):
 
    ```bash
@@ -1212,9 +1217,26 @@ scopes() { as_elif systemctl --user list-units --plain --no-legend 'biokids-app-
 
    **Pass:** no second scope; the journal says the window "could not be looked for;
    not starting it twice", and once the bar is thawed the app's window comes to
-   the front.
+   the front. Then the same with `sleep 15`, tapping at its start: once thawed,
+   **no** window jumps to the front - the request is stamped with the tap's time
+   and is more than ten seconds old - and the journal says "not acted on".
 6. No bar. `sudo kill -KILL $B` and, before it is back, tap the tile of an open app.
-   **Pass:** the app comes back (the helper, a few seconds) and `scopes` lists one.
+   **Pass:** the app comes back (the helper, a few seconds), `scopes` lists one, and
+   the journal says "no app bar to ask … running its helper".
+7. An app that cannot start. Put a failing `tuxpaint` ahead of Debian's on the
+   session's PATH:
+
+   ```bash
+   printf '#!/bin/sh\necho "tuxpaint: cannot start" >&2\nexit 1\n' | sudo tee /usr/local/bin/tuxpaint >/dev/null
+   sudo chmod 755 /usr/local/bin/tuxpaint
+   ```
+
+   Tap **Boya**. **Pass:** its tile breathes "Açılıyor…" for about two seconds,
+   then the calm Blocked screen; `scopes` lists no `biokids-app-tuxpaint-*`, and the
+   journal says "ended as it started, with exit status 1" and "tuxpaint: cannot
+   start". Back home, tap it again: the same two seconds, never 25 seconds of the
+   ring. Then `sudo rm /usr/local/bin/tuxpaint` and tap it once more: Tux Paint
+   opens.
 
 ### 8.10 Insights: the week in plain words (D-206)
 

@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import json
 import pathlib
+import re
 import shutil
 from typing import Any
 
@@ -420,6 +421,24 @@ def test_without_javascript_the_launching_screen_has_a_button(client: TestClient
     assert ">Aç</button>" in noscript
 
 
+def test_without_javascript_nothing_says_it_is_opening(client: TestClient) -> None:
+    """Nothing opens until the child presses "Aç", and a four-year-old cannot
+    read "Boya açılıyor" above it: the icon, the name and the button. The
+    sentence is there for the script, which shows it as it posts."""
+    page = client.get("/launch/tuxpaint").text
+    body = page[page.index("<body") :]
+    status = body[body.index('<p id="launch-status"') :]
+    assert status.index(">") < status.index("Boya açılıyor")
+    assert "hidden" in status[: status.index(">")]
+    assert body.count("açılıyor") == 1, (
+        "the sentence is somewhere a child without a script sees"
+    )
+    script = (STATIC / "shell.js").read_text(encoding="utf-8")
+    launching = script[script.index('getElementById("launch-slug")') :]
+    assert 'getElementById("launch-status")' in launching
+    assert "launchStatus.hidden = false" in launching
+
+
 def test_a_plain_form_is_answered_with_where_to_go_next(
     client: TestClient, daemon: FakeShellDaemon
 ) -> None:
@@ -473,6 +492,71 @@ def test_a_tap_opens_the_app_from_the_home_page(client: TestClient) -> None:
         "if (opening[target.slug]) return;",
     ):
         assert needed in section, needed
+
+
+def _js_function(script: str, name: str) -> str:
+    """The body of `var <name> = function (...) {...};` in shell.js."""
+    start = script.index(f"var {name} = function")
+    return script[start : script.index("\n  };\n", start)]
+
+
+def test_a_no_for_a_tap_the_child_has_left_is_not_shown() -> None:
+    """The 25 seconds ran out, an app's window took the focus, or a later tap
+    has its own ring: a "no" arriving then is about nothing the child can see,
+    and the calm screen must not jump over whatever they are doing now."""
+    script = (STATIC / "shell.js").read_text(encoding="utf-8")
+    refused = _js_function(script, "refused")
+    assert "opening[slug] === entry" in refused
+    assert "!entry.superseded" in refused
+    assert refused.index("if (!live) return;") < refused.index("window.location.href")
+
+
+def test_an_app_that_ends_as_it_starts_ends_its_tiles_opening() -> None:
+    """The yes comes at the exec, before an app that cannot start has failed:
+    without a second look, its tile said "Açılıyor…" for 25 seconds over
+    nothing. An app tile's yes is followed by a look at /running, after the
+    launcher's own watch is over, and a tile whose app is gone gets the calm
+    screen - through `refused`, so only while its ring is still the live one."""
+    script = (STATIC / "shell.js").read_text(encoding="utf-8")
+    open_app = _js_function(script, "openApp")
+    assert "result.tracked" in open_app and "checkStillThere(slug, entry)" in open_app
+    check = _js_function(script, "checkStillThere")
+    assert "if (opening[slug] !== entry) return;" in check
+    assert "askRunning()" in check
+    assert 'refused(slug, entry, "error.unknown")' in check
+    assert 'fetch("/running"' in _js_function(script, "askRunning")
+    match = re.search(r"var STILL_THERE_MS = (\d+);", script)
+    assert match is not None
+    assert int(match.group(1)) > launcher_module.SCOPE_REFUSAL_TIMEOUT_S * 1000, (
+        "the page looks before the launcher has finished watching"
+    )
+
+
+def test_an_app_tiles_yes_says_the_page_can_follow_it(
+    config: Config, daemon: FakeShellDaemon
+) -> None:
+    class Following(_RecordingLauncher):
+        async def launch(self, request: LaunchRequest) -> Any:
+            from biokids_shell.launcher import LaunchResult
+
+            self.requests.append(request)
+            return LaunchResult(ok=True, unit=f"biokids-app-{request.slug}-1", tracked=True)
+
+    app = create_app(config)
+    app.state.shell.client = daemon  # type: ignore[assignment]
+    app.state.shell.launcher = Following(config)
+    with TestClient(app, base_url=LAUNCHER) as client:
+        assert client.post("/launch/tuxpaint").json() == {
+            "ok": True,
+            "reason": "",
+            "tracked": True,
+        }
+        form = client.post(
+            "/launch/tuxpaint", content=b"", headers=FORM, follow_redirects=False
+        )
+        assert form.status_code == 303 and form.headers["location"] == "/"
+        daemon.launch_answer = (False, Reason.QUOTA_EXHAUSTED)
+        assert "tracked" not in client.post("/launch/tuxpaint").json()
 
 
 def test_the_opening_tile_is_seen_and_is_still(client: TestClient) -> None:

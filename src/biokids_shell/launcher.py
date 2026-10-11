@@ -57,11 +57,15 @@ from biokids_shell.appbar import control as appbar_control
 log = logging.getLogger(__name__)
 
 SCOPE_REFUSAL_TIMEOUT_S = 1.5
-"""The longest wait before deciding systemd-run did not refuse.
+"""The longest wait before deciding systemd-run did not refuse, and how long a
+started app is watched for failing as it starts.
 
 A refusal happens before the exec and so is immediate; anything still alive
 after this has become the application itself. Usually the exec is seen long
-before (`EXEC_POLL_S`), and the tap is answered then."""
+before (`EXEC_POLL_S`), and the tap is answered then - a moment before an app
+that cannot start has had time to fail, so it is still watched until this much
+time has passed since it was started (`AppLauncher._watch`). The page asks
+/running two seconds after its answer (shell.js), after this has run out."""
 EXEC_POLL_S = 0.05
 """How often `/proc/<pid>/exe` is looked at while systemd-run sets the scope up."""
 
@@ -108,6 +112,11 @@ class LaunchResult:
     unit: str = ""
     error: str = ""
     """An i18n key, never a sentence."""
+    tracked: bool = False
+    """The tile's app is in `AppLauncher.running`, so /running lists it while it
+    runs - and stops listing it at once when it ends with an error as it starts
+    (`AppLauncher._watch`). The page asks, a moment after the answer, to tell
+    an app that is opening from one that is gone (D-208). Not a web tile's."""
 
 
 @dataclass
@@ -124,8 +133,9 @@ class AppLauncher:
     always that of the copy being asked about."""
     appbar_socket: Path | None = None
     """Where the running app bar listens (D-208); its usual place when None."""
-    _drains: set[asyncio.Task[None]] = field(default_factory=set)
-    """Live stderr drains. Held so the event loop cannot collect one mid-flight."""
+    _watches: set[asyncio.Task[None]] = field(default_factory=set)
+    """Started apps still watched (`_watch`). Held so the event loop cannot
+    collect one mid-flight, which would put the stderr pipe back where it started."""
     _taps: dict[str, asyncio.Lock] = field(default_factory=dict)
     """One lock per tile: a second tap waits for the first to be answered, and
     then finds the app it started instead of starting another."""
@@ -204,11 +214,18 @@ class AppLauncher:
             #
             # A refusal happens before the exec and is therefore fast, so a short
             # bounded wait separates "systemd said no" from "the app is running".
-            refused = await self._refused_quickly(process, request.slug, _resolved(runner))
+            until = asyncio.get_running_loop().time() + SCOPE_REFUSAL_TIMEOUT_S
+            refused = await self._refused_quickly(
+                process, request.slug, _resolved(runner), until
+            )
             if refused:
                 return LaunchResult(ok=False, error="error.unknown")
-            if request.kind == "app":
+            tracked = request.kind == "app"
+            if tracked:
                 self._remember(request.slug, unit)
+            # Remembered first, so that an app found to have failed is forgotten.
+            self._keep_watching(process, request.slug, unit, until)
+            return LaunchResult(ok=True, unit=unit, tracked=tracked)
         return LaunchResult(ok=True, unit=unit)
 
     # ------------------------------------------------------- open it again
@@ -229,7 +246,7 @@ class AppLauncher:
         shown = await self.bring_back(unit)
         if shown == 0:
             log.info("%s is open already; its window is in front again", unit)
-            return LaunchResult(ok=True, unit=unit)
+            return LaunchResult(ok=True, unit=unit, tracked=True)
         active = await self.unit_state(unit)
         if active is False:
             self._forget(slug, unit)
@@ -240,10 +257,10 @@ class AppLauncher:
                 unit,
                 "running" if active else "perhaps running",
             )
-            return LaunchResult(ok=True, unit=unit)
+            return LaunchResult(ok=True, unit=unit, tracked=True)
         if active is None or self.age(unit) < STILL_OPENING_S:
             # Still opening its window: a tile tapped again while a slow app starts.
-            return LaunchResult(ok=True, unit=unit)
+            return LaunchResult(ok=True, unit=unit, tracked=True)
         log.info("%s is running with no window; stopping it to start it again", unit)
         await self.stop_unit(unit)
         self._forget(slug, unit)
@@ -315,7 +332,9 @@ class AppLauncher:
         try:
             return await appbar_control.ask_bar(socket_path, unit, BAR_ANSWER_TIMEOUT_S)
         except appbar_control.BarNotRunning as exc:
-            log.debug("no app bar to ask (%s); running its helper", exc)
+            # INFO, not DEBUG: whether a tap went to the bar or to a new Python
+            # is what VM-RUNBOOK §8.10 reads in the journal.
+            log.info("no app bar to ask (%s); running its helper", exc)
         return await _exit_code(
             [sys.executable, "-m", MODULE, "--bring-back", unit], BRING_BACK_TIMEOUT_S
         )
@@ -342,7 +361,11 @@ class AppLauncher:
         return await _exit_code(argv, UNIT_COMMAND_TIMEOUT_S) == 0
 
     async def _refused_quickly(
-        self, process: asyncio.subprocess.Process, slug: str, runner: str | None = None
+        self,
+        process: asyncio.subprocess.Process,
+        slug: str,
+        runner: str | None,
+        until: float,
     ) -> bool:
         """Did systemd-run refuse, or is the application now running?
 
@@ -353,17 +376,16 @@ class AppLauncher:
         The moment of the exec can be seen: `/proc/<pid>/exe` stops being
         systemd-run (`runner`) and becomes the app. Once it has, nothing can be
         refused any more and the tap is answered then - a tenth of a second,
-        usually - instead of after the whole `SCOPE_REFUSAL_TIMEOUT_S` (D-208).
-        Where it cannot be read, the whole wait it is.
+        usually - instead of at `until`, the end of `SCOPE_REFUSAL_TIMEOUT_S`
+        (D-208). Where it cannot be read, the whole wait it is.
         """
         loop = asyncio.get_running_loop()
-        deadline = loop.time() + SCOPE_REFUSAL_TIMEOUT_S
         pid = getattr(process, "pid", None)
         watched = (pid, runner) if isinstance(pid, int) and runner is not None else None
         exited = asyncio.ensure_future(process.wait())
         try:
             while not exited.done():
-                left = deadline - loop.time()
+                left = until - loop.time()
                 if left <= 0:
                     break
                 step = left if watched is None else min(EXEC_POLL_S, left)
@@ -374,19 +396,10 @@ class AppLauncher:
         finally:
             if not exited.done():
                 exited.cancel()
-        if still_running:
-            # The exec happened. Drain stderr in the background so a chatty
-            # application cannot fill the pipe and block itself. Held in a set:
-            # a task with no reference can be collected mid-flight, which would
-            # put the pipe back where it started.
-            task = asyncio.create_task(self._drain(process, slug))
-            self._drains.add(task)
-            task.add_done_callback(self._drains.discard)
-            return False
-
-        if process.returncode in (0, None):
-            # Exited cleanly and immediately. Some applications fork a real
-            # window and exit; treat that as launched rather than refused.
+        if still_running or process.returncode in (0, None):
+            # Running - or exited cleanly and immediately: some applications
+            # fork a real window and exit, or hand the tap to a copy already
+            # running. Launched, not refused; `_watch` takes it from here.
             return False
 
         err = b""
@@ -396,14 +409,55 @@ class AppLauncher:
         log.error("systemd-run refused %s: %s", slug, err.decode("utf-8", "replace").strip())
         return True
 
-    async def _drain(self, process: asyncio.subprocess.Process, slug: str) -> None:
-        """Read the application's stderr so the pipe cannot fill, and log it."""
-        if process.stderr is None:
-            return
-        with contextlib.suppress(Exception):
-            data = await process.stderr.read()
-            if data:
-                log.debug("%s wrote to stderr: %s", slug, data.decode("utf-8", "replace")[:500])
+    def _keep_watching(
+        self, process: asyncio.subprocess.Process, slug: str, unit: str, until: float
+    ) -> None:
+        """`_watch` in the background, held in a set: a task with no reference
+        can be collected mid-flight."""
+        task = asyncio.create_task(self._watch(process, slug, unit, until))
+        self._watches.add(task)
+        task.add_done_callback(self._watches.discard)
+
+    async def _watch(
+        self, process: asyncio.subprocess.Process, slug: str, unit: str, until: float
+    ) -> None:
+        """A started app, from the answer on: a failure as it starts, and its stderr.
+
+        The tap is answered once systemd-run has become the app (D-208), a
+        moment before an app that cannot start - a missing library, a broken
+        setting - has had time to fail. Before D-208 the whole 1.5 s wait saw
+        that exit and the child got the calm screen; answered at the exec, the
+        tile said "Açılıyor…" for 25 seconds over nothing, and every tap again
+        did the same. So the app is watched until `until`, the end of
+        `SCOPE_REFUSAL_TIMEOUT_S`: one that ends with an error by then is
+        forgotten at once, /running stops listing it, and the page - which
+        asks two seconds after its answer - ends the tile's opening and shows
+        the calm screen. One that ends cleanly may have handed the tap to a
+        copy already running, as KDE apps do: systemd says what is open.
+
+        All the while stderr is read to its end, so a chatty app cannot fill the
+        pipe and block itself.
+        """
+        reading = asyncio.ensure_future(_read_stderr(process))
+        failed = False
+        try:
+            code = await _exit_within(process, until - asyncio.get_running_loop().time())
+            if code not in (None, 0):
+                failed = True
+                self._forget(slug, unit)
+                log.warning(
+                    "%s ended as it started, with exit status %s; it is not open", unit, code
+                )
+            data = await reading
+        finally:
+            reading.cancel()
+        if data:
+            log.log(
+                logging.WARNING if failed else logging.DEBUG,
+                "%s wrote to stderr: %s",
+                slug,
+                data.decode("utf-8", "replace").strip()[:500],
+            )
 
     def build_argv(self, request: LaunchRequest) -> list[str] | None:
         """What to actually run, or None when the tile has nothing to start."""
@@ -590,6 +644,28 @@ def _resolved(program: str | None) -> str | None:
         return str(Path(program).resolve())
     except (OSError, ValueError, RuntimeError):
         return None
+
+
+async def _exit_within(process: asyncio.subprocess.Process, within: float) -> int | None:
+    """The process's exit status if it has ended `within` seconds from now; None
+    while it runs.
+
+    Its `returncode`, not what `wait()` returns: `wait()` also waits for the
+    pipes to close, which a helper the app left behind may hold open after the
+    app itself is gone.
+    """
+    if within > 0:
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(process.wait(), within)
+    return process.returncode
+
+
+async def _read_stderr(process: asyncio.subprocess.Process) -> bytes:
+    """All the process writes to stderr, read until it closes; nothing when it cannot be."""
+    if process.stderr is not None:
+        with contextlib.suppress(Exception):  # an app's output is never worth a failure
+            return await process.stderr.read()
+    return b""
 
 
 async def _stdout(argv: list[str], within: float) -> str | None:

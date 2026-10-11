@@ -7,7 +7,10 @@
      script, and for any link that still leads here. #}
   <div class="tile__icon" style="font-size:6rem" aria-hidden="true">{{ tile.icon|icon }}</div>
   <h1>{{ tile.name }}</h1>
-  <p id="launch-status">{{ _('shell.launching', app=tile.name) }}</p>
+  {# Hidden until shell.js shows it: without a script nothing is opening until
+     the child presses "Aç", and a four-year-old cannot read "… açılıyor" above
+     the button that does it. #}
+  <p id="launch-status" hidden>{{ _('shell.launching', app=tile.name) }}</p>
   <div id="launch-slug" hidden data-slug="{{ tile.slug }}"></div>
   <noscript>
     {# Without JavaScript nothing posts for the child, so they do: the answer is
