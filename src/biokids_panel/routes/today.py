@@ -73,7 +73,7 @@ def week_cards(view: View) -> list[dict[str, Any]]:
                 {
                     "child": child,
                     "highlights": insights.week_highlights(
-                        view.session, child, view.tr, today, TODAY_HIGHLIGHTS
+                        view.session, child, view.tr, today, TODAY_HIGHLIGHTS, view.ctx.config
                     ),
                 }
             )

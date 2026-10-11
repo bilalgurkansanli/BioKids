@@ -151,6 +151,11 @@ a {
     border-radius: var(--r-md);
     box-shadow: var(--shadow-1);
     justify-content: flex-start;
+    /* Six entries (D-206) are about 690 px wide in English with roomy padding,
+     * more with a larger font: just above the breakpoint the row is tightened, and
+     * whatever still does not fit goes to a second row rather than making
+     * every panel page scroll sideways. */
+    flex-wrap: wrap;
     gap: var(--sp-1);
     padding: var(--sp-2);
   }
@@ -158,9 +163,13 @@ a {
   .nav a {
     flex: 0 0 auto;
     flex-direction: row;
-    padding: var(--sp-2) var(--sp-3);
+    padding: var(--sp-2);
     font-size: .9rem;
   }
+}
+
+@media (min-width: 48rem) {
+  .nav a { padding: var(--sp-2) var(--sp-3); }
 }
 
 /* ------------------------------------------------------------------- cards */

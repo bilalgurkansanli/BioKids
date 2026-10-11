@@ -1940,6 +1940,9 @@ msgstr "Insights"
 msgid "insights.intro"
 msgstr "How {name} uses the computer, in short. It is all worked out on this computer and sent nowhere."
 
+msgid "insights.intro.mailed"
+msgstr "How {name} uses the computer, in short. It is all worked out on this computer; only the highlights go out, to you, in the Sunday email through your own mail server."
+
 msgid "insights.period.label"
 msgstr "Period"
 
@@ -2000,6 +2003,9 @@ msgstr "↓ {percent}%"
 msgid "insights.delta.up"
 msgstr "↑ {percent}%"
 
+msgid "insights.delta.much_more"
+msgstr "↑ more than double"
+
 msgid "insights.delta.same"
 msgstr "≈ the same"
 
@@ -2013,7 +2019,10 @@ msgid "insights.days"
 msgstr "Day by day"
 
 msgid "insights.days.help"
-msgstr "Each bar is a day; on the orange ones the day's time ran out. Tap a day to open it in History."
+msgstr "Each bar is a day; on the orange ones the day's time ran out."
+
+msgid "insights.days.tap"
+msgstr "Tap a day to open it in History."
 
 msgid "insights.kinds"
 msgstr "Where did the time go?"
@@ -2052,7 +2061,7 @@ msgid "insights.hours.none"
 msgstr "No times of day yet. BioKids keeps them from this version on."
 
 msgid "insights.hours.partial"
-msgstr "Times of day are kept from this version on; earlier days are not in this chart."
+msgstr "Times of day are kept from this version on, for {days} days; earlier days are not in this chart."
 
 msgid "insights.req.time"
 msgstr "More time"
@@ -2074,6 +2083,9 @@ msgstr "{count} not now"
 
 msgid "insights.req.unanswered"
 msgstr "{count} unanswered"
+
+msgid "insights.req.waiting"
+msgstr "{count} waiting"
 
 msgid "insights.req.none"
 msgstr "No requests in this period."
@@ -2155,6 +2167,9 @@ msgstr "Average daily screen time is down {percent}% {vs}."
 msgid "insights.h.more"
 msgstr "Average daily screen time is up {percent}% {vs}."
 
+msgid "insights.h.much_more"
+msgstr "Average daily screen time is more than double {vs}."
+
 msgid "insights.h.same"
 msgstr "Average daily screen time is about the same {vs}."
 
@@ -2165,7 +2180,7 @@ msgid "insights.h.never_ran_out"
 msgstr "The day's time never ran out."
 
 msgid "insights.h.late"
-msgstr "Used between 21:00 and 06:00 on {days} day(s)."
+msgstr "Used between 21:00 and 06:00 on {nights} night(s)."
 
 msgid "insights.h.unanswered"
 msgstr "{count} requests went unanswered."

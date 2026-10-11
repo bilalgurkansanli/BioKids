@@ -26,9 +26,9 @@ asked to talk with the child, and answers that they will."""
 REQUESTS_PER_HOUR = 6
 """A child may ask this often. Asking again for the same thing while it is still
 waiting is the same request, not another one."""
-REQUEST_EXPIRY = dt.timedelta(hours=12)
-"""A request nobody answered is gone by the next morning: "more time" asked for
-yesterday is not a question about today."""
+REQUEST_EXPIRY = repo.REQUEST_EXPIRY
+"""A request nobody answered is gone by the next morning; the panel and the
+insights screen read the same window from `biokids_core.repo`."""
 
 
 class AccessRequestsMixin(OperationsMixin):

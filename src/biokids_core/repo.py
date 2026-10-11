@@ -46,6 +46,12 @@ from biokids_core.types import (
 
 DEFAULT_WARN_MINUTES: tuple[int, ...] = (10, 5, 1)
 
+REQUEST_EXPIRY = dt.timedelta(hours=12)
+"""A request nobody answered is gone by the next morning: "more time" asked for
+yesterday is not a question about today. Here rather than in the daemon, which
+marks such requests expired, because the panel's lists and the insights screen
+(D-206) must already treat one that old as unanswered before the daemon gets to it."""
+
 
 # ------------------------------------------------------------------- lookups
 
@@ -408,10 +414,10 @@ def default_filter_mode(band: AgeBand) -> FilterMode:
 def access_requests(
     session: Session, *, decided_limit: int = 20
 ) -> tuple[list[AccessRequest], list[AccessRequest]]:
-    """(waiting, recently answered). Waiting ones older than a day are not shown:
-    the daemon marks them expired on the next request, and "more time" from
-    yesterday is not a question about today."""
-    since = utcnow() - dt.timedelta(hours=12)
+    """(waiting, recently answered). Waiting ones older than `REQUEST_EXPIRY` are
+    not shown: the daemon marks them expired on the next request, and "more
+    time" from yesterday is not a question about today."""
+    since = utcnow() - REQUEST_EXPIRY
     waiting = list(
         session.scalars(
             select(AccessRequest)

@@ -51,15 +51,32 @@ def test_minutes_per_day_are_kept_for_the_history_screen(
         session.add(
             UsageTick(child_id=child.id, day=day, category="games", app_slug="x", seconds=600)
         )
-        # The hours of the day go with the day they belong to (D-206).
+    session.commit()
+
+    prune(session, config, NOW)
+    session.commit()
+
+    assert count(session, LedgerDay) == 1 and count(session, UsageTick) == 1
+
+
+def test_the_hours_of_the_day_go_with_the_sites(
+    session: Session, config: Config, child: Child
+) -> None:
+    """*When* a child sat at the computer is closer to a timeline than how long:
+    a month, like the sites visited, though the minutes per day stay a year.
+    Nothing reads more than thirty days of it (D-206)."""
+    keep = config.retention.activity_days
+    for days_ago in (keep + 1, keep - 1):
+        day = (NOW - dt.timedelta(days=days_ago)).date()
         session.add(UsageHour(child_id=child.id, day=day, hour=16, seconds=600))
+        session.add(LedgerDay(child_id=child.id, day=day, general_s=600))
     session.commit()
 
     deleted = prune(session, config, NOW)
     session.commit()
 
-    assert count(session, LedgerDay) == 1 and count(session, UsageTick) == 1
     assert count(session, UsageHour) == 1 and deleted["usage_hour"] == 1
+    assert count(session, LedgerDay) == 2, "the minutes of that day are kept"
 
 
 def test_the_audit_log_and_requests_have_windows_of_their_own(

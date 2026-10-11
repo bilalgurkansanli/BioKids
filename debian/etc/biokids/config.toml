@@ -81,8 +81,8 @@
 
 [retention]
 # How long records are kept, in days. Nothing is kept forever.
-# activity_days = 30        # apps used, sites visited, assistant alerts
-# usage_days = 400          # minutes per day, for the history screen
+# activity_days = 30        # apps used, sites visited, hours of the day, assistant alerts
+# usage_days = 400          # minutes per day and per app, for history and insights
 # audit_days = 365
 # requests_days = 90
 

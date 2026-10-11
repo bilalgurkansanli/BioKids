@@ -12,6 +12,19 @@
   {{ _('insights.kinds.other') if category == 'other' else _('category.' ~ category) }}
 {%- endmacro %}
 
+{# A day's bar, its label, and its number for a screen reader. #}
+{% macro day_bar(row) -%}
+  <span class="daybars__track">
+    {% if row.quota_percent %}
+      <span class="daybars__quota" style="bottom: {{ row.quota_percent }}%"></span>
+    {% endif %}
+    <span class="daybars__fill{% if row.ran_out %} is-over{% endif %}"
+          style="height: {{ row.percent }}%"></span>
+  </span>
+  <span class="daybars__label" aria-hidden="true">{{ row.label }}</span>
+  <span class="visually-hidden">{{ row.day.strftime('%d.%m') }}: {{ row.seconds|duration(_) }}</span>
+{%- endmacro %}
+
 {% block content %}
   <h1>{{ _('insights.title') }}</h1>
 
@@ -46,7 +59,7 @@
         <p>{{ _('insights.empty', name=child.display_name) }}</p>
       </div>
     {% else %}
-      <p class="muted">{{ _('insights.intro', name=child.display_name) }}</p>
+      <p class="muted">{{ _('insights.intro.mailed' if mail_weekly else 'insights.intro', name=child.display_name) }}</p>
 
       {# ------------------------------------------------------ highlights #}
       <section class="card" aria-labelledby="h-highlights">
@@ -131,30 +144,35 @@
         {% endif %}
 
         <h3>{{ _('insights.days') }}</h3>
+        {#
+          A week's bars are links to the day in History; a month's are not:
+          thirty bars on a phone are a few pixels wide each, nothing to tap.
+        #}
         <ol class="daybars" style="--n: {{ day_rows|length }}">
           {% for row in day_rows %}
-            <li class="daybars__day{% if row.future %} is-future{% endif %}{% if row.today %} is-today{% endif %}">
-              {% if row.future %}
+            {% if row.future %}
+              <li class="daybars__day is-future">
                 <span class="daybars__track" aria-hidden="true"></span>
                 <span class="daybars__label" aria-hidden="true">{{ row.label }}</span>
-              {% else %}
+              </li>
+            {% elif days_linked %}
+              <li class="daybars__day{% if row.today %} is-today{% endif %}">
                 <a href="/history?child={{ child.id }}&day={{ row.day.isoformat() }}"
                    title="{{ row.day.strftime('%d.%m') }} · {{ row.seconds|duration(_) }}">
-                  <span class="daybars__track">
-                    {% if row.quota_percent %}
-                      <span class="daybars__quota" style="bottom: {{ row.quota_percent }}%"></span>
-                    {% endif %}
-                    <span class="daybars__fill{% if row.ran_out %} is-over{% endif %}"
-                          style="height: {{ row.percent }}%"></span>
-                  </span>
-                  <span class="daybars__label" aria-hidden="true">{{ row.label }}</span>
-                  <span class="visually-hidden">{{ row.day.strftime('%d.%m') }}: {{ row.seconds|duration(_) }}</span>
+                  {{ day_bar(row) }}
                 </a>
-              {% endif %}
-            </li>
+              </li>
+            {% else %}
+              <li class="daybars__day{% if row.today %} is-today{% endif %}"
+                  title="{{ row.day.strftime('%d.%m') }} · {{ row.seconds|duration(_) }}">
+                {{ day_bar(row) }}
+              </li>
+            {% endif %}
           {% endfor %}
         </ol>
-        <p class="muted small">{{ _('insights.days.help') }}</p>
+        <p class="muted small">
+          {{ _('insights.days.help') }}{% if days_linked %} {{ _('insights.days.tap') }}{% endif %}
+        </p>
       </section>
 
       {# ----------------------------------------------------- kinds of app #}
@@ -228,7 +246,7 @@
           </ol>
           <p class="muted small">{{ _('insights.hours.help') }}</p>
           {% if ins.hours_total_s < ins.total_s * 0.9 %}
-            <p class="muted small">{{ _('insights.hours.partial') }}</p>
+            <p class="muted small">{{ _('insights.hours.partial', days=kept_days) }}</p>
           {% endif %}
         {% else %}
           <p class="muted">{{ _('insights.hours.none') }}</p>

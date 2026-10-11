@@ -16,7 +16,8 @@ from pathlib import Path
 import pytest
 from sqlalchemy.orm import Session
 
-from biokids_core import insights
+from biokids_core import insights, mail
+from biokids_core.config import Config
 from biokids_core.db import AccessRequest, AiAlert, AuditLog, Child, LedgerDay, UsageEvent
 from biokids_core.db.models import CategoryLimit, Parent, Policy, UsageHour, UsageTick
 from biokids_core.i18n import parse_po, translator
@@ -42,6 +43,10 @@ SUNDAY = dt.date(2026, 10, 11)
 LAST_MONDAY = MONDAY - dt.timedelta(days=7)
 CTX = Context(child_id=1)
 LOCALE_DIR = Path(__file__).resolve().parent.parent / "src" / "biokids_core" / "locale"
+ISTANBUL = dt.timezone(dt.timedelta(hours=3), "Europe/Istanbul")
+"""The family's zone, pinned, so the local-day tests test the conversion on a
+machine set to UTC, as CI is. Istanbul has kept +03:00 all year since 2016, and
+a fixed offset needs no time zone database on the machine running the tests."""
 
 
 def week(today: dt.date = THURSDAY, **facts: object) -> insights.Insights:
@@ -58,8 +63,8 @@ def keys(found: list[insights.Highlight]) -> list[str]:
 
 
 def utc(day: dt.date, hour: int, minute: int = 0) -> dt.datetime:
-    """Local wall-clock time on `day`, as the naive UTC the tables store."""
-    local = dt.datetime.combine(day, dt.time(hour, minute)).astimezone()
+    """Istanbul wall-clock time on `day`, as the naive UTC the tables store."""
+    local = dt.datetime.combine(day, dt.time(hour, minute), tzinfo=ISTANBUL)
     return local.astimezone(dt.UTC).replace(tzinfo=None)
 
 
@@ -176,6 +181,69 @@ def test_a_few_minutes_last_week_are_not_something_to_compare_with() -> None:
     assert week(general=general).comparison is None
 
 
+def test_a_child_tried_out_last_friday_is_not_up_nine_hundred_percent() -> None:
+    """Six minutes on Friday and five on Saturday while the parent set things up
+    are eleven in total, over the old guard's ten; a day they are nothing to
+    measure a week by, and two days are not enough days."""
+    last_friday = LAST_MONDAY + dt.timedelta(days=4)
+    found = week(
+        SUNDAY,
+        general={**days(last_friday, 360, 300), **days(MONDAY, *[3300] * 6)},
+        tracked_from=last_friday,
+    )
+    assert found.comparison is None
+    assert not {"insights.h.more", "insights.h.much_more"} & set(keys(highlights(found, CTX)))
+
+
+def test_enough_time_on_too_few_days_is_not_a_comparison() -> None:
+    """One evening of an hour last week against six days this week."""
+    last_saturday = LAST_MONDAY + dt.timedelta(days=5)
+    found = week(
+        SUNDAY,
+        general={**days(last_saturday, 3600), **days(MONDAY, *[3600] * 6)},
+        tracked_from=last_saturday,
+    )
+    assert found.comparison is None
+    tuesday = week(
+        MONDAY + dt.timedelta(days=1),
+        general={LAST_MONDAY: 3600, MONDAY: 3000},
+        tracked_from=LAST_MONDAY,
+    )
+    assert tuesday.comparison is not None, "one finished day needs one day to compare with"
+
+
+def test_a_quiet_month_before_is_not_up_fifteen_thousand_percent() -> None:
+    month = span_for(Period.MONTH, THURSDAY)
+    before = month.shift(-month.days)
+    found = summarize(
+        Facts(
+            general={**days(before.first, *[22] * 30), **days(month.first, *[3600] * 30)},
+            tracked_from=before.first,
+        ),
+        Period.MONTH,
+        month,
+        THURSDAY,
+    )
+    assert found.comparison is None, "eleven minutes in thirty days is no month to compare"
+
+
+def test_more_than_tripling_is_said_in_words() -> None:
+    general = {**days(LAST_MONDAY, 900, 900, 900), **days(MONDAY, 3600, 3600, 3600)}
+    found = week(general=general)
+    assert found.comparison is not None and found.comparison.percent == 300
+    assert found.comparison.change is insights.Change.MUCH_MORE
+    [change] = [h for h in highlights(found, CTX) if h.weight == 80]
+    assert change.key == "insights.h.much_more" and "percent" not in change.params
+    assert say(translator("tr"), change.key, change.params) == (
+        "Geçen haftanın aynı günlerine göre günlük ortalama ekran süresi"
+        " iki katından fazla arttı."
+    )
+    assert "more than double" in say(translator("en"), change.key, change.params)
+    doubled = week(general={**days(LAST_MONDAY, 1800, 1800, 1800), **days(MONDAY, *[3600] * 3)})
+    assert doubled.comparison is not None
+    assert doubled.comparison.change is insights.Change.MORE, "+100% is still a number"
+
+
 def test_a_finished_week_is_compared_with_the_whole_week_before() -> None:
     before = LAST_MONDAY - dt.timedelta(days=7)
     found = summarize(
@@ -265,6 +333,25 @@ def test_apps_are_ranked_and_compared_with_the_period_before() -> None:
     }
 
 
+def test_a_weekend_game_is_not_new_every_thursday() -> None:
+    """Played last Saturday and Sunday and not on last Monday to Wednesday, the
+    days this week's are compared with: still not new."""
+    last_saturday = LAST_MONDAY + dt.timedelta(days=5)
+    apps = {
+        (last_saturday, "games", "supertux"): 3600,
+        (last_saturday + dt.timedelta(days=1), "games", "supertux"): 3600,
+        **{(MONDAY + dt.timedelta(days=n), "games", "supertux"): 1200 for n in range(3)},
+        **{(MONDAY + dt.timedelta(days=n), "learning", "gcompris"): 1200 for n in range(3)},
+    }
+    general = {
+        **days(LAST_MONDAY, 2400, 2400, 2400, 2400, 2400, 3600, 3600),
+        **days(MONDAY, 2400, 2400, 2400),
+    }
+    trends = {line.slug: line.trend for line in week(general=general, apps=apps).apps}
+    assert trends["supertux"] is Trend.NONE
+    assert trends["gcompris"] is Trend.NEW, "nowhere in the week before: new"
+
+
 def test_an_app_moved_to_another_kind_shows_the_one_it_spent_longest_in() -> None:
     apps = {(MONDAY, "games", "x"): 600, (MONDAY + dt.timedelta(days=1), "learning", "x"): 1200}
     found = week(general=days(MONDAY, 600, 1200), apps=apps)
@@ -295,8 +382,17 @@ def test_requests_are_counted_by_kind_and_answer() -> None:
         ("search", 1),
     ]
     time = found.requests[0]
-    assert (time.approved, time.denied, time.unanswered) == (1, 1, 2)
+    assert (time.approved, time.denied, time.unanswered, time.waiting) == (1, 1, 1, 1)
     assert found.has_data, "a request is something to show even without minutes"
+
+
+def test_requests_still_waiting_were_not_left_unanswered() -> None:
+    """Two fresh "Büyüğüme sor" requests: Today says "2 istek bekliyor" in its
+    banner, and must not say beside it that they went unanswered."""
+    found = week(requests=[("time", "pending"), ("site", "pending")])
+    assert sum(line.unanswered for line in found.requests) == 0
+    assert sum(line.waiting for line in found.requests) == 2
+    assert "insights.h.unanswered" not in keys(highlights(found, CTX))
 
 
 def test_sites_are_ranked_by_the_days_they_were_opened() -> None:
@@ -322,14 +418,43 @@ def test_the_busiest_two_hours_and_the_late_evenings() -> None:
         (MONDAY, 16): 1500,
         (MONDAY, 17): 1200,
         (MONDAY, 10): 1800,
-        (MONDAY, 21): 600,  # five minutes or more after nine: a late day
+        (MONDAY, 21): 600,  # five minutes or more after nine: a late night
         (MONDAY + dt.timedelta(days=1), 22): 120,  # two minutes: not
-        (MONDAY + dt.timedelta(days=2), 5): 400,  # before six in the morning
+        (THURSDAY, 5): 400,  # before six on Thursday: Wednesday's night
     }
     found = week(hours=hours)
     assert found.hours[16] == 1500 and found.hours_total_s == sum(hours.values())
     assert found.peak == (16, 18)
-    assert found.late_days == 2
+    assert found.late_nights == 2
+
+
+def test_an_evening_past_midnight_is_one_late_night() -> None:
+    """22:00 to 00:30 is one evening, though it is filed under two days."""
+    tuesday = MONDAY + dt.timedelta(days=1)
+    found = week(
+        general={MONDAY: 7200, tuesday: 1800},
+        hours={(MONDAY, 22): 3600, (MONDAY, 23): 3600, (tuesday, 0): 1800},
+    )
+    assert found.late_nights == 1
+    late = next(h for h in highlights(found, CTX) if h.key == "insights.h.late")
+    assert late.params == {"nights": 1}
+
+
+def test_a_night_belongs_to_the_period_its_evening_is_in() -> None:
+    """The small hours of this Monday are last week's Sunday night: not this
+    week's late use, but last week's."""
+    early_monday = {(MONDAY, 1): 1800}
+    this_week = week(hours=early_monday)
+    assert this_week.late_nights == 0
+    assert this_week.hours[1] == 1800, "still drawn among the hours of the day"
+    last_week = summarize(
+        Facts(hours=early_monday),
+        Period.LAST_WEEK,
+        span_for(Period.LAST_WEEK, THURSDAY),
+        THURSDAY,
+    )
+    assert last_week.late_nights == 1
+    assert last_week.hours_total_s == 0, "Monday is not one of last week's days"
 
 
 def test_no_peak_from_a_few_minutes() -> None:
@@ -403,8 +528,18 @@ def test_a_day_that_never_ran_out_is_said_only_for_a_managed_child() -> None:
 def test_late_use_points_at_the_allowed_hours() -> None:
     found = highlights(week(general={MONDAY: 900}, hours={(MONDAY, 22): 900}), CTX)
     late = next(h for h in found if h.key == "insights.h.late")
-    assert late.params == {"days": 1}
+    assert late.params == {"nights": 1}
     assert late.link == "/children/1/time#windows"
+    assert late.tone is insights.Tone.ATTENTION
+
+
+def test_late_use_with_allowed_hours_set_is_only_the_fact() -> None:
+    """The parent has already chosen the hours; the screen does not offer it again."""
+    windows = Context(child_id=1, windows_set=True)
+    found = highlights(week(general={MONDAY: 900}, hours={(MONDAY, 22): 900}), windows)
+    late = next(h for h in found if h.key == "insights.h.late")
+    assert not late.suggestion and not late.link and not late.link_label
+    assert late.tone is insights.Tone.INFO
 
 
 def test_learning_time_is_good_news_and_earning_is_offered_once() -> None:
@@ -436,10 +571,16 @@ def test_a_share_is_said_only_from_half_an_hour() -> None:
 
 
 def test_unanswered_requests_suggest_mail_only_when_it_is_off() -> None:
-    found = week(requests=[("site", "expired"), ("app", "pending")])
+    found = week(requests=[("site", "expired"), ("app", "expired"), ("app", "pending")])
     unanswered = next(h for h in highlights(found, CTX) if h.key == "insights.h.unanswered")
+    assert unanswered.params == {"count": 2}
     assert unanswered.link == "/settings#mail"
-    mailed = Context(child_id=1, mail_on=True)
+    weekly_only = Context(child_id=1, mail_weekly=True)
+    unanswered = next(
+        h for h in highlights(found, weekly_only) if h.key == "insights.h.unanswered"
+    )
+    assert unanswered.link == "/settings#mail", "the Sunday mail tells nobody of a request"
+    mailed = Context(child_id=1, mail_alerts=True)
     unanswered = next(h for h in highlights(found, mailed) if h.key == "insights.h.unanswered")
     assert not unanswered.link
 
@@ -541,7 +682,14 @@ def test_facts_are_read_by_the_local_day_they_happened(session: Session, child: 
     session.add(AiAlert(child_id=child.id, ts=late_monday, score=90, app="other"))
     session.commit()
 
-    facts = insights.load_facts(session, child.id, Span(MONDAY, SUNDAY), THURSDAY)
+    facts = insights.load_facts(
+        session,
+        child.id,
+        Span(MONDAY, SUNDAY),
+        THURSDAY,
+        now=early_tuesday + dt.timedelta(hours=1),
+        tz=ISTANBUL,
+    )
 
     assert facts.general == {LAST_MONDAY: 1800, MONDAY: 3600}, "the week before, for comparing"
     assert facts.earned[MONDAY] == 600
@@ -551,9 +699,57 @@ def test_facts_are_read_by_the_local_day_they_happened(session: Session, child: 
         (MONDAY + dt.timedelta(days=1), "trt.net.tr"),
     ]
     assert facts.ran_out == frozenset({MONDAY}), "a closed window is not time running out"
-    assert facts.requests == [("time", "pending")]
+    assert facts.requests == [("time", "pending")], "asked an hour ago: still waiting"
     assert facts.assistant_alerts == 1
     assert facts.tracked_from == LAST_MONDAY, "the first day on record, not the row's age"
+
+
+def test_a_week_starts_at_the_familys_midnight(session: Session, child: Child) -> None:
+    """Sunday 23:30 in Istanbul is 20:30 UTC on Sunday, and Monday 00:30 is 21:30
+    UTC on Sunday: the first belongs to last week, the second to this one."""
+    last_sunday, early_monday = utc(MONDAY - dt.timedelta(days=1), 23, 30), utc(MONDAY, 0, 30)
+    for when, host in ((last_sunday, "old.org"), (early_monday, "new.org")):
+        session.add(
+            UsageEvent(
+                child_id=child.id,
+                kind="visit",
+                ts_wall=when,
+                payload_json=f'{{"host": "{host}"}}',
+            )
+        )
+        session.add(AccessRequest(child_id=child.id, url=host, kind="site", created_at=when))
+        session.add(
+            AuditLog(
+                actor="daemon",
+                action="quota_exhausted",
+                target=f"child:{child.id}",
+                ts=when,
+                detail_json='{"reason": "quota.exhausted"}',
+            )
+        )
+    session.commit()
+
+    facts = insights.load_facts(
+        session, child.id, Span(MONDAY, SUNDAY), THURSDAY, now=utc(THURSDAY, 12), tz=ISTANBUL
+    )
+
+    assert facts.visits == [(MONDAY, "new.org")]
+    assert facts.requests == [("site", "expired")], "asked on Monday, never answered"
+    assert facts.ran_out == frozenset({MONDAY})
+
+
+def test_hours_are_read_with_the_morning_after(session: Session, child: Child) -> None:
+    """Last week's Sunday night runs into this Monday's small hours."""
+    last_sunday = MONDAY - dt.timedelta(days=1)
+    session.add(UsageHour(child_id=child.id, day=last_sunday, hour=23, seconds=600))
+    session.add(UsageHour(child_id=child.id, day=MONDAY, hour=0, seconds=600))
+    session.add(UsageHour(child_id=child.id, day=MONDAY, hour=16, seconds=600))
+    session.commit()
+    span = span_for(Period.LAST_WEEK, THURSDAY)
+    facts = insights.load_facts(session, child.id, span, THURSDAY, tz=ISTANBUL)
+    found = summarize(facts, Period.LAST_WEEK, span, THURSDAY)
+    assert found.late_nights == 1, "one night past midnight, and last week's"
+    assert found.hours_total_s == 600, "Monday is not drawn in last week's hours"
 
 
 def test_a_period_still_ahead_reads_only_the_ledger(session: Session, child: Child) -> None:
@@ -561,23 +757,77 @@ def test_a_period_still_ahead_reads_only_the_ledger(session: Session, child: Chi
     assert facts.visits == () and facts.assistant_alerts == 0
 
 
-def test_the_settings_that_shape_a_suggestion(session: Session, child: Child) -> None:
-    assert insights.context_for(session, child) == Context(child_id=child.id)
+def _mail(
+    session: Session, config: Config, *, alerts: bool = True, weekly: bool = True
+) -> None:
+    mail.save_settings(
+        session,
+        config,
+        mail.MailSettings(
+            host="smtp.example.com",
+            username="anne@example.com",
+            password="s3cret-app-password",
+            recipients=("anne@example.com",),
+            alerts=alerts,
+            weekly=weekly,
+        ),
+    )
+    session.commit()
+
+
+def test_the_settings_that_shape_a_suggestion(
+    session: Session, config: Config, child: Child
+) -> None:
+    assert insights.context_for(session, child, config) == Context(child_id=child.id)
     policy = session.get(Policy, child.id)
     assert policy is not None
     policy.earn_enabled = True
     session.add(CategoryLimit(child_id=child.id, category="games", minutes=30))
-    session.add(Parent(display_name="Anne", smtp_json_encrypted="sealed"))
+    session.add(Parent(display_name="Anne"))
     session.commit()
-    assert insights.context_for(session, child) == Context(
-        child_id=child.id, games_limited=True, earning_on=True, mail_on=True
+    _mail(session, config)
+    assert insights.context_for(session, child, config) == Context(
+        child_id=child.id,
+        games_limited=True,
+        earning_on=True,
+        mail_alerts=True,
+        mail_weekly=True,
     )
     policy.enabled = False
     session.commit()
-    assert not insights.context_for(session, child).managed
+    assert not insights.context_for(session, child, config).managed
 
 
-def test_the_week_in_words_from_the_database(session: Session, child: Child) -> None:
+def test_only_the_alert_mail_tells_a_parent_of_requests(
+    session: Session, config: Config, child: Child
+) -> None:
+    """A parent with only the Sunday summary still hears of a request when they
+    next open the panel, so "turn on email notifications" is still for them."""
+    session.add(Parent(display_name="Anne"))
+    session.commit()
+    _mail(session, config, alerts=False)
+    context = insights.context_for(session, child, config)
+    assert not context.mail_alerts and context.mail_weekly
+
+
+def test_allowed_hours_for_any_day_are_allowed_hours(
+    session: Session, config: Config, child: Child
+) -> None:
+    policy = session.get(Policy, child.id)
+    assert policy is not None
+    assert not insights.context_for(session, child, config).windows_set
+    policy.schedule = {5: {"windows": ["10:00-12:00"]}}
+    session.commit()
+    assert insights.context_for(session, child, config).windows_set
+    policy.schedule = {}
+    policy.windows = {"weekday": ["16:00-19:00"], "weekend": []}
+    session.commit()
+    assert insights.context_for(session, child, config).windows_set
+
+
+def test_the_week_in_words_from_the_database(
+    session: Session, config: Config, child: Child
+) -> None:
     today = dt.date.today()
     monday = today - dt.timedelta(days=today.weekday())
     for n in range(7):
@@ -589,7 +839,7 @@ def test_the_week_in_words_from_the_database(session: Session, child: Child) -> 
             LedgerDay(child_id=child.id, day=monday + dt.timedelta(days=n), general_s=7200)
         )
     session.commit()
-    said = insights.week_highlights(session, child, translator("tr"), today, 3)
+    said = insights.week_highlights(session, child, translator("tr"), today, 3, config)
     if today.weekday():
         assert any("%100 arttı" in s.text for s in said), said
     assert len(said) <= 3

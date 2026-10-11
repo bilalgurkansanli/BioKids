@@ -1940,6 +1940,9 @@ msgstr "Analiz"
 msgid "insights.intro"
 msgstr "{name} bilgisayarı nasıl kullanıyor, kısaca. Hepsi bu bilgisayarda hesaplanır, hiçbir yere gönderilmez."
 
+msgid "insights.intro.mailed"
+msgstr "{name} bilgisayarı nasıl kullanıyor, kısaca. Hepsi bu bilgisayarda hesaplanır; yalnızca öne çıkanlar, Pazar akşamı haftalık e-postayla kendi e-posta sunucunuz üzerinden size gönderilir."
+
 msgid "insights.period.label"
 msgstr "Dönem"
 
@@ -2000,6 +2003,9 @@ msgstr "↓ %{percent}"
 msgid "insights.delta.up"
 msgstr "↑ %{percent}"
 
+msgid "insights.delta.much_more"
+msgstr "↑ iki katından fazla"
+
 msgid "insights.delta.same"
 msgstr "≈ aynı"
 
@@ -2013,7 +2019,10 @@ msgid "insights.days"
 msgstr "Gün gün"
 
 msgid "insights.days.help"
-msgstr "Her çubuk bir gün; turuncu olanlarda günlük süre doldu. Bir güne dokunun, Geçmiş'te o günün ayrıntısı açılsın."
+msgstr "Her çubuk bir gün; turuncu olanlarda günlük süre doldu."
+
+msgid "insights.days.tap"
+msgstr "Bir güne dokunun, Geçmiş'te o günün ayrıntısı açılsın."
 
 msgid "insights.kinds"
 msgstr "Zaman nereye gitti?"
@@ -2052,7 +2061,7 @@ msgid "insights.hours.none"
 msgstr "Saat bilgisi henüz yok. BioKids her saatin süresini bu sürümden itibaren tutuyor."
 
 msgid "insights.hours.partial"
-msgstr "Saat bilgisi bu sürümle tutulmaya başlandı; daha önceki günler bu grafikte yok."
+msgstr "Saat bilgisi bu sürümle tutulmaya başlandı ve {days} gün saklanıyor; daha önceki günler bu grafikte yok."
 
 msgid "insights.req.time"
 msgstr "Daha fazla süre"
@@ -2074,6 +2083,9 @@ msgstr "{count} şimdi değil"
 
 msgid "insights.req.unanswered"
 msgstr "{count} cevapsız"
+
+msgid "insights.req.waiting"
+msgstr "{count} bekliyor"
 
 msgid "insights.req.none"
 msgstr "Bu dönemde istek yok."
@@ -2155,6 +2167,9 @@ msgstr "{vs} günlük ortalama ekran süresi %{percent} azaldı."
 msgid "insights.h.more"
 msgstr "{vs} günlük ortalama ekran süresi %{percent} arttı."
 
+msgid "insights.h.much_more"
+msgstr "{vs} günlük ortalama ekran süresi iki katından fazla arttı."
+
 msgid "insights.h.same"
 msgstr "{vs} günlük ortalama ekran süresi hemen hemen aynı."
 
@@ -2165,7 +2180,7 @@ msgid "insights.h.never_ran_out"
 msgstr "Günlük süre hiç dolmadı."
 
 msgid "insights.h.late"
-msgstr "{days} gün, akşam 21:00 ile sabah 06:00 arasında da kullanıldı."
+msgstr "{nights} gece, saat 21:00 ile 06:00 arasında da kullanıldı."
 
 msgid "insights.h.unanswered"
 msgstr "{count} istek cevapsız kaldı."

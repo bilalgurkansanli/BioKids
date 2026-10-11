@@ -278,7 +278,9 @@ that changes every Monday.
 ### 3.1 Information architecture
 
 The menu has six entries (`templates/base.html`), which still fit the phone's
-bottom bar at 360 px:
+bottom bar at 360 px. Above 40rem they are a row at the top, tightened just above
+the breakpoint so that the English labels fit at 640 px; with a larger font the row
+wraps to a second line rather than letting the page scroll sideways:
 
 ```
 Bugün / Today          ← default, the only screen most parents open; a badge
@@ -453,7 +455,7 @@ one control: **Bu hafta** (the default), **Geçen hafta**, **Son 30 gün**.
 │ ▌📉 Geçen haftanın aynı günlerine göre   │
 │ ▌   günlük ortalama ekran süresi %18     │
 │ ▌   azaldı.                              │
-│ ▌🌙 1 gün, akşam 21:00 ile sabah 06:00   │
+│ ▌🌙 1 gece, saat 21:00 ile 06:00         │
 │ ▌   arasında da kullanıldı.              │
 │ ▌   İsterseniz … Kullanım saatleri →     │
 │                                          │
@@ -474,18 +476,31 @@ one control: **Bu hafta** (the default), **Geçen hafta**, **Son 30 gün**.
   may read them out with the child beside them. Some carry one gentle suggestion and
   a link to the setting that acts on it (a games limit, earned time, the allowed
   hours, email notifications); the link opens that setting, with **Gelişmiş** open
-  where it lives there (`?more=1`).
+  where it lives there (`?more=1`). A suggestion is offered only while it is still
+  to be done: no "allowed hours" once any are set (the late-use sentence is then
+  only the fact, in a calm tone), no "email notifications" once the alert mail is
+  on — the Sunday summary alone does not tell a parent of a request.
+- Late use is counted in nights: 22:00 to 00:30 is one night, the small hours
+  belonging to the evening before.
+- "İstek cevapsız kaldı" counts only requests that expired with nobody answering.
+  One still open is "bekliyor", in the present, in the requests tally; it is never
+  told as unanswered while the "2 istek bekliyor" banner is on Today.
 - Then the numbers, as tiles (two across on a phone, four on a wider screen): total,
   a day on average with its change, days used, days the time ran out, weekdays and
   weekends, minutes earned and added. Today counts in the total but not in an
   average or a comparison, and a line under the tiles says so; a week so far is
-  compared with the same days of the week before.
-- Bars drawn by the server — the days (each a link to that day in **Geçmiş**, the
+  compared with the same days of the week before. There is no comparison until the
+  days compared with are at least three (or as many as this side has finished)
+  with ten minutes a day on average, and a rise beyond tripling is "iki katından
+  fazla", never "%900".
+- Bars drawn by the server — the days (for a week, each a link to that day in
+  **Geçmiş**; thirty bars on a phone are too thin to tap and are not links; the
   day's quota as a dashed line, warm where the time ran out), the kinds of app as
   one bar in parts with a legend that names each and gives minutes and percent, the
-  apps with a thin bar and "↑ daha çok", "↓ daha az", "≈ aynı" or "yeni", and the 24
-  hours of the day. Each kind of app has one brand colour wherever it appears, and
-  every bar's number is also written. No script, no chart library (D-129).
+  apps with a thin bar and "↑ daha çok", "↓ daha az", "≈ aynı" or "yeni" ("yeni"
+  only for an app not used anywhere in the period before), and the 24 hours of the
+  day. Each kind of app has one brand colour wherever it appears, and every bar's
+  number is also written. No script, no chart library (D-129).
 - The requests by kind with how they were answered, and the sites the browser
   reported, ranked by the days they were opened (at most eight, then "ve 3 site
   daha"), with the note that only the name is kept, for 30 days.
@@ -493,7 +508,8 @@ one control: **Bu hafta** (the default), **Geçen hafta**, **Son 30 gün**.
   kullandıkça burada bir özet belirecek." and nothing else.
 
 The same highlights, at most three per child and without links, end each child's
-part of the Sunday mail (D-177). A mail never names a site.
+part of the Sunday mail (D-177). A mail never names a site. The line under the
+title says so when that mail is on, rather than "hiçbir yere gönderilmez".
 
 ---
 

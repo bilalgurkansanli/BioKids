@@ -10,11 +10,13 @@ The daemon runs `prune` once a day, a few minutes after it starts and then
 every 24 hours (`Supervisor.housekeeping`).
 The windows are in `[retention]` of config.toml:
 
-* activity (usage events, which include the sites visited, and the assistant's
-  alerts): `activity_days`, a month by default - the most personal records go
-  first;
-* minutes per day, per app and per hour of the day, for the history and
-  insights screens: `usage_days`;
+* activity (usage events, which include the sites visited, the assistant's
+  alerts, and the hours of the day the computer was used): `activity_days`, a
+  month by default - the most personal records go first. *When* in the day a
+  child sat at the computer is closer to a timeline than how long they did,
+  and no screen reads more than thirty days of it (D-206);
+* minutes per day and per app, for the history and insights screens:
+  `usage_days`;
 * the audit log: `audit_days`;
 * children's requests: `requests_days`;
 * parent sessions that have expired, and boot epochs from long ago, which no
@@ -65,13 +67,14 @@ def prune(session: Session, config: Config, now: dt.datetime | None = None) -> d
     now = now or utcnow()
     keep = config.retention
     activity = now - dt.timedelta(days=keep.activity_days)
+    activity_day = activity.date()
     usage_day = (now - dt.timedelta(days=keep.usage_days)).date()
 
     deleted = {
         "usage_event": _run(session, delete(UsageEvent).where(UsageEvent.ts_wall < activity)),
         "ai_alert": _run(session, delete(AiAlert).where(AiAlert.ts < activity)),
         "usage_tick": _run(session, delete(UsageTick).where(UsageTick.day < usage_day)),
-        "usage_hour": _run(session, delete(UsageHour).where(UsageHour.day < usage_day)),
+        "usage_hour": _run(session, delete(UsageHour).where(UsageHour.day < activity_day)),
         "ledger_day": _run(session, delete(LedgerDay).where(LedgerDay.day < usage_day)),
         "audit_log": _run(
             session,
