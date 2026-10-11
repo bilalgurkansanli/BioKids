@@ -1051,10 +1051,11 @@ journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep -i 'app
 
 1. On the launcher's home screen there is **no** bar.
 2. Open **Balonlar** (Frozen Bubble). Its window opens in the middle of the screen,
-   its title bar has no button, and at its title bar's top right is the bar: 🏠,
-   "⏳ N dk" (with the clock under it for an 8–10 child), 🔉, a slider, 🔊, and a
-   red ✕ — the emoji in colour, each button as big as the old close button (D-201).
-3. With the game's music playing, the slider's knob shows the level. Tap 🔉 twice:
+   its title bar has no button, and at its title bar's top right is the compact bar
+   (D-205): 🏠, "⏳ N dk", 🔉, 🔊 and a red ✕ — the emoji in colour, no slider and no
+   clock, the whole of it under half the game's width, ✕ at the game's own top
+   right corner.
+3. With the game's music playing, tap 🔉 twice:
 
    ```bash
    as_elif pactl list sink-inputs | grep -E 'Sink Input|Volume:|process.id'
@@ -1063,9 +1064,12 @@ journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep -i 'app
 
    **Pass:** the game's stream went down by 20%, the machine's volume did not move,
    and a time warning (§7) is as loud as before. A game with no sound has both
-   volume buttons and the slider dimmed. Drag the knob to the left end, then tap the
-   middle of the slider: the stream goes to 0%, then to about 50%, following the
-   finger without lagging behind it.
+   volume buttons dimmed. The slider is the whole bar's: over an app that fills the
+   screen and plays a sound (a video in a web tile, as in 9), the bar has 🏠,
+   "⏳ N dk" with the clock under it, 🔉, a slider, 🔊 and ✕, each button as big as
+   the old close button (D-201), and the slider's knob shows the level. Drag the
+   knob to the left end, then tap the middle of the slider: the stream goes to 0%,
+   then to about 50%, following the finger without lagging behind it.
 4. Tap 🏠: the launcher is back and the game keeps running
    (`as_elif systemctl --user list-units --plain --no-legend 'biokids-app-*'`).
    Tap the Balonlar tile: the **same** game comes back, where it was left, and the
@@ -1117,7 +1121,7 @@ journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep -i 'app
     (`unset-environment BIOKIDS_LOG_LEVEL` and a restart put it back.)
 11. Time and clock. **Pass:** the bar's "⏳ N dk" matches the launcher's ring; with
     a grant or quota that leaves under five minutes it turns orange, under one red.
-    The clock shows only for an 8–10 child.
+    The clock shows for every child, in the whole bar only.
 12. Open apps on the launcher. Open Balonlar, tap 🏠. **Pass:** within a second the
     launcher's footer shows "Açık" with Balonlar's bubble icon and its tile has a teal
     dot; tapping the footer button brings the same game back (one scope, as in 4).
@@ -1126,6 +1130,41 @@ journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep -i 'app
 13. The launcher's own sound bar: drag its knob, tap the bar's ends, and with Tab
     focus it and press ← and →. **Pass:** `as_elif wpctl get-volume
     @DEFAULT_AUDIO_SINK@` follows each.
+14. The bar's size (D-205). Switch between a web tile (filling the screen) and
+    Balonlar with 🏠 and their tiles, several times. **Pass:** over the web tile
+    the whole bar at the screen's top right, over Balonlar the compact one at the
+    game's top right, each the moment the app is in front — never the whole bar
+    over the game, not even for a moment, and never a bar standing off its corner
+    or with a gap after ✕. Drag Balonlar until half of it is off the screen's right
+    edge: the bar on what is left of its title bar - 🏠 and ✕ alone, as what is
+    left is under 520 pixels - all of it on the screen. A question an app asks in a
+    window narrower than that has only 🏠 and ✕ too. For each, the size the bar
+    picked:
+
+    ```bash
+    as_elif systemctl --user set-environment BIOKIDS_LOG_LEVEL=debug
+    as_elif systemctl --user restart biokids-shell
+    journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep 'pixels wide'
+    ```
+
+    (`unset-environment BIOKIDS_LOG_LEVEL` and a restart put it back.)
+15. A new window fills the screen (D-205). Tick **Yapboz** (Palapeli) for Elif under
+    **Çocuklar → Uygulamalar ve siteler** - the app the owner saw open in a window
+    little wider than the bar - and open it, three times, closing it with ✕ in
+    between. **Pass:** each time, within about two seconds of appearing, it fills
+    the screen and stays so, with the whole bar in the screen's top right; it may
+    show at its own size for a moment first. Where it did, the journal says the bar
+    maximised it:
+
+    ```bash
+    journalctl _SYSTEMD_USER_UNIT=biokids-shell.service -b --no-pager | grep 'does not fill the screen'
+    ```
+
+    The same with **Patates Kafa** (KTuberling) and **Haritalar** (KGeography),
+    ticked the same way where they are not on her screen. Balonlar never gets that
+    line: a fixed size is left alone. If a KDE app still ends up small, record how
+    long after it appeared it shrank (a screen recording, or `xprop -spy` on its
+    `_NET_WM_STATE`): the bar looks for six seconds.
 
 ---
 

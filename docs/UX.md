@@ -110,6 +110,8 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
 ### 2.4 Rules
 
 - Every interactive target is at least **64 × 64 px** for 4–7, 44 × 44 px for 8–10.
+  One exception: the app bar over a window too narrow for it (§2.6, D-205), whose
+  buttons are 48 wide and the title bar's 64 tall, so the app keeps its title bar.
 - **No double-click anywhere.** Single tap or click, always.
 - Every action gives feedback within 100 ms, even if the app takes 3 seconds to start.
   A tile that does nothing for two seconds will be tapped eight more times.
@@ -117,13 +119,14 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
 - No modal that a child cannot dismiss. The only unskippable screen is the first-run
   explanation.
 - **Every app has a way out a child can find** (D-163, D-197). Over every app
-  window the app bar (§2.6) holds a 64-pixel close button in the top right corner
-  of the screen, always in that same place, and it closes the app even when the
-  app will not close itself. Each app window fills the screen where it can, under
-  a 64-pixel title bar the bar sits in; one that cannot, such as a game with a
-  fixed size, opens in the middle. No app starts full screen. Whenever the bar is
-  not running, the title bar has the close button instead. The launcher itself has
-  no title bar and no bar over it; it is never closed, only covered.
+  window the app bar (§2.6) holds a big close button in the top right corner of
+  the window - of the screen, for the app that fills it - and it closes the app
+  even when the app will not close itself. Each app window fills the screen where
+  it can, under a 64-pixel title bar the bar sits in, also when the app shrinks it
+  back to a size it saved (D-205); one that cannot, such as a game with a fixed
+  size, opens in the middle. No app starts full screen. Whenever the bar is not
+  running, the title bar has the close button instead. The launcher itself has no
+  title bar and no bar over it; it is never closed, only covered.
 - **A tile that cannot work is not drawn.** An app whose program is not installed
   (D-164), or a site served on this machine with nothing behind it yet, such as
   Vikipedi before the encyclopedia is downloaded (D-190).
@@ -171,34 +174,48 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
 ### 2.6 The app bar
 
 Asked for by the owner (D-197, D-201): next to the close button, a way to send an
-app to the background, the app's own volume, and the time.
+app to the background, the app's own volume, and the time. It fits the window it
+sits on (D-205).
 
 ```
                   ┌──────┬──────────┬──────┬─────────────┬──────┬──────┐
    … app title …  │  🏠  │ ⏳ 12 dk │  🔉  │ ━━━━━●━━━━━ │  🔊  │  ✕   │  ← top right of the app
                   │      │  15:24   │      │             │      │      │
                   └──────┴──────────┴──────┴─────────────┴──────┴──────┘
+
+   a narrower window:                       a very narrow one:
+   ┌────┬─────────┬────┬────┬────┐          ┌────┬────┐
+   │ 🏠 │ ⏳ 12 dk │ 🔉 │ 🔊 │ ✕  │          │ 🏠 │ ✕  │
+   └────┴─────────┴────┴────┴────┘          └────┴────┘
 ```
 
 - Shown whenever an app window is the active one, at the top right of that
   window's own title bar: for an app that fills the screen, the top right of the
   screen. Never over the launcher, its warnings or the screens that end the day. It
   never takes the keyboard from the app.
-- Each button is 64 × 64 for the finger, a 56-pixel rounded square for the eye, on
-  the bar's off-white: the same height as the title bar it sits in, with the title
-  bar's own line along its bottom, so over a maximised app it sits flush in the
-  title bar and covers only the title.
+- In the whole bar each button is 64 × 64 for the finger, a 56-pixel rounded
+  square for the eye, on the bar's off-white: the same height as the title bar it
+  sits in, with the title bar's own line along its bottom, so over a maximised app
+  it sits flush in the title bar and covers only the title.
+- **As big as the window allows** (D-205). The whole bar, 544 pixels, over a window
+  at least 1000 wide: every app that fills a screen 1024 pixels wide or more. Over
+  a narrower one - Frozen Bubble's 640 × 480, a game that cannot fill the screen -
+  the compact bar, 284 pixels: buttons 48 wide with 44-pixel faces, still as tall
+  as the title bar, the minutes without the clock, and the sound by 🔉 and 🔊
+  alone. Under 520 pixels, a small question an app asks, only 🏠 and ✕. So the bar
+  never covers much more than half of a window's title bar; for a window partly off
+  the screen, half of what is left of it on the screen.
 - **🏠 Ana ekran** sends the app to the background and shows the launcher. The app
   keeps running; its tile, or its button under **Açık** at the launcher's bottom,
   brings the same window back, not a second copy.
 - **⏳ 12 dk** — the minutes left today, as the launcher's ring counts them; orange
-  in the last five minutes, red in the last one. Under it the clock, for 8–10 only,
-  as on the launcher (§2.2).
+  in the last five minutes, red in the last one. Under it, in the whole bar, the
+  clock, for every child (D-201).
 - **🔉 / 🔊** turn this app's own sound down or up by a tenth, never the machine's,
-  so Zio and Sio stay as loud as they were. The slider between them follows a finger
-  dragged or tapped anywhere along the bar's height, with a knob as big as a
-  fingertip. All three dim when the app makes no sound. The machine's volume is the
-  launcher's.
+  so Zio and Sio stay as loud as they were. In the whole bar the slider between them
+  follows a finger dragged or tapped anywhere along the bar's height, with a knob as
+  big as a fingertip. All three dim when the app makes no sound. The machine's
+  volume is the launcher's.
 - **✕ Kapat** closes the app. It asks first, so an app can ask "save your
   drawing?"; an app still there after three seconds, or tapped a second time, is
   stopped. Red, with a white cross, as the title bar's button was.
@@ -206,6 +223,11 @@ app to the background, the app's own volume, and the time.
   title bar a quarter of a second after it stops — never a bar trailing the window.
   An app that filled the screen fills it again when the finger lets go; a game with
   a fixed size stays where it was put.
+- **A new window fills the screen** (D-205). Every app window is maximised as it
+  opens (D-163); an app that then shrinks it back to the size it saved last time,
+  as KDE's apps do, is maximised again by the bar, in its first few seconds and at
+  most twice. The bar is not shown on the window until it has its size. After that
+  an app's own size is not fought, and nothing is maximised under a finger.
 - No words on the buttons; a screen reader hears "Ana ekran", "Sesi kıs", "Sesi
   aç", "Kapat", and the minutes left.
 
