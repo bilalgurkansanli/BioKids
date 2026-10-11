@@ -16,7 +16,8 @@
         <span class="muted small">{{ _('age_band.' ~ child.age_band) }}</span>
       </div>
       <p class="muted small">{{ _('child.unix_user') }}: <code>{{ child.unix_user }}</code></p>
-      {# D-207: tiles an upgrade added that suit this child and are not ticked. #}
+      {# D-207: tiles an upgrade added that suit this child and are not on
+         their screen yet. A link, because the boxes are on the apps screen. #}
       {% set new_line = new_lines.get(child.id) %}
       {% if new_line %}
         <p class="small"><a href="/children/{{ child.id }}/apps">{{ new_line }}</a></p>

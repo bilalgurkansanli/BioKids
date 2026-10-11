@@ -1242,6 +1242,58 @@ minute). Then, on the phone, **Analiz** in the bottom bar:
 5. Sunday after 19:00, with mail set up (D-177), the week's mail ends each child's
    days with "Öne çıkanlar:" and at most three sentences, and names no site.
 
+### 8.11 The apps an upgrade brought (D-207)
+
+On this machine nothing is marked new, and that is right. A tile is new only when
+an upgrade's `sync-catalog` adds its slug to a database that already had tiles.
+§7's machine was a fresh install, and a machine that already had D-203's apps gets
+no new slug from this build:
+
+```bash
+sudo biokids-admin sync-catalog      # catalog: 0 added, …
+sudo bkq "select value from setting where key='catalog_new_apps'"   # nothing
+```
+
+**Pass:** no row, no **Yeni** on any **Uygulamalar ve siteler**, no line under any
+child on **Çocuklar**.
+
+To see the feature, make two tiles new by hand. `dpkg -l ktuberling blinken` must
+show both installed (a box that cannot be ticked is not named). Take a child who is
+five this year (the birth year is under **Düzenle**), untick **Patates Kafa** and
+**Hafıza** under **Uygulamalar ve siteler** and save. Only after that save, with the
+panel stopped, write the setting at the current UTC time; `bkq` never commits, so
+this is a `with con:` block:
+
+```bash
+sudo systemctl stop biokids-panel
+sudo python3 - <<'EOF'
+import datetime as dt, json, sqlite3
+now = dt.datetime.now(dt.UTC).replace(tzinfo=None).isoformat(timespec="seconds")
+con = sqlite3.connect("/var/lib/biokids/biokids.db")
+with con:
+    con.execute(
+        "insert or replace into setting (key, value) values (?, ?)",
+        ("catalog_new_apps", json.dumps({"ktuberling": now, "blinken": now})),
+    )
+con.close()
+EOF
+sudo systemctl start biokids-panel
+```
+
+The order matters: a save of the child's apps after the apps arrived answers the
+line, so unticking them after writing the setting would hide it.
+
+**Pass, in order:**
+
+1. **Çocuklar**: under that child, a link "Bu çocuğun yaşına uygun 2 yeni uygulama
+   henüz ekranında yok: Patates Kafa, Hafıza." to the child's apps screen. A child
+   of eight or more has no line (Patates Kafa is for 4–6, Hafıza for 5–7).
+2. The link: the same line at the top, ending "Eklemek için işaretleyin.", and a
+   **Yeni** beside those two tiles and no others, for every child.
+3. Save that screen without ticking them. **Pass:** the line is gone from both
+   screens and the two **Yeni** stay. They go by themselves thirty days after the
+   time written above.
+
 ---
 
 ## 9. After the run

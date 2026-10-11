@@ -542,11 +542,20 @@ msgstr "Volume, brightness and the Shut down button are always there."
 msgid "apps.new"
 msgstr "New"
 
+# Said on the apps screen and, as a link to it, on Çocuklar: the apps are not
+# on the child's screen until the parent ticks them, so it must not read as news.
 msgid "apps.new.line.one"
-msgstr "A new app suits this child's age: {names}."
+msgstr "A new app suits this child's age but is not on their screen yet: {names}."
 
 msgid "apps.new.line.many"
-msgstr "{count} new apps suit this child's age: {names}."
+msgstr "{count} new apps suit this child's age but are not on their screen yet: {names}."
+
+# After the line, on the apps screen only, where the boxes are
+msgid "apps.new.tick.one"
+msgstr "Tick it to add it."
+
+msgid "apps.new.tick.many"
+msgstr "Tick them to add them."
 
 msgid "time.title"
 msgstr "Time rules"

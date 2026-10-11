@@ -13,8 +13,9 @@ never reused for something else: a tile that changes what it is gets a new
 slug, and `inherits` hands it to the children who had the old one (D-203).
 
 What an upgrade adds is remembered for thirty days (D-207). A child who already
-exists keeps exactly the tiles a parent chose, so a new one reaches them only
-when the parent ticks it; the apps screen marks it "Yeni" so that they can.
+exists keeps the tiles a parent chose, so a new one reaches them only when the
+parent ticks it (or, once, by `inherits`, beside the tile it takes over); the
+apps screen marks it "Yeni" so that they can.
 """
 
 from __future__ import annotations

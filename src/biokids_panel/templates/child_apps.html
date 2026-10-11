@@ -8,7 +8,9 @@
 
   D-207. A tile an upgrade added in the last thirty days says "Yeni", and one
   line at the top names those that suit this child and are not ticked yet,
-  until the parent has saved this screen once since they arrived.
+  until the parent has saved this screen once since they arrived. It says
+  they are not on the child's screen yet and that ticking adds them, so that
+  it does not read as news of something the child already has.
 #}
 {% block content %}
   <h1>{{ child.display_name }} — {{ _('apps.title') }}</h1>

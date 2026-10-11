@@ -429,7 +429,9 @@ def apps_form(view: View, child_id: int) -> Response:
         installed={e.slug for e in entries if e.available()},
         for_age={e.slug for e in catalog.for_age(child.age_on(today))},
         new=set(new),
-        new_line=_new_apps_line(view, _new_for(view.session, catalog, new, child, today)),
+        new_line=_new_apps_line(
+            view, _new_for(view.session, catalog, new, child, today), tick=True
+        ),
     )
 
 
@@ -805,14 +807,27 @@ def _new_for(
     )
 
 
-def _new_apps_line(view: PanelView, entries: Sequence[CatalogEntry]) -> str:
-    """One sentence naming them in the panel's language, or "" for none."""
+def _new_apps_line(
+    view: PanelView, entries: Sequence[CatalogEntry], *, tick: bool = False
+) -> str:
+    """The sentence naming them in the panel's language, or "" for none.
+
+    It says they are not on the child's screen yet: "a new app suits this
+    child" alone reads as news, and a parent would think the child has it.
+    `tick` adds how to give it them, for the apps screen, where the boxes
+    are; on Çocuklar the sentence is a link to that screen instead.
+    """
     if not entries:
         return ""
     turkish = view.tr.locale == "tr"
     names = ", ".join(entry.name_tr if turkish else entry.name_en for entry in entries)
-    key = "apps.new.line.one" if len(entries) == 1 else "apps.new.line.many"
-    return view.tr(key, count=len(entries), names=names)
+    one = len(entries) == 1
+    line = view.tr(
+        "apps.new.line.one" if one else "apps.new.line.many", count=len(entries), names=names
+    )
+    if not tick:
+        return line
+    return f"{line} {view.tr('apps.new.tick.one' if one else 'apps.new.tick.many')}"
 
 
 def _assistant_status(ctx: PanelContext) -> dict[str, Any]:
