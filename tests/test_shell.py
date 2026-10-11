@@ -265,9 +265,11 @@ def test_tapping_a_tile_paints_before_it_asks(
 
 
 def test_launching_asks_the_daemon_and_reports_the_activity(
-    client: TestClient, daemon: FakeShellDaemon
+    config: Config, daemon: FakeShellDaemon
 ) -> None:
-    response = client.post("/launch/tuxpaint")
+    with _launcher_client(config, daemon) as client:
+        response = client.post("/launch/tuxpaint")
+        _settle(client)  # the report goes after the answer (D-208)
     assert response.json()["ok"] is True
     assert daemon.launched == ["tuxpaint"]
     assert daemon.activity == [("tuxpaint", "Boya", "free")]
@@ -304,6 +306,183 @@ def test_a_builtin_tile_starts_no_process(client: TestClient, daemon: FakeShellD
     assert body["ok"] is True
     assert body["builtin"] == "volume"
     assert daemon.launched == [], "a slider does not need permission"
+
+
+# ------------------------------------------------- opening at once (D-208)
+
+
+def _settle(client: TestClient) -> None:
+    """Let the work an answer did not wait for finish, on the client's own loop."""
+
+    async def finished() -> None:
+        tasks = list(client.app.state.shell.background)  # type: ignore[attr-defined]
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+    client.portal.call(finished)  # type: ignore[union-attr]
+
+
+def _launcher_client(config: Config, daemon: FakeShellDaemon) -> TestClient:
+    app = create_app(config)
+    app.state.shell.client = daemon  # type: ignore[assignment]
+    app.state.shell.launcher = _RecordingLauncher(config)
+    return TestClient(app, base_url=LAUNCHER)
+
+
+class _SlowToNoteDaemon(FakeShellDaemon):
+    """A daemon that takes its time over the activity report: until `release`."""
+
+    def __init__(self, state: dict[str, Any]) -> None:
+        super().__init__(state)
+        self.release: asyncio.Event | None = None
+
+    async def report_activity(self, app_slug: str, app_name: str, category: str) -> None:
+        assert self.release is not None
+        await self.release.wait()
+        await super().report_activity(app_slug, app_name, category)
+
+
+def test_the_answer_does_not_wait_for_the_activity_report(config: Config) -> None:
+    """The child's tap is answered; the daemon hears what was opened just after."""
+    daemon = _SlowToNoteDaemon(a_state())
+    with _launcher_client(config, daemon) as client:
+
+        async def event() -> asyncio.Event:
+            return asyncio.Event()  # made on the client's own loop
+
+        daemon.release = client.portal.call(event)  # type: ignore[union-attr]
+        assert client.post("/launch/tuxpaint").json() == {"ok": True, "reason": ""}
+        assert daemon.activity == [], "the answer waited for the report"
+        assert len(client.app.state.shell.background) == 1  # type: ignore[attr-defined]
+
+        client.portal.call(daemon.release.set)  # type: ignore[union-attr]
+        _settle(client)
+        assert daemon.activity == [("tuxpaint", "Boya", "free")]
+        assert not client.app.state.shell.background  # type: ignore[attr-defined]
+
+
+def test_a_report_that_fails_is_logged_not_raised(
+    config: Config, caplog: pytest.LogCaptureFixture
+) -> None:
+    class Broken(FakeShellDaemon):
+        async def report_activity(self, app_slug: str, app_name: str, category: str) -> None:
+            raise RuntimeError("the daemon hiccuped")
+
+    with _launcher_client(config, Broken(a_state())) as client:
+        assert client.post("/launch/tuxpaint").json()["ok"] is True
+        _settle(client)
+    assert "report-activity failed" in caplog.text
+
+
+def test_the_tile_and_the_permission_are_asked_together(config: Config) -> None:
+    """Two questions to the daemon, not one after the other."""
+
+    class Overlapping(FakeShellDaemon):
+        def __init__(self) -> None:
+            super().__init__(a_state())
+            self.in_state = False
+            self.overlapped = False
+
+        async def state(self) -> dict[str, Any] | None:
+            self.in_state = True
+            await asyncio.sleep(0.05)
+            self.in_state = False
+            return self.data
+
+        async def may_launch(self, app_slug: str) -> tuple[bool, str]:
+            self.overlapped = self.in_state
+            return await super().may_launch(app_slug)
+
+    daemon = Overlapping()
+    client = _launcher_client(config, daemon)
+    assert client.post("/launch/tuxpaint").json()["ok"] is True
+    assert daemon.overlapped
+    assert daemon.launched == ["tuxpaint"]
+
+
+def test_the_daemons_no_still_wins_when_asked_together(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    """Asked at once, the permission is still the daemon's: a refusal starts nothing."""
+    daemon.launch_answer = (False, Reason.CATEGORY_EXHAUSTED)
+    body = client.post("/launch/tuxpaint").json()
+    assert body == {"ok": False, "reason": Reason.CATEGORY_EXHAUSTED}
+    assert client.app.state.shell.launcher.requests == []  # type: ignore[attr-defined]
+    assert daemon.activity == []
+
+
+FORM = {"content-type": "application/x-www-form-urlencoded"}
+
+
+def test_without_javascript_the_launching_screen_has_a_button(client: TestClient) -> None:
+    page = client.get("/launch/tuxpaint").text
+    noscript = page[page.index("<noscript>") : page.index("</noscript>")]
+    assert '<form method="post" action="/launch/tuxpaint">' in noscript
+    assert ">Aç</button>" in noscript
+
+
+def test_a_plain_form_is_answered_with_where_to_go_next(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    opened = client.post("/launch/tuxpaint", content=b"", headers=FORM, follow_redirects=False)
+    assert opened.status_code == 303 and opened.headers["location"] == "/"
+    assert daemon.launched == ["tuxpaint"]
+
+    daemon.launch_answer = (False, Reason.QUOTA_EXHAUSTED)
+    refused = client.post("/launch/tuxpaint", content=b"", headers=FORM, follow_redirects=False)
+    assert refused.status_code == 303
+    assert refused.headers["location"] == (
+        f"/blocked?reason={Reason.QUOTA_EXHAUSTED}&slug=tuxpaint"
+    )
+
+    stranger = client.post("/launch/doom", content=b"", headers=FORM, follow_redirects=False)
+    assert stranger.headers["location"].startswith("/blocked?reason=")
+
+
+def test_a_form_from_a_website_still_cannot_start_an_app(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    headers = {**FORM, "origin": "https://evil.example", "sec-fetch-site": "cross-site"}
+    response = client.post("/launch/tuxpaint", content=b"", headers=headers)
+    assert response.status_code == 403
+    assert daemon.launched == []
+
+
+def test_a_tap_opens_the_app_from_the_home_page(client: TestClient) -> None:
+    """No screen in between: the tile shows it is opening, and stays a link."""
+    page = client.get("/").text
+    assert 'href="/launch/tuxpaint"' in page, "without a script the link still works"
+    strings = json.loads(
+        page.split('<script id="strings" type="application/json">')[1].split("<")[0]
+    )
+    assert strings["opening"] == "Açılıyor…"
+    script = (STATIC / "shell.js").read_text(encoding="utf-8")
+    section = script[
+        script.index("opening (D-208)") : script.index(
+            "/* ---", script.index("opening (D-208)")
+        )
+    ]
+    for needed in (
+        'a[href^="/launch/"]',
+        "preventDefault",
+        'method: "POST"',
+        "is-opening",
+        "OPENING_MS = 25000",
+        '"blur"',
+        "visibilitychange",
+        "/blocked?reason=",
+        "if (opening[target.slug]) return;",
+    ):
+        assert needed in section, needed
+
+
+def test_the_opening_tile_is_seen_and_is_still(client: TestClient) -> None:
+    css = (STATIC / "shell.css").read_text(encoding="utf-8")
+    section = css[css.index("opening (D-208)") :]
+    assert ".tile.is-opening::before" in section
+    assert ".tile__opening" in section
+    assert "font-size: var(--tile-label)" in section, "as big as the tile's own name"
+    still = section[section.index("prefers-reduced-motion") :]
+    assert ".tile.is-opening::before" in still and "animation: none" in still
 
 
 # ------------------------------------------------------------- the screens

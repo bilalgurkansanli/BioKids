@@ -20,6 +20,12 @@ A tap on the tile of an app that is already open brings that app's window back
 rather than starting a second copy (D-197): the app bar's 🏠 sends an app to the
 background, and its tile is the way back to it. The launcher's footer lists the
 apps that are open that way, from `AppLauncher.open_apps` (D-201).
+
+Never two copies of one app (D-208). Taps on one tile are taken one at a time,
+and an app whose scope is still running is not started again unless it has
+been seen to have no window long after it started - not because the app bar
+could not look in time, which on a busy machine is exactly when a slow app is
+still opening.
 """
 
 from __future__ import annotations
@@ -38,23 +44,41 @@ from pathlib import Path
 
 from biokids_core.catalog import resolve_program
 from biokids_core.config import Config, get_config
-from biokids_shell.appbar import EXIT_NOT_FOUND, MODULE, is_app_scope, scope_unit, stop_command
+from biokids_shell.appbar import (
+    EXIT_BAD_UNIT,
+    EXIT_NOT_FOUND,
+    MODULE,
+    is_app_scope,
+    scope_unit,
+    stop_command,
+)
+from biokids_shell.appbar import control as appbar_control
 
 log = logging.getLogger(__name__)
 
 SCOPE_REFUSAL_TIMEOUT_S = 1.5
-"""How long to wait before deciding systemd-run did not refuse.
+"""The longest wait before deciding systemd-run did not refuse.
 
 A refusal happens before the exec and so is immediate; anything still alive
-after this has become the application itself."""
+after this has become the application itself. Usually the exec is seen long
+before (`EXEC_POLL_S`), and the tap is answered then."""
+EXEC_POLL_S = 0.05
+"""How often `/proc/<pid>/exe` is looked at while systemd-run sets the scope up."""
 
+BAR_ANSWER_TIMEOUT_S = 1.0
+"""How long the running app bar gets to show an open app's window (D-208)."""
 BRING_BACK_TIMEOUT_S = 5.0
-"""How long the app bar's helper gets to find an app's window and show it."""
+"""How long the app bar's helper gets, where no bar is running to ask."""
 STILL_OPENING_S = 30.0
 """An app with no window yet this soon after it started is still opening it; a
 second tap waits for it rather than starting another. Later, a scope with no
 window is something left behind, and is stopped before the app starts again."""
 UNIT_COMMAND_TIMEOUT_S = 30.0
+UNIT_STATE_TIMEOUT_S = 5.0
+"""`systemctl --user is-active` for one scope: a tap waits for it."""
+SYSTEMCTL_INACTIVE = frozenset({3, 4})
+"""`is-active`'s "not running" (3, and 4 for a unit systemd has forgotten);
+any other failure is systemd not answering, which says nothing about the app."""
 OPEN_APPS_TIMEOUT_S = 5.0
 """The launcher's page asks every few seconds which apps are open; a slow answer
 is no answer, and the footer stays as it was."""
@@ -95,22 +119,34 @@ class AppLauncher:
     rather than starting a second copy (`_open_again`). Not web tiles: every
     browser window is one Chromium, and their tiles open a window each time."""
     started: dict[str, float] = field(default_factory=dict)
-    """slug -> when its unit started (monotonic): an app still opening its window
-    is told apart from a scope that has none."""
+    """unit -> when it started (monotonic): an app still opening its window is
+    told apart from a scope that has none. By unit, not by tile, so the time is
+    always that of the copy being asked about."""
+    appbar_socket: Path | None = None
+    """Where the running app bar listens (D-208); its usual place when None."""
     _drains: set[asyncio.Task[None]] = field(default_factory=set)
     """Live stderr drains. Held so the event loop cannot collect one mid-flight."""
+    _taps: dict[str, asyncio.Lock] = field(default_factory=dict)
+    """One lock per tile: a second tap waits for the first to be answered, and
+    then finds the app it started instead of starting another."""
 
     async def launch(self, request: LaunchRequest) -> LaunchResult:
         argv = self.build_argv(request)
         if argv is None:
             return LaunchResult(ok=False, error="app.not_allowed")
-        if request.kind == "app":
-            # Not web tiles: every browser window is one Chromium, in the scope
-            # of whichever tile started it first, so "the window of this tile's
-            # scope" can be another tile's site. A web tile opens a window.
+        if request.kind != "app":
+            return await self._start(request, argv)
+        # Not web tiles: every browser window is one Chromium, in the scope of
+        # whichever tile started it first, so "the window of this tile's scope"
+        # can be another tile's site. A web tile opens a window.
+        lock = self._taps.setdefault(request.slug, asyncio.Lock())
+        async with lock:
             again = await self._open_again(request.slug)
             if again is not None:
                 return again
+            return await self._start(request, argv)
+
+    async def _start(self, request: LaunchRequest, argv: list[str]) -> LaunchResult:
         if request.kind == "web" or (request.kind == "builtin" and request.slug == "browser"):
             prepare_browser_profile(self.child_browser_profile(), request.locale)
 
@@ -128,7 +164,8 @@ class AppLauncher:
             *argv,
         ]
 
-        if shutil.which("systemd-run") is None:
+        runner = shutil.which("systemd-run")
+        if runner is None:
             # A development machine, or a session without a user manager. Start
             # the process directly so the launcher is still usable; it will not
             # be accounted for by cgroup, and the log says so rather than
@@ -167,13 +204,11 @@ class AppLauncher:
             #
             # A refusal happens before the exec and is therefore fast, so a short
             # bounded wait separates "systemd said no" from "the app is running".
-            refused = await self._refused_quickly(process, request.slug)
+            refused = await self._refused_quickly(process, request.slug, _resolved(runner))
             if refused:
                 return LaunchResult(ok=False, error="error.unknown")
             if request.kind == "app":
-                self.running.pop(request.slug, None)  # the newest last, for the footer
-                self.running[request.slug] = unit
-                self.started[request.slug] = time.monotonic()
+                self._remember(request.slug, unit)
         return LaunchResult(ok=True, unit=unit)
 
     # ------------------------------------------------------- open it again
@@ -182,7 +217,11 @@ class AppLauncher:
         """The second tap on an open app's tile: its window, not a second copy.
 
         A result when the tap is answered by the app already running; None when
-        it should be started as usual.
+        it should be started as usual. Only a scope systemd says has ended is
+        started again, or one seen with no window long after it started. A bar
+        that could not look - busy, restarting, or no GTK at all - is not an
+        answer to "is it running": three copies of a game the owner was waiting
+        for came from taking it for one (D-208).
         """
         unit = self.running.get(slug)
         if not unit:
@@ -191,23 +230,42 @@ class AppLauncher:
         if shown == 0:
             log.info("%s is open already; its window is in front again", unit)
             return LaunchResult(ok=True, unit=unit)
+        active = await self.unit_state(unit)
+        if active is False:
+            self._forget(slug, unit)
+            return None
         if shown != EXIT_NOT_FOUND:
-            # The helper could not look (no GTK, no display): start it as before.
-            self._forget(slug)
-            return None
-        if not await self.unit_active(unit):
-            self._forget(slug)
-            return None
-        if time.monotonic() - self.started.get(slug, 0.0) < STILL_OPENING_S:
+            log.info(
+                "%s is %s, and its window could not be looked for; not starting it twice",
+                unit,
+                "running" if active else "perhaps running",
+            )
+            return LaunchResult(ok=True, unit=unit)
+        if active is None or self.age(unit) < STILL_OPENING_S:
+            # Still opening its window: a tile tapped again while a slow app starts.
             return LaunchResult(ok=True, unit=unit)
         log.info("%s is running with no window; stopping it to start it again", unit)
         await self.stop_unit(unit)
-        self._forget(slug)
+        self._forget(slug, unit)
         return None
 
-    def _forget(self, slug: str) -> None:
-        self.running.pop(slug, None)
-        self.started.pop(slug, None)
+    def _remember(self, slug: str, unit: str) -> None:
+        old = self.running.pop(slug, None)  # the newest last, for the footer
+        if old is not None:
+            self.started.pop(old, None)
+        self.running[slug] = unit
+        self.started[unit] = time.monotonic()
+
+    def _forget(self, slug: str, unit: str) -> None:
+        """Forget `unit`, and the tile's app only if `unit` is still it."""
+        if self.running.get(slug) == unit:
+            del self.running[slug]
+        self.started.pop(unit, None)
+
+    def age(self, unit: str) -> float:
+        """Seconds since this very unit was started; very old when not known."""
+        since = self.started.get(unit)
+        return float("inf") if since is None else time.monotonic() - since
 
     async def open_apps(self) -> list[str]:
         """The app tiles whose app is still running, in the order they were opened.
@@ -228,9 +286,10 @@ class AppLauncher:
         for slug, unit in apps.items():
             if scope_unit(unit) in active:
                 open_now.append(slug)
-            elif self.running.get(slug) == unit:
-                # Not one started again while systemctl was answering.
-                self._forget(slug)
+            else:
+                # Not one started again while systemctl was answering: that
+                # one is the tile's app now, and `_forget` leaves it be.
+                self._forget(slug, unit)
         return open_now
 
     async def active_units(self, units: Sequence[str]) -> set[str] | None:
@@ -242,25 +301,37 @@ class AppLauncher:
         return None if out is None else active_scopes(scopes, out)
 
     async def bring_back(self, unit: str) -> int | None:
-        """Ask the app bar's helper to show this app's window again.
+        """Ask the app bar to show this app's window again.
 
-        Its exit code: 0 shown, `EXIT_NOT_FOUND` no window, anything else (or
-        None) could not look. The helper is the bar's own code, run once, because
-        the bar is what knows the windows: which are the app's, and which are
-        only minimised.
+        Its answer: 0 shown, `EXIT_NOT_FOUND` no window, anything else (or None)
+        could not look. The bar is what knows the windows - which are the app's,
+        and which are only minimised - so it is asked first, on its own socket
+        (D-208). Only where no bar is running is its code run once as a helper,
+        a new Python that loads GTK, which on a busy machine takes seconds.
         """
+        if not is_app_scope(scope_unit(unit)):
+            return EXIT_BAD_UNIT
+        socket_path = self.appbar_socket or default_appbar_socket()
+        try:
+            return await appbar_control.ask_bar(socket_path, unit, BAR_ANSWER_TIMEOUT_S)
+        except appbar_control.BarNotRunning as exc:
+            log.debug("no app bar to ask (%s); running its helper", exc)
         return await _exit_code(
             [sys.executable, "-m", MODULE, "--bring-back", unit], BRING_BACK_TIMEOUT_S
         )
 
-    async def unit_active(self, unit: str) -> bool:
-        return (
-            await _exit_code(
-                ["systemctl", "--user", "is-active", "--quiet", scope_unit(unit)],
-                UNIT_COMMAND_TIMEOUT_S,
-            )
-            == 0
+    async def unit_state(self, unit: str) -> bool | None:
+        """Whether the app's scope is running; None when systemd does not say."""
+        code = await _exit_code(
+            ["systemctl", "--user", "is-active", "--quiet", scope_unit(unit)],
+            UNIT_STATE_TIMEOUT_S,
         )
+        if code == 0:
+            return True
+        return False if code in SYSTEMCTL_INACTIVE else None
+
+    async def unit_active(self, unit: str) -> bool:
+        return await self.unit_state(unit) is True
 
     async def stop_unit(self, unit: str) -> bool:
         try:
@@ -270,20 +341,44 @@ class AppLauncher:
             return False
         return await _exit_code(argv, UNIT_COMMAND_TIMEOUT_S) == 0
 
-    async def _refused_quickly(self, process: asyncio.subprocess.Process, slug: str) -> bool:
+    async def _refused_quickly(
+        self, process: asyncio.subprocess.Process, slug: str, runner: str | None = None
+    ) -> bool:
         """Did systemd-run refuse, or is the application now running?
 
         A refusal is a non-zero exit within the first moment, before the exec.
         Anything still alive after that has become the application, and waiting
         on it is waiting for the child to finish playing.
+
+        The moment of the exec can be seen: `/proc/<pid>/exe` stops being
+        systemd-run (`runner`) and becomes the app. Once it has, nothing can be
+        refused any more and the tap is answered then - a tenth of a second,
+        usually - instead of after the whole `SCOPE_REFUSAL_TIMEOUT_S` (D-208).
+        Where it cannot be read, the whole wait it is.
         """
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + SCOPE_REFUSAL_TIMEOUT_S
+        pid = getattr(process, "pid", None)
+        watched = (pid, runner) if isinstance(pid, int) and runner is not None else None
+        exited = asyncio.ensure_future(process.wait())
         try:
-            await asyncio.wait_for(process.wait(), timeout=SCOPE_REFUSAL_TIMEOUT_S)
-        except TimeoutError:
-            # Still running: the exec happened. Drain stderr in the background
-            # so a chatty application cannot fill the pipe and block itself.
-            # Held in a set: a task with no reference can be collected
-            # mid-flight, which would put the pipe back where it started.
+            while not exited.done():
+                left = deadline - loop.time()
+                if left <= 0:
+                    break
+                step = left if watched is None else min(EXEC_POLL_S, left)
+                await asyncio.wait({exited}, timeout=step)
+                if not exited.done() and watched is not None and has_execed(*watched):
+                    break
+            still_running = not exited.done()
+        finally:
+            if not exited.done():
+                exited.cancel()
+        if still_running:
+            # The exec happened. Drain stderr in the background so a chatty
+            # application cannot fill the pipe and block itself. Held in a set:
+            # a task with no reference can be collected mid-flight, which would
+            # put the pipe back where it started.
             task = asyncio.create_task(self._drain(process, slug))
             self._drains.add(task)
             task.add_done_callback(self._drains.discard)
@@ -459,6 +554,42 @@ def active_scopes(scopes: Sequence[str], output: str) -> set[str] | None:
     if len(states) != len(scopes):
         return None
     return {scope for scope, state in zip(scopes, states, strict=True) if state == "active"}
+
+
+def default_appbar_socket() -> Path | None:
+    """Where this session's app bar listens: the launcher started it, with the
+    same `$XDG_RUNTIME_DIR` (D-208)."""
+    return appbar_control.socket_path()
+
+
+def process_exe(pid: int, proc: Path = Path("/proc")) -> str | None:
+    """The program process `pid` is running now, or None when that cannot be read."""
+    try:
+        return str((proc / str(pid) / "exe").readlink())
+    except (OSError, ValueError):
+        return None
+
+
+def has_execed(pid: int, runner: str, proc: Path = Path("/proc")) -> bool:
+    """Whether systemd-run (`runner`, its real path) has become the application.
+
+    `systemd-run --scope` sets the scope up and then execs the command in the
+    same process; from then on its `/proc/<pid>/exe` is the app's program (or
+    the interpreter of an app that is a script). A process that cannot be read
+    - gone, or no `/proc` - has not been seen to exec.
+    """
+    exe = process_exe(pid, proc)
+    return exe is not None and exe != runner
+
+
+def _resolved(program: str | None) -> str | None:
+    """A program's real path, as the kernel names it in `/proc/<pid>/exe`."""
+    if program is None:
+        return None
+    try:
+        return str(Path(program).resolve())
+    except (OSError, ValueError, RuntimeError):
+        return None
 
 
 async def _stdout(argv: list[str], within: float) -> str | None:

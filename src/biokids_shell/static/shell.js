@@ -72,6 +72,144 @@
     });
   });
 
+  /* ------------------------------------------------------- opening (D-208) */
+
+  /* A tap on an app opens it from here, with no screen in between: the tile
+   * shows it is opening - a ring that breathes and "Açılıyor…" - and the rest
+   * of the screen stays as it was. That ends when the app's window takes the
+   * focus from the launcher, when the launcher says no (the calm screen, as
+   * before), or after OPENING_MS, whichever comes first. A second tap on a
+   * tile that is opening does nothing. The links stay links: without this
+   * script they lead to the launching screen, which works without it too. */
+  var OPENING_MS = 25000;
+  var opening = Object.create(null); /* slug -> what is shown for it, and its timer */
+  var tileGrid = document.querySelector(".tiles");
+
+  var launchTarget = function (node) {
+    var link = node && node.closest ? node.closest('a[href^="/launch/"]') : null;
+    if (!link || !tileGrid) return null;
+    var slug = link.getAttribute("data-slug");
+    if (!slug) {
+      try {
+        slug = decodeURIComponent(link.getAttribute("href").slice("/launch/".length));
+      } catch (err) {
+        return null;
+      }
+    }
+    return slug ? { link: link, slug: slug } : null;
+  };
+
+  /* The tile itself, and whatever else was tapped for it: an "Açık" button at
+   * the bottom, or the day's card. */
+  var openingMarks = function (slug, link) {
+    var marks = [];
+    var tiles = document.querySelectorAll(".tile[data-slug]");
+    for (var i = 0; i < tiles.length; i += 1) {
+      if (tiles[i].getAttribute("data-slug") === slug) marks.push(tiles[i]);
+    }
+    if (marks.indexOf(link) === -1) marks.push(link);
+    return marks;
+  };
+
+  var endOpening = function (slug, entry) {
+    if (opening[slug] !== entry) return;
+    delete opening[slug];
+    window.clearTimeout(entry.timer);
+    entry.marks.forEach(function (mark) {
+      mark.classList.remove("is-opening");
+      mark.removeAttribute("aria-busy");
+      var label = mark.querySelector(".tile__opening");
+      if (label) label.parentNode.removeChild(label);
+    });
+  };
+
+  var showOpening = function (slug, link) {
+    var entry = { marks: openingMarks(slug, link), timer: null, superseded: false };
+    entry.marks.forEach(function (mark) {
+      mark.classList.add("is-opening");
+      mark.setAttribute("aria-busy", "true");
+      if (mark.classList.contains("tile") && !mark.querySelector(".tile__opening")) {
+        var label = document.createElement("span");
+        label.className = "tile__opening";
+        label.setAttribute("role", "status");
+        label.textContent = (window.BIOKIDS_STRINGS && window.BIOKIDS_STRINGS.opening) || "…";
+        mark.appendChild(label);
+      }
+    });
+    opening[slug] = entry;
+    entry.timer = window.setTimeout(function () {
+      endOpening(slug, entry);
+    }, OPENING_MS);
+    return entry;
+  };
+
+  /* An app's window took the focus: whatever was opening has opened. A "no"
+   * that arrives after that is about a tap the child has left behind. */
+  var openingDone = function () {
+    Object.keys(opening).forEach(function (slug) {
+      var entry = opening[slug];
+      entry.superseded = true;
+      endOpening(slug, entry);
+    });
+  };
+
+  var refused = function (slug, entry, reason) {
+    endOpening(slug, entry);
+    if (entry.superseded) return;
+    window.location.href = reason === null
+      ? "/blocked"
+      : "/blocked?reason=" + encodeURIComponent(reason || "") +
+        "&slug=" + encodeURIComponent(slug);
+  };
+
+  var openApp = function (slug, link) {
+    var entry = showOpening(slug, link);
+    fetch("/launch/" + encodeURIComponent(slug), {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+    })
+      .then(function (response) {
+        return response.json();
+      })
+      .then(function (result) {
+        if (!result || !result.ok) {
+          refused(slug, entry, (result && result.reason) || "");
+        } else if (result.builtin === "shutdown") {
+          window.location.href = "/shutdown";
+        } else if (result.builtin) {
+          endOpening(slug, entry);
+        }
+        /* Otherwise the app is starting, or was brought back: the ring stays
+         * until its window is in front. */
+      })
+      .catch(function () {
+        refused(slug, entry, null);
+      });
+  };
+
+  if (tileGrid) {
+    document.addEventListener("click", function (event) {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      var target = launchTarget(event.target);
+      if (!target) return;
+      event.preventDefault();
+      if (opening[target.slug]) return;
+      openApp(target.slug, target.link);
+    });
+    window.addEventListener("blur", function (event) {
+      if (event.target === window) openingDone();
+    });
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "hidden") openingDone();
+    });
+    /* A page brought back from the browser's cache is not opening anything. */
+    window.addEventListener("pageshow", function (event) {
+      if (event.persisted) openingDone();
+    });
+  }
+
   /* ------------------------------------------------------------ launching */
 
   var launchSlug = document.getElementById("launch-slug");

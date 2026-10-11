@@ -68,6 +68,12 @@ def no_real_system_commands(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(filtering, "FILTER_SETTLE_PAUSE", 0.0)
 
+    # Nor the app bar of the session the tests run in (D-208): a launcher under
+    # test that asked it would bring the developer's own windows to the front.
+    from biokids_shell import launcher
+
+    monkeypatch.setattr(launcher, "default_appbar_socket", lambda: None)
+
     # The lockdown's own checks (D-172) ask the real logind about a session id
     # and the real biokids-child group. On a machine with BioKids installed
     # those exist - "c1" is the greeter's session - and a test must never end
