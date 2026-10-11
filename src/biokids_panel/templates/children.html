@@ -16,6 +16,11 @@
         <span class="muted small">{{ _('age_band.' ~ child.age_band) }}</span>
       </div>
       <p class="muted small">{{ _('child.unix_user') }}: <code>{{ child.unix_user }}</code></p>
+      {# D-207: tiles an upgrade added that suit this child and are not ticked. #}
+      {% set new_line = new_lines.get(child.id) %}
+      {% if new_line %}
+        <p class="small"><a href="/children/{{ child.id }}/apps">{{ new_line }}</a></p>
+      {% endif %}
       <div class="actions">
         <a class="btn" href="/children/{{ child.id }}/time">{{ _('time.title') }}</a>
         <a class="btn" href="/children/{{ child.id }}/apps">{{ _('apps.title') }}</a>

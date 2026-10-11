@@ -16,7 +16,7 @@ import datetime as dt
 import json
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from biokids_core import search_filter
@@ -256,6 +256,22 @@ def app_is_allowed(session: Session, child_id: int, app_slug: str) -> bool:
 def suggested_apps_for_age(session: Session, age: int) -> list[App]:
     """What the wizard pre-selects. Age-appropriate, in catalog order (D-20)."""
     return [app for app in list_apps(session) if app.min_age <= age <= app.max_age]
+
+
+def apps_saved_at(session: Session, child_id: int) -> dt.datetime | None:
+    """When a parent last saved this child's apps screen, in naive UTC (D-207).
+
+    Read from the audit log, which has a row for every save, changed or not.
+    The upgrade's own hand-down (D-203, actor `system`) is not a parent
+    answering, so only a parent's rows count.
+    """
+    return session.scalar(
+        select(func.max(AuditLog.ts)).where(
+            AuditLog.action == "apps_changed",
+            AuditLog.target == f"child:{child_id}",
+            AuditLog.actor.like("parent%"),
+        )
+    )
 
 
 # --------------------------------------------------------------- settings

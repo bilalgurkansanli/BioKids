@@ -642,6 +642,22 @@ tr:last-child td { border-bottom: 0; }
   gap: 2px;
 }
 
+/* D-207: a tile an upgrade added in the last thirty days. The requests
+ * banner's amber, small enough to sit beside a name without wrapping it. */
+.badge-new {
+  display: inline-block;
+  margin-left: var(--sp-1);
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-pill);
+  background: var(--bio-amber);
+  color: #3a2a00;
+  font-size: .7rem;
+  font-weight: 600;
+  line-height: 1.6;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 footer.legal {
   max-width: 44rem;
   margin: var(--sp-5) auto var(--sp-4);

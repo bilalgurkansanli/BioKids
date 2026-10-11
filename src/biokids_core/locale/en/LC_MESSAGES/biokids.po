@@ -530,6 +530,16 @@ msgstr "For ages {min}–{max}"
 msgid "apps.always_on"
 msgstr "Volume, brightness and the Shut down button are always there."
 
+# Tiles an upgrade added in the last thirty days (D-207)
+msgid "apps.new"
+msgstr "New"
+
+msgid "apps.new.line.one"
+msgstr "A new app suits this child's age: {names}."
+
+msgid "apps.new.line.many"
+msgstr "{count} new apps suit this child's age: {names}."
+
 msgid "time.title"
 msgstr "Time rules"
 

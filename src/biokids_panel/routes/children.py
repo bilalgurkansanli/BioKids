@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import logging
+from collections.abc import Mapping, Sequence
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Form, Response
@@ -13,9 +14,18 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from biokids_core import repo, search_filter
-from biokids_core.catalog import ALWAYS_ON_TILES, enable_for_child, load_catalog, sync_catalog
+from biokids_core.catalog import (
+    ALWAYS_ON_TILES,
+    Catalog,
+    CatalogEntry,
+    enable_for_child,
+    load_catalog,
+    new_apps,
+    new_for_child,
+    sync_catalog,
+)
 from biokids_core.db.models import CategoryLimit, Child, Policy
-from biokids_core.errors import IpcError
+from biokids_core.errors import ConfigError, IpcError
 from biokids_core.ipc import Op
 from biokids_core.provision import unprovision, unprovision_via_systemd
 from biokids_core.types import AgeBand, Category, EndAction, FilterMode
@@ -44,11 +54,7 @@ router = APIRouter()
 def children_list(view: View) -> Response:
     if blocked := view.guard():
         return blocked
-    return view.render(
-        "children.html",
-        children=repo.list_children(view.session),
-        this_year=dt.date.today().year,
-    )
+    return _children_page(view)
 
 
 @router.post("/children")
@@ -77,13 +83,7 @@ def children_add(
         locale=locale,
     )
     if child is None:
-        return view.render(
-            "children.html",
-            status_code=400,
-            children=repo.list_children(session),
-            this_year=dt.date.today().year,
-            error=view.tr(error),
-        )
+        return _children_page(view, status_code=400, error=view.tr(error))
     repo.audit(
         session,
         actor=view.actor,
@@ -417,8 +417,9 @@ def apps_form(view: View, child_id: int) -> Response:
     if child is None:
         return view.not_found()
     catalog = load_catalog(config=view.ctx.config)
-    age = child.age_on(dt.date.today())
+    today = dt.date.today()
     entries = [e for e in catalog.entries if e.slug not in ALWAYS_ON_TILES]
+    new = new_apps(view.session)
     return view.render(
         "child_apps.html",
         child=child,
@@ -426,7 +427,9 @@ def apps_form(view: View, child_id: int) -> Response:
         sites=[e for e in entries if e.kind != "app"],
         enabled=set(_enabled_apps(view.session, child_id)),
         installed={e.slug for e in entries if e.available()},
-        for_age={e.slug for e in catalog.for_age(age)},
+        for_age={e.slug for e in catalog.for_age(child.age_on(today))},
+        new=set(new),
+        new_line=_new_apps_line(view, _new_for(view.session, catalog, new, child, today)),
     )
 
 
@@ -750,6 +753,66 @@ def _enabled_apps(session: Session, child_id: int) -> list[str]:
         link.app_slug
         for link, _app in repo.list_child_apps(session, child_id, only_enabled=True)
     )
+
+
+def _children_page(view: PanelView, status_code: int = 200, **values: Any) -> HTMLResponse:
+    """The children screen, with a line under each child whose new tiles are
+    worth a look (D-207)."""
+    children = repo.list_children(view.session)
+    return view.render(
+        "children.html",
+        status_code=status_code,
+        children=children,
+        this_year=dt.date.today().year,
+        new_lines=_new_lines(view, children),
+        **values,
+    )
+
+
+def _new_lines(view: PanelView, children: Sequence[Child]) -> dict[int, str]:
+    """child id -> the sentence about their new tiles, for those who have one."""
+    new = new_apps(view.session)
+    if not new:
+        return {}  # most of the year: nothing arrived this month, nothing to read
+    try:
+        catalog = load_catalog(config=view.ctx.config)
+    except ConfigError as exc:
+        # A hint is not worth the children screen, which draws without it.
+        log.warning("new apps are not shown: %s", exc)
+        return {}
+    today = dt.date.today()
+    lines = {
+        child.id: _new_apps_line(view, _new_for(view.session, catalog, new, child, today))
+        for child in children
+    }
+    return {child_id: line for child_id, line in lines.items() if line}
+
+
+def _new_for(
+    session: Session,
+    catalog: Catalog,
+    new: Mapping[str, dt.datetime],
+    child: Child,
+    today: dt.date,
+) -> list[CatalogEntry]:
+    """The new tiles worth a sentence to `child`'s parent (D-207)."""
+    return new_for_child(
+        catalog,
+        new,
+        age=child.age_on(today),
+        enabled=set(_enabled_apps(session, child.id)),
+        answered_at=repo.apps_saved_at(session, child.id),
+    )
+
+
+def _new_apps_line(view: PanelView, entries: Sequence[CatalogEntry]) -> str:
+    """One sentence naming them in the panel's language, or "" for none."""
+    if not entries:
+        return ""
+    turkish = view.tr.locale == "tr"
+    names = ", ".join(entry.name_tr if turkish else entry.name_en for entry in entries)
+    key = "apps.new.line.one" if len(entries) == 1 else "apps.new.line.many"
+    return view.tr(key, count=len(entries), names=names)
 
 
 def _assistant_status(ctx: PanelContext) -> dict[str, Any]:
