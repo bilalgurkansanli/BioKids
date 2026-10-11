@@ -1227,7 +1227,7 @@ scopes() { as_elif systemctl --user list-units --plain --no-legend 'biokids-app-
    session's PATH:
 
    ```bash
-   printf '#!/bin/sh\necho "tuxpaint: cannot start" >&2\nexit 1\n' | sudo tee /usr/local/bin/tuxpaint >/dev/null
+   printf '#!/bin/sh\nsleep 0.5\necho "tuxpaint: cannot start" >&2\nexit 1\n' | sudo tee /usr/local/bin/tuxpaint >/dev/null
    sudo chmod 755 /usr/local/bin/tuxpaint
    ```
 
@@ -1236,9 +1236,11 @@ scopes() { as_elif systemctl --user list-units --plain --no-legend 'biokids-app-
    journal says "ended as it started, with exit status 1" and "tuxpaint: cannot
    start". Back home, tap it again: the same two seconds, never 25 seconds of the
    ring. Then `sudo rm /usr/local/bin/tuxpaint` and tap it once more: Tux Paint
-   opens.
+   opens. (The half-second `sleep` matters: an app that fails before the launcher
+   has seen it start is a refusal, as before D-208 - the calm screen at once and
+   "systemd-run refused ..." in the journal.)
 
-### 8.10 Insights: the week in plain words (D-206)
+### 8.11 Insights: the week in plain words (D-206)
 
 The upgrade's migration adds one table; the daemon fills it from the tick that
 counts the minutes. With Elif logged in and using an app for a few minutes:
@@ -1277,7 +1279,7 @@ minute). Then, on the phone, **Analiz** in the bottom bar:
 6. Sunday after 19:00, with mail set up (D-177), the week's mail ends each child's
    days with "Öne çıkanlar:" and at most three sentences, and names no site.
 
-### 8.11 The apps an upgrade brought (D-207)
+### 8.12 The apps an upgrade brought (D-207)
 
 On this machine nothing is marked new, and that is right. A tile is new only when
 an upgrade's `sync-catalog` adds its slug to a database that already had tiles.

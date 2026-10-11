@@ -17,7 +17,8 @@ this module works out:
 Everything is computed when it is read, from the tables retention already
 prunes (D-189): `ledger_day`, `usage_tick`, `usage_hour`, the `visit` events,
 `access_request`, `ai_alert` and the `quota_exhausted` audit rows. Nothing is
-stored and nothing leaves the machine. There is no model: every highlight is a
+stored, and nothing leaves the machine but the week in the parent's own Sunday
+mail (D-177). There is no model: every highlight is a
 rule written down below, so the same week always reads the same way.
 
 Three rules shape the arithmetic:

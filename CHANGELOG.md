@@ -18,7 +18,7 @@ Nothing yet.
 ## [0.1.0-2] - 2026-10-07
 
 The v1.0 release candidate. Not published: the APT repository waits for its archive
-key (`docs/ROADMAP.md`). Decisions D-171 to D-196; read them in `docs/DECISIONS.md`.
+key (`docs/ROADMAP.md`). Decisions D-171 to D-208; read them in `docs/DECISIONS.md`.
 An upgrade from 0.1.0-1 runs whichever of the migrations `3e8b51c0d2a7` (request
 kinds), `9a4f2c7e1b36` (day schedules) and `c41d8e0f5a92` (the cuts) the database has
 not seen, after `biokids-admin backup-db` has copied it; it moves the virtual-terminal
@@ -27,6 +27,22 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
 
 ### Added
 
+- **Analiz, the week in plain words** (D-206): a new panel screen, in the menu and a tap
+  from **Geçmiş**, for this week, last week or the last 30 days. First at most five
+  sentences a parent reads at a glance - "Günlük süre 3 gün doldu", "1 gece, saat 21:00
+  ile 06:00 arasında da kullanıldı" - some with a gentle suggestion and a link to the
+  setting that acts on it; then a bar per day against its quota, where the time went by
+  kind of app, the apps used more or less than before, the hours of the day, the
+  requests and the sites. Rules, not a model, worked out on the machine when the page is
+  read. **Bugün** gets a "Bu hafta" card, and the Sunday mail ends each child's week with
+  the same highlights, never a site. New table `usage_hour` (migration `077ca4545f23`),
+  screen time per hour of the day, kept 30 days like the sites; an upgraded machine
+  starts it empty.
+- **New apps are marked after an upgrade** (D-207). For thirty days **Çocuklar →
+  Uygulamalar** marks each tile an upgrade added with "Yeni", and one line names those
+  that suit the child and are not on their screen yet; **Çocuklar** links to it. Nothing
+  is ticked for the parent, and a fresh install marks nothing. New setting
+  `catalog_new_apps`; no migration.
 - **Bugünün sürprizi** (D-203): a strip under the launcher's header with something new
   every day - a fact, a riddle whose answer opens with a tap, an animal, a word, or a
   small task that can open one of the child's own apps - inside a theme that changes
@@ -159,6 +175,19 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
 
 ### Fixed
 
+- **The app bar was too big for a small window** (D-205). It now fits the window under
+  it: the whole bar from 1000 pixels, a compact one half as wide (smaller buttons, the
+  minutes, 🔉 and 🔊 without the slider) from 520, and 🏠 and ✕ alone below that.
+- **An app that shrank its window back as it opened stayed small** (D-205). KDE's apps,
+  such as Yapboz, put back their saved size after BioKids maximised them; the bar now
+  maximises a new window again in its first seconds - at most twice, never under a
+  finger, never a game with a fixed size.
+- **Opening an app kept the child on "… açılıyor", and could start it two or three
+  times** (D-208). The tile itself shows it is opening, with a ring and "Açılıyor…",
+  until the app's window is in front; the rest of the launcher stays usable and a
+  second tap is ignored. An app still running is never started again because the app
+  bar could not look in time, and the running bar brings an open app back over its own
+  socket instead of a new process each time.
 - **"Büyüğüme sor", "Biraz daha süre iste" and "Evet, kapat" showed a blank page**
   (D-204). The launcher's pages told Chromium to send no referrer, so their forms
   arrived with `Origin: null` and the launcher refused them as forged. They now send

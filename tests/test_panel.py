@@ -2702,7 +2702,7 @@ def test_insights_say_where_the_sentences_go(
         session.commit()
     page = html.unescape(client.get("/insights").text)
     assert "hiçbir yere gönderilmez" not in page
-    assert "Pazar akşamı haftalık e-postayla" in page
+    assert "Pazar akşamı kendi e-posta sunucunuz" in page
 
 
 def test_insights_are_in_the_menu_and_a_tap_from_history(

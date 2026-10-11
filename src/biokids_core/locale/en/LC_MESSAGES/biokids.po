@@ -1950,7 +1950,7 @@ msgid "insights.intro"
 msgstr "How {name} uses the computer, in short. It is all worked out on this computer and sent nowhere."
 
 msgid "insights.intro.mailed"
-msgstr "How {name} uses the computer, in short. It is all worked out on this computer; only the highlights go out, to you, in the Sunday email through your own mail server."
+msgstr "How {name} uses the computer, in short. It is all worked out on this computer; only the weekly summary (the minutes per day and the highlights) goes out, to you, in the Sunday email through your own mail server."
 
 msgid "insights.period.label"
 msgstr "Period"

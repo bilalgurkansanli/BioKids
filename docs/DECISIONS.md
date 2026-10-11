@@ -1114,7 +1114,8 @@ raises itself for the warnings and the end of the day.
   topmost window of that scope again instead of starting a second copy. A scope with
   no window is left 30 s to open one, then stopped and the app started afresh. Web
   tiles open a window each time: all of them are one Chromium, in the scope of
-  whichever tile started it.
+  whichever tile started it. *Partly superseded by D-208:* the running bar is asked
+  over a socket, and a bar that cannot look never leads to a second copy.
 - 🔉 and 🔊 step the app's own streams by ten percent, 0 to 100, never the machine's,
   so Zio and Sio stay audible: `pactl -f json list sink-inputs` (its text form when
   the JSON cannot be read; `pulseaudio-utils` talks to Debian 13's pipewire-pulse), the
@@ -1196,7 +1197,7 @@ height too low and well left of the window's corner.
   child never needs a floating window, and the close button stays in the corner
   (D-163). A fixed-size window (Frozen Bubble) or a full-screen one is only followed.
   Without a button down nothing is maximised, so an app that sizes itself is not
-  fought; and a window still changing after 1.5 s without one (10 s with one) gets the
+  fought (*amended by D-205:* except a new window in its first seconds); and a window still changing after 1.5 s without one (10 s with one) gets the
   bar back, following it, so the way out is never gone for long.
 - Where the bar goes is the window's frame as the X server has it at that moment: the
   contents' position and size (a foreign GdkWindow: XTranslateCoordinates,
@@ -1217,7 +1218,8 @@ height too low and well left of the window's corner.
   (on this child's launcher port, loopback only, no proxy) reports them every 15 s -
   never worked out in the bar - orange under five minutes and red under one, as the
   launcher's banners; under it the clock, for 8-10 only, as on the launcher (UX.md
-  §2.2). Showing it to 4-7 too is a one-line change if the owner wants it.
+  §2.2). Showing it to 4-7 too is a one-line change if the owner wants it. *The
+  owner asked for it the same day: the clock shows for every child (7c6b1e7).*
 - The launcher's own sound bar (D-199) can be dragged or tapped anywhere along its
   64-pixel height (pointer events, `touch-action: none`) and is a slider to a screen
   reader and the arrow keys; it posts at most every 120 ms and once where the finger
@@ -1364,3 +1366,118 @@ Four faults, each found by doing it in a real Chromium, which the tests' client 
   1.2.1.
 - **A new profile invited the child to sign in to Chromium** although sign-in was off;
   the policy also sets `SigninInterceptionEnabled` and `PromotionsEnabled` to false.
+
+**D-205 [claude] The app bar fits the window it sits on; a new window fills the screen.** (2026-10-11)
+The owner on the VM: "on some small things this bar stays far too big". It was 544 pixels
+wide whatever was under it: over Palapeli, open in a window a little wider than that, it
+covered nearly the whole title bar; over Frozen Bubble's fixed 640 x 480, most of it.
+- **Three sizes** (`appbar.bar_tier`), chosen each time the bar is placed from the width
+  of the window under it, in CSS pixels and only the part on the monitor: the whole bar
+  (544 px) from 1000 pixels; a compact one (284 px) from 520 - buttons 48 wide and the
+  title bar's 64 tall with 44-pixel faces, the minutes in a smaller type without the
+  clock, 🔉 and 🔊 without the slider; below that 🏠 and ✕ alone (96 px). Each threshold
+  is the narrowest window over which that bar takes no more than 55%, so every app that
+  fills a screen 1024 or more wide keeps every control and Frozen Bubble gets the compact
+  bar. The compact targets are UX.md §2.4's one exception to 64 x 64 for 4-7.
+- **Only on a change, and nothing feeds back.** The tier is a CSS class on the bar; a
+  change hides what the tier does not show, has GTK measure again, asks the window for
+  1 x 1 (a GTK 3 window does not shrink by itself) and places the bar by its new width.
+  The tier depends on the app's window alone, so the bar's own size cannot change it. The
+  minutes' box shows only while it holds something - not while the launcher cannot say
+  the minutes (the daemon restarting during an upgrade) - so the compact bar has no gap.
+- **A new window fills the screen** (`appbar.Filler`). devilspie2 maximises every
+  ordinary window as it maps (D-163), and KDE's apps then put back the size they saved,
+  as Palapeli did. The first time a window is in front it is maximised if it is an
+  ordinary window that can be and is not. When libwnck reports it leaving maximisation
+  with no finger down, or from 1.5 s on if nothing is reported, it is looked at again
+  and maximised once more, until 6 s after it was first seen: at most twice, then
+  never. Never a dialog, a fixed-size window, a window under a finger, or one open
+  before the bar started; and the bar stays off a window it asked to maximise until the
+  window settles, so it is never shown on the small window first.
+
+**D-206 [claude] Insights: the week in plain words.** (2026-10-11)
+The owner asked for analysis in the parent panel. A parent who is not technical
+(principle 6) wants to know whether anything changed, where the time went and whether to
+do something about it, not a dashboard. **Analiz** (`/insights`), in the menu and a tap
+from **Geçmiş**, shows one child for **Bu hafta** (Monday to Sunday, the default),
+**Geçen hafta** or **Son 30 gün**: at most five highlights first, then the numbers as
+tiles and bars the server draws - a bar per day against its quota, where the time went by
+kind of app, the apps with "daha çok", "daha az", "aynı" or "yeni", the hours of the day,
+the requests and the sites. No script, no chart library (D-129). Today gets a "Bu hafta"
+card with three highlights per child, and the Sunday mail (D-177) ends each child's week
+with the same three; it never names a site.
+- **Rules, not a model.** `biokids_core.insights.highlights` is a list of weighted rules,
+  each a catalogue key with parameters: an assistant alert, a refused search the child
+  asked about, a change in the daily average, the time running out on two days or more,
+  use late at night, requests that expired unanswered, where most of the time went,
+  minutes earned, weekends far from weekdays, many asks for time, the busiest hours, a
+  week the time never ran out. A highlight says what happened, never what it says about
+  the child; a test refuses judgement words. Some carry one gentle suggestion and a link
+  to the setting that acts on it - a games limit, earned time, the allowed hours, the
+  alert mail - and say nothing once it is on.
+- **Honest arithmetic.** Today counts in totals, never in an average or a comparison; a
+  period still under way is compared with the same days one period back. Days before
+  BioKids knew the child are left out, not counted as zeros. A comparison needs ten
+  minutes a day on average over at least three days on the earlier side (or as many as
+  have finished), and a rise beyond +200% is said in words ("iki katından fazla") - a
+  child added last Friday is not "up 900%". "Yeni" is decided against the whole period
+  before. Late use is counted in nights, 00:00-06:00 belonging to the evening before. A
+  request still waiting is "bekliyor", never "cevapsız": only one that expired unanswered
+  is. The day's time ran out on the days the daemon wrote `quota_exhausted`.
+- **When in the day.** Nothing recorded it, so: `usage_hour(child_id, day, hour,
+  seconds)`, migration `077ca4545f23`, filled by the ledger at the one place it adds to
+  `general_s` (split at the hour, never across midnight), after the ledger's commit in a
+  transaction of its own: a failure costs the chart, never a tick (D-139), and nothing
+  that enforces reads it. It is the most personal of the aggregates, so it is kept for
+  `activity_days` (30) with the sites, not `usage_days` (D-189).
+- Everything else is computed when read, one indexed query per table. The intro says
+  plainly what leaves the machine: nothing, or, with the weekly mail on, the week's
+  minutes and highlights to the parent. Extends D-37 and D-192.
+
+**D-207 [claude] A parent sees which apps an upgrade brought.** (2026-10-11)
+D-203 added eight apps, and a child who already existed got none of them but Marble
+(through `inherits`): a family's tiles are the ones its parent ticked (D-164), and nothing
+told the parent the new ones were there.
+- `sync_catalog` writes each slug it adds, with the time, to the setting
+  `catalog_new_apps` (JSON; no schema change), for thirty days - but nothing on the first
+  sync into an empty table, a fresh install, where every tile would be new. A time in the
+  future (a wrong clock during the upgrade) is brought back to the present.
+- **Çocuklar → Uygulamalar** puts "Yeni" beside each such tile, and one line names those
+  that suit the child (what a new child of that age would be given), can start on the
+  machine and are not ticked: "Bu çocuğun yaşına uygun 2 yeni uygulama henüz ekranında
+  yok: Patates Kafa, Hafıza. Eklemek için işaretleyin." **Çocuklar** shows it under the
+  child as a link to that screen.
+- A parent's save of that child's apps after the apps arrived answers the line (the
+  newest `apps_changed` row by a parent); the hand-down's `system` rows, a save from
+  before the upgrade and another child's do not. The "Yeni" stays its thirty days.
+  Nothing is ticked for the parent: the child's screen changes only by D-203's
+  hand-down. A machine that already had these apps shows nothing new (VM-RUNBOOK §8.12).
+
+**D-208 [claude] Opening an app is answered at once, on its tile, and never twice.** (2026-10-11)
+The owner on the VM: whatever the app, "Yapboz açılıyor" stayed up "for a very, very long
+time". That session's journal had palapeli-3, -4 and -5 running at once. Measured: the
+POST that starts an app took 1.59 s, all but 0.09 s of it a fixed wait; Palapeli's window
+came 6.9 s later; a second tap on an open app took 1.46 s, because `bring_back` started a
+new Python that loaded GTK and libwnck every time, and on a busy machine it ran out of
+its 5 s and `_open_again` took "could not look" for "not running" and started another.
+- **No screen in between.** A tap on a tile, an "Açık" button or the day's card posts
+  `/launch/<slug>` from the home page. The tile gets a teal ring breathing on its edge and
+  "Açılıyor…" where its name was; the rest of the screen stays usable and a second tap
+  on it does nothing. It ends when the launcher loses the focus (the app's window took
+  it), on a refusal (the calm Blocked screen), or after 25 s; an answer for a ring that
+  has already ended shows nothing. Without JavaScript the old screen remains, with only
+  the icon, the name and an "Aç" button.
+- **Never two copies.** Taps on one tile are taken one at a time, and an app whose scope
+  is running is never started again because the bar could not look: only a scope systemd
+  says has ended is forgotten. D-197's rule stays - no window 30 s after that very unit
+  started, and it is stopped and started afresh.
+- **The bar is asked, not a new Python.** The running bar listens on
+  `$XDG_RUNTIME_DIR/biokids-appbar.sock` (0600; a peer of another uid is refused): one line
+  in, `bring-back <scope> <time>`, the helper's exit code out, served on the GTK main loop.
+  A request more than 10 s old by the launcher's clock is dropped, so a frozen bar never
+  raises a window long after the tap. The old helper runs only where no bar listens.
+- **Answered sooner.** A launch is answered once `/proc/<pid>/exe` shows systemd-run has
+  become the app (every 50 ms; 1.5 s is the upper bound), and `report_activity` runs
+  after the answer. The launcher keeps watching for the rest of the 1.5 s: an app that
+  exits non-zero then is forgotten, and the page, asking `/running` two seconds after a
+  yes, gives its tile the calm Blocked screen, as the old wait did.

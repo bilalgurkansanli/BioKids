@@ -1950,7 +1950,7 @@ msgid "insights.intro"
 msgstr "{name} bilgisayarı nasıl kullanıyor, kısaca. Hepsi bu bilgisayarda hesaplanır, hiçbir yere gönderilmez."
 
 msgid "insights.intro.mailed"
-msgstr "{name} bilgisayarı nasıl kullanıyor, kısaca. Hepsi bu bilgisayarda hesaplanır; yalnızca öne çıkanlar, Pazar akşamı haftalık e-postayla kendi e-posta sunucunuz üzerinden size gönderilir."
+msgstr "{name} bilgisayarı nasıl kullanıyor, kısaca. Hepsi bu bilgisayarda hesaplanır; yalnızca haftalık özet (günlük süreler ve öne çıkanlar) Pazar akşamı kendi e-posta sunucunuz üzerinden size gönderilir."
 
 msgid "insights.period.label"
 msgstr "Dönem"
