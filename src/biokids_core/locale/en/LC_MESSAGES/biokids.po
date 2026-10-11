@@ -364,11 +364,14 @@ msgstr "Search"
 msgid "common.loading"
 msgstr "Loading"
 
-msgid "common.coming_soon"
-msgstr "This section is coming soon"
+msgid "settings.per_child.title"
+msgstr "Each child's own settings"
 
-msgid "common.coming_soon.help"
-msgstr "This feature arrives in the next release. You can skip it for now."
+msgid "settings.per_child.help"
+msgstr "Sites and blocked searches, apps, time rules and the assistant are on each child's own page."
+
+msgid "settings.per_child.open"
+msgstr "Go to Children"
 
 # --- sign in ---
 

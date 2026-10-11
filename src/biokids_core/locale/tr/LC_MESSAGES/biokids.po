@@ -364,11 +364,14 @@ msgstr "Ara"
 msgid "common.loading"
 msgstr "Yükleniyor"
 
-msgid "common.coming_soon"
-msgstr "Bu bölüm yakında"
+msgid "settings.per_child.title"
+msgstr "Her çocuğun kendi ayarları"
 
-msgid "common.coming_soon.help"
-msgstr "Bu özellik bir sonraki sürümde geliyor. Şimdilik atlayabilirsiniz."
+msgid "settings.per_child.help"
+msgstr "Siteler ve yasaklı aramalar, uygulamalar, süre kuralları ve asistan her çocuğun kendi sayfasındadır."
+
+msgid "settings.per_child.open"
+msgstr "Çocuklara git"
 
 # --- giriş ---
 

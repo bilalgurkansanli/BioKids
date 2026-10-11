@@ -635,6 +635,21 @@ def test_settings_still_renders_without_the_daemon(
     assert client.get("/settings").status_code == 200
 
 
+def test_settings_say_where_sites_and_the_assistant_are(
+    config: Config, db: Database, family_ready: None
+) -> None:
+    """The card said site blocking and the assistant were "coming soon", long
+    after both arrived; it now points to each child's own page."""
+    app = create_app(config)
+    app.state.ctx.client = FakeDaemon(up=True)  # type: ignore[assignment]
+    client = TestClient(app)
+    login(client)
+    page = client.get("/settings").text
+    assert "yakında" not in page
+    assert "Her çocuğun kendi ayarları" in page
+    assert 'href="/children"' in page
+
+
 # ------------------------------------------------------------------- pages
 
 

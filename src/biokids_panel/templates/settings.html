@@ -166,12 +166,12 @@
     {% endif %}
   </section>
 
+  {# Where a parent who looks here for sites or the assistant finds them: they
+     are each child's own (D-167, D-202, D-165). This card said "coming soon"
+     about both long after they came. #}
   <section class="card card--flat">
-    <h2>{{ _('common.coming_soon') }}</h2>
-    <p class="muted">{{ _('common.coming_soon.help') }}</p>
-    <ul class="muted small">
-      <li>{{ _('wizard.filter.title') }}</li>
-      <li>{{ _('wizard.extras.title') }}</li>
-    </ul>
+    <h2>{{ _('settings.per_child.title') }}</h2>
+    <p class="muted">{{ _('settings.per_child.help') }}</p>
+    <a class="btn btn--quiet" href="/children">{{ _('settings.per_child.open') }}</a>
   </section>
 {% endblock %}
