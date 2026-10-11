@@ -116,6 +116,10 @@ PEAK_SECOND_HOUR: Final = 0.25
 
 WEEKEND_RATIO: Final = 1.5
 WEEKEND_MIN_SECONDS: Final = 30 * 60
+WEEKEND_MIN_DAYS: Final = 2
+"""Finished days on each side before weekdays and weekends are set side by side.
+On a Sunday only Saturday is over, and on the VM a Saturday the machine was off
+made "the weekend" an average of 0 minutes over that one day."""
 
 SHARE_MIN_SECONDS: Final = 30 * 60
 """Shares of the time are said only once there is half an hour to share."""
@@ -575,8 +579,8 @@ def summarize(facts: Facts, period: Period, span: Span, today: dt.date) -> Insig
         counted_days=sum(1 for day in shown if tracked(day)),
         finished_days=len(finished),
         average_s=_average([seconds_on(day) for day in finished]),
-        weekday_average_s=_average([seconds_on(day) for day in weekdays]),
-        weekend_average_s=_average([seconds_on(day) for day in weekend]),
+        weekday_average_s=_average([seconds_on(day) for day in weekdays], WEEKEND_MIN_DAYS),
+        weekend_average_s=_average([seconds_on(day) for day in weekend], WEEKEND_MIN_DAYS),
         comparison=comparison,
         ran_out_days=len(ran_out_shown),
         shares=_shares(facts, shown_set, total),
@@ -635,8 +639,8 @@ def _compare(
     )
 
 
-def _average(values: list[int]) -> int | None:
-    return round_half_up(sum(values) / len(values)) if values else None
+def _average(values: list[int], at_least: int = 1) -> int | None:
+    return round_half_up(sum(values) / len(values)) if len(values) >= max(1, at_least) else None
 
 
 def _shares(facts: Facts, days: set[dt.date], total: int) -> tuple[Share, ...]:

@@ -152,6 +152,15 @@ def test_weekdays_and_weekends_are_averaged_apart() -> None:
     assert not found.includes_today
 
 
+def test_one_finished_weekend_day_is_not_a_weekend() -> None:
+    """On a Sunday only Saturday is over: on the VM, a Saturday the machine was off
+    made "the weekend" 0 minutes a day beside the weekdays."""
+    found = week(SUNDAY, general=days(MONDAY, 3600, 3600, 3600, 3600, 3600, 0, 7200))
+    assert found.weekday_average_s == 3600
+    assert found.weekend_average_s is None
+    assert not any(h.key == "insights.h.weekend" for h in highlights(found, CTX))
+
+
 # ------------------------------------------------------------ comparisons
 
 

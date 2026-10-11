@@ -1423,7 +1423,9 @@ with the same three; it never names a site.
   child added last Friday is not "up 900%". "Yeni" is decided against the whole period
   before. Late use is counted in nights, 00:00-06:00 belonging to the evening before. A
   request still waiting is "bekliyor", never "cevapsız": only one that expired unanswered
-  is. The day's time ran out on the days the daemon wrote `quota_exhausted`.
+  is. Weekdays and weekends are set side by side only from two finished days on
+  each side: on the VM a Sunday made "the weekend" one Saturday the machine was off.
+  The day's time ran out on the days the daemon wrote `quota_exhausted`.
 - **When in the day.** Nothing recorded it, so: `usage_hour(child_id, day, hour,
   seconds)`, migration `077ca4545f23`, filled by the ledger at the one place it adds to
   `general_s` (split at the hour, never across midnight), after the ledger's commit in a
