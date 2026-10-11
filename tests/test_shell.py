@@ -25,7 +25,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from biokids_core.config import Config
-from biokids_core.types import AgeBand, Reason
+from biokids_core.errors import IpcError
+from biokids_core.types import AgeBand, Reason, ShutdownOutcome
 from biokids_shell import app as shell_app
 from biokids_shell import launcher as launcher_module
 from biokids_shell.app import create_app
@@ -99,7 +100,7 @@ class FakeShellDaemon:
         self.asked: list[str] = []
         self.asked_kinds: list[str] = []
         self.visits: list[str] = []
-        self.shutdown_ok = True
+        self.shutdown_answer: ShutdownOutcome | None = ShutdownOutcome.POWEROFF
 
     async def available(self) -> bool:
         return self.data is not None
@@ -119,9 +120,9 @@ class FakeShellDaemon:
         if self.data:
             self.data["first_run_done"] = True
 
-    async def request_shutdown(self) -> bool:
+    async def request_shutdown(self) -> ShutdownOutcome | None:
         self.shutdown_calls += 1
-        return self.shutdown_ok
+        return self.shutdown_answer
 
     async def report_visit(self, host: str) -> None:
         self.visits.append(host)
@@ -661,15 +662,123 @@ def test_the_child_can_shut_the_machine_down_but_is_asked_first(
 
     done = client.post("/shutdown")
     assert daemon.shutdown_calls == 1
+    assert "Bilgisayar kapanıyor" in done.text
     assert "Yarın görüşürüz" in done.text
 
 
-def test_a_refused_shutdown_returns_to_the_launcher(
+def test_the_goodbye_is_said_aloud_for_a_child_who_cannot_read_yet(
     client: TestClient, daemon: FakeShellDaemon
 ) -> None:
-    daemon.shutdown_ok = False
+    """D-175's rule for full screens; the daemon waits a few seconds for it (D-209)."""
+    assert "data-speak-on-load" in client.post("/shutdown").text
+    assert daemon.data is not None
+    daemon.data["age_band"] = AgeBand.OLDER.value
+    assert "data-speak-on-load" not in client.post("/shutdown").text
+
+
+def test_with_someone_else_logged_in_the_child_is_told_what_happens_instead(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    """The computer stays on and only the child's session ends (D-100, D-209).
+
+    This used to re-render the home screen and say nothing, so the child pressed
+    "Kapat" again, and again.
+    """
+    daemon.shutdown_answer = ShutdownOutcome.LOGOUT
     page = client.post("/shutdown").text
-    assert "Merhaba Elif" in page
+    text = _visible_text(page)
+    assert "başka biri de var" in text
+    assert "açık kalıyor" in text
+    assert "oturumunu kapatıyorum" in text
+    assert "Bilgisayar kapanıyor" not in text
+    assert "Merhaba Elif" not in text, "never the home screen"
+    assert "data-speak-on-load" in page
+
+
+def test_the_same_in_english(client: TestClient, daemon: FakeShellDaemon) -> None:
+    assert daemon.data is not None
+    daemon.data["locale"] = "en"
+    assert "The computer is shutting down" in client.post("/shutdown").text
+    daemon.shutdown_answer = ShutdownOutcome.LOGOUT
+    assert "so it stays on" in client.post("/shutdown").text
+
+
+def test_a_shutdown_the_daemon_never_heard_is_said_so_calmly(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    """Never the home screen, as if nothing had been pressed (D-209).
+
+    An IPC failure used to put the child back on the launcher: they could not
+    tell "it did not work" from "it is about to", and walked away from an open
+    session. They are told, without an error code, to find a grown-up, and
+    have a way back.
+    """
+    daemon.shutdown_answer = None
+    page = client.post("/shutdown").text
+    text = _visible_text(page)
+    assert "Bilgisayar kapanamadı" in text
+    assert "Bir büyüğüne söyle" in text
+    assert "Merhaba Elif" not in text
+    assert 'href="/"' in page
+    assert 'action="/shutdown"' not in page, "no second try that would fail the same way"
+
+
+def test_the_failure_page_needs_no_daemon_to_draw(config: Config) -> None:
+    """The likeliest reason the request failed is that the daemon is gone."""
+    app = create_app(config)
+    gone = FakeShellDaemon(None)
+    gone.shutdown_answer = None
+    app.state.shell.client = gone  # type: ignore[assignment]
+    page = TestClient(app, base_url=LAUNCHER).post("/shutdown").text
+    assert "Bilgisayar kapanamadı" in page
+
+
+class _AnsweringClient:
+    """Stands in for the socket under ShellClient: one fixed answer, or a failure."""
+
+    def __init__(self, answer: Any) -> None:
+        self.answer = answer
+
+    async def call(self, op: Any, **_args: Any) -> Any:
+        if isinstance(self.answer, Exception):
+            raise self.answer
+        return self.answer
+
+
+@pytest.mark.parametrize(
+    ("answer", "expected"),
+    [
+        ({"ok": True, "data": {"poweroff": True, "outcome": "poweroff"}}, "poweroff"),
+        ({"ok": True, "data": {"poweroff": False, "outcome": "logout"}}, "logout"),
+        ({"ok": True, "data": {"poweroff": True}}, "poweroff"),
+        ({"ok": True, "data": {"outcome": "explode"}}, None),
+        ({"ok": False, "error": "shell.not_allowed"}, None),
+    ],
+)
+async def test_the_client_reads_what_the_daemon_will_do(
+    tmp_path: pathlib.Path, answer: dict[str, Any], expected: str | None
+) -> None:
+    from biokids_core.ipc import Response
+    from biokids_shell.client import ShellClient
+
+    client = ShellClient(tmp_path / "shell.sock")
+    client._client = _AnsweringClient(Response(**answer))  # type: ignore[assignment]
+    outcome = await client.request_shutdown()
+    assert (outcome.value if outcome else None) == expected
+
+
+@pytest.mark.parametrize(
+    "failure", [IpcError("gone"), TimeoutError(), ConnectionRefusedError()]
+)
+async def test_the_client_says_none_when_the_daemon_cannot_be_asked(
+    tmp_path: pathlib.Path, failure: Exception
+) -> None:
+    """A timeout included: that is what five seconds of stopping apps looked like."""
+    from biokids_shell.client import ShellClient
+
+    client = ShellClient(tmp_path / "shell.sock")
+    client._client = _AnsweringClient(failure)  # type: ignore[assignment]
+    assert await client.request_shutdown() is None
 
 
 def test_the_launcher_holds_when_the_daemon_is_gone(config: Config) -> None:

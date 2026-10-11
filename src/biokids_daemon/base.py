@@ -7,8 +7,11 @@ database session, the ledger, speaking, locking and unlocking.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from collections.abc import Coroutine
 from dataclasses import dataclass, field
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -117,6 +120,10 @@ class SupervisorBase:
     downloaded) and `voice` (speech recognition too). Empty when it is not
     installed or did not answer, and then the launcher shows no "Sor Bana"
     tile: a tile that can only say "I'm resting" is a broken toy (D-198)."""
+    _afterwards: set[asyncio.Task[None]] = field(default_factory=set)
+    """Work answered for before it was done (D-209): switching off, restarting,
+    ending a child's session. Held here so a task is not collected half-way, and
+    so stop() can cancel what is left before the database closes under it."""
 
     @property
     def session(self) -> Session:
@@ -140,6 +147,50 @@ class SupervisorBase:
         if runtime is None:
             raise KeyError(f"no such child: {child_id}")
         return runtime
+
+    # ------------------------------------------------------------ afterwards
+
+    def _after_answering(self, work: Coroutine[Any, Any, None], name: str) -> None:
+        """Do `work` once the caller has been answered (D-209).
+
+        For what takes longer than anyone waits for an answer: every open
+        application gets its grace period before the machine goes, ten seconds
+        by default, and the launcher and the panel give up on the daemon after
+        five. A failure is logged here; the work itself decides what to do
+        about one, because only it knows what "fail safe" means for it.
+        """
+        task = asyncio.create_task(work, name=name)
+        self._afterwards.add(task)
+        task.add_done_callback(self._afterwards_done)
+
+    def _afterwards_done(self, task: asyncio.Task[None]) -> None:
+        self._afterwards.discard(task)
+        if task.cancelled():
+            log.warning(
+                "%s was cancelled: the daemon stopped before it was done", task.get_name()
+            )
+            return
+        error = task.exception()
+        if error is not None:
+            log.error("%s failed: %s", task.get_name(), error, exc_info=error)
+
+    def _under_way(self, *names: str) -> bool:
+        """True while work by one of these names has been answered for and not done."""
+        return any(task.get_name() in names for task in self._afterwards)
+
+    async def _cancel_afterwards(self) -> None:
+        """Cancel what has not happened yet, and wait until it has stopped.
+
+        Cancelled rather than waited for: a daemon stopped for an upgrade must
+        not switch the machine off half-way through it. The child's session goes
+        on, and a restarted daemon supervises it as before.
+        """
+        pending = [task for task in self._afterwards if not task.done()]
+        for task in pending:
+            task.cancel()
+        if pending:
+            await asyncio.gather(*pending, return_exceptions=True)
+        self._afterwards.clear()
 
     # ---------------------------------------------------------------- speech
 

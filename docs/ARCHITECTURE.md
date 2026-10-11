@@ -280,6 +280,20 @@ Parent-configurable end action: `lock` \| `logout` \| `poweroff` (default `power
 matching the owner's spec). Open applications receive a normal termination signal
 sequence so files can be saved.
 
+**Kapat**, the child's tile (D-100) or the parent's button on Today, takes the same
+steps without the countdown, and is answered before they are taken (D-209). The daemon
+decides, audits and answers at once; then a task the supervisor holds stops the apps
+with their grace period, writes the ledger, waits until at least
+`POWER_GRACE_SECONDS` (6 s) after the answer so the goodbye can be read and, for 4–7,
+heard, and calls `systemctl poweroff`. Done inside the IPC call, all of that outlasted
+the five seconds the launcher and the panel wait for an answer. While anyone else is
+logged in, the child's tile ends only the child's own session (`loginctl
+terminate-user`, as the `logout` end action does), and who is logged in is asked again
+just before the machine goes. When the poweroff fails, the child's session is ended -
+or, failing that, locked - and the parent's poweroff locks every child's screen; either
+way an `alert` audit row reaches the parent (principle 3). A daemon stopped meanwhile
+cancels what is left rather than switching off later, during an upgrade.
+
 ---
 
 ## 4. Policy engine

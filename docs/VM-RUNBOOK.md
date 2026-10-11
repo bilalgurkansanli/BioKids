@@ -1331,6 +1331,37 @@ line, so unticking them after writing the setting would hide it.
    screens and the two **Yeni** stay. They go by themselves thirty days after the
    time written above.
 
+### 8.13 Kapat switches the computer off (D-209)
+
+Take a snapshot first: every pass here ends with the VM off.
+
+1. **Alone.** Log Elif in and open two apps, so **Açık** lists them; draw something
+   in Boya and leave it unsaved. On the launcher, **Kapat**, then **Evet, kapat**.
+   **Pass:** at once "Bilgisayar kapanıyor…" and "Yarın görüşürüz.", said aloud for a
+   child of four to seven, never the home screen; Boya asks about the drawing or
+   closes; the VM powers off within about fifteen seconds. Boot it and check:
+
+   ```bash
+   journalctl -b -1 -u biokids-daemon --no-pager | grep -iE 'switch|session did not'   # nothing
+   sudo bkq "select actor, action, detail_json from audit_log where action like 'poweroff%' order by id desc limit 1"
+   ```
+
+   The row is `child:elif poweroff {"by": "child"}`.
+2. **Someone else is logged in.** Log in as `anne` and leave her a window open (a
+   text editor with a line typed), bring the greeter up from ssh as in §8.4 and log
+   Elif in. Open an app, then **Kapat**, **Evet, kapat**. **Pass:** "Bilgisayarda
+   başka biri de var, o yüzden bilgisayar açık kalıyor." and "Senin oturumunu
+   kapatıyorum.", and a few seconds later the login screen; the VM stays on; `anne`'s
+   session is still there with her window when she picks her picture. The audit row is
+   `child:elif logout {"by": "child", "instead_of": "poweroff", "others": ["anne"]}`.
+3. **From the phone.** Log Elif in with an app open; on the phone, **Bugün → Kapat** and
+   confirm. **Pass:** the phone says "Bilgisayar kapatılıyor." - not that the service
+   is not answering - and the VM powers off a few seconds later.
+4. **The daemon is not there.** Log Elif in, tap **Kapat** so the question is on
+   screen, then from ssh `sudo systemctl stop biokids-daemon`, and **Evet, kapat**.
+   **Pass:** "Bilgisayar kapanamadı." and "Bir büyüğüne söyle.", with **Geri dön**; the
+   VM stays on. `sudo systemctl start biokids-daemon` afterwards.
+
 ---
 
 ## 9. After the run

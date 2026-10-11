@@ -28,7 +28,7 @@ from biokids_core.config import Config
 from biokids_core.db import AuditLog, Child, Database, Policy
 from biokids_core.ipc import EventKind, Op, Request, Response
 from biokids_core.ledger import TickInput
-from biokids_core.types import EndAction
+from biokids_core.types import EndAction, ShutdownOutcome
 from biokids_daemon.bus import EventBus
 from biokids_daemon.enforcer import CommandResult, Enforcer, RecordingRunner
 from biokids_daemon.server import DaemonServer
@@ -1492,38 +1492,368 @@ async def test_the_machine_does_not_power_off_between_two_windows(
 # ------------------------------------------------- the machine belongs to everyone
 
 
-async def test_the_shutdown_tile_refuses_while_a_parent_is_logged_in(
-    supervisor: Supervisor, clock: FakeClock, source: FakeSessionSource, runner: RecordingRunner
+async def settled(supervisor: Supervisor) -> None:
+    """Wait for what the daemon answered for and then went on to do (D-209)."""
+    while supervisor._afterwards:
+        await asyncio.gather(*list(supervisor._afterwards), return_exceptions=True)
+
+
+def powered_off(runner: RecordingRunner) -> bool:
+    return runner.ran("systemctl", "poweroff")
+
+
+class GatedRunner(LoginctlAwareRunner):
+    """loginctl as the tests model it, with two things a real machine does.
+
+    `systemctl --user stop` waits until the test opens the gate, as an app that
+    takes its grace period to close does. And any command starting with one of
+    `failing` exits 1, as logind or systemd refusing does.
+    """
+
+    def __init__(self, source: FakeSessionSource, *failing: tuple[str, ...]) -> None:
+        super().__init__(source)
+        self.gate = asyncio.Event()
+        self.gate.set()
+        self.failing = failing
+
+    async def __call__(self, argv: Sequence[str]) -> Any:
+        if "--user" in argv and "stop" in argv:
+            await self.gate.wait()
+        if any(tuple(argv[: len(prefix)]) == prefix for prefix in self.failing):
+            self.calls.append(tuple(argv))
+            return CommandResult(tuple(argv), returncode=1)
+        return await super().__call__(argv)
+
+
+def supervisor_with(
+    runner: RecordingRunner,
+    db: Database,
+    bus: EventBus,
+    source: FakeSessionSource,
+    clock: FakeClock,
+    config: Config,
+) -> Supervisor:
+    return Supervisor(
+        database=db,
+        bus=bus,
+        watcher=SessionWatcher(source),
+        enforcer=Enforcer(config, runner),
+        clock=clock,
+        config=config,
+    )
+
+
+def audited(db: Database, action: str) -> list[AuditLog]:
+    with db.session() as fresh:
+        rows = fresh.query(AuditLog).filter(AuditLog.action == action).all()
+        fresh.expunge_all()
+        return rows
+
+
+async def test_the_shutdown_tile_ends_only_the_childs_session_while_a_parent_is_logged_in(
+    supervisor: Supervisor,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    db: Database,
 ) -> None:
     """Mum switches user so her son can play; he taps "Kapat" when he is done.
 
     The check iterated `self.children`, so it refused when the other user was
     another managed child and allowed it when the other user was a parent - and
-    the machine went down with her session and her unsaved work still open. The
-    code already knew this harm was worth refusing; it was looking in the wrong
-    list.
+    the machine went down with her session and her unsaved work still open.
+    Refusing then left the child's own session open with a launcher that said
+    nothing (D-209): "Kapat" now closes what the child has open, and only that.
     """
     await supervisor.start()
     source.log_in("elif")
-    source.log_in("anne")
+    mum = source.log_in("anne", uid=1001)
 
-    allowed = await supervisor.child_requested_shutdown(1)
+    outcome = await supervisor.child_requested_shutdown(1)
+    await settled(supervisor)
 
-    assert allowed is False
-    assert not any("poweroff" in " ".join(call) for call in runner.calls)
+    assert outcome is ShutdownOutcome.LOGOUT
+    assert not powered_off(runner)
+    assert runner.ran("systemctl", "--user", "-M", "elif@.host")
+    assert runner.ran("loginctl", "terminate-user", "elif")
+    assert not runner.ran("loginctl", "terminate-user", "anne")
+    assert not runner.ran("loginctl", "terminate-session", mum.session_id)
+    assert [s.unix_user for s in source.sessions] == ["anne"], "her session is untouched"
+    (row,) = audited(db, "logout")
+    assert row.actor == "child:elif"
+    assert row.detail == {"by": "child", "instead_of": "poweroff", "others": ["anne"]}
 
 
 async def test_a_child_alone_can_still_shut_the_machine_down(
-    supervisor: Supervisor, clock: FakeClock, source: FakeSessionSource, runner: RecordingRunner
+    supervisor: Supervisor, source: FakeSessionSource, runner: RecordingRunner, db: Database
 ) -> None:
     """D-100 gives the child that tile on purpose; refusing always is not the fix."""
     await supervisor.start()
     source.log_in("elif")
 
-    allowed = await supervisor.child_requested_shutdown(1)
+    outcome = await supervisor.child_requested_shutdown(1)
+    await settled(supervisor)
 
-    assert allowed is True
-    assert any("poweroff" in " ".join(call) for call in runner.calls)
+    assert outcome is ShutdownOutcome.POWEROFF
+    assert powered_off(runner)
+    assert not runner.ran("loginctl", "terminate-user", "elif")
+    assert audited(db, "poweroff")[0].detail == {"by": "child"}
+
+
+async def test_the_shutdown_is_answered_before_the_apps_are_stopped(
+    db: Database,
+    bus: EventBus,
+    source: FakeSessionSource,
+    clock: FakeClock,
+    config: Config,
+    child: Child,
+) -> None:
+    """The owner's "Kapat" with a drawing open (D-209).
+
+    The answer used to wait for every app's grace period - ten seconds - and the
+    launcher gives up after five, took the silence for a no, and put the child
+    back on the home screen. The answer now comes first; the apps, the minutes
+    and the poweroff come after it, in that order.
+    """
+    runner = GatedRunner(source)
+    supervisor = supervisor_with(runner, db, bus, source, clock, config)
+    await supervisor.start()
+    source.log_in("elif")
+    runner.gate.clear()
+
+    outcome = await asyncio.wait_for(supervisor.child_requested_shutdown(1), 1.0)
+
+    assert outcome is ShutdownOutcome.POWEROFF
+    assert not powered_off(runner), "nothing is switched off before the answer has gone"
+    await asyncio.sleep(0)
+    assert supervisor._under_way("poweroff")
+
+    runner.gate.set()
+    await settled(supervisor)
+
+    commands = [" ".join(call) for call in runner.calls]
+    stopped = next(i for i, c in enumerate(commands) if "--user" in c and " stop " in c)
+    assert stopped < commands.index("systemctl poweroff"), commands
+
+
+async def test_the_shell_socket_says_poweroff_at_once(
+    db: Database,
+    bus: EventBus,
+    source: FakeSessionSource,
+    clock: FakeClock,
+    config: Config,
+    child: Child,
+) -> None:
+    """What the launcher reads: ok, and which of the two it will be."""
+    from biokids_core.ipc import ShellOp
+    from biokids_daemon.shell_server import ShellCaller, ShellServer
+
+    runner = GatedRunner(source)
+    supervisor = supervisor_with(runner, db, bus, source, clock, config)
+    await supervisor.start()
+    source.log_in("elif")
+    server = ShellServer(supervisor, bus, config)
+    caller = ShellCaller(uid=1000, runtime=supervisor.children[1])
+    runner.gate.clear()
+
+    response, _ = await asyncio.wait_for(
+        server._dispatch(caller, Request(op=ShellOp.REQUEST_SHUTDOWN, id="7").encode()), 1.0
+    )
+
+    assert response.ok
+    assert response.data == {"poweroff": True, "outcome": "poweroff"}
+    runner.gate.set()
+    await settled(supervisor)
+    assert powered_off(runner)
+
+
+async def test_a_second_tap_does_not_switch_off_twice(
+    supervisor: Supervisor, source: FakeSessionSource, runner: RecordingRunner, db: Database
+) -> None:
+    await supervisor.start()
+    source.log_in("elif")
+
+    first = await supervisor.child_requested_shutdown(1)
+    second = await supervisor.child_requested_shutdown(1)
+    await settled(supervisor)
+
+    assert first is second is ShutdownOutcome.POWEROFF
+    assert [call for call in runner.calls if call == ("systemctl", "poweroff")] == [
+        ("systemctl", "poweroff")
+    ]
+    assert len(audited(db, "poweroff")) == 1
+
+
+async def test_a_second_tap_with_someone_else_there_ends_the_session_once(
+    supervisor: Supervisor, source: FakeSessionSource, runner: RecordingRunner, db: Database
+) -> None:
+    await supervisor.start()
+    source.log_in("elif")
+    source.log_in("anne", uid=1001)
+
+    first = await supervisor.child_requested_shutdown(1)
+    second = await supervisor.child_requested_shutdown(1)
+    await settled(supervisor)
+
+    assert first is second is ShutdownOutcome.LOGOUT
+    assert runner.calls.count(("loginctl", "terminate-user", "elif")) == 1
+    assert len(audited(db, "logout")) == 1
+
+
+async def test_a_parent_who_logs_in_while_the_apps_close_keeps_their_session(
+    db: Database,
+    bus: EventBus,
+    source: FakeSessionSource,
+    clock: FakeClock,
+    config: Config,
+    child: Child,
+) -> None:
+    """D-100's promise holds at the moment the machine goes, not only at the tap."""
+    runner = GatedRunner(source)
+    supervisor = supervisor_with(runner, db, bus, source, clock, config)
+    await supervisor.start()
+    source.log_in("elif")
+    runner.gate.clear()
+
+    assert await supervisor.child_requested_shutdown(1) is ShutdownOutcome.POWEROFF
+    source.log_in("anne", uid=1001)
+    runner.gate.set()
+    await settled(supervisor)
+
+    assert not powered_off(runner)
+    assert runner.ran("loginctl", "terminate-user", "elif")
+    assert [s.unix_user for s in source.sessions] == ["anne"]
+
+
+async def test_a_poweroff_that_fails_ends_the_childs_session_and_tells_the_parent(
+    db: Database,
+    bus: EventBus,
+    source: FakeSessionSource,
+    clock: FakeClock,
+    config: Config,
+    child: Child,
+) -> None:
+    """Principle 3: told the computer is switching off, the child is not left in
+    front of an open session that nothing is ending."""
+    runner = GatedRunner(source, ("systemctl", "poweroff"))
+    supervisor = supervisor_with(runner, db, bus, source, clock, config)
+    await supervisor.start()
+    source.log_in("elif")
+
+    await supervisor.child_requested_shutdown(1)
+    await settled(supervisor)
+
+    assert powered_off(runner), "it was tried"
+    assert runner.ran("loginctl", "terminate-user", "elif")
+    assert source.sessions == []
+    (row,) = audited(db, "poweroff_failed")
+    assert row.severity == "alert"
+    assert row.detail == {"by": "child", "session_ended": True}
+
+
+async def test_a_session_that_will_not_end_is_locked_instead(
+    db: Database,
+    bus: EventBus,
+    source: FakeSessionSource,
+    clock: FakeClock,
+    config: Config,
+    child: Child,
+) -> None:
+    runner = GatedRunner(source, ("systemctl", "poweroff"), ("loginctl", "terminate-user"))
+    supervisor = supervisor_with(runner, db, bus, source, clock, config)
+    await supervisor.start()
+    session = source.log_in("elif")
+
+    await supervisor.child_requested_shutdown(1)
+    await settled(supervisor)
+
+    assert runner.ran("loginctl", "lock-session", session.session_id)
+    (row,) = audited(db, "logout_failed")
+    assert row.severity == "alert"
+    assert row.detail == {"locked": True, "sessions": [session.session_id]}
+    assert audited(db, "poweroff_failed")[0].detail == {"by": "child", "session_ended": False}
+
+
+async def test_the_parents_poweroff_is_answered_before_the_apps_are_stopped(
+    db: Database,
+    bus: EventBus,
+    source: FakeSessionSource,
+    clock: FakeClock,
+    config: Config,
+    child: Child,
+) -> None:
+    """The panel's "Kapat" said the service was not answering while the machine
+    went down anyway: its client, too, waits five seconds (D-209)."""
+    runner = GatedRunner(source)
+    supervisor = supervisor_with(runner, db, bus, source, clock, config)
+    await supervisor.start()
+    source.log_in("elif")
+    server = DaemonServer(supervisor, bus, config)
+    runner.gate.clear()
+
+    response, _ = await asyncio.wait_for(
+        server._dispatch(
+            Request(op=Op.POWEROFF_NOW, id="1", args={"actor": "parent:1"}).encode()
+        ),
+        1.0,
+    )
+
+    assert response.ok
+    assert not powered_off(runner)
+    runner.gate.set()
+    await settled(supervisor)
+    assert powered_off(runner)
+    assert audited(db, "poweroff")[0].actor == "parent:1"
+
+
+async def test_a_parents_poweroff_that_fails_locks_every_childs_screen(
+    db: Database,
+    bus: EventBus,
+    source: FakeSessionSource,
+    clock: FakeClock,
+    config: Config,
+    child: Child,
+) -> None:
+    """The parent meant nobody to be using it; a lock is what they can lift."""
+    runner = GatedRunner(source, ("systemctl", "poweroff"))
+    supervisor = supervisor_with(runner, db, bus, source, clock, config)
+    await supervisor.start()
+    session = source.log_in("elif")
+    mum = source.log_in("anne", uid=1001)
+
+    assert await supervisor.poweroff_now("parent:1")
+    await settled(supervisor)
+
+    assert runner.ran("loginctl", "lock-session", session.session_id)
+    assert not runner.ran("loginctl", "lock-session", mum.session_id)
+    (row,) = audited(db, "poweroff_failed")
+    assert row.severity == "alert"
+    assert row.detail == {"by": "parent", "locked": ["elif"]}
+
+
+async def test_a_daemon_stopping_mid_way_does_not_switch_off_later(
+    db: Database,
+    bus: EventBus,
+    source: FakeSessionSource,
+    clock: FakeClock,
+    config: Config,
+    child: Child,
+) -> None:
+    """An upgrade restarting the daemon while apps close must not end in a
+    poweroff half-way through it; the restarted daemon supervises as before."""
+    runner = GatedRunner(source)
+    supervisor = supervisor_with(runner, db, bus, source, clock, config)
+    await supervisor.start()
+    source.log_in("elif")
+    runner.gate.clear()
+
+    await supervisor.child_requested_shutdown(1)
+    await asyncio.sleep(0)
+    await supervisor.stop()
+    runner.gate.set()
+    await asyncio.sleep(0)
+
+    assert not supervisor._afterwards
+    assert not powered_off(runner)
 
 
 # ------------------------------------------------------- the ring the child reads
@@ -2136,11 +2466,14 @@ async def test_unlock_lets_the_child_back_in_without_adding_time(
 async def test_the_restart_a_fresh_install_needs_is_a_clean_one(
     supervisor: Supervisor, runner: RecordingRunner, db: Database
 ) -> None:
-    """D-195: the ledger is written and the audit log says who."""
+    """D-195: the ledger is written and the audit log says who. Answered first
+    and done after, like a poweroff (D-209)."""
     await supervisor.start()
     assert await supervisor.reboot_now("parent:1")
-    assert runner.ran("systemctl", "reboot")
     with db.session() as session:
         from biokids_core import repo
 
         assert repo.recent_audit(session, limit=1)[0].action == "reboot"
+    await settled(supervisor)
+    assert runner.ran("systemctl", "reboot")
+    assert not powered_off(runner)

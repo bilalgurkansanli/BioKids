@@ -37,6 +37,7 @@ from typing import TYPE_CHECKING, Any, cast
 from biokids_core.config import Config, get_config
 from biokids_core.errors import IpcError
 from biokids_core.ipc import MAX_LINE_BYTES, Event, Request, Response, ShellOp
+from biokids_core.types import ShutdownOutcome
 from biokids_daemon.assistant import AssistantGate
 from biokids_daemon.bus import EventBus
 from biokids_daemon.server import cancel_connections
@@ -300,13 +301,17 @@ class ShellServer:
     async def _request_shutdown(self, caller: ShellCaller, request: Request) -> Response:
         """The child may shut the machine down from a clearly marked tile (D-100).
 
-        It is a request rather than a command: the daemon stops the child's own
-        applications first and refuses outright if another child is still logged
-        in, because one child must not be able to close another's work.
+        It is a request rather than a command, answered before it is carried out
+        and with what will happen (D-209): the computer switches off, or - while
+        anyone else is logged in - only this child's session ends, because one
+        person's "Kapat" must not close another's work. Who the others are is not
+        said: the child's screen has no use for another account's name.
         """
-        ok = await self.supervisor.child_requested_shutdown(caller.child_id)
+        outcome = await self.supervisor.child_requested_shutdown(caller.child_id)
         return Response(
-            id=request.id, ok=ok, data={"poweroff": ok}, error="" if ok else "shell.not_allowed"
+            id=request.id,
+            ok=True,
+            data={"poweroff": outcome is ShutdownOutcome.POWEROFF, "outcome": outcome.value},
         )
 
     async def _ask_a_parent(self, caller: ShellCaller, request: Request) -> Response:

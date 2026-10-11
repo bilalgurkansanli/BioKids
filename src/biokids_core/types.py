@@ -43,6 +43,19 @@ class EndAction(StrEnum):
     POWEROFF = "poweroff"
 
 
+class ShutdownOutcome(StrEnum):
+    """What the daemon does with a child's "Kapat" (D-100, D-209).
+
+    Decided when the tile is pressed and said at once, so the launcher can tell
+    the child before it happens; the doing comes after the answer.
+    """
+
+    POWEROFF = "poweroff"
+    """Nobody else is logged in: the computer switches off."""
+    LOGOUT = "logout"
+    """Someone else is: only this child's session ends, and the computer stays on."""
+
+
 class FilterMode(StrEnum):
     """Allowlist for 4-7, blocklist for 8-10 (D-61). Phase 1 gives these teeth."""
 
