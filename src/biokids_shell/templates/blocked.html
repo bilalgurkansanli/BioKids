@@ -26,11 +26,13 @@
     <form method="post" action="/ask-a-parent">
       <input type="hidden" name="url" value="{{ ask_what|default('') }}">
       <input type="hidden" name="kind" value="{{ ask_kind|default('site') }}">
+      {% if in_browser %}<input type="hidden" name="browser" value="1">{% endif %}
       {# Not "ask my mum": BioKids has one parent account and this request goes
          to whoever holds it, who may be the father and may be the only one. #}
       <button class="big-btn" type="submit">{{ _('shell.blocked.ask') }}</button>
     </form>
-    <a class="big-btn big-btn--quiet" href="/">{{ _('shell.blocked.back') }}</a>
+    {# In the browser, back is the child's start page, not the launcher (D-204). #}
+    <a class="big-btn big-btn--quiet" href="{{ '/start' if in_browser else '/' }}">{{ _('shell.blocked.back') }}</a>
   </div>
   {% endif %}
 {% endblock %}

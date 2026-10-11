@@ -13,5 +13,5 @@
   {% else %}
     <h1>{{ _('shell.error.unknown') }}</h1>
   {% endif %}
-  <a class="big-btn" href="/">{{ _('shell.blocked.back') }}</a>
+  <a class="big-btn" href="{{ '/start' if in_browser else '/' }}">{{ _('shell.blocked.back') }}</a>
 {% endblock %}

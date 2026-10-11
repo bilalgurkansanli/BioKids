@@ -434,6 +434,7 @@ def register_routes(app: FastAPI) -> None:
             ask_kind=kind,
             # A refused search carries nothing to the parent (D-202).
             ask_what="" if kind == "search" else url or slug,
+            in_browser=_in_browser(reason, url),
         )
 
     @app.post("/ask-a-parent")
@@ -442,11 +443,14 @@ def register_routes(app: FastAPI) -> None:
         shell: Shell,
         url: Annotated[str, Form()] = "",
         kind: Annotated[str, Form()] = "site",
+        browser: Annotated[str, Form()] = "",
     ) -> Response:
         """The button that turns a wall into a conversation (D-65, D-173)."""
         ok, reason = await shell.client.ask_a_parent(url, kind)
         data = await shell.client.state()
-        return await render(shell, request, "asked.html", data, ok=ok, reason=reason)
+        return await render(
+            shell, request, "asked.html", data, ok=ok, reason=reason, in_browser=browser == "1"
+        )
 
     @app.get("/shutdown", response_class=HTMLResponse)
     async def shutdown_confirm(request: Request, shell: Shell) -> Response:
@@ -756,6 +760,18 @@ def _from_launcher(request: Request, content_type: str) -> bool:
         return True
     host = request.headers.get("host", "")
     return origin in {f"http://{host}", f"https://{host}"}
+
+
+def _in_browser(reason: str, url: str) -> bool:
+    """Whether this block page is open in the child's browser, not the launcher.
+
+    The extension sends a closed site's address or a refused search there
+    (D-187, D-202); the launcher itself sends the rest. "Back" in the browser is
+    the child's start page (/start): the launcher's home inside a browser tab is
+    the wrong screen, and the browser's own history leads to the error page of
+    the address that was just closed, which closes it again.
+    """
+    return bool(url) or reason == Reason.SEARCH_BLOCKED
 
 
 def _request_kind_for(reason: str, url: str, slug: str) -> str:

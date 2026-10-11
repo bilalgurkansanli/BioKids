@@ -1008,6 +1008,30 @@ def test_a_null_origin_from_anywhere_else_is_refused(
     assert response.status_code == 403
 
 
+def test_back_from_a_block_in_the_browser_is_the_start_page(client: TestClient) -> None:
+    """The owner pressed "Geri dön" under a refused search and the launcher's
+    whole home screen opened inside a browser tab (D-204)."""
+    page = client.get("/blocked?reason=search.blocked").text
+    assert 'href="/start"' in page
+    assert 'name="browser" value="1"' in page
+    site = client.get("/blocked?url=https://closed.test/").text
+    assert 'href="/start"' in site
+
+
+def test_back_from_a_block_in_the_launcher_is_home(client: TestClient) -> None:
+    page = client.get("/blocked?reason=app.not_allowed&slug=tuxpaint").text
+    assert 'href="/start"' not in page
+    assert 'name="browser"' not in page
+
+
+def test_back_after_asking_from_the_browser_is_the_start_page(client: TestClient) -> None:
+    same = {"origin": LAUNCHER, "sec-fetch-site": "same-origin"}
+    asked = client.post("/ask-a-parent", data={"kind": "search", "browser": "1"}, headers=same)
+    assert 'href="/start"' in asked.text
+    home = client.post("/ask-a-parent", data={"kind": "time"}, headers=same)
+    assert 'href="/start"' not in home.text
+
+
 def test_the_launchers_pages_send_their_origin_with_a_form(client: TestClient) -> None:
     """no-referrer made every form post "Origin: null" (D-204); same-origin keeps
     the launcher's address from other sites just the same."""

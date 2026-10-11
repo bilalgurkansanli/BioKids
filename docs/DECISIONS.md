@@ -1350,3 +1350,8 @@ also accepts `Origin: null` when Sec-Fetch-Site, which no page can set, says
 same-origin, so a page left open across the upgrade works too; a sandboxed frame on a
 website says cross-site and is still refused. Found by posting the form in a real
 Chromium, which the tests' client never did; the tests now send what Chromium sent.
+In the same place, "Geri dön" on a block page in the child's browser (a closed site or a
+refused search, which the extension sends there) went to `/`, and the launcher's whole
+home screen opened inside a browser tab. There it now goes to the child's start page,
+`/start`; not the browser's own Back, which leads to the error page of the address that
+was just closed and closes it again. After asking, the same.
