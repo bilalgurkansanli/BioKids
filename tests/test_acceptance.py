@@ -33,7 +33,7 @@ from biokids_core.clock import FakeClock
 from biokids_core.config import Config
 from biokids_core.db import AuditLog, Database
 from biokids_core.ipc import Op, Request, Response, ShellOp
-from biokids_core.types import EndAction
+from biokids_core.types import EndAction, ShutdownOutcome
 from biokids_daemon.bus import EventBus
 from biokids_daemon.enforcer import Enforcer, RecordingRunner
 from biokids_daemon.server import DaemonServer
@@ -114,8 +114,9 @@ class InProcessShellClient:
     async def first_run_done(self) -> None:
         await self._call(ShellOp.FIRST_RUN_DONE)
 
-    async def request_shutdown(self) -> bool:
-        return (await self._call(ShellOp.REQUEST_SHUTDOWN)).ok
+    async def request_shutdown(self) -> ShutdownOutcome | None:
+        response = await self._call(ShellOp.REQUEST_SHUTDOWN)
+        return ShutdownOutcome(response.data["outcome"]) if response.ok else None
 
     async def ask_a_parent(self, url: str, kind: str = "site") -> tuple[bool, str]:
         response = await self._call(ShellOp.ASK_A_PARENT, url=url, kind=kind)

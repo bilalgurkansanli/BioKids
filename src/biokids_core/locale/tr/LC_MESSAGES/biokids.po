@@ -135,6 +135,21 @@ msgstr "Evet, kapat"
 msgid "shell.shutdown.confirm_no"
 msgstr "Vazgeç"
 
+msgid "shell.shutdown.going"
+msgstr "Bilgisayar kapanıyor…"
+
+msgid "shell.shutdown.others"
+msgstr "Bilgisayarda başka biri de var, o yüzden bilgisayar açık kalıyor."
+
+msgid "shell.shutdown.others_body"
+msgstr "Senin oturumunu kapatıyorum."
+
+msgid "shell.shutdown.failed"
+msgstr "Bilgisayar kapanamadı."
+
+msgid "shell.shutdown.failed_body"
+msgstr "Bir büyüğüne söyle."
+
 msgid "shell.launching"
 msgstr "{app} açılıyor"
 
@@ -728,7 +743,7 @@ msgid "audit.action.first_run_explained"
 msgstr "Çocuğa BioKids anlatıldı"
 
 msgid "audit.action.logout"
-msgstr "Panelden çıkıldı"
+msgstr "Çocuğun oturumu kapatıldı"
 
 msgid "audit.action.passphrase_failed"
 msgstr "Hatalı parola denemesi"
@@ -1841,6 +1856,15 @@ msgstr "Bilgisayar yeniden başlatılıyor…"
 
 msgid "audit.action.reboot"
 msgstr "Bilgisayar yeniden başlatıldı"
+
+msgid "audit.action.poweroff_failed"
+msgstr "Bilgisayar kapanmadı"
+
+msgid "audit.action.reboot_failed"
+msgstr "Bilgisayar yeniden başlamadı"
+
+msgid "audit.action.logout_failed"
+msgstr "Çocuğun oturumu kapanmadı"
 
 msgid "help.title"
 msgstr "Yardım"

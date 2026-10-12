@@ -1,6 +1,6 @@
 """The launcher's HTTP surface.
 
-Seven screens (UX.md §2.5) and no eighth. Everything a child can reach is here,
+The screens of UX.md §2.5 and no others. Everything a child can reach is here,
 which is the point: the set of things they can do is the set of routes in this
 file, and there is no address bar to type anything else into.
 
@@ -514,11 +514,20 @@ def register_routes(app: FastAPI) -> None:
 
     @app.post("/shutdown")
     async def shutdown(request: Request, shell: Shell) -> Response:
-        ok = await shell.client.request_shutdown()
+        """The confirmation's "Evet, kapat": a goodbye, never the home screen (D-209).
+
+        The daemon answers at once with what it will do and does it afterwards:
+        the computer switches off, or, while someone else is logged in, only
+        this child's session ends - and the page says which, in words a child
+        can follow. When the daemon could not be asked, the child is told so and
+        to find a grown-up. Put back on the home screen, as before, they could
+        not tell "nothing happened" from "about to happen".
+        """
+        outcome = await shell.client.request_shutdown()
         data = await shell.client.state()
-        if ok:
-            return await render(shell, request, "goodbye.html", data)
-        return await render(shell, request, "home.html", data)
+        if outcome is None:
+            return await render(shell, request, "shutdown.html", data, failed=True)
+        return await render(shell, request, "goodbye.html", data, outcome=outcome.value)
 
     # ---------------------------------------------------------- assistant
 

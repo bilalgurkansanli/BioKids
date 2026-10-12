@@ -46,17 +46,24 @@ async def running(
 
     source = FakeSessionSource()
     bus = EventBus(queue_size=256, history_size=256)
+    runner = RecordingRunner()
     supervisor = Supervisor(
         database=db,
         bus=bus,
         watcher=SessionWatcher(source),
-        enforcer=Enforcer(config, RecordingRunner()),
+        enforcer=Enforcer(config, runner),
         clock=clock,
         config=config,
     )
     await supervisor.start()
     server = ShellServer(supervisor, bus, config)
-    return {"supervisor": supervisor, "server": server, "source": source, "bus": bus}
+    return {
+        "supervisor": supervisor,
+        "server": server,
+        "source": source,
+        "bus": bus,
+        "runner": runner,
+    }
 
 
 def caller_for(server: ShellServer, unix_user: str, uid: int = 1000) -> ShellCaller:
@@ -232,12 +239,24 @@ async def test_the_first_run_flag_is_recorded_once(
     assert entries.count("first_run_explained") == 1, "the second call is a no-op"
 
 
+async def settled(supervisor: Supervisor) -> None:
+    """Wait for what the daemon answered for and then went on to do (D-209)."""
+    while supervisor._afterwards:
+        await asyncio.gather(*list(supervisor._afterwards), return_exceptions=True)
+
+
 async def test_a_child_cannot_shut_down_while_a_sibling_is_logged_in(
     running: dict[str, Any],
 ) -> None:
-    """One child must not be able to close another child's work."""
+    """One child must not be able to close another child's work.
+
+    Their own, though, they can (D-209): the computer stays on and only the
+    caller's session ends. The launcher is told which, and not who else is
+    there - the child's screen has no use for another account's name.
+    """
     server: ShellServer = running["server"]
     source: FakeSessionSource = running["source"]
+    runner: RecordingRunner = running["runner"]
     source.log_in("elif")
     source.log_in("kerem", uid=1001)
     await server.supervisor.watcher.refresh()
@@ -245,8 +264,14 @@ async def test_a_child_cannot_shut_down_while_a_sibling_is_logged_in(
     response, _ = await server._dispatch(
         caller_for(server, "elif"), Request(op=str(ShellOp.REQUEST_SHUTDOWN)).encode()
     )
-    assert response.ok is False
-    assert response.error == "shell.not_allowed"
+    await settled(server.supervisor)
+
+    assert response.ok is True
+    assert response.data == {"poweroff": False, "outcome": "logout"}
+    assert "kerem" not in response.encode().decode().lower()
+    assert runner.ran("loginctl", "terminate-user", "elif")
+    assert not runner.ran("loginctl", "terminate-user", "kerem")
+    assert not runner.ran("systemctl", "poweroff")
 
 
 async def test_a_child_alone_at_the_machine_may_shut_it_down(
@@ -261,7 +286,12 @@ async def test_a_child_alone_at_the_machine_may_shut_it_down(
     response, _ = await server._dispatch(
         caller_for(server, "elif"), Request(op=str(ShellOp.REQUEST_SHUTDOWN)).encode()
     )
+    await settled(server.supervisor)
+
     assert response.ok is True
+    assert response.data == {"poweroff": True, "outcome": "poweroff"}
+    runner: RecordingRunner = running["runner"]
+    assert runner.ran("systemctl", "poweroff")
 
 
 async def test_subscribing_asks_for_a_stream_rather_than_answering(

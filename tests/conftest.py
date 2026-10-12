@@ -67,6 +67,11 @@ def no_real_system_commands(monkeypatch: pytest.MonkeyPatch) -> None:
     from biokids_daemon import filtering
 
     monkeypatch.setattr(filtering, "FILTER_SETTLE_PAUSE", 0.0)
+    # The goodbye's few seconds before switching off (D-209) are for a child
+    # reading the screen, not for a test.
+    from biokids_daemon import operations
+
+    monkeypatch.setattr(operations, "POWER_GRACE_SECONDS", 0.0)
 
     # Nor the app bar of the session the tests run in (D-208): a launcher under
     # test that asked it would bring the developer's own windows to the front.

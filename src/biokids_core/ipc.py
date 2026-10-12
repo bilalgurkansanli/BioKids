@@ -94,7 +94,8 @@ class ShellOp(StrEnum):
     """A site the child opened, by host name only, from the extension (D-187)."""
     FIRST_RUN_DONE = "first_run_done"
     REQUEST_SHUTDOWN = "request_shutdown"
-    """The child pressed the shutdown tile (D-100). The daemon decides."""
+    """The child pressed the shutdown tile (D-100). The daemon decides, and says
+    at once which it will be, `ShutdownOutcome`, before doing it (D-209)."""
     ASK_A_PARENT = "ask_a_parent"
     """The block page's "Anneme sor" button files an access request (D-65)."""
     ASK_ASSISTANT = "ask_assistant"

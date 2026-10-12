@@ -187,6 +187,15 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
    reads it aloud. A refusal is a kind fixed sentence in the same bubble, never an
    error. While the model loads, "Biraz bekle, aklımı topluyorum…", then
    "Düşünüyorum…", in words rather than a spinner.
+10. **Kapat** (D-100) — "Bilgisayarı kapatalım mı?", **Evet, kapat** and **Vazgeç**.
+    The yes is answered at once (D-209): "Bilgisayar kapanıyor…" and "Yarın
+    görüşürüz.", said aloud for 4–7, and a few seconds later the computer switches
+    off, once the child's open apps have had their chance to save. While anyone else
+    is logged in - a parent who switched user, a sibling - the computer stays on and
+    only the child's own session ends: "Bilgisayarda başka biri de var, o yüzden
+    bilgisayar açık kalıyor. Senin oturumunu kapatıyorum." Nobody is named. When the
+    launcher cannot reach BioKids: "Bilgisayar kapanamadı. Bir büyüğüne söyle." and a
+    way back. Never the home screen as if nothing had been pressed.
 
 ### 2.6 The app bar
 
@@ -354,6 +363,10 @@ One card per child, and under them one card for the week (D-206):
 Three buttons, large, thumb-reachable at the bottom of a phone screen. Live-updating
 via server-sent events. A parent glancing at this on their phone must understand it in
 three seconds without reading a label twice.
+
+**Kapat** asks first, then says "Bilgisayar kapatılıyor." at once; the computer goes a
+few seconds later, after the children's apps have closed (D-209). If it does not go,
+every child's screen is locked and the parent gets an alert.
 
 Pending access requests appear as a banner above the cards, because they are
 time-sensitive — a child is standing at the computer waiting.

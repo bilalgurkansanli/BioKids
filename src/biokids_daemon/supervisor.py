@@ -139,6 +139,8 @@ class Supervisor(
 
     async def stop(self) -> None:
         self.started = False
+        # First: what was answered for and is still to come uses the database.
+        await self._cancel_afterwards()
         if self._ledger is not None:
             self._ledger.persist()
         if self._session is not None:

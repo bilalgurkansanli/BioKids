@@ -135,6 +135,21 @@ msgstr "Yes, shut down"
 msgid "shell.shutdown.confirm_no"
 msgstr "Never mind"
 
+msgid "shell.shutdown.going"
+msgstr "The computer is shutting down…"
+
+msgid "shell.shutdown.others"
+msgstr "Someone else is using the computer too, so it stays on."
+
+msgid "shell.shutdown.others_body"
+msgstr "I'm closing your session."
+
+msgid "shell.shutdown.failed"
+msgstr "The computer did not shut down."
+
+msgid "shell.shutdown.failed_body"
+msgstr "Tell a grown-up."
+
 msgid "shell.launching"
 msgstr "Opening {app}"
 
@@ -728,7 +743,7 @@ msgid "audit.action.first_run_explained"
 msgstr "BioKids was explained to the child"
 
 msgid "audit.action.logout"
-msgstr "Signed out of the panel"
+msgstr "Child's session ended"
 
 msgid "audit.action.passphrase_failed"
 msgstr "Wrong passphrase attempt"
@@ -1841,6 +1856,15 @@ msgstr "The computer is restarting…"
 
 msgid "audit.action.reboot"
 msgstr "Computer restarted"
+
+msgid "audit.action.poweroff_failed"
+msgstr "The computer did not shut down"
+
+msgid "audit.action.reboot_failed"
+msgstr "The computer did not restart"
+
+msgid "audit.action.logout_failed"
+msgstr "The child's session would not end"
 
 msgid "help.title"
 msgstr "Help"

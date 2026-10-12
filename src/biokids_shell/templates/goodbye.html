@@ -1,8 +1,19 @@
 {% extends "_full.html" %}
+{# Said for a 4-7 child as the screen opens (D-175): the daemon waits a few
+   seconds before the machine or the session goes, for this (D-209). #}
+{% set speak_on_load = true %}
 {% set tone = 'full--night' %}
 {% set persona = 'zio' %}
 {% set expression = 'sleepy' %}
 {% block title %}{{ _('shell.timeup.tomorrow') }}{% endblock %}
 {% block inner %}
-  <h1>{{ _('shell.timeup.tomorrow') }}</h1>
+  {% if outcome == 'logout' %}
+    {# Someone else is logged in, so the computer stays on and only this
+       child's session ends (D-100). Nobody is named. #}
+    <h1>{{ _('shell.shutdown.others') }}</h1>
+    <p>{{ _('shell.shutdown.others_body') }}</p>
+  {% else %}
+    <h1>{{ _('shell.shutdown.going') }}</h1>
+    <p>{{ _('shell.timeup.tomorrow') }}</p>
+  {% endif %}
 {% endblock %}

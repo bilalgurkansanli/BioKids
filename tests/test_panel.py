@@ -443,6 +443,40 @@ def test_shutting_down_requires_an_explicit_confirmation(
     assert daemon.ran("poweroff_now")
 
 
+def test_the_parent_is_told_the_computer_is_shutting_down(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    """The daemon answers before it stops the apps (D-209), so the panel says so.
+
+    It used to answer after every child's apps had had their grace period, the
+    panel gave up after five seconds, and a parent was told the service was not
+    answering while the machine went down anyway.
+    """
+    login(client)
+    response = client.post(
+        "/children/1/poweroff",
+        data={"csrf_token": csrf_of(client), "confirm": "yes"},
+        follow_redirects=False,
+    )
+    assert response.headers["location"] == "/today?poweroff=1"
+    assert "Bilgisayar kapatılıyor." in client.get(response.headers["location"]).text
+
+
+def test_a_poweroff_the_daemon_never_heard_is_not_reported_as_done(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    login(client)
+    token = csrf_of(client)
+    daemon.up = False
+    response = client.post(
+        "/children/1/poweroff",
+        data={"csrf_token": token, "confirm": "yes"},
+        follow_redirects=False,
+    )
+    assert response.headers["location"] == "/today?error=daemon"
+    assert "Bilgisayar kapatılıyor." not in client.get("/today?error=daemon").text
+
+
 # ------------------------------------------------------------ time settings
 
 

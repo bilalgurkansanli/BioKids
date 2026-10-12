@@ -16,6 +16,7 @@ from typing import Any
 
 from biokids_core.errors import IpcError
 from biokids_core.ipc import AsyncDaemonClient, Event, ShellOp
+from biokids_core.types import ShutdownOutcome
 
 log = logging.getLogger(__name__)
 
@@ -79,11 +80,26 @@ class ShellClient:
         except (IpcError, OSError):
             log.warning("could not record that the first-run screen was seen")
 
-    async def request_shutdown(self) -> bool:
+    async def request_shutdown(self) -> ShutdownOutcome | None:
+        """What "Evet, kapat" does, or None when the daemon could not be asked.
+
+        The daemon answers before it acts (D-209), so the five seconds are
+        plenty. None is never shown as the home screen: put back where they
+        were, a child cannot tell "it did not work" from "it is about to", and
+        walks away from an open session.
+        """
         try:
-            return (await self._client.call(ShellOp.REQUEST_SHUTDOWN)).ok
-        except (IpcError, OSError):
-            return False
+            response = await self._client.call(ShellOp.REQUEST_SHUTDOWN)
+        except (IpcError, OSError) as exc:
+            log.warning("could not ask to shut down: %s", exc)
+            return None
+        if not response.ok:
+            log.warning("the daemon did not take the shutdown: %s", response.error)
+            return None
+        try:
+            return ShutdownOutcome(str(response.data.get("outcome", ShutdownOutcome.POWEROFF)))
+        except ValueError:
+            return None
 
     async def ask_a_parent(self, url: str, kind: str = "site") -> tuple[bool, str]:
         """(filed, reason). The reason is a catalog key when it was not filed."""

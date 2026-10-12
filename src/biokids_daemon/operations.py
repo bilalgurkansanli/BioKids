@@ -8,18 +8,33 @@ the actor the panel names.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
+from collections.abc import Awaitable, Iterable, Iterator
 from typing import Any
 
 from biokids_core import repo
 from biokids_core.ipc import EventKind
 from biokids_core.policy import evaluate
-from biokids_core.types import ActivityContext, Category, Decision
-from biokids_daemon.base import log
+from biokids_core.types import ActivityContext, Category, Decision, ShutdownOutcome
+from biokids_daemon.base import ChildRuntime, log
 from biokids_daemon.end_sequence import EndSequenceMixin
 
 VISIT_REPEAT_SECONDS = 600
 """The same host again within ten minutes is the same visit."""
+
+POWER_GRACE_SECONDS = 6.0
+"""The least time between answering "switch off" and doing it (D-209).
+
+The answer is a page - the child's goodbye, the parent's "Bilgisayar
+kapatılıyor." - and a page needs a moment on the screen, and a 4-7 child's
+goodbye a moment to be said aloud, before systemd takes the session down under
+it. The applications are being stopped meanwhile, so with one open this is
+seldom any extra wait."""
+
+POWER_TASKS = ("poweroff", "reboot")
+"""The names the machine-wide work runs under, one at a time: a second "Kapat"
+while the first is under way gets the same answer and starts nothing more."""
 
 
 class OperationsMixin(EndSequenceMixin):
@@ -39,11 +54,20 @@ class OperationsMixin(EndSequenceMixin):
         )
         self.session.commit()
 
-    async def child_requested_shutdown(self, child_id: int) -> bool:
-        """The shutdown tile (D-100). Refused while anyone else is still logged in.
+    async def child_requested_shutdown(self, child_id: int) -> ShutdownOutcome:
+        """The shutdown tile (D-100): the computer switches off, or the child's session ends.
 
-        Anyone, not just a sibling: a parent who switched user so the child
-        could play must not lose their open session with the machine.
+        Off when nobody else is logged in. While anyone else is - anyone, not
+        just a sibling: a parent who switched user so the child could play must
+        not lose their open session with the machine - only this child's own
+        session ends, so "Kapat" still closes everything the child has open and
+        nothing of anyone else's.
+
+        Decided and audited here, done after the answer (D-209). Every open
+        application gets its grace period first, and the launcher waits five
+        seconds for an answer: with an app open the answer came too late, and
+        the child was put back on the home screen as if "Evet, kapat" had done
+        nothing.
         """
         runtime = self._require(child_id)
         # Ask logind now rather than trusting the last tick's snapshot: this is
@@ -53,13 +77,17 @@ class OperationsMixin(EndSequenceMixin):
             await self.watcher.refresh()
         others = self._others_logged_in(runtime)
         if others:
-            log.info(
-                "%s asked to shut down, but %s is still logged in",
-                runtime.unix_user,
-                ", ".join(others),
-            )
-            return False
+            name = f"logout:{runtime.unix_user}"
+            if not self._under_way(name):
+                self._audit_session_instead(runtime, others)
+                self._after_answering(
+                    self._end_childs_session(runtime, _grace_deadline()), name
+                )
+            return ShutdownOutcome.LOGOUT
 
+        if self._under_way(*POWER_TASKS):
+            # A second tap, or the parent pressed "Kapat" too: once is enough.
+            return ShutdownOutcome.POWEROFF
         repo.audit(
             self.session,
             actor=f"child:{runtime.unix_user}",
@@ -68,9 +96,125 @@ class OperationsMixin(EndSequenceMixin):
             detail={"by": "child"},
         )
         self.session.commit()
-        await self.enforcer.stop_all_apps(runtime.unix_user)
-        self.ledger.persist()
-        return await self.enforcer.poweroff()
+        self._after_answering(self._child_poweroff(runtime, _grace_deadline()), "poweroff")
+        return ShutdownOutcome.POWEROFF
+
+    def _audit_session_instead(self, runtime: ChildRuntime, others: tuple[str, ...]) -> None:
+        log.info(
+            "%s asked to shut down, but %s %s logged in; ending only %s's session",
+            runtime.unix_user,
+            ", ".join(others),
+            "is" if len(others) == 1 else "are",
+            runtime.unix_user,
+        )
+        with self._recorded_if_possible("a session ended instead of the computer"):
+            repo.audit(
+                self.session,
+                actor=f"child:{runtime.unix_user}",
+                action="logout",
+                target=f"child:{runtime.child_id}",
+                detail={"by": "child", "instead_of": "poweroff", "others": list(others)},
+            )
+
+    async def _child_poweroff(self, runtime: ChildRuntime, deadline: float) -> None:
+        """The child's applications, the day's minutes, then the computer.
+
+        Who else is logged in is asked once more just before: D-100's promise is
+        about the moment the machine goes, and a parent may have switched to
+        their own account while the applications were closing.
+        """
+        await self._close_apps((runtime,))
+        await _until(deadline)
+        with contextlib.suppress(Exception):
+            await self.watcher.refresh()
+        others = self._others_logged_in(runtime)
+        if others:
+            self._audit_session_instead(runtime, others)
+            await self._logout_or_lock(runtime)
+            return
+        if await _attempt(self.enforcer.poweroff(), "switching the computer off"):
+            return
+        # Principle 3: the child was told the computer is switching off, and is
+        # not left in front of an open session that nothing is ending.
+        log.error(
+            "the computer did not switch off when %s asked; ending their session instead",
+            runtime.unix_user,
+        )
+        ended = await self._logout_or_lock(runtime)
+        with self._recorded_if_possible("the shutdown that did not happen"):
+            repo.audit(
+                self.session,
+                actor="daemon",
+                action="poweroff_failed",
+                target=f"child:{runtime.child_id}",
+                detail={"by": "child", "session_ended": ended},
+                severity="alert",
+            )
+
+    async def _end_childs_session(self, runtime: ChildRuntime, deadline: float) -> None:
+        """Someone else is using the computer: close what this child has open."""
+        await self._close_apps((runtime,))
+        await _until(deadline)
+        await self._logout_or_lock(runtime)
+
+    async def _close_apps(self, runtimes: Iterable[ChildRuntime]) -> None:
+        """Applications first, so an unsaved drawing gets its SIGTERM and its grace
+        period; then the day's minutes are written down. Neither failing stops
+        what comes after: ending the session or the machine ends the apps too."""
+        for runtime in list(runtimes):
+            await _attempt(
+                self.enforcer.stop_all_apps(runtime.unix_user),
+                f"stopping {runtime.unix_user}'s applications",
+            )
+        try:
+            self.ledger.persist()
+        except Exception:
+            log.exception("could not write the day's minutes down first")
+
+    async def _logout_or_lock(self, runtime: ChildRuntime) -> bool:
+        """End this child's session - this child's alone - or at least lock it.
+
+        `loginctl terminate-user`, the path EndAction.LOGOUT takes, and it ends
+        sessions by user name, so nobody else's. When logind will not end it the
+        screen is locked instead, and the parent is told: a child who pressed
+        "Kapat" is never left at an open session nobody is ending (principle 3).
+        """
+        user = runtime.unix_user
+        if await _attempt(self.enforcer.logout_user(user), f"ending {user}'s session"):
+            return True
+        with contextlib.suppress(Exception):
+            await self.watcher.refresh()
+        sessions = self.watcher.presence(user).lockable_session_ids
+        locked = await _attempt(
+            self.enforcer.lock_sessions(sessions), f"locking {user}'s screen"
+        )
+        log.error(
+            "%s's session did not end; %s",
+            user,
+            "the screen is locked instead" if locked else "nor could the screen be locked",
+        )
+        with self._recorded_if_possible("the session that did not end"):
+            repo.audit(
+                self.session,
+                actor="daemon",
+                action="logout_failed",
+                target=f"child:{runtime.child_id}",
+                detail={"locked": locked, "sessions": list(sessions)},
+                severity="alert",
+            )
+        return False
+
+    @contextlib.contextmanager
+    def _recorded_if_possible(self, what: str) -> Iterator[None]:
+        """For the audit rows of work done after answering: a database that will
+        not take one is logged, and never stops the switching off or the lock."""
+        try:
+            yield
+            self.session.commit()
+        except Exception:
+            log.exception("could not record %s in the audit log", what)
+            with contextlib.suppress(Exception):
+                self.session.rollback()
 
     async def unlock_now(self, child_id: int, actor: str = "parent") -> bool:
         """The "Kilidi aç" button: back in, without changing the day's time.
@@ -167,22 +311,70 @@ class OperationsMixin(EndSequenceMixin):
         return ok
 
     async def poweroff_now(self, actor: str = "parent") -> bool:
-        for runtime in self.children.values():
-            await self.enforcer.stop_all_apps(runtime.unix_user)
-        repo.audit(self.session, actor=actor, action="poweroff", severity="warning")
-        self.session.commit()
-        self.ledger.persist()
-        return await self.enforcer.poweroff()
+        """The parent's "Kapat" on Today: answered at once, done afterwards (D-209).
+
+        Every child's applications get their grace period first, and that used
+        to happen inside the panel's request: with an app open the panel gave
+        up after its five seconds and told the parent the service was not
+        answering, while the machine went down anyway.
+        """
+        return self._power_after_answering(actor, restart=False)
 
     async def reboot_now(self, actor: str = "parent") -> bool:
         """Restart the machine, which LightDM needs once after BioKids is
-        installed before a child can log in by their picture (D-155, D-195)."""
-        for runtime in self.children.values():
-            await self.enforcer.stop_all_apps(runtime.unix_user)
-        repo.audit(self.session, actor=actor, action="reboot", severity="warning")
+        installed before a child can log in by their picture (D-155, D-195).
+        Answered at once and done afterwards, like poweroff_now (D-209)."""
+        return self._power_after_answering(actor, restart=True)
+
+    def _power_after_answering(self, actor: str, *, restart: bool) -> bool:
+        if self._under_way(*POWER_TASKS):
+            log.info("%s asked again while the computer is already going down", actor)
+            return True
+        repo.audit(
+            self.session,
+            actor=actor,
+            action="reboot" if restart else "poweroff",
+            severity="warning",
+        )
         self.session.commit()
-        self.ledger.persist()
-        return await self.enforcer.reboot()
+        self._after_answering(
+            self._power(restart, _grace_deadline()), "reboot" if restart else "poweroff"
+        )
+        return True
+
+    async def _power(self, restart: bool, deadline: float) -> None:
+        """Every child's applications, the minutes, then the machine.
+
+        If the machine does not go, every child's screen is locked and the
+        parent is told: they meant nobody to be using it, and a lock is the one
+        thing they can lift again from Today ("Kilidi aç").
+        """
+        await self._close_apps(self.children.values())
+        await _until(deadline)
+        command = self.enforcer.reboot() if restart else self.enforcer.poweroff()
+        if await _attempt(command, "restarting" if restart else "switching off"):
+            return
+        log.error(
+            "the computer did not %s; locking every child's screen",
+            "restart" if restart else "switch off",
+        )
+        with contextlib.suppress(Exception):
+            await self.watcher.refresh()
+        locked: list[str] = []
+        for runtime in list(self.children.values()):
+            sessions = self.watcher.presence(runtime.unix_user).lockable_session_ids
+            if sessions and await _attempt(
+                self.enforcer.lock_sessions(sessions), f"locking {runtime.unix_user}'s screen"
+            ):
+                locked.append(runtime.unix_user)
+        with self._recorded_if_possible("the shutdown that did not happen"):
+            repo.audit(
+                self.session,
+                actor="daemon",
+                action="reboot_failed" if restart else "poweroff_failed",
+                detail={"by": "parent", "locked": locked},
+                severity="alert",
+            )
 
     def start_timeout(self, child_id: int, minutes: int, actor: str = "parent") -> None:
         self._require(child_id)
@@ -265,3 +457,27 @@ class OperationsMixin(EndSequenceMixin):
             ),
             reading.wall,
         )
+
+
+def _grace_deadline() -> float:
+    """When the work just answered for may go ahead, on the event loop's clock.
+
+    Not the supervisor's clock, which a test moves by hand and a guarded wall
+    clock may hold still: this is a few real seconds, nothing to account."""
+    return asyncio.get_running_loop().time() + POWER_GRACE_SECONDS
+
+
+async def _until(deadline: float) -> None:
+    wait = deadline - asyncio.get_running_loop().time()
+    if wait > 0:
+        await asyncio.sleep(wait)
+
+
+async def _attempt(step: Awaitable[bool], what: str) -> bool:
+    """One step of work done after answering: False, logged, rather than raised,
+    so that the fallback after it still runs."""
+    try:
+        return await step
+    except Exception:
+        log.exception("%s failed", what)
+        return False

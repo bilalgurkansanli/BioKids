@@ -2,9 +2,17 @@
 {% set speak_on_load = true %}
 {% set tone = 'full--warm' %}
 {% set persona = 'sio' %}
-{% set expression = 'neutral' %}
+{% set expression = 'concerned' if failed else 'neutral' %}
 {% block title %}{{ _('shell.shutdown.confirm_title') }}{% endblock %}
 {% block inner %}
+  {% if failed %}
+    {# The daemon could not be asked (D-209). Calm, no error code, and a way
+       back, since as far as the launcher knows nothing is going to switch off.
+       No second "Evet, kapat": it would fail the same way. #}
+    <h1>{{ _('shell.shutdown.failed') }}</h1>
+    <p>{{ _('shell.shutdown.failed_body') }}</p>
+    <a class="big-btn" href="/">{{ _('shell.blocked.back') }}</a>
+  {% else %}
   <h1>{{ _('shell.shutdown.confirm_title') }}</h1>
   <div class="btn-row">
     <form method="post" action="/shutdown">
@@ -14,4 +22,5 @@
     </form>
     <a class="big-btn big-btn--quiet" href="/">{{ _('shell.shutdown.confirm_no') }}</a>
   </div>
+  {% endif %}
 {% endblock %}
