@@ -230,12 +230,17 @@ Depends: biokids (= ${binary:Version}),
          lightdm,
          xfce4,
          ${misc:Depends}
+# Separate programs the launcher starts, under the GPL and LGPL, so their
+# licences do not reach BioKids' own code (D-30). Each is an app in the
+# catalogue, except tuxpaint-stamps-default: Tux Paint's ("Boya") stamps -
+# animals, food, vehicles, plants - where tuxpaint alone has six of Tux (D-210).
 Recommends: blinken,
             frozen-bubble,
             gcompris-qt,
             gnome-chess,
             gnome-mahjongg,
             kbruch,
+            kdiamond,
             kgeography,
             klavaro,
             kolourpaint,
@@ -245,16 +250,17 @@ Recommends: blinken,
             palapeli,
             supertux,
             tuxmath,
-            tuxpaint
+            tuxpaint,
+            tuxpaint-stamps-default
 Suggests: biokids-ai, libreoffice-writer
 Description: parental controls for Debian - full child desktop (metapackage)
  This metapackage turns a plain Debian installation into the machine a child
  is handed: BioKids itself, the Xfce session it is built on, the LightDM
  greeter with its large avatars, and the applications in the BioKids
- catalogue - GCompris, TuxPaint, TuxMath, Klavaro, KolourPaint,
- SuperTux, Frozen Bubble and gnome-mahjongg, and for learning the Marble
- globe, KGeography, KBruch, KTurtle, Blinken, KTuberling, Palapeli and
- GNOME Chess. All of them work without the internet.
+ catalogue - GCompris, TuxPaint with its stamps, TuxMath, Klavaro,
+ KolourPaint, SuperTux, Frozen Bubble, KDiamond and gnome-mahjongg, and for
+ learning the Marble globe, KGeography, KBruch, KTurtle, Blinken, KTuberling,
+ Palapeli and GNOME Chess. All of them work without the internet.
  .
  The applications arrive as recommendations, so a parent who wants a smaller
  set can drop any of them without fighting the package manager. Nothing a

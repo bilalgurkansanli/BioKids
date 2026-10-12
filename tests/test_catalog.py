@@ -138,6 +138,11 @@ def test_no_two_tiles_share_a_name(entries: list[CatalogEntry]) -> None:
         assert len(names) == len(set(names)), f"two tiles look the same: {language}"
 
 
+COMPANIONS = {"tuxpaint-stamps-default": "tuxpaint"}
+"""Recommended for what they add to a catalogue app, not as a tile of their own:
+Tux Paint alone has six stamps, all of Tux (D-210)."""
+
+
 def test_every_app_package_comes_with_the_child_desktop(entries: list[CatalogEntry]) -> None:
     """biokids-desktop brings them as Recommends: never Depends, so a parent can
     drop one without fighting the package manager (D-20)."""
@@ -148,9 +153,11 @@ def test_every_app_package_comes_with_the_child_desktop(entries: list[CatalogEnt
     for package in packages - {"thunar"}:  # Thunar is part of xfce4 itself
         assert package in recommends | suggests, f"{package} is not offered by biokids-desktop"
         assert package not in depends, f"{package} must not be a Depends"
-    assert recommends <= packages, (
-        f"recommended but not in the catalogue: {recommends - packages}"
+    assert recommends - set(COMPANIONS) <= packages, (
+        f"recommended but not in the catalogue: {recommends - set(COMPANIONS) - packages}"
     )
+    for companion, app in COMPANIONS.items():
+        assert companion in recommends and app in packages, companion
 
 
 # --------------------------------------------------------------- D-203
@@ -181,6 +188,54 @@ def test_the_learning_apps_are_offered_at_their_ages(entries: list[CatalogEntry]
     older = {e.slug for e in Catalog(tuple(entries)).suggested_for_age(10)}
     assert {"marble", "kgeography", "kbruch"} <= older
     assert "google-earth" not in older, "Google Earth is offered, never ticked"
+
+
+# --------------------------------------------------------------- D-210
+
+
+def test_a_game_and_a_site_fill_the_rows(entries: list[CatalogEntry]) -> None:
+    """The owner looked at a six-year-old's screen and asked for one more game
+    and one more site, so the rows look full: both are ticked for a new child of
+    any age the launcher is for."""
+    by_slug = {e.slug: e for e in entries}
+    game, site = by_slug["kdiamond"], by_slug["chrome-music-lab"]
+
+    assert game.kind == "app" and game.package == "kdiamond"
+    assert game.exec_argv == ("kdiamond",), "a window of its own, nothing to turn off"
+    assert game.default_category == Category.GAMES.value
+    assert site.kind == "web" and site.url == "https://musiclab.chromeexperiments.com/"
+    assert site.default_category == Category.LEARNING.value
+    for entry in (game, site):
+        assert (entry.min_age, entry.max_age) == (4, 10), entry.slug
+        assert entry.suggest, entry.slug
+        others = {e.icon for e in entries if e.slug != entry.slug}
+        assert entry.icon in TILE_ICONS and entry.icon not in others, "a picture of its own"
+        # For a four-year-old, the parent reading the panel needs to know.
+        assert "okuma gerekmez" in entry.description_tr.lower(), entry.slug
+        assert "no reading needed" in entry.description_en.lower(), entry.slug
+
+    catalog = Catalog(tuple(entries))
+    for age in (4, 6, 10):
+        assert {"kdiamond", "chrome-music-lab"} <= {
+            e.slug for e in catalog.suggested_for_age(age)
+        }, age
+
+
+def test_music_labs_song_maker_opens_in_selected_sites_mode(
+    entries: list[CatalogEntry],
+) -> None:
+    """Every experiment opens in a frame; Song Maker's comes from a host of its
+    own, which the browser's URL filter would close in "only the sites I choose"
+    mode. Its scripts and fonts are not pages, and the filter leaves them be."""
+    site = next(e for e in entries if e.slug == "chrome-music-lab")
+    assert set(site.allowed_patterns()) == {
+        "musiclab.chromeexperiments.com",
+        "gweb-song-maker.appspot.com",
+    }
+
+
+def test_tux_paint_comes_with_its_stamps() -> None:
+    assert "tuxpaint-stamps-default" in _field(_stanza("biokids-desktop"), "Recommends")
 
 
 # ------------------------------------------------- catalogue changes (sync)

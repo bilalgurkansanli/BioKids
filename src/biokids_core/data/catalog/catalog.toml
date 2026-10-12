@@ -302,6 +302,33 @@ suggest = false
 description_tr = "Bilgisayara ya da yanındaki birine karşı satranç."
 description_en = "Chess against the computer or someone sitting beside you."
 
+# --- a game that fills the row (D-210) --------------------------------------
+# The owner saw a six-year-old's home screen end in a row of four under rows of
+# six and asked for one more game. Held to D-203's rules: trixie main (KDiamond
+# 4:25.04.0-1), offline, a Turkish interface, in a window of its own with no
+# full-screen option to turn off, and nothing to read while playing. GPL-2+, a
+# separate program the launcher starts (CLAUDE.md §6).
+#
+# Not taken: Ri-li, the wooden toy train. It has no command-line options at all
+# - its first argument is read as a data directory - and it starts full screen
+# unless its own settings file says otherwise; none of its fourteen languages
+# is Turkish, its first start asks the child to pick one by flag, and between
+# levels it asks a question about a human-rights article in that language.
+
+[[app]]
+slug = "kdiamond"
+name_tr = "Elmaslar"
+name_en = "Diamonds"
+exec = ["kdiamond"]
+package = "kdiamond"
+kind = "app"
+icon = "diamond"
+default_category = "games"
+min_age = 4
+max_age = 10
+description_tr = "Yan yana iki elmasın yerini değiştir; aynı renkten üçü bir sıraya gelince kaybolur. Okuma gerekmez."
+description_en = "Swap two neighbouring diamonds; three of a colour in a row disappear. No reading needed."
+
 # --- web tiles -------------------------------------------------------------
 # These open the child's Chromium at a URL. In allowlist mode the address is
 # added to the child's allowlist when the tile is enabled, so a tile can never
@@ -470,6 +497,33 @@ min_age = 6
 max_age = 10
 description_tr = "Google'ın açık kaynak kodlama oyunları: bulmaca, labirent, kuş. Türkçe, reklamsız, hesap gerekmez."
 description_en = "Google's open-source coding games: puzzle, maze, bird. No ads, no account."
+
+[[app]]
+# Chrome Music Lab (D-210), checked on 2026-10-11: free, no ads, no account,
+# fourteen experiments in pictures - rhythm, a song grid, sound waves, drawing
+# that plays. The menu's words are English (the site maps Turkish to English),
+# but nothing in it needs reading, so unlike PBS KIDS it is ticked. Each
+# experiment opens in a frame: thirteen from the site itself, Song Maker from
+# its own host, which "selected sites only" mode would close without `allow`.
+# Its scripts and fonts come from ajax.googleapis.com, gstatic.com and
+# fonts.googleapis.com, which the browser's URL filter does not govern (it
+# governs pages and frames). The two experiments that listen to a microphone
+# (Spectrogram, Voice Spinner) cannot: the child's browser allows the
+# microphone to the launcher alone.
+slug = "chrome-music-lab"
+name_tr = "Müzik Atölyesi"
+name_en = "Music Lab"
+exec = []
+url = "https://musiclab.chromeexperiments.com/"
+allow = ["musiclab.chromeexperiments.com", "gweb-song-maker.appspot.com"]
+package = ""
+kind = "web"
+icon = "piano"
+default_category = "learning"
+min_age = 4
+max_age = 10
+description_tr = "Google'ın müzik deneyleri: ritim yap, şarkı besteleyip çal, sesin şeklini gör. Menüsü İngilizce; okuma gerekmez, reklamsız, hesap gerekmez."
+description_en = "Google's music experiments: make a rhythm, compose and play a song, see what sound looks like. Menu in English; no reading needed, no ads, no account."
 
 [[app]]
 slug = "google-earth"

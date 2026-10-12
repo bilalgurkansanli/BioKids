@@ -82,6 +82,14 @@ background with the app bar's 🏠, each a round button with the app's own icon,
 dot marks their tiles; a tap on either brings the same window back (D-201). Web tiles
 are not listed: each opens a window of its own (D-197).
 
+The tiles sit in rows of one size, as many as the width holds (six at 1600 pixels
+for 4–7), and every row is centred: a last row that does not fill sits in the
+middle under the others, never with holes on the right, because a half-empty row
+looked to the owner like something was missing (D-210). More rows than fit scroll
+inside the grid, under a header and a footer that stay put. The browser's start
+page (`/start`), the child's own sites, is laid out the same way, seven a row at
+1600 pixels with the young band's tiles at 200 pixels there.
+
 ### 2.2 Age bands
 
 | | 4–7 | 8–10 |

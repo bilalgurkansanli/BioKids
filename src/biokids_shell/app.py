@@ -106,6 +106,8 @@ TILE_ICONS: dict[str, str] = {
     "turtle": "🐢",
     "fractions": "🍕",
     "chess": "♟️",
+    "diamond": "💎",
+    "piano": "🎹",
     "globe": "🌐",
     "speaker": "🔊",
     "sun": "☀️",
