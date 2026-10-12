@@ -224,14 +224,20 @@ class SupervisorBase:
     def _others_logged_in(self, runtime: ChildRuntime) -> tuple[str, ...]:
         """Which other human users have a session right now.
 
-        Everyone with a `user` session who is not this child. Another child
-        counts: ending Elif's day must not log Deniz out mid-drawing either.
+        Everyone with a `user` session on a seat who is not this child. Another
+        child counts: ending Elif's day must not log Deniz out mid-drawing
+        either. A login with no seat does not: an ssh session is a grown-up at
+        another machine, not a person at this one, and counting it kept the
+        computer on when the child pressed "Kapat" (D-209).
         """
         others: list[str] = []
         for unix_user, presence in self.watcher.all_presence.items():
             if unix_user == runtime.unix_user:
                 continue
-            if presence.lockable_session_ids:
+            if any(
+                session.seat and session.session_class == "user" and session.is_person
+                for session in presence.sessions
+            ):
                 others.append(unix_user)
         return tuple(sorted(others))
 

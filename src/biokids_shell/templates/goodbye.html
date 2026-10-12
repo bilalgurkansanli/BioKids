@@ -7,6 +7,10 @@
 {% set expression = 'sleepy' %}
 {% block title %}{{ _('shell.timeup.tomorrow') }}{% endblock %}
 {% block inner %}
+  {# Back to the launcher's current screen after a minute, should the machine
+     or the session not have gone after all (the daemon restarted mid-way):
+     never a child left in front of "switching off" with nothing to press. #}
+  <div id="goodbye" hidden data-back-after="60"></div>
   {% if outcome == 'logout' %}
     {# Someone else is logged in, so the computer stays on and only this
        child's session ends (D-100). Nobody is named. #}

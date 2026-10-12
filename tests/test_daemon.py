@@ -1583,6 +1583,38 @@ async def test_the_shutdown_tile_ends_only_the_childs_session_while_a_parent_is_
     assert row.detail == {"by": "child", "instead_of": "poweroff", "others": ["anne"]}
 
 
+async def test_an_ssh_login_does_not_keep_the_computer_on(
+    supervisor: Supervisor, source: FakeSessionSource, runner: RecordingRunner, db: Database
+) -> None:
+    """A login with no seat is a grown-up at another machine (D-209). Counted,
+    it turned "Kapat" into a logout and the VM stayed on."""
+    await supervisor.start()
+    source.log_in("elif")
+    source.log_in("bilal", uid=1000, seat="")
+
+    outcome = await supervisor.child_requested_shutdown(1)
+    await settled(supervisor)
+
+    assert outcome is ShutdownOutcome.POWEROFF
+    assert powered_off(runner)
+
+
+async def test_a_restart_asked_for_while_switching_off_is_not_done(
+    supervisor: Supervisor, source: FakeSessionSource, runner: RecordingRunner, db: Database
+) -> None:
+    """Answered "restarting" from the phone, the machine would have powered off,
+    and a parent away from it could not switch it back on."""
+    await supervisor.start()
+    source.log_in("elif")
+
+    assert await supervisor.child_requested_shutdown(1) is ShutdownOutcome.POWEROFF
+    assert await supervisor.reboot_now() is False
+    await settled(supervisor)
+
+    assert powered_off(runner)
+    assert not runner.ran("systemctl", "reboot")
+
+
 async def test_a_child_alone_can_still_shut_the_machine_down(
     supervisor: Supervisor, source: FakeSessionSource, runner: RecordingRunner, db: Database
 ) -> None:

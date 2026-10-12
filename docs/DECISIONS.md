@@ -574,7 +574,8 @@ is a Suggests (D-161). Each engine caches separately, since the key names no eng
 **D-138 [claude] An end action is scoped to whoever is actually at the machine.** The
 sequence does not start for a child with no session. When someone else is logged in,
 `poweroff` and `logout` narrow to `lock`, audited: the child loses the machine, nobody
-else does.
+else does. *Amended by D-209:* only a login on a seat is someone at the machine; an ssh
+session is not.
 
 **D-139 [claude] Three failed ticks in a row is a failed daemon, and it says so.**
 `persist()` rolls back and re-raises. One failed tick is logged; three lock every child
@@ -1483,3 +1484,60 @@ its 5 s and `_open_again` took "could not look" for "not running" and started an
   after the answer. The launcher keeps watching for the rest of the 1.5 s: an app that
   exits non-zero then is forgotten, and the page, asking `/running` two seconds after a
   yes, gives its tile the calm Blocked screen, as the old wait did.
+
+**D-209 [claude] "Kapat" switches the computer off: answered at once, done after.** (2026-10-11)
+The owner: "Bilgisayarı kapat deyince kapansın." The child's "Evet, kapat" asked the
+daemon, which stopped the child's applications (each given `app_term_grace_seconds`,
+ten by default), wrote the ledger and called `systemctl poweroff`, all before it
+answered; the launcher waits five seconds. With an app open the answer came too late and
+the launcher showed the home screen as if nothing had been pressed. While anyone else was
+logged in - an ssh login included - the refusal looked the same and the child's session
+stayed open. The panel's "Kapat" did the same inside its request.
+- **Answered first, done after.** The daemon asks logind (at most two seconds), decides,
+  audits and answers with what it will do (`ShutdownOutcome`: `poweroff` or `logout`). A
+  task the supervisor holds then stops the apps, writes the ledger and, no sooner than six
+  seconds after the answer, calls `systemctl poweroff`. The parent's poweroff and restart
+  (D-195) work the same way. A second "Kapat" while one is under way starts nothing; a
+  restart asked for while the computer is switching off (or the reverse) is not done and
+  says so, rather than answering "restarting" and powering off.
+- **The child is told.** "Bilgisayar kapanıyor…" and "Yarın görüşürüz.", said aloud for
+  4-7 (D-175). Should the machine stay up after all, the page goes back to the launcher
+  after a minute: never a child in front of "switching off" with nothing to press.
+- **Someone else at the machine: the child's session ends instead.** D-100's protection
+  stays - a parent who switched user, or a sibling, never loses their session - but
+  "Kapat" closes what the child has open: their apps stop, then `loginctl terminate-user`
+  for the child alone, after ten seconds so the longer sentence ("Bilgisayarda başka biri
+  de var, o yüzden bilgisayar açık kalıyor. Senin oturumunu kapatıyorum.") is heard. Nobody
+  is named. Only a login on a seat counts as someone at the machine: an ssh session is a
+  grown-up at another one, and counting it kept the computer on. Who is logged in is asked
+  again just before the machine goes.
+- **No silent failure (principle 3).** A poweroff that fails ends the child's session, or
+  locks it; a parent's that fails locks every child's screen; each writes an alert the
+  mail carries. A launcher that cannot reach the daemon says "Bilgisayar kapanamadı. Bir
+  büyüğüne söyle." with a way back. A daemon stopped during the wait cancels what is left:
+  an upgrade must not end in a poweroff.
+- The audit log's `logout` read "Panelden çıkıldı"; only the daemon writes it, for a
+  child's session, so it reads "Çocuğun oturumu kapatıldı".
+
+**D-210 [owner] Rows that look full: a game, a site, and centred rows.** (2026-10-11)
+The owner, at a six-year-old's launcher on 1600 x 900: the home grid ended in a row of four
+under rows of six, and the browser's start page one short. "Böyle boş kalmış gibi
+gözüküyor, kötü gözüküyor." One more thing on each, they asked.
+- **Elmaslar** (KDiamond, games, 4-10): swap two diamonds, three of a colour vanish - in
+  trixie main, offline, in Turkish, in a window of its own, nothing to read. **Müzik
+  Atölyesi** (Chrome Music Lab, learning, 4-10): fourteen music experiments, free, no ads,
+  no account; its menu is English but nothing needs reading. Song Maker opens in a frame
+  from gweb-song-maker.appspot.com, which its `allow` lists for "only the sites I choose";
+  scripts and fonts are not pages and the URL filter leaves them alone (D-167). The
+  experiments that listen cannot: the microphone is the launcher's alone. Both are ticked
+  for a new child; an existing one gets them when a parent ticks them (D-207).
+- **Not Ri-li**, the toy train first proposed: no command-line options, full screen
+  unless its own settings file says otherwise (D-163), no Turkish, a flag picker on its
+  first start, and in Debian's build a question about a human-rights article between levels.
+- **Tux Paint's stamps.** biokids-desktop recommends tuxpaint-stamps-default (GPL-2 data
+  of a separate program, D-30): thousands of animals, foods, plants and vehicles instead of
+  six of Tux. Among them are a few military ones and Halloween's graves; a parent who minds
+  removes the package.
+- **Every row is centred**, on the home grid and the start page alike: a wrapping flexbox
+  of fixed-size tiles instead of a grid that holds the last row to the left. Home keeps six
+  220-pixel tiles a row at 1600; the start page's young tiles are 200 pixels, seven a row.

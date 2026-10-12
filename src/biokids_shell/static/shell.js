@@ -304,6 +304,18 @@
       });
   }
 
+  /* ------------------------------------------------------------- goodbye */
+
+  /* "Bilgisayar kapanıyor…" (D-209). A machine that goes down never runs
+   * this; one that stayed up sends the child back to whatever is current. */
+  var goodbye = document.getElementById("goodbye");
+  if (goodbye) {
+    var backAfter = parseInt(goodbye.getAttribute("data-back-after") || "60", 10);
+    window.setTimeout(function () {
+      window.location.replace("/");
+    }, Math.max(10, backAfter) * 1000);
+  }
+
   /* ------------------------------------------------------------ countdown */
 
   var countdown = document.getElementById("countdown");

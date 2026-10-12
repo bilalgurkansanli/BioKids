@@ -86,6 +86,14 @@ biokids (0.1.0-2) trixie; urgency=medium
     in front, with no loading screen in between; an app is started once
     however often its tile is tapped; the running app bar brings an open
     app back over $XDG_RUNTIME_DIR/biokids-appbar.sock (D-208).
+  * biokids-daemon, biokids-shell: "Kapat" is answered at once and the
+    computer switches off a few seconds later; with someone else at the
+    machine only the child's session ends, and an ssh login does not count
+    as someone. The panel's power buttons answer at once too (D-209).
+  * biokids-core, biokids-shell: KDiamond ("Elmaslar") and Chrome Music Lab
+    ("Müzik Atölyesi") in the catalogue; rows of tiles are centred;
+    biokids-desktop recommends kdiamond and tuxpaint-stamps-default (D-210).
+  * biokids-panel: no "coming soon" card in Settings.
 
  -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Wed, 07 Oct 2026 12:00:00 +0300
 

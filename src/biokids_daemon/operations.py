@@ -32,6 +32,16 @@ goodbye a moment to be said aloud, before systemd takes the session down under
 it. The applications are being stopped meanwhile, so with one open this is
 seldom any extra wait."""
 
+LOGOUT_GRACE_SECONDS = 10.0
+"""The same for a child's session that ends instead (D-209): the sentence that
+says why the computer stays on is three times the goodbye's, and a 4-7 child
+should hear it to the end before the session goes."""
+
+REFRESH_BEFORE_ANSWER_S = 2.0
+"""How long logind gets to say who is logged in before the child is answered.
+The launcher gives up after five seconds; a slower logind is answered from the
+last tick's picture, and the work asks again before it acts."""
+
 POWER_TASKS = ("poweroff", "reboot")
 """The names the machine-wide work runs under, one at a time: a second "Kapat"
 while the first is under way gets the same answer and starts nothing more."""
@@ -74,14 +84,15 @@ class OperationsMixin(EndSequenceMixin):
         # rare and irreversible, and ten seconds is long enough for a parent to
         # have just sat down at their own account.
         with contextlib.suppress(Exception):
-            await self.watcher.refresh()
+            await asyncio.wait_for(self.watcher.refresh(), REFRESH_BEFORE_ANSWER_S)
         others = self._others_logged_in(runtime)
         if others:
             name = f"logout:{runtime.unix_user}"
             if not self._under_way(name):
                 self._audit_session_instead(runtime, others)
                 self._after_answering(
-                    self._end_childs_session(runtime, _grace_deadline()), name
+                    self._end_childs_session(runtime, _grace_deadline(LOGOUT_GRACE_SECONDS)),
+                    name,
                 )
             return ShutdownOutcome.LOGOUT
 
@@ -327,9 +338,16 @@ class OperationsMixin(EndSequenceMixin):
         return self._power_after_answering(actor, restart=True)
 
     def _power_after_answering(self, actor: str, *, restart: bool) -> bool:
-        if self._under_way(*POWER_TASKS):
+        wanted = "reboot" if restart else "poweroff"
+        if self._under_way(wanted):
             log.info("%s asked again while the computer is already going down", actor)
             return True
+        if self._under_way(*POWER_TASKS):
+            # The other one is under way: a restart asked for while a child's
+            # "Kapat" is closing apps would otherwise be answered "restarting"
+            # and power off - and a parent on the phone cannot switch it back on.
+            log.info("%s asked for a %s while the other is under way; not done", actor, wanted)
+            return False
         repo.audit(
             self.session,
             actor=actor,
@@ -459,12 +477,12 @@ class OperationsMixin(EndSequenceMixin):
         )
 
 
-def _grace_deadline() -> float:
+def _grace_deadline(seconds: float = POWER_GRACE_SECONDS) -> float:
     """When the work just answered for may go ahead, on the event loop's clock.
 
     Not the supervisor's clock, which a test moves by hand and a guarded wall
     clock may hold still: this is a few real seconds, nothing to account."""
-    return asyncio.get_running_loop().time() + POWER_GRACE_SECONDS
+    return asyncio.get_running_loop().time() + seconds
 
 
 async def _until(deadline: float) -> None:

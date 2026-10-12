@@ -18,7 +18,7 @@ Nothing yet.
 ## [0.1.0-2] - 2026-10-07
 
 The v1.0 release candidate. Not published: the APT repository waits for its archive
-key (`docs/ROADMAP.md`). Decisions D-171 to D-208; read them in `docs/DECISIONS.md`.
+key (`docs/ROADMAP.md`). Decisions D-171 to D-210; read them in `docs/DECISIONS.md`.
 An upgrade from 0.1.0-1 runs whichever of the migrations `3e8b51c0d2a7` (request
 kinds), `9a4f2c7e1b36` (day schedules) and `c41d8e0f5a92` (the cuts) the database has
 not seen, after `biokids-admin backup-db` has copied it; it moves the virtual-terminal
@@ -27,6 +27,12 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
 
 ### Added
 
+- **Two more tiles, and rows that look full** (D-210): **Elmaslar** (KDiamond), a
+  diamond-matching game that needs no reading, and **Müzik Atölyesi** (Chrome Music Lab),
+  music experiments with no ads and no account, both ticked for a new child of 4 to 10.
+  biokids-desktop also recommends kdiamond and tuxpaint-stamps-default (thousands of
+  stamps for Tux Paint). Every row of tiles is centred, the last one too, on the home
+  screen and the browser's start page.
 - **Analiz, the week in plain words** (D-206): a new panel screen, in the menu and a tap
   from **Geçmiş**, for this week, last week or the last 30 days. First at most five
   sentences a parent reads at a glance - "Günlük süre 3 gün doldu", "1 gece, saat 21:00
@@ -175,6 +181,14 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
 
 ### Fixed
 
+- **"Kapat" did not switch the computer off** (D-209). With an app open the launcher gave
+  up waiting and showed the home screen again; with anyone else logged in - an ssh login
+  included - it refused without a word. It now answers at once ("Bilgisayar kapanıyor…"),
+  then closes the apps and switches off; when someone else is at the machine, only the
+  child's own session ends, and the child is told why. The panel's "Kapat" and "Yeniden
+  başlat" answer at once too.
+- **Settings said site blocking and the assistant were "coming soon"**, long after both
+  arrived; the card now points to each child's own page.
 - **The app bar was too big for a small window** (D-205). It now fits the window under
   it: the whole bar from 1000 pixels, a compact one half as wide (smaller buttons, the
   minutes, 🔉 and 🔊 without the slider) from 520, and 🏠 and ✕ alone below that.

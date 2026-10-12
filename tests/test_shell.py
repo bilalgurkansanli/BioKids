@@ -742,6 +742,16 @@ def test_the_goodbye_is_said_aloud_for_a_child_who_cannot_read_yet(
     assert "data-speak-on-load" not in client.post("/shutdown").text
 
 
+def test_the_goodbye_is_never_a_dead_end(client: TestClient) -> None:
+    """Should the machine stay up after all (the daemon restarted mid-way), the
+    child goes back to the launcher's current screen after a minute (D-209)."""
+    assert 'id="goodbye"' in client.post("/shutdown").text
+    script = (
+        pathlib.Path(__file__).resolve().parent.parent / "src/biokids_shell/static/shell.js"
+    ).read_text(encoding="utf-8")
+    assert 'getElementById("goodbye")' in script
+
+
 def test_with_someone_else_logged_in_the_child_is_told_what_happens_instead(
     client: TestClient, daemon: FakeShellDaemon
 ) -> None:
