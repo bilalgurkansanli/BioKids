@@ -26,6 +26,7 @@ from biokids_core.config import Config, set_config
 from biokids_core.ipc import AsyncDaemonClient
 from biokids_shell.app import ShellState, create_app
 from biokids_shell.client import ShellClient
+from biokids_shell.dimmer import BedtimeDimmer
 from biokids_shell.kiosk import KioskSupervisor, keep_fullscreen, launcher_port
 from biokids_shell.relay import SessionRelay, WindowRaiser, voice_socket_path
 from biokids_shell.windows import (
@@ -40,6 +41,9 @@ SHUTDOWN_GRACE_SECONDS = 3
 page's event stream never closes on its own, and without a bound the server
 waited for it forever - so a logout, or a shutdown, waited for systemd to kill
 the unit (D-160)."""
+
+BRIGHTNESS_RESTORE_SECONDS = 2.0
+"""How long putting the brightness back may take, at start and at stop (D-214)."""
 
 log = logging.getLogger("biokids.shell")
 
@@ -96,11 +100,17 @@ async def main_async(args: argparse.Namespace) -> int:
     rules = WindowRules(config.paths.share_dir / RULES_SUBDIR)
     appbar = AppBar()
     shell: ShellState = app.state.shell
+    # The evening's dimming (D-214). Not on a developer's own desktop; and a
+    # brightness the last session left dimmed is put back before anything else.
+    dimmer = None if args.no_kiosk else BedtimeDimmer()
+    if dimmer is not None:
+        await _restore_brightness(dimmer)
     relay = SessionRelay(
         ShellClient(config.paths.shell_socket),
         voice=AsyncDaemonClient(voice_socket_path(config)),
         raiser=None if args.no_kiosk else WindowRaiser(),
         on_spoken=shell.remember_spoken,
+        dimmer=dimmer,
     )
     tasks = [
         asyncio.create_task(server.serve(), name="launcher"),
@@ -130,7 +140,19 @@ async def main_async(args: argparse.Namespace) -> int:
     for task in tasks:
         task.cancel()
     await asyncio.gather(*tasks, return_exceptions=True)
+    if dimmer is not None and dimmer.dimmed:
+        # Whoever uses the machine next should not find it dim; if the session
+        # is going too fast for this, the next one puts it back.
+        await _restore_brightness(dimmer)
     return 0
+
+
+async def _restore_brightness(dimmer: BedtimeDimmer) -> None:
+    """Put the brightness back, within a bound: never what holds a logout up."""
+    try:
+        await asyncio.wait_for(dimmer.restore(), BRIGHTNESS_RESTORE_SECONDS)
+    except Exception as exc:
+        log.info("the brightness was not put back: %s", exc)
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -145,6 +145,12 @@ class TimeWindow:
             return moment >= self.start or moment < self.end
         return self.start <= moment < self.end
 
+    @property
+    def seconds_long(self) -> int:
+        """How long the window is open, start to end."""
+        length = _seconds_of_day(self.end) - _seconds_of_day(self.start)
+        return length + 86_400 if self.wraps_midnight else length
+
     def seconds_until_close(self, moment: dt.time) -> int:
         """How long this window stays open, from `moment`. Zero if already closed."""
         if not self.contains(moment):
@@ -185,6 +191,46 @@ def _seconds_of_day(moment: dt.time) -> int:
     return moment.hour * 3600 + moment.minute * 60 + moment.second
 
 
+# ------------------------------------------------------------------ special days
+
+
+NO_DAILY_LIMIT_MINUTES: Final = 24 * 60
+"""What "no daily limit" means to the engine (D-215): a day's worth of minutes.
+
+A calendar day has 1440 minutes and the ledger files every second under the day
+it ended on, so this quota cannot run out before the day does - and it is a
+number the rest of BioKids already handles, because a parent may type it on the
+time screen. A sentinel like "infinity" would have reached the ring on the
+child's screen and the Today card as a number nobody can read."""
+
+
+@dataclass(frozen=True, slots=True)
+class SpecialDay:
+    """A parent's "today is special", or a range of such days (D-215).
+
+    Local calendar dates, both ends included. Built from a `day_override` row;
+    the engine only ever asks which of these cover a date. More than one may
+    cover the same day - a holiday range and, inside it, "+60 today" - and
+    `ChildPolicy.special_on` says how they combine.
+    """
+
+    start: dt.date
+    end: dt.date
+    extra_minutes: int = 0
+    """Added to whatever the day's quota is, after everything else."""
+    quota_minutes: int | None = None
+    """The day's own quota instead of the usual one. None keeps the usual one."""
+    no_limit: bool = False
+    """No daily quota; the allowed hours still apply."""
+    weekend_rules: bool = False
+    """A weekday inside this range follows the weekend's quota and hours."""
+    order: int = 0
+    """The row id: when two set a quota of their own, the later one wins."""
+
+    def covers(self, day: dt.date) -> bool:
+        return self.start <= day <= self.end
+
+
 # ------------------------------------------------------------------------- policy
 
 
@@ -209,6 +255,8 @@ class ChildPolicy:
     """Per day of the week, Monday 0 (D-176). Wins over the weekday/weekend quota."""
     day_windows: dict[int, tuple[TimeWindow, ...]] = field(default_factory=dict)
     """Per day of the week. A day named here with no windows is open all day."""
+    special_days: tuple[SpecialDay, ...] = ()
+    """Dates a parent made special (D-215). They win over everything above."""
 
     end_action: EndAction = EndAction.POWEROFF
     warn_minutes: tuple[int, ...] = (10, 5, 1)
@@ -242,7 +290,55 @@ class ChildPolicy:
     enabled: bool = True
     """A disabled policy means BioKids does not manage this child at all."""
 
+    def special_on(self, day: dt.date) -> SpecialDay | None:
+        """Every special day covering `day`, as one, or None for an ordinary day.
+
+        They add up rather than replace each other, because that is what a
+        parent means by tapping "+60 today" in the middle of a holiday: the
+        holiday's rules, and an hour more. So: extra minutes are summed; "no
+        limit" and "weekend rules" hold if any of them says so; and of two
+        quotas of their own, the one set later wins - there is no adding two
+        quotas up into a sensible number.
+        """
+        found = [special for special in self.special_days if special.covers(day)]
+        if not found:
+            return None
+        own = [special for special in found if special.quota_minutes is not None]
+        return SpecialDay(
+            start=day,
+            end=day,
+            extra_minutes=sum(max(0, special.extra_minutes) for special in found),
+            quota_minutes=max(own, key=lambda s: s.order).quota_minutes if own else None,
+            no_limit=any(special.no_limit for special in found),
+            weekend_rules=any(special.weekend_rules for special in found),
+            order=max(special.order for special in found),
+        )
+
+    def _as_weekend(self, day: dt.date, special: SpecialDay | None) -> bool:
+        """A weekday a special day sends to the weekend's rules.
+
+        Only a weekday: a Saturday inside a holiday is still that Saturday, with
+        whatever the parent set for it on the time screen (D-176).
+        """
+        return (
+            special is not None
+            and special.weekend_rules
+            and Weekday.for_date(day) is Weekday.WEEKDAY
+        )
+
     def quota_minutes(self, day: dt.date) -> int:
+        special = self.special_on(day)
+        if special is not None and special.no_limit:
+            return NO_DAILY_LIMIT_MINUTES
+        if special is not None and special.quota_minutes is not None:
+            base = max(0, special.quota_minutes)
+        elif self._as_weekend(day, special):
+            base = self.weekend_quota_min
+        else:
+            base = self._usual_quota_minutes(day)
+        return base + (special.extra_minutes if special is not None else 0)
+
+    def _usual_quota_minutes(self, day: dt.date) -> int:
         if day.weekday() in self.day_quota_min:
             return self.day_quota_min[day.weekday()]
         return (
@@ -252,6 +348,8 @@ class ChildPolicy:
         )
 
     def windows(self, day: dt.date) -> tuple[TimeWindow, ...]:
+        if self._as_weekend(day, self.special_on(day)):
+            return self.weekend_windows
         if day.weekday() in self.day_windows:
             return self.day_windows[day.weekday()]
         return (

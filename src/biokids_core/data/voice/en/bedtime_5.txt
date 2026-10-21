@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}
+# The evening's last five minutes (D-214).
+Five minutes until good night, {name}. Save your work.
+Five minutes left. Save what you are doing, bedtime is coming.
+Five minutes to go. You can slowly start finishing up.

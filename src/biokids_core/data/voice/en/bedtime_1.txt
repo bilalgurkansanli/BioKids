@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}
+# The evening's last minute (D-214).
+One minute left, {name}. Good night soon.
+One last minute. It is almost bedtime.
+One minute left. Add your finishing touches, then sleep.

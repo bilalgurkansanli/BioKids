@@ -5,7 +5,12 @@ from __future__ import annotations
 from typing import Any
 
 from biokids_core import album, repo
-from biokids_core.policy import evaluate, general_allowance_seconds
+from biokids_core.policy import (
+    bedtime_in,
+    evaluate,
+    general_allowance_seconds,
+    no_limit_ring_seconds,
+)
 from biokids_core.types import ActivityContext, Category
 from biokids_daemon.access_requests import AccessRequestsMixin
 from biokids_daemon.filtering import FilteringMixin
@@ -61,6 +66,9 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
                     "action": decision.action.value,
                     "reason_code": decision.reason_code,
                     "end_action": policy.end_action.value if policy else "",
+                    # A day with no daily limit (D-215) draws its ring against
+                    # the window it is in; None on every other day.
+                    "ring_seconds": no_limit_ring_seconds(policy, state, reading.wall),
                 }
             )
 
@@ -127,6 +135,10 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
         # The whole allowance, earned minutes included: the launcher draws its
         # ring as remaining/quota, which against the bare quota would stay full.
         quota = general_allowance_seconds(policy, state) if policy else 0
+        # The day ending for the night, within ten minutes or already (D-214):
+        # the warnings and the end screen are drawn for bedtime.
+        night = bedtime_in(policy, state, reading.wall)
+        ring = no_limit_ring_seconds(policy, state, reading.wall)
         return {
             "child_id": child_id,
             "display_name": runtime.display_name,
@@ -140,7 +152,7 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
             "asked_for_time": self.pending_request(child_id, "time"),
             "remaining_seconds": decision.remaining_seconds,
             "remaining_minutes": decision.remaining_minutes,
-            "quota_seconds": quota + state.granted_s,
+            "quota_seconds": ring if ring is not None else quota + state.granted_s,
             "used_seconds": state.general_used_s,
             "earned_seconds": state.earned_s,
             "break_seconds": state.break_remaining_s,
@@ -170,6 +182,8 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
             "countdown_seconds": self._countdown_remaining(
                 runtime, day, reading.boot, reading.boot_id
             ),
+            "bedtime": night is not None,
+            "bedtime_seconds": night,
             # The parent's own search words (D-202), which the launcher adds to
             # the default list it serves the browser extension.
             "search_words": repo.search_words(self.session),

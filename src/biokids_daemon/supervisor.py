@@ -34,7 +34,7 @@ from biokids_core import repo, retention
 from biokids_core.clock import GuardedClock
 from biokids_core.ipc import EventKind
 from biokids_core.ledger import TickInput, TimeLedger
-from biokids_core.policy import evaluate
+from biokids_core.policy import BEDTIME_EVENT, bedtime_in, evaluate
 from biokids_core.types import Action, ActivityContext, Decision, SpeechRequest
 from biokids_daemon.access_requests import (
     REQUEST_EXPIRY,
@@ -190,6 +190,11 @@ class Supervisor(
                 runtime.end_action_failures = previous.end_action_failures
                 runtime.end_action_next_attempt = previous.end_action_next_attempt
                 runtime.paused_reason = previous.paused_reason
+                # A lock the DNS filter put on stays this daemon's to lift; a
+                # reload that forgot it left the child locked once the filter
+                # was back, and let a special day (D-215) lift it while open.
+                runtime.locked_for_filter = previous.locked_for_filter
+                runtime.lock_attempts = previous.lock_attempts
                 runtime.earned_pending_s = previous.earned_pending_s
                 runtime.earned_announced_at = previous.earned_announced_at
             fresh[child.id] = runtime
@@ -276,7 +281,9 @@ class Supervisor(
             # the child dirty when the set actually changes.
             self.ledger.rearm_warnings(runtime.child_id, result.day, decision.remaining_seconds)
             await self._act(runtime, seen, decision, result.day, reading.boot)
-            self._publish_tick(runtime, seen, decision, state)
+            self._publish_tick(
+                runtime, seen, decision, state, bedtime_in(runtime.policy, state, reading.wall)
+            )
             runtime.last_decision = decision
             runtime.last_active = seen.active
 
@@ -363,6 +370,9 @@ class Supervisor(
             reason_code=decision.reason_code,
             remaining_seconds=decision.remaining_seconds,
             minutes=threshold,
+            # The night's warning (D-214): the launcher draws it in the night's
+            # colours, with Zio sleepy. The engine chose the words.
+            bedtime=decision.speak.event.startswith(BEDTIME_EVENT),
         )
         self._publish_speech(runtime, decision)
         repo.audit(
@@ -416,6 +426,7 @@ class Supervisor(
         presence: UserPresence,
         decision: Decision,
         state: Any,
+        bedtime_seconds: int | None = None,
     ) -> None:
         self.bus.publish(
             EventKind.TICK,
@@ -428,6 +439,9 @@ class Supervisor(
             reason_code=decision.reason_code,
             online=presence.active,
             app=runtime.app_name or runtime.app_slug,
+            # Seconds to a night ending, or None (D-214): what the launcher
+            # dims the screen by. Never read by anything that enforces.
+            bedtime_seconds=bedtime_seconds,
         )
 
     def _audit_anomalies(self) -> None:

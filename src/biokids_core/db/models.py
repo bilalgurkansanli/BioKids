@@ -237,6 +237,47 @@ class Policy(Base):
         self.voice_events_json = json.dumps(value)
 
 
+class DayOverride(Base):
+    """A special day, or a range of them, for one child (D-215).
+
+    "Bugün özel gün: +60 dk", "no daily limit today", or "Tatil: 20-31 Ocak, like
+    the weekend". Local dates, both ends included. The policy engine reads them
+    where it picks a day's quota and hours (`ChildPolicy.special_on`).
+
+    Never about a day that is over: a range is made from today on, and one
+    cancelled half-way keeps its past days, cut to yesterday, so the history
+    screen still shows the quota those days were actually given. Kept for
+    `retention.usage_days`, with the minutes they explain (D-189).
+    """
+
+    __tablename__ = "day_override"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    child_id: Mapped[int] = mapped_column(ForeignKey("child.id", ondelete="CASCADE"))
+    start_day: Mapped[dt.date] = mapped_column(Date)
+    end_day: Mapped[dt.date] = mapped_column(Date)
+    extra_minutes: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    quota_minutes: Mapped[int | None] = mapped_column(Integer, default=None)
+    """The day's own quota; NULL keeps the usual one."""
+    no_limit: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    weekend_rules: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    label: Mapped[str] = mapped_column(String(40), default="", server_default="")
+    """The parent's own word for it ("Tatil", "Bayram"), shown in the panel only."""
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+    __table_args__ = (
+        CheckConstraint("end_day >= start_day", name="ck_day_override_range"),
+        CheckConstraint(
+            "extra_minutes >= 0 AND extra_minutes <= 1440", name="ck_day_override_extra"
+        ),
+        CheckConstraint(
+            "quota_minutes IS NULL OR (quota_minutes >= 0 AND quota_minutes <= 1440)",
+            name="ck_day_override_quota",
+        ),
+        Index("ix_day_override_child_end", "child_id", "end_day"),
+    )
+
+
 class CategoryLimit(Base):
     __tablename__ = "category_limit"
 

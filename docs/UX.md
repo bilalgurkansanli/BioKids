@@ -179,11 +179,20 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
 4. **Break** — a calm full-screen timer, a suggestion ("gözlerini dinlendir"), no
    dismiss button.
 5. **Time up** — friendly, a countdown, a note that unsaved work should be saved.
+   **Good night** (D-214) is its evening form, when the day's time runs out or its
+   last allowed hours close at 18:30 or later: the night's dark blue, Zio sleepy,
+   "İyi geceler, Elif." and "Yarın görüşürüz.", with the same end-action sentence and
+   the same countdown, in blue rather than red. Zio says it (the daemon's
+   good-night line), for every age, as the time-up line always was.
 6. **Time warning** — at ten, five and one minute, a short full-screen pause in front
    of whatever app is open (D-160): the speaking character large in the middle, the
    sentence actually being said in a bubble, the ring underneath. Seven seconds,
    then the app comes back. Chosen by the owner over a corner card, which an app
-   window simply covered.
+   window simply covered. In an evening's last ten minutes (D-214) the pause is in
+   the night's colours, calm at every minute - no amber, no red, no pulse - with Zio
+   sleepy and the night's words ("Akşam oldu Elif. 10 dakika sonra yatma vakti."),
+   and the screen grows a little darker in four steps, to 60% of the child's own
+   brightness; it is put back the next time the launcher can.
 7. **First run** — the supervision explanation, age-appropriate, spoken for 4–7. It
    says the family can see which sites the child opens, the site's name and not its
    pages (D-187).
@@ -390,8 +399,9 @@ wraps to a second line rather than letting the page scroll sideways:
 ```
 Bugün / Today          ← default, the only screen most parents open; a badge
                          counts pending requests, and the banner opens İstekler
-Çocuklar / Children    → per child: Süre kuralları (time), Uygulamalar ve siteler
-                         (D-164), İnternet (D-167), Asistan (D-165), Düzenle (D-191)
+Çocuklar / Children    → per child: Süre kuralları (time, and special days, D-215),
+                         Uygulamalar ve siteler (D-164), İnternet (D-167), Asistan
+                         (D-165), Düzenle (D-191)
 Geçmiş / History       → fourteen days of minutes, and one day's apps, sites and
                          requests (D-192)
 Analiz / Insights      → a week or a month in plain words, then the numbers (D-206)
@@ -454,6 +464,15 @@ every child's screen is locked and the parent gets an alert.
 
 Pending access requests appear as a banner above the cards, because they are
 time-sensitive — a child is standing at the computer waiting.
+
+**Special days** (D-215, §3.10). Under the buttons, closed, **🎉 Bugün özel bir gün
+mü?** opens four choices for today only - **+30 dk**, **+1 sa**, **+2 sa**, **Süre
+sınırı yok** - a line saying tomorrow is an ordinary day again and a second choice
+replaces the first, and a link to the time screen for several days. A day that is
+special shows on the card as "🎉 Bugün özel gün: +1 sa" (or "Tatil (20.01 – 31.01):
+hafta sonu kuralları") with **Kaldır**, which asks first. Read from the database, so
+the line is there with the daemon down. A tap after the time ran out lets the child
+back in, as **+10 dk** does.
 
 A question the assistant refused (D-165) appears the same way, as a banner that
 names the child and the count and opens **Çocuklar → Asistan**, where each one is
@@ -628,6 +647,28 @@ one control: **Bu hafta** (the default), **Geçen hafta**, **Son 30 gün**.
 The same highlights, at most three per child and without links, end each child's
 part of the Sunday mail (D-177). A mail never names a site. The line under the
 title says so when that mail is on, rather than "hiçbir yere gönderilmez".
+
+### 3.10 Special days
+
+**Süre kuralları** ends with a card of its own, **🎉 Özel günler** (D-215), outside
+the rules' form because a special day is an exception to them and takes effect
+without saving them. One line says what it is for and that the limits per kind of
+app still apply. Then:
+
+- today's and the coming special days, one sentence each ("Bugün özel gün: +1 sa",
+  "Tatil (20.01 – 31.01): hafta sonu kuralları", "10.11: günde 3 sa 20 dk") with
+  **Kaldır**; or "Şu an özel gün yok.";
+- **Bugün özel bir gün mü?** and the same four choices as on Today;
+- closed, **Birkaç gün için: tatil, bayram**: the first and the last day (the
+  phone's date pickers, from today), a name if the parent wants one ("Tatil"), and
+  **Hafta sonu gibi** (the weekend's time and hours, the default) or **Günde şu
+  kadar dakika**. One line says both days are included and that days already over
+  do not change.
+
+A start in the past is moved to today; an end in the past, an end before the start
+or more than 100 days are refused with a sentence that says so. **Kaldır** on a
+holiday already under way ends it today, and the days before keep it: **Geçmiş**
+draws them against the quota they had.
 
 ---
 

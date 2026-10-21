@@ -67,6 +67,7 @@ from biokids_panel.routes import (
     misc,
     requests,
     settings,
+    special_days,
     today,
     voices,
 )
@@ -83,6 +84,7 @@ ROUTERS = (
     requests.router,
     voices.router,
     children.router,
+    special_days.router,
     audit.router,
     history.router,
     insights.router,

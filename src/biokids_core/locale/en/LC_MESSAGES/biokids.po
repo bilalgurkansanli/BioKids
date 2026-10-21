@@ -248,6 +248,15 @@ msgstr "{seconds} seconds"
 msgid "shell.timeup.tomorrow"
 msgstr "See you tomorrow."
 
+msgid "shell.bedtime.title"
+msgstr "Good night, {name}."
+
+msgid "shell.bedtime.warning"
+msgstr "Bedtime is coming. {minutes} minutes left."
+
+msgid "shell.bedtime.line"
+msgstr "Good night. See you tomorrow."
+
 msgid "shell.locked.title"
 msgstr "Taking a break for now"
 
@@ -497,6 +506,114 @@ msgstr "Waiting for their next window"
 msgid "today.window_closed"
 msgstr "outside allowed hours"
 
+msgid "special.title"
+msgstr "Special days"
+
+msgid "special.help"
+msgstr "A holiday, a birthday, a school break: the rules can be different on these days. Limits you set for a kind of app, such as games, still apply."
+
+msgid "special.none"
+msgstr "No special days at the moment."
+
+msgid "special.today.title"
+msgstr "Is today a special day?"
+
+msgid "special.today.help"
+msgstr "For today only; tomorrow is an ordinary day again. A second choice replaces the first."
+
+msgid "special.choice.plus"
+msgstr "+{duration}"
+
+msgid "special.choice.no_limit"
+msgstr "No daily limit"
+
+msgid "special.today.extra"
+msgstr "Special day today: +{duration}"
+
+msgid "special.today.no_limit"
+msgstr "Special day today: no daily limit, the allowed hours still apply"
+
+msgid "special.when.today"
+msgstr "Today"
+
+msgid "special.when.range"
+msgstr "{start} – {end}"
+
+msgid "special.when.labelled"
+msgstr "{label} ({dates})"
+
+msgid "special.range.weekend"
+msgstr "{when}: weekend rules"
+
+msgid "special.range.no_limit"
+msgstr "{when}: no daily limit"
+
+msgid "special.range.quota"
+msgstr "{when}: {duration} a day"
+
+msgid "special.remove"
+msgstr "Remove"
+
+msgid "special.remove.confirm"
+msgstr "Remove this special day for {name}? From today on the usual rules apply; if today's usual time is used up, the screen closes shortly."
+
+msgid "special.done"
+msgstr "Today is a special day for {name}."
+
+msgid "special.removed"
+msgstr "The special day for {name} is removed. The usual rules apply."
+
+msgid "special.range.link"
+msgstr "For several days, like a holiday"
+
+msgid "special.range.title"
+msgstr "For several days: a holiday, a school break"
+
+msgid "special.range.help"
+msgstr "The first and the last day are included. Days already over do not change."
+
+msgid "special.range.start"
+msgstr "First day"
+
+msgid "special.range.end"
+msgstr "Last day"
+
+msgid "special.range.label"
+msgstr "Name (optional)"
+
+msgid "special.range.label.example"
+msgstr "Holiday"
+
+msgid "special.range.rule"
+msgstr "On these days"
+
+msgid "special.range.rule.weekend"
+msgstr "Like the weekend"
+
+msgid "special.range.rule.weekend.help"
+msgstr "The weekend's time and hours apply."
+
+msgid "special.range.rule.quota"
+msgstr "This many minutes a day"
+
+msgid "special.range.add"
+msgstr "Add"
+
+msgid "special.error.order"
+msgstr "The last day cannot come before the first."
+
+msgid "special.error.past"
+msgstr "These days are already over. Choose days from today on."
+
+msgid "special.error.too_long"
+msgstr "At most 100 days can be chosen."
+
+msgid "special.error.dates"
+msgstr "Choose the first and the last day."
+
+msgid "special.error.minutes"
+msgstr "Enter how many minutes a day."
+
 msgid "today.unknown"
 msgstr "state unknown"
 
@@ -669,6 +786,12 @@ msgstr "Rules changed"
 
 msgid "audit.action.time_granted"
 msgstr "Time added"
+
+msgid "audit.action.special_day_set"
+msgstr "Special day set"
+
+msgid "audit.action.special_day_removed"
+msgstr "Special day removed"
 
 msgid "audit.action.session_unlocked"
 msgstr "Session unlocked"

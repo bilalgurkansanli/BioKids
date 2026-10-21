@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}
+# The evening's last ten minutes (D-214): bedtime is coming.
+It is getting late, {name}. Bedtime in {minutes} minutes.
+Time to start winding down. Ten minutes until bedtime.
+The day is nearly over. Ten more minutes, then good night.

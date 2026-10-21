@@ -15,8 +15,8 @@ The windows are in `[retention]` of config.toml:
   month by default - the most personal records go first. *When* in the day a
   child sat at the computer is closer to a timeline than how long they did,
   and no screen reads more than thirty days of it (D-206);
-* minutes per day and per app, for the history and insights screens:
-  `usage_days`;
+* minutes per day and per app, for the history and insights screens, and the
+  special days that explain some of those minutes (D-215): `usage_days`;
 * the audit log: `audit_days`;
 * children's requests: `requests_days`;
 * parent sessions that have expired, and boot epochs from long ago, which no
@@ -40,6 +40,7 @@ from biokids_core.db.models import (
     AiAlert,
     AuditLog,
     BootEpoch,
+    DayOverride,
     LedgerDay,
     PanelSession,
     UsageEvent,
@@ -76,6 +77,10 @@ def prune(session: Session, config: Config, now: dt.datetime | None = None) -> d
         "usage_tick": _run(session, delete(UsageTick).where(UsageTick.day < usage_day)),
         "usage_hour": _run(session, delete(UsageHour).where(UsageHour.day < activity_day)),
         "ledger_day": _run(session, delete(LedgerDay).where(LedgerDay.day < usage_day)),
+        # A special day goes with the last of the minutes it explains (D-215).
+        "day_override": _run(
+            session, delete(DayOverride).where(DayOverride.end_day < usage_day)
+        ),
         "audit_log": _run(
             session,
             delete(AuditLog).where(AuditLog.ts < now - dt.timedelta(days=keep.audit_days)),

@@ -74,6 +74,9 @@ class Op(StrEnum):
     """A parent's yes or no to something a child asked for (D-173)."""
     UNLOCK_NOW = "unlock_now"
     """Let a child back into a screen BioKids locked, without adding time."""
+    DAY_CHANGED = "day_changed"
+    """A parent made today special or took it back (D-215): re-read the rules,
+    and let a child whose day just got longer back in."""
 
 
 class ShellOp(StrEnum):

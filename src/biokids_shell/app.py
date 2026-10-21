@@ -1184,7 +1184,12 @@ def _screen_for(data: dict[str, Any]) -> str | None:
     """Which full-screen state, if any, replaces the tile grid right now."""
     if data.get("allow"):
         return None
-    match str(data.get("reason_code", "")):
+    reason = str(data.get("reason_code", ""))
+    if data.get("bedtime") and reason in {Reason.QUOTA_EXHAUSTED, Reason.WINDOW_CLOSED}:
+        # The day ended in the evening (D-214): good night, rather than a cold
+        # "that is all". The same countdown and the same end action.
+        return "good_night.html"
+    match reason:
         case Reason.QUOTA_EXHAUSTED:
             return "time_up.html"
         case Reason.WINDOW_CLOSED | Reason.WINDOW_WAITING:
@@ -1206,6 +1211,7 @@ def _browser_strings(tr: Translator) -> dict[str, str]:
     """
     return {
         "warning": tr("quota.warning", minutes="{minutes}"),
+        "bedtime_warning": tr("shell.bedtime.warning", minutes="{minutes}"),
         "earned": tr("shell.earned.body", minutes="{minutes}"),
         "request_approved": tr("shell.request.approved"),
         "request_approved_time": tr("shell.request.approved_time", minutes="{minutes}"),
@@ -1233,6 +1239,11 @@ def _spoken_lines(tr: Translator) -> dict[str, str]:
         "warn_5": tr("quota.warning", minutes=5),
         "warn_1": tr("quota.warning", minutes=1),
         "time_up": tr("shell.timeup.title"),
+        # The evening's (D-214): the notice and the card, in the night's words.
+        "bedtime_10": tr("shell.bedtime.warning", minutes=10),
+        "bedtime_5": tr("shell.bedtime.warning", minutes=5),
+        "bedtime_1": tr("shell.bedtime.warning", minutes=1),
+        "bedtime": tr("shell.bedtime.line"),
         "blocked": tr("shell.blocked.title"),
         "earned": tr("shell.earned.title"),
         "break_start": tr("shell.break.title"),

@@ -235,7 +235,8 @@ class Totals:
     suspended: int = 0
     gaps: int = 0
     ticks: int = 0
-    spoken: list[int] = field(default_factory=list)
+    spoken: list[str] = field(default_factory=list)
+    """The warning events said, by name: `warn_10`, or `bedtime_10` at night (D-214)."""
     anomalies: list[str] = field(default_factory=list)
     ended_with: str = ""
     ended_reason: str = ""
@@ -347,7 +348,7 @@ class Simulation:
             threshold = int(decision.speak.vars.get("minutes", 0))
             if not self._ledger.already_warned(child_id, day, threshold):
                 self._ledger.mark_warned(child_id, day, threshold)
-                self.totals.spoken.append(threshold)
+                self.totals.spoken.append(decision.speak.event)
                 # The event key is what the voice service receives; the sentence
                 # beside it is what the child actually hears.
                 spoken = f'speaks {decision.speak.event}: "{self._speech(decision)}"'
@@ -502,7 +503,7 @@ class Simulation:
         if totals.anomalies:
             for text in totals.anomalies:
                 print(f"    clock jump   {text}")
-        spoken = ", ".join(f"warn_{m}" for m in totals.spoken) or "none"
+        spoken = ", ".join(totals.spoken) or "none"
         print(f"    spoken       {spoken}")
         if totals.ended_with and totals.ended_at is not None:
             print(f"    ended        {totals.ended_with} at {totals.ended_at:%H:%M:%S}")

@@ -40,6 +40,7 @@ from biokids_panel.forms import (
     _schedule_from_json,
     _windows_from_pickers,
 )
+from biokids_panel.routes import special_days
 
 log = logging.getLogger(__name__)
 
@@ -702,6 +703,9 @@ def _time_page(
         category_limits={
             c.value: m for c, m in repo.load_category_limits(view.session, child.id).items()
         },
+        # Today's and the coming special days (D-215), under the rules.
+        specials=special_days.listed(view.session, child.id, view.tr, dt.date.today()),
+        today=dt.date.today(),
         **values,
     )
 

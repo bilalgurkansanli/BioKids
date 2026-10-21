@@ -1,6 +1,8 @@
 """What the daemon says, carried to the parts of the child's session that act on it.
 
-Two jobs, on one subscription that lives as long as the launcher does.
+Two jobs, on one subscription that lives as long as the launcher does - and a
+third that rides along: the evening's dimming (D-214, `dimmer.py`), which
+follows the ticks.
 
 **Speech.** The daemon publishes SPEAK and never makes a sound itself: the voice
 service runs inside the child's session, where the audio is, and the child
@@ -40,6 +42,7 @@ from biokids_core.config import Config
 from biokids_core.errors import IpcError
 from biokids_core.ipc import AsyncDaemonClient, Event, EventKind
 from biokids_shell.client import ShellClient
+from biokids_shell.dimmer import BedtimeDimmer
 from biokids_shell.kiosk import KIOSK_WINDOW_CLASS
 
 log = logging.getLogger(__name__)
@@ -141,12 +144,14 @@ class SessionRelay:
         raiser: WindowRaiser | None = None,
         notice_seconds: float = NOTICE_SECONDS,
         on_spoken: Callable[[dict[str, Any]], None] | None = None,
+        dimmer: BedtimeDimmer | None = None,
     ) -> None:
         self.client = client
         self.voice = voice
         self.raiser = raiser
         self.notice_seconds = notice_seconds
         self.on_spoken = on_spoken
+        self.dimmer = dimmer
         self._pause: asyncio.Task[None] | None = None
 
     async def run(self, stop: asyncio.Event) -> None:
@@ -174,6 +179,13 @@ class SessionRelay:
                 self._pause = asyncio.create_task(self.pause(), name="warning-pause")
         elif event.kind == EventKind.SPEAK:
             await self.speak(event.payload)
+        elif event.kind == EventKind.TICK and self.dimmer is not None:
+            # The evening's last ten minutes dim the screen (D-214). A failure
+            # costs the dimming, never the relay: the next warning matters more.
+            try:
+                await self.dimmer.on_tick(event.payload)
+            except Exception:
+                log.exception("the bedtime dimming failed")
 
     async def speak(self, payload: dict[str, Any]) -> None:
         if self.voice is None:

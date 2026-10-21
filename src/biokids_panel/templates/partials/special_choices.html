@@ -1,0 +1,18 @@
+{#
+  "Bugün özel gün": the one-tap choices for today only (D-215), on Today and on
+  the time screen alike. A second tap replaces the first; tomorrow is an
+  ordinary day again. Needs `special_child` and `special_next`.
+#}
+<div class="actions special-choices">
+  {% for value, label in (('30', _('special.choice.plus', duration=1800|duration(_))),
+                          ('60', _('special.choice.plus', duration=3600|duration(_))),
+                          ('120', _('special.choice.plus', duration=7200|duration(_))),
+                          ('nolimit', _('special.choice.no_limit'))) %}
+    <form method="post" action="/children/{{ special_child }}/special/today">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <input type="hidden" name="choice" value="{{ value }}">
+      <input type="hidden" name="next" value="{{ special_next }}">
+      <button class="btn" type="submit">{{ label }}</button>
+    </form>
+  {% endfor %}
+</div>

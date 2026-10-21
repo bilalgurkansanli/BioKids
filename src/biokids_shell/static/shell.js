@@ -494,16 +494,30 @@
     }
   }
 
-  function showNotice(minutes, remainingSeconds) {
+  /* The evening's last ten minutes (D-214): the same pause, in the night's
+   * colours, with the night's sentence and Zio sleepy. The daemon says which;
+   * nothing here decides what time of day it is. */
+  function nightFaces(on) {
+    if (!notice) return;
+    var faces = notice.querySelectorAll(".notice__face svg");
+    for (var i = 0; i < faces.length; i += 1) {
+      faces[i].classList.toggle("is-sleepy", on);
+    }
+  }
+
+  function showNotice(minutes, remainingSeconds, bedtime) {
     if (!notice || !noticeLine) return false;
-    var line = window.BIOKIDS_LINES && window.BIOKIDS_LINES["warn_" + minutes];
-    var fallback =
-      window.BIOKIDS_STRINGS && window.BIOKIDS_STRINGS.warning
-        ? window.BIOKIDS_STRINGS.warning
-        : "{minutes}";
+    var strings = window.BIOKIDS_STRINGS || {};
+    var lines = window.BIOKIDS_LINES || {};
+    var line = bedtime
+      ? lines["bedtime_" + minutes] || strings.bedtime_warning
+      : lines["warn_" + minutes];
+    var fallback = strings.warning ? strings.warning : "{minutes}";
     noticeLine.textContent = (line || fallback).replace("{minutes}", minutes);
     notice.setAttribute("data-level", minutes <= 1 ? "danger" : minutes <= 5 ? "warn" : "info");
+    notice.setAttribute("data-tone", bedtime ? "night" : "day");
     notice.setAttribute("data-persona", "zio");
+    nightFaces(!!bedtime);
     if (noticeRing) {
       var wrap = document.getElementById("ring-wrap");
       var quota = wrap ? Number(wrap.getAttribute("data-quota")) : 0;
@@ -577,7 +591,7 @@
       if (!data) return;
       updateRing(data.remaining_seconds || 0);
       var minutes = data.minutes || 0;
-      if (!showNotice(minutes, data.remaining_seconds || 0)) {
+      if (!showNotice(minutes, data.remaining_seconds || 0, !!data.bedtime)) {
         showBanner(
           (window.BIOKIDS_STRINGS && window.BIOKIDS_STRINGS.warning
             ? window.BIOKIDS_STRINGS.warning
@@ -592,7 +606,8 @@
       var data = parse(event);
       if (!data) return;
       var name = data.event || "";
-      if (name.indexOf("warn_") === 0 && notice && !notice.hidden) {
+      var warning = name.indexOf("warn_") === 0 || name.indexOf("bedtime_") === 0;
+      if (warning && notice && !notice.hidden) {
         /* The warning already fills the screen; it takes the spoken words. */
         whenSpoken(name, function (spoken) {
           noticeLine.textContent = spoken.text;
