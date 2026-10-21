@@ -99,7 +99,10 @@ class ShellOp(StrEnum):
     ASK_A_PARENT = "ask_a_parent"
     """The block page's "Anneme sor" button files an access request (D-65)."""
     ASK_ASSISTANT = "ask_assistant"
-    """A question for the assistant, if this child's parent turned it on (D-165)."""
+    """A question for the assistant, if this child's parent turned it on (D-165).
+    Answered once the question is refused or accepted; the answer follows (D-216)."""
+    ASSISTANT_MORE = "assistant_more"
+    """The next sentences of this child's answer in progress, by its id (D-216)."""
     HEAR_ASSISTANT = "hear_assistant"
     """A short recording to turn into a question, if press-and-speak is on (D-166)."""
     WARM_ASSISTANT = "warm_assistant"

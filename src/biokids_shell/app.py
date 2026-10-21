@@ -29,9 +29,9 @@ import math
 import re
 import shlex
 import socket
-from collections.abc import AsyncIterator, Coroutine
+from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 from urllib.parse import urlencode, urlsplit
 
 from fastapi import Depends, FastAPI, Form, Request, Response
@@ -52,6 +52,9 @@ from biokids_core.config import Config, get_config
 from biokids_core.errors import IpcError
 from biokids_core.i18n import Translator, normalise_locale, translator
 from biokids_core.ipc import AsyncDaemonClient
+from biokids_core.ipc import Event as IpcEvent
+from biokids_core.ipc import Request as IpcRequest
+from biokids_core.ipc import Response as IpcResponse
 from biokids_core.types import AgeBand, Reason
 from biokids_shell import device
 from biokids_shell.client import ShellClient
@@ -194,11 +197,51 @@ class ShellState:
         self.spoken = dict(card)
 
     async def say(self, text: str, locale: str) -> None:
-        """Zio reads the assistant's answer aloud (D-165). Silence is not an error."""
+        """Zio reads a line aloud (D-165). Silence is not an error."""
         try:
             await self.voice.call("say", text=text, locale=locale, persona="zio")
         except (IpcError, OSError) as exc:
+            log.info("the line was not read aloud: %s", exc)
+
+    async def say_and_wait(self, text: str, locale: str) -> bool:
+        """Zio says `text`; this returns once it has been said, or cannot be (D-216).
+
+        The voice service answers `say` at once and tells its subscribers when
+        a line has finished, so this listens first and asks second: an end
+        announced before the listening began would never be heard. False when
+        nothing was said: no voice service, a queue full of more urgent lines,
+        or no end heard in good time. Silence is not an error; the page simply
+        goes on to the next sentence.
+        """
+        try:
+            reader, writer = await _open_voice(voice_socket_path(self.config))
+        except (OSError, TimeoutError, AttributeError, NotImplementedError) as exc:
             log.info("the answer was not read aloud: %s", exc)
+            return False
+        try:
+            writer.write(IpcRequest(op="subscribe", id="said").encode())
+            await writer.drain()
+            ack = await asyncio.wait_for(reader.readline(), timeout=SAY_CONNECT_S)
+            if not ack or not IpcResponse.decode(ack).ok:
+                return False
+            reply = await self.voice.call("say", text=text, locale=locale, persona="zio")
+            if not reply.ok or reply.data.get("status") == "dropped":
+                return False
+            line = str(reply.data.get("id", ""))
+            hold = max(0.0, float(reply.data.get("duration_ms") or 0) / 1000)
+            async with asyncio.timeout(min(SAY_MAX_WAIT_S, 2 * hold + SAY_SLACK_S)):
+                while raw := await reader.readline():
+                    event = IpcEvent.decode(raw)
+                    if event.kind == SPEAK_FINISHED and str(event.payload.get("id")) == line:
+                        return True
+            return False
+        except (IpcError, OSError, TimeoutError, TypeError, ValueError) as exc:
+            log.info("the answer was not heard to the end: %s", exc)
+            return False
+        finally:
+            writer.close()
+            with contextlib.suppress(OSError):
+                await writer.wait_closed()
 
 
 EXPRESSIONS = ("neutral", "happy", "concerned", "sleepy")
@@ -545,7 +588,7 @@ def register_routes(app: FastAPI) -> None:
 
     @app.post("/assistant/ask")
     async def assistant_ask(request: Request, shell: Shell) -> Response:
-        """A question in, the sentence to show out; Zio says it as well.
+        """A question in; its refusal, or the start of its answer, out (D-216).
 
         JSON only, and only from the launcher's own page: a site open in the
         child's browser could otherwise post questions in the child's name and
@@ -553,26 +596,48 @@ def register_routes(app: FastAPI) -> None:
         """
         if not _from_launcher(request, "application/json"):
             return JSONResponse({"error": "forbidden"}, status_code=403)
-        try:
-            body = json.loads(await request.body() or b"{}")
-        except ValueError:
+        body = await _json_body(request)
+        if body is None:
             return JSONResponse({"error": "bad request"}, status_code=400)
-        question = str(body.get("question", "") if isinstance(body, dict) else "")[:600]
-        data = await shell.client.state() or {}
-        locale = normalise_locale(str(data.get("locale", "tr")))
-        tr = translator(locale)
-        reply = await shell.client.ask_assistant(question)
-        refused = bool(reply.get("refused"))
-        if refused:
-            # Never generated: a refusal is a sentence people wrote (D-165).
-            text = tr(str(reply.get("refusal_key") or "assistant.refuse.default"))
-        else:
-            text = str(reply.get("text", ""))
+        question = str(body.get("question", ""))[:600]
+        return await _answer_so_far(shell, await shell.client.ask_assistant(question))
+
+    @app.post("/assistant/more")
+    async def assistant_more(request: Request, shell: Shell) -> Response:
+        """The sentences of an answer written since the page last asked (D-216).
+
+        The page asks about twice a second until the answer is done. Only from
+        the launcher's own page, like the question itself.
+        """
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        body = await _json_body(request)
+        if body is None:
+            return JSONResponse({"error": "bad request"}, status_code=400)
+        answer_id = str(body.get("id", ""))[:64]
+        return await _answer_so_far(shell, await shell.client.assistant_more(answer_id))
+
+    @app.post("/assistant/say")
+    async def assistant_say(request: Request, shell: Shell) -> Response:
+        """Zio says one sentence of an answer; answered once it has been said (D-216).
+
+        The page sends the next sentence only when this one is answered, so an
+        answer is read in order and never two sentences at once. It also keeps
+        at most one of them waiting in the voice service's queue, which holds
+        three lines and drops the oldest ordinary one when it is full: a fast
+        model must not push a time warning out of it.
+        """
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        body = await _json_body(request)
+        text = " ".join(str((body or {}).get("text", "")).split())[:MAX_SAY_CHARS]
+        said = False
         if text:
-            await shell.say(text, locale)
-        return JSONResponse(
-            {"text": text, "refused": refused}, headers={"Cache-Control": "no-store"}
-        )
+            data = await shell.client.state() or {}
+            said = await shell.say_and_wait(
+                text, normalise_locale(str(data.get("locale", "tr")))
+            )
+        return JSONResponse({"ok": said}, headers={"Cache-Control": "no-store"})
 
     @app.post("/speak-label")
     async def speak_label(request: Request, shell: Shell) -> Response:
@@ -764,6 +829,66 @@ def local_service_up(url: str) -> bool:
 
 MAX_RECORDING_BYTES = 16_000 * 2 * 16 + 1024
 """Sixteen seconds of 16 kHz mono: the button stops at fifteen."""
+
+MAX_SAY_CHARS = 600
+"""One sentence of an answer, or a catalogue sentence that ends one."""
+SPEAK_FINISHED = "speak_finished"
+"""`biokids_voice.service.EVENT_FINISHED`, spelled out for the reason relay.py
+spells out its op: biokids-voice is a Recommends of biokids-shell."""
+SAY_CONNECT_S = 3.0
+SAY_SLACK_S = 15.0
+"""Beyond twice the line's own length: a time warning may be ahead of it."""
+SAY_MAX_WAIT_S = 60.0
+
+
+async def _json_body(request: Request) -> dict[str, Any] | None:
+    """The request's JSON object, {} for an empty body, None for anything else."""
+    try:
+        body = json.loads(await request.body() or b"{}")
+    except ValueError:
+        return None
+    return body if isinstance(body, dict) else None
+
+
+async def _answer_so_far(shell: ShellState, reply: dict[str, Any]) -> Response:
+    """What the page needs of an answer in progress (D-216).
+
+    The sentences released since it last asked, whether the answer is done,
+    and - once it is - the sentence it ends with, translated here: a refusal,
+    the ending of an answer the word list stopped, or "I'm resting". Never
+    generated: those are sentences people wrote (D-165). `refused` asks the
+    page to mark a bubble that holds nothing else.
+    """
+    done = bool(reply.get("done", True))
+    sentences = [
+        text for text in (str(s).strip() for s in reply.get("sentences") or []) if text
+    ]
+    ending = ""
+    refused = bool(reply.get("refused"))
+    if done and refused:
+        data = await shell.client.state() or {}
+        tr = translator(normalise_locale(str(data.get("locale", "tr"))))
+        ending = tr(str(reply.get("refusal_key") or "assistant.refuse.default"))
+    return JSONResponse(
+        {
+            "id": "" if done else str(reply.get("answer_id", "")),
+            "sentences": sentences,
+            "done": done,
+            "ending": ending,
+            "refused": refused,
+        },
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+async def _open_voice(path: Path) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+    # typeshed declares the unix helpers on POSIX only, and mypy runs on the
+    # Windows development host. Production is Linux (D-12).
+    open_unix = cast(
+        "Callable[[str], Awaitable[tuple[asyncio.StreamReader, asyncio.StreamWriter]]]",
+        getattr(asyncio, "open_unix_connection"),  # noqa: B009
+    )
+    return await asyncio.wait_for(open_unix(str(path)), timeout=SAY_CONNECT_S)
 
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})

@@ -1057,6 +1057,9 @@ msgstr "Bu çok güzel bir soru. Bunu ailenle konuşursan sana en güzel onlar a
 msgid "assistant.refuse.unavailable"
 msgstr "Şu an biraz dinleniyorum. Birazdan tekrar sorar mısın?"
 
+msgid "assistant.refuse.cut"
+msgstr "Bu konuda sana bu kadarını anlatabilirim. Gerisini ailenden bir büyüğe sorabilirsin."
+
 msgid "assistant.refuse.slow_down"
 msgstr "Çok soru sordun! Biraz dinlenelim, birazdan yine sorabilirsin."
 

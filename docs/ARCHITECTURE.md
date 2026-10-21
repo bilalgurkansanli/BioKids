@@ -77,7 +77,7 @@ things (D-123):
 | Socket | Access | What it can do |
 |---|---|---|
 | `/run/biokids/daemon.sock` | `root:biokids`, 0660 | everything: policy, grants, lock, poweroff |
-| `/run/biokids/shell.sock` | world-connectable, authorised by peer uid | reads scoped to the calling child, plus launch, activity, ask-a-parent, shutdown request |
+| `/run/biokids/shell.sock` | world-connectable, authorised by peer uid | reads scoped to the calling child, plus launch, activity, ask-a-parent, shutdown request, and the assistant: a question, the rest of the child's own answer (D-216), a recording |
 
 The child is not in the `biokids` group and must never be — that group can grant
 time and power the machine off. The launcher therefore has a socket of its own on

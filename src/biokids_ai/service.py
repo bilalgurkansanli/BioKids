@@ -9,8 +9,20 @@ and the daemon, which owns the database, tells the parent.
 Operations, line-delimited JSON as everywhere else in BioKids:
 
     status                         which models are installed and selected
-    ask      question, age, locale, persona  -> a Reply (assistant.py)
+    ask      question, age, locale, persona  -> the start of an answer
+    more     answer_id                       -> its next sentences, and how it ended
+    cancel   answer_id                       -> stop writing it
     transcribe   audio (base64 WAV), locale  -> {"text": ...}
+
+An answer is streamed (D-216). `ask` returns as soon as the question has been
+refused or has passed both checks, with an `answer_id`; the model writes on in
+the background, and each `more` returns the sentences released since the last
+one. Every reply has the same shape, `progress()`: the new `sentences`, whether
+the answer is `done`, and once it is, how it ended - the Reply's category,
+stage, refusal key and alert. Polling rather than a streamed reply keeps every
+hop a single request and a single response, as every other operation in BioKids
+is, each with its own timeout: a launcher that goes away simply stops asking,
+and the answer it left is stopped (`ABANDONED_S`).
 """
 
 from __future__ import annotations
@@ -21,10 +33,14 @@ import binascii
 import contextlib
 import logging
 import os
+import secrets
+import time
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final, cast
 
-from biokids_ai.assistant import Assistant, Reply, refuse
+from biokids_ai.assistant import Assistant, Reply, cut, refuse
 from biokids_ai.knowledge import PORT as KNOWLEDGE_PORT
 from biokids_ai.knowledge import Book, Knowledge
 from biokids_ai.llm import WARMUP_TIMEOUT_S, ChatModel, ModelError
@@ -53,6 +69,62 @@ every question paid for both in full."""
 
 MAX_THREADS: Final = 8
 
+ABANDONED_S: Final = 60.0
+"""An answer nobody has asked `more` of for this long is stopped and forgotten.
+The daemon asks for the launcher twice a second and gives up on a silent
+launcher after fifteen seconds, collecting what is left; this is the backstop
+for a daemon that went away, so the model is not left writing to nobody."""
+REAP_EVERY_S: Final = 5.0
+
+
+@dataclass(eq=False)
+class AnswerInProgress:
+    """One answer being written, until the daemon has read all of it (D-216).
+
+    Kept in memory only, and only until it has been read or abandoned: an
+    ordinary answer is forgotten once it has been shown (D-165).
+    """
+
+    id: str
+    seen: float
+    """When the daemon last asked about it, on the service's monotonic clock."""
+    sentences: list[str] = field(default_factory=list)
+    taken: int = 0
+    """How many of `sentences` the daemon has already been given."""
+    reply: Reply | None = None
+    """How the answer ended, once it has."""
+    decided: asyncio.Event = field(default_factory=asyncio.Event)
+    """Set once the question was refused or has passed both checks."""
+    task: asyncio.Task[None] | None = None
+
+    def finish(self, reply: Reply) -> None:
+        if self.reply is None:
+            self.reply = reply
+        self.decided.set()
+
+
+def progress(answer_id: str, sentences: list[str], reply: Reply | None) -> dict[str, Any]:
+    """What `ask` and `more` return: new sentences, and the ending once there is one."""
+    data: dict[str, Any] = {
+        "answer_id": answer_id,
+        "sentences": sentences,
+        "done": reply is not None,
+        "refused": False,
+        "category": "ok",
+        "stage": "answer",
+        "refusal_key": "",
+        "alert": False,
+    }
+    if reply is not None:
+        data.update(
+            refused=reply.refused,
+            category=reply.category,
+            stage=reply.stage,
+            refusal_key=reply.refusal_key,
+            alert=reply.alert,
+        )
+    return data
+
 
 def thread_count(configured: int, cpus: int | None = None) -> int:
     """Half the logical CPUs, at most eight, unless the parent set a number.
@@ -71,7 +143,7 @@ def thread_count(configured: int, cpus: int | None = None) -> int:
 
 
 class AssistantService:
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: Config, *, clock: Callable[[], float] = time.monotonic) -> None:
         self.config = config
         self.models_dir = config.paths.ai_models_dir
         self.run_dir = config.paths.ai_run_dir
@@ -82,6 +154,9 @@ class AssistantService:
         self._knowledge: Knowledge | None = None
         self._transcriber: Transcriber | None = None
         self._loaded: dict[str, str] = {}
+        self._clock = clock
+        self._answers: dict[str, AnswerInProgress] = {}
+        self._reaper: asyncio.Task[None] | None = None
 
     # ------------------------------------------------------------- models
 
@@ -185,8 +260,13 @@ class AssistantService:
             case "status":
                 return Response(id=request.id, ok=True, data=self.status())
             case "ask":
-                reply = await self.ask(request.args)
-                return Response(id=request.id, ok=True, data=reply.as_dict())
+                return Response(id=request.id, ok=True, data=await self.ask(request.args))
+            case "more":
+                answer_id = str(request.args.get("answer_id", ""))
+                return Response(id=request.id, ok=True, data=self.more(answer_id))
+            case "cancel":
+                cancelled = self.cancel(str(request.args.get("answer_id", "")))
+                return Response(id=request.id, ok=True, data={"cancelled": cancelled})
             case "transcribe":
                 return await self.transcribe(request)
             case "warmup":
@@ -209,27 +289,114 @@ class AssistantService:
             "loaded": bool(self._llm and self._llm.running),
         }
 
-    async def ask(self, args: dict[str, Any]) -> Reply:
-        question = str(args.get("question", ""))
-        age = _int(args.get("age"), 7)
-        locale = str(args.get("locale", "tr"))
-        persona = str(args.get("persona", "zio"))
+    async def ask(self, args: dict[str, Any]) -> dict[str, Any]:
+        """Start answering; return once the question is refused or accepted (D-216).
+
+        The checks run before this returns, exactly as before: a refused
+        question comes back done, with its refusal, and the model has written
+        nothing. An accepted one comes back with an `answer_id` and, usually,
+        no sentences yet; the model writes on while the daemon asks `more`.
+        """
         self._servers()
-        if self._llm is None or self._assistant is None:
-            return refuse("unavailable", "error")
-        async with self._question_lock:
-            try:
-                await self._llm.ensure()
-            except ServerUnavailable as exc:
-                log.warning("%s", exc)
-                return refuse("unavailable", "error")
-            return await self._assistant.ask(
-                question,
-                age=age,
-                locale=locale,
-                persona=persona,
-                name=str(args.get("name", ""))[:40],
-            )
+        llm, assistant = self._llm, self._assistant
+        if llm is None or assistant is None:
+            return progress("", [], refuse("unavailable", "error"))
+        answer = AnswerInProgress(id=secrets.token_hex(8), seen=self._clock())
+        self._answers[answer.id] = answer
+        answer.task = asyncio.create_task(
+            self._write(answer, llm, assistant, args), name=f"answer-{answer.id}"
+        )
+        self._watch()
+        await answer.decided.wait()
+        return self._take(answer)
+
+    async def _write(
+        self,
+        answer: AnswerInProgress,
+        llm: ManagedServer,
+        assistant: Assistant,
+        args: dict[str, Any],
+    ) -> None:
+        """The whole pipeline for one question, holding the model while it writes."""
+        try:
+            async with self._question_lock:
+                try:
+                    await llm.ensure()
+                except ServerUnavailable as exc:
+                    log.warning("%s", exc)
+                    answer.finish(refuse("unavailable", "error"))
+                    return
+                reply = await assistant.ask(
+                    str(args.get("question", "")),
+                    age=_int(args.get("age"), 7),
+                    locale=str(args.get("locale", "tr")),
+                    persona=str(args.get("persona", "zio")),
+                    name=str(args.get("name", ""))[:40],
+                    on_answering=answer.decided.set,
+                    on_sentence=answer.sentences.append,
+                )
+                answer.finish(reply)
+        except asyncio.CancelledError:
+            answer.finish(cut("unavailable", "error", answer.sentences))
+            raise
+        except Exception:  # one broken answer must not take the service down
+            log.exception("an answer failed")
+            answer.finish(cut("unavailable", "error", answer.sentences))
+
+    def more(self, answer_id: str) -> dict[str, Any]:
+        """The sentences released since the last call, and the ending once there is one.
+
+        An answer this service does not know - finished and read, abandoned,
+        or written before a restart - ends with "I'm resting": the launcher is
+        never left asking about something that will not come.
+        """
+        answer = self._answers.get(answer_id)
+        if answer is None:
+            return progress(answer_id, [], refuse("unavailable", "error"))
+        return self._take(answer)
+
+    def cancel(self, answer_id: str) -> bool:
+        """Stop writing an answer and forget it; the daemon asked a new question."""
+        answer = self._answers.pop(answer_id, None)
+        if answer is None:
+            return False
+        # A task cancelled before it ever ran never reaches its own handler,
+        # and `ask` would wait for a decision that never comes.
+        answer.finish(cut("unavailable", "error", answer.sentences))
+        if answer.task is not None and not answer.task.done():
+            answer.task.cancel()
+        return True
+
+    def _take(self, answer: AnswerInProgress) -> dict[str, Any]:
+        answer.seen = self._clock()
+        fresh = answer.sentences[answer.taken :]
+        answer.taken = len(answer.sentences)
+        if answer.reply is not None:
+            self._answers.pop(answer.id, None)  # read to its end: forgotten
+        return progress(answer.id, fresh, answer.reply)
+
+    def forget_abandoned(self) -> int:
+        """Stop the answers nobody has asked about for `ABANDONED_S`; how many."""
+        now = self._clock()
+        stale = [
+            answer.id
+            for answer in self._answers.values()
+            # Not before the checks are done: `ask` is still waiting for them.
+            if answer.decided.is_set() and now - answer.seen > ABANDONED_S
+        ]
+        for answer_id in stale:
+            log.info("an answer nobody is reading any more was stopped")
+            self.cancel(answer_id)
+        return len(stale)
+
+    def _watch(self) -> None:
+        if self._reaper is None or self._reaper.done():
+            self._reaper = asyncio.create_task(self._reap(), name="answers-reaper")
+
+    async def _reap(self) -> None:
+        while self._answers:
+            await asyncio.sleep(REAP_EVERY_S)
+            self.forget_abandoned()
 
     async def warmup(self, args: dict[str, Any]) -> dict[str, Any]:
         """Load the model and its two fixed prompts before the first question.
@@ -283,6 +450,10 @@ class AssistantService:
         return Response(id=request.id, ok=True, data={"text": text})
 
     async def aclose(self) -> None:
+        for answer_id in list(self._answers):
+            self.cancel(answer_id)
+        if self._reaper is not None:
+            self._reaper.cancel()
         for server in (self._llm, self._stt):
             if server is not None:
                 await server.stop()

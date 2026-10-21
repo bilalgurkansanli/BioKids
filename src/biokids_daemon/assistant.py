@@ -11,15 +11,28 @@ this is where the alert is written - the question itself, its category, when -
 and where the panel hears about it. Questions that were answered are not kept
 anywhere: the parent asked to know about the worrying ones, not to read every
 question a child ever wondered about.
+
+An answer arrives a sentence at a time (D-216). `ask` returns once the question
+has been refused or has passed the assistant's checks; the launcher then asks
+`more` about twice a second, and each call is carried to the assistant service
+and back. The gate remembers, per child, the one answer in progress and the
+question it answers, so that an answer the word list stops part-way still
+becomes an alert with the child's words in it, and so that no child can read
+another's answer. A launcher that stops asking is noticed here
+(`ABANDONED_S`): what the answer came to is collected - an alert is still an
+alert - and the model is told to stop.
 """
 
 from __future__ import annotations
 
+import asyncio
 import collections
+import contextlib
 import datetime as dt
 import logging
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final, Protocol
 
@@ -34,9 +47,17 @@ log = logging.getLogger(__name__)
 AI_SOCKET_NAME: Final = "ai.sock"
 ASK_TIMEOUT_S: Final = 300.0
 """A first question loads the model: up to four minutes on a slow disk."""
+POLL_TIMEOUT_S: Final = 10.0
+"""`more` and `cancel` answer from memory at once; this only bounds a wedged service."""
+ABANDONED_S: Final = 15.0
+"""A launcher that has not asked for the rest of an answer for this long has gone:
+the child went home, or the launcher closed. Its page asks twice a second, and a
+browser slows a page it is not showing to once a second at the most."""
+WATCH_EVERY_S: Final = 5.0
 WINDOW_S: Final = 600.0
 MAX_AUDIO_B64: Final = 700_000
 MAX_ALERT_TEXT: Final = 500
+MAX_ANSWER_ID: Final = 64
 
 
 class AiClient(Protocol):
@@ -44,6 +65,7 @@ class AiClient(Protocol):
 
 
 def refusal(key: str, category: str) -> dict[str, Any]:
+    """An answer that ends here, before or instead of anything the model wrote."""
     return {
         "refused": True,
         "text": "",
@@ -51,7 +73,21 @@ def refusal(key: str, category: str) -> dict[str, Any]:
         "stage": "daemon",
         "refusal_key": key,
         "alert": False,
+        "done": True,
+        "sentences": [],
+        "answer_id": "",
     }
+
+
+@dataclass(eq=False)
+class OpenAnswer:
+    """The answer a child is reading, while the model is still writing it (D-216)."""
+
+    answer_id: str
+    question: str
+    """For the alert, should the answer be stopped part-way; never stored otherwise."""
+    runtime: Any
+    seen: float
 
 
 class AssistantGate:
@@ -67,13 +103,16 @@ class AssistantGate:
         self.supervisor = supervisor
         self.bus = bus
         self.config = config
-        self.client: AiClient = client or AsyncDaemonClient(
-            Path(config.paths.ai_run_dir) / AI_SOCKET_NAME, timeout=ASK_TIMEOUT_S
-        )
+        path = Path(config.paths.ai_run_dir) / AI_SOCKET_NAME
+        self.client: AiClient = client or AsyncDaemonClient(path, timeout=ASK_TIMEOUT_S)
+        self.poller: AiClient = client or AsyncDaemonClient(path, timeout=POLL_TIMEOUT_S)
+        """The same socket with a short timeout, for `more` and `cancel`."""
         self._clock = clock
         self._asked: dict[int, collections.deque[float]] = collections.defaultdict(
             collections.deque
         )
+        self._open: dict[int, OpenAnswer] = {}
+        self._watcher: asyncio.Task[None] | None = None
 
     def _policy(self, child_id: int) -> Any:
         runtime = self.supervisor._require(child_id)
@@ -90,11 +129,18 @@ class AssistantGate:
         return False
 
     async def ask(self, child_id: int, question: str) -> dict[str, Any]:
+        """A question to the assistant: refused here, refused there, or begun.
+
+        Begun means `done` is false and `answer_id` names the answer for `more`.
+        """
         runtime, policy = self._policy(child_id)
         if policy is None or not policy.assistant_enabled:
             return refusal("assistant.refuse.off", "off")
         if self._over_limit(child_id):
             return refusal("assistant.refuse.slow_down", "slow_down")
+        # One answer at a time per child: a new question stops the last one,
+        # which the child has stopped reading, and frees the model for this.
+        await self._close(child_id)
 
         child = repo.get_child(self.supervisor.session, child_id)
         age = child.age_on(dt.date.today()) if child is not None else 7
@@ -114,9 +160,102 @@ class AssistantGate:
             return refusal("assistant.refuse.unavailable", "unavailable")
 
         reply = dict(response.data)
-        if reply.get("alert"):
-            self._report(runtime, child_id, question, reply)
+        answer_id = str(reply.get("answer_id", ""))[:MAX_ANSWER_ID]
+        if reply.get("done", True) or not answer_id:
+            reply["done"] = True
+            if reply.get("alert"):
+                self._report(runtime, child_id, question, reply)
+            return reply
+        self._open[child_id] = OpenAnswer(answer_id, question, runtime, self._clock())
+        self._watch()
         return reply
+
+    async def more(self, child_id: int, answer_id: str) -> dict[str, Any]:
+        """The next sentences of this child's answer in progress, and its ending (D-216).
+
+        Only the answer this child is reading: an id that is not theirs, or
+        no longer open, ends with "I'm resting" and reaches nothing. A parent
+        who switches the assistant off is obeyed between two sentences.
+        """
+        opened = self._open.get(child_id)
+        if opened is None or not answer_id or opened.answer_id != answer_id:
+            return refusal("assistant.refuse.unavailable", "unavailable")
+        _runtime, policy = self._policy(child_id)
+        if policy is None or not policy.assistant_enabled:
+            await self._close(child_id)
+            return refusal("assistant.refuse.off", "off")
+        opened.seen = self._clock()
+        reply = await self._collect(child_id, opened)
+        if reply is None:
+            return refusal("assistant.refuse.unavailable", "unavailable")
+        return reply
+
+    async def _collect(self, child_id: int, opened: OpenAnswer) -> dict[str, Any] | None:
+        """One `more`, with the alert filed if the answer ended in one. None: gone."""
+        try:
+            response = await self.poller.call("more", answer_id=opened.answer_id)
+        except IpcError as exc:
+            log.warning("the assistant service stopped answering mid-answer: %s", exc)
+            response = Response(ok=False)
+        if not response.ok:
+            self._forget(child_id, opened)
+            return None
+        reply = dict(response.data)
+        if reply.get("done", True):
+            reply["done"] = True
+            self._forget(child_id, opened)
+            if reply.get("alert"):
+                self._report(opened.runtime, child_id, opened.question, reply)
+        return reply
+
+    def _forget(self, child_id: int, opened: OpenAnswer) -> None:
+        if self._open.get(child_id) is opened:
+            del self._open[child_id]
+
+    async def _close(self, child_id: int) -> None:
+        """Stop this child's answer in progress, if any, after a last look at it."""
+        opened = self._open.get(child_id)
+        if opened is None:
+            return
+        reply = await self._collect(child_id, opened)
+        if reply is not None and not reply["done"]:
+            self._forget(child_id, opened)
+            with contextlib.suppress(IpcError):
+                await self.poller.call("cancel", answer_id=opened.answer_id)
+
+    async def forget_abandoned(self) -> int:
+        """Close the answers whose launcher stopped asking; how many there were."""
+        now = self._clock()
+        gone = [
+            child_id
+            for child_id, opened in self._open.items()
+            if now - opened.seen > ABANDONED_S
+        ]
+        for child_id in gone:
+            log.info("child %s stopped reading an answer; it is stopped", child_id)
+            await self._close(child_id)
+        return len(gone)
+
+    def _watch(self) -> None:
+        if self._watcher is None or self._watcher.done():
+            self._watcher = asyncio.create_task(self._watch_loop(), name="assistant-answers")
+
+    async def _watch_loop(self) -> None:
+        while self._open:
+            await asyncio.sleep(WATCH_EVERY_S)
+            try:
+                await self.forget_abandoned()
+            except Exception:  # the watch must outlive one bad answer
+                log.exception("could not close an abandoned answer")
+
+    async def aclose(self) -> None:
+        """The daemon is stopping: stop watching. The service stops its own answers."""
+        if self._watcher is not None:
+            self._watcher.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._watcher
+            self._watcher = None
+        self._open.clear()
 
     def _report(
         self, runtime: Any, child_id: int, question: str, reply: dict[str, Any]

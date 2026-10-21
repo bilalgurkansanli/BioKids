@@ -110,20 +110,39 @@ class ShellClient:
         return response.ok, response.error or ""
 
     async def ask_assistant(self, question: str) -> dict[str, Any]:
-        """The assistant's reply (D-165). A refusal when anything is unreachable.
+        """The start of the assistant's reply (D-165, D-216). Resting when unreachable.
 
         Its own connection with a long timeout: the first question after a pause
         waits for the model to load, which is seconds on a good machine and can
-        be minutes on an old one.
+        be minutes on an old one. It returns once the question is refused or
+        accepted; an accepted one carries the `answer_id` that `assistant_more`
+        asks about.
         """
         client = AsyncDaemonClient(self.socket_path, timeout=ASSISTANT_TIMEOUT_S)
         try:
             response = await client.call(ShellOp.ASK_ASSISTANT, question=question)
         except (IpcError, OSError) as exc:
             log.warning("could not ask the assistant: %s", exc)
-            return {"refused": True, "refusal_key": "assistant.refuse.unavailable"}
+            return resting()
         if not response.ok:
-            return {"refused": True, "refusal_key": "assistant.refuse.unavailable"}
+            return resting()
+        return dict(response.data)
+
+    async def assistant_more(self, answer_id: str) -> dict[str, Any]:
+        """The next sentences of an answer, and its ending once it has one (D-216).
+
+        A daemon that cannot be reached ends the answer with "I'm resting": the
+        page stops asking, and the child is not left in front of a sentence
+        that never finishes.
+        """
+        client = AsyncDaemonClient(self.socket_path, timeout=ASSISTANT_POLL_TIMEOUT_S)
+        try:
+            response = await client.call(ShellOp.ASSISTANT_MORE, answer_id=answer_id)
+        except (IpcError, OSError) as exc:
+            log.warning("could not read the rest of the answer: %s", exc)
+            return resting()
+        if not response.ok:
+            return resting()
         return dict(response.data)
 
     async def warm_assistant(self) -> None:
@@ -152,3 +171,16 @@ class ShellClient:
 
 
 ASSISTANT_TIMEOUT_S = 300.0
+ASSISTANT_POLL_TIMEOUT_S = 15.0
+"""For `assistant_more`, which the daemon answers from the assistant's memory;
+longer than the daemon's own ten seconds for the same question."""
+
+
+def resting() -> dict[str, Any]:
+    """An answer that ends now, with "Şu an biraz dinleniyorum" (D-165)."""
+    return {
+        "refused": True,
+        "done": True,
+        "sentences": [],
+        "refusal_key": "assistant.refuse.unavailable",
+    }
