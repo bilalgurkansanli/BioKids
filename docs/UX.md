@@ -191,10 +191,13 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
 9. **Sor Bana** (D-165), when a parent has switched it on — a big text box and a
    send button, and with voice on (D-166) a round microphone button the child holds
    while speaking, which says "Dinliyorum…" while it listens. Under the box, always:
-   "Sorduğun bazı soruları ailen görebilir." The answer appears in a bubble and Zio
-   reads it aloud. A refusal is a kind fixed sentence in the same bubble, never an
-   error. While the model loads, "Biraz bekle, aklımı topluyorum…", then
-   "Düşünüyorum…", in words rather than a spinner.
+   "Sorduğun bazı soruları ailen görebilir." The answer appears in a bubble a sentence
+   at a time, as the model writes it, and Zio reads each sentence aloud in turn, never
+   two at once (D-216). A refusal is a kind fixed sentence in the same bubble, never an
+   error; an answer stopped part-way keeps what was shown and ends with one ("Bu konuda
+   sana bu kadarını anlatabilirim. Gerisini ailenden bir büyüğe sorabilirsin."). Until
+   the first sentence, "Düşünüyorum…", and while the model loads, "Biraz bekle, aklımı
+   topluyorum…", in words rather than a spinner.
 10. **Kapat** (D-100) — "Bilgisayarı kapatalım mı?", **Evet, kapat** and **Vazgeç**.
     The yes is answered at once (D-209): "Bilgisayar kapanıyor…" and "Yarın
     görüşürüz.", said aloud for 4–7, and a few seconds later the computer switches

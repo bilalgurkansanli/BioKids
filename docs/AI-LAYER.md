@@ -278,7 +278,8 @@ and what was decided is in DECISIONS.md D-165 and D-166; this is how it works.
 ```
 launcher (child)  --shell.sock-->  daemon  --ai.sock-->  biokids-ai  --llm.sock-->  llama-server
   /assistant/ask     ASK_ASSISTANT   policy, rate limit,   lexicon, classifier,      (llama.cpp)
-  /assistant/hear    HEAR_ASSISTANT  alerts, audit         answer, lexicon      --:8178-->     whisper-server
+  /assistant/more    ASSISTANT_MORE  alerts, audit         answer, lexicon per
+  /assistant/hear    HEAR_ASSISTANT                        sentence             --:8178-->     whisper-server
 ```
 
 * **Gate (daemon, `biokids_daemon/assistant.py`).** Refuses unless the child's policy
@@ -288,8 +289,33 @@ launcher (child)  --shell.sock-->  daemon  --ai.sock-->  biokids-ai  --llm.sock-
 * **Pipeline (`biokids_ai/assistant.py`).** Lexicon (`data/lexicon.toml`: exact words,
   prefixes, Turkish-only words, phrases, squashed spellings, phone numbers and e-mail
   addresses) → small talk skips the classifier → classifier, temperature 0, output
-  constrained to a JSON enum → answer → lexicon on the answer. Any refusal is a fixed
-  catalog sentence (`assistant.refuse.*`); the model never writes one.
+  constrained to a JSON enum → answer, streamed → lexicon on each sentence. Any refusal
+  is a fixed catalog sentence (`assistant.refuse.*`); the model never writes one.
+* **Streaming (D-216).** The answer is asked for with `stream: true` and read as
+  server-sent events (`localhttp.post_events`), the whole stream under the answer's
+  old 120-second deadline. `sentences.SentenceSplitter` releases a sentence once the
+  next word shows it is whole: a full stop after an abbreviation ("Dr.", "Prof.",
+  "vb."), an initial, a number or a Roman numeral (the Turkish ordinal: "19. yüzyıl",
+  "II. Mehmet"), or before a lowercase word, is not an end; a line break is; a
+  sentence past 200 characters is cut at a comma or between words, never inside one.
+  Each sentence is screened together with everything released before it, so the word
+  list sees what it saw when it screened the whole answer. The first sentence it
+  stops is not shown and ends the answer: with the category's refusal if nothing was
+  shown yet, as before; otherwise with `assistant.refuse.cut` ("Bu konuda sana bu
+  kadarını anlatabilirim…"), except self-harm, which keeps its own sentence with 183
+  and 112. The alert is filed as before. A model that dies, or runs out of time,
+  part-way ends the answer with "Şu an biraz dinleniyorum"; what was shown stays.
+* **Transport (D-216).** Polling, not a streamed reply: every hop stays one request
+  and one response with its own timeout, as everywhere else in BioKids. The service's
+  `ask` returns once the question is refused or has passed both checks, with an
+  `answer_id`; the model writes on in a task that holds the model, and `more` returns
+  the sentences released since the last call, then the ending. The page asks
+  `/assistant/more` every 500 ms; the daemon carries each call to the service, only
+  for the calling child's own open answer, and files the alert from the ending. A new
+  question from the same child stops the last answer. A launcher silent for 15
+  seconds has gone: the daemon collects what the answer came to (an alert is still an
+  alert) and cancels it; the service itself stops an answer nobody has asked about
+  for 60 seconds. An unknown or vanished answer ends with "Şu an biraz dinleniyorum".
 * **Prompts (`biokids_ai/prompts.py`).** One system prompt per language, filled with
   the persona, the child's name and age, and the band's length: five sentences and
   260 tokens for 4-7, seven and 380 for 8-10. One worked example per language and
@@ -317,8 +343,12 @@ launcher (child)  --shell.sock-->  daemon  --ai.sock-->  biokids-ai  --llm.sock-
 * **Voice (`biokids_shell/static/assistant.js`).** Press and hold, at most 15 seconds;
   the page records with Web Audio, encodes a 16 kHz mono WAV in memory and posts it
   as `audio/wav`. Chromium lets only the launcher's origin open the microphone.
-  Nothing is written to disk anywhere on the way. Zio reads the answer aloud through
-  the voice service's `say` operation, after any time warning.
+  Nothing is written to disk anywhere on the way. Zio reads the answer aloud a
+  sentence at a time (D-216): the page posts each to `/assistant/say`, which hands it
+  to the voice service's `say` and answers once the voice service reports that line
+  finished, and only then posts the next. Sentences are read in order, never two at
+  once, after any time warning, and never more than one of them waits in the voice
+  service's three-line queue, which would otherwise drop a warning to make room.
 
 **Threads.** llama.cpp's threads spin while they wait for each other, so a thread
 that loses its CPU stalls the rest. `llama-bench` on the development VM (eight vCPUs
@@ -345,7 +375,10 @@ VM in front, and do not read a slow afternoon as a slow model.
 
 **Testing.** `tests/test_ai_safety.py` covers the lexicon (Turkish case folding,
 leetspeak, phrases, false friends that must pass); `tests/test_ai_assistant.py` the
-pipeline with a fake model, the gate, the downloader and the runtime. Answer quality
+pipeline with a fake model, the gate, the downloader and the runtime;
+`tests/test_ai_streaming.py` the sentence splitter, the per-sentence word list, a
+refusal and a dead model part-way, the stream's deadline, the service's `ask`/`more`,
+the gate's open answers and the launcher's one-sentence-at-a-time speech. Answer quality
 is checked by hand on the VM with the prompts from the shared folder; it is not a CI
 test, because a model's wording is not a contract.
 

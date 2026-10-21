@@ -272,8 +272,10 @@ shell can dismiss the card.
 for testing a voice.
 
 `{"op": "say", "text": "...", "locale": "tr", "persona": "zio"}` reads out the
-assistant's answer (D-165). An ordinary line in the queue, so a time warning still
-goes first; cut after a whole sentence at 1,500 characters.
+assistant's answer (D-165), one sentence per line since D-216: the launcher subscribes,
+sends a sentence, and sends the next only when that line's `speak_finished` arrives,
+so an answer never fills the queue. An ordinary line in the queue, so a time warning
+still goes first; cut after a whole sentence at 1,500 characters.
 
 ---
 

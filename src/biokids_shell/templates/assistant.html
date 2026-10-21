@@ -9,6 +9,10 @@
   can read, every time they open it (principle 2). Press-and-speak is shown only
   when the parent turned it on (D-166); the microphone is open only while the
   button is held, and the page shows that it is.
+
+  An answer arrives a sentence at a time (D-216): "Düşünüyorum…" until the
+  first, then each sentence added to Zio's bubble as it comes and read aloud
+  in turn. The script does all of that; without it the page is what it was.
 #}
 {% block body %}
 <div class="screen assistant" data-band="{{ band }}"
@@ -59,6 +63,7 @@
   'loading': _('assistant.loading'),
   'heard_nothing': _('assistant.heard_nothing'),
   'mic_failed': _('assistant.mic_failed'),
+  'resting': _('assistant.refuse.unavailable'),
 }|tojson }}</script>
 <script src="/static/assistant.js?v={{ asset_version }}" defer></script>
 {% endblock %}

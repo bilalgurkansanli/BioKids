@@ -146,6 +146,7 @@ class ShellServer:
         if self._server is not None:
             self._server.close()
         await cancel_connections(self._connections)
+        await self.assistant.aclose()
         if self._server is not None:
             await self._server.wait_closed()
             self._server = None
@@ -254,6 +255,7 @@ class ShellServer:
             ShellOp.REQUEST_SHUTDOWN: self._request_shutdown,
             ShellOp.ASK_A_PARENT: self._ask_a_parent,
             ShellOp.ASK_ASSISTANT: self._ask_assistant,
+            ShellOp.ASSISTANT_MORE: self._assistant_more,
             ShellOp.HEAR_ASSISTANT: self._hear_assistant,
             ShellOp.WARM_ASSISTANT: self._warm_assistant,
         }
@@ -329,6 +331,13 @@ class ShellServer:
     async def _ask_assistant(self, caller: ShellCaller, request: Request) -> Response:
         question = str(request.args.get("question", ""))[:1000]
         reply = await self.assistant.ask(caller.child_id, question)
+        return Response(id=request.id, ok=True, data=reply)
+
+    async def _assistant_more(self, caller: ShellCaller, request: Request) -> Response:
+        """The rest of an answer (D-216). The id only names it; whose it is, the
+        kernel said, and the gate answers about this child's answer alone."""
+        answer_id = str(request.args.get("answer_id", ""))[:64]
+        reply = await self.assistant.more(caller.child_id, answer_id)
         return Response(id=request.id, ok=True, data=reply)
 
     async def _warm_assistant(self, caller: ShellCaller, request: Request) -> Response:

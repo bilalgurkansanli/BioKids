@@ -1,11 +1,17 @@
-/* The assistant screen (D-165, D-166).
+/* The assistant screen (D-165, D-166, D-216).
  *
- * A question goes to /assistant/ask as JSON and comes back as the sentence to
- * show; the launcher has already asked Zio to say it aloud. Press-and-speak
- * records only while the button is held - at most fifteen seconds - and stops
- * the microphone the moment it is released, so Chromium's own "recording"
- * indicator goes out with it. The recording is turned into a 16 kHz WAV in
- * memory, posted once, and dropped.
+ * A question goes to /assistant/ask as JSON. What comes back is either the end
+ * of it - a refusal, which is a sentence people wrote - or the start of an
+ * answer, with an id the page asks /assistant/more about twice a second until
+ * the answer is done. "Düşünüyorum…" stays until the first sentence; then each
+ * sentence is added to Zio's bubble as it arrives and read aloud in turn, one
+ * at a time, through /assistant/say, which answers once the sentence has been
+ * said. Every sentence has been through the word list before it gets here.
+ *
+ * Press-and-speak records only while the button is held - at most fifteen
+ * seconds - and stops the microphone the moment it is released, so Chromium's
+ * own "recording" indicator goes out with it. The recording is turned into a
+ * 16 kHz WAV in memory, posted once, and dropped.
  */
 (function () {
   "use strict";
@@ -13,6 +19,9 @@
   var MAX_SECONDS = 15;
   var SAMPLE_RATE = 16000;
   var SLOW_MS = 6000;
+  var POLL_MS = 500;
+  var MAX_POLLS = 600; /* five minutes; every service ends an answer long before */
+  var MAX_MISSES = 3;
 
   var strings = JSON.parse(document.getElementById("assistant-strings").textContent);
   var form = document.getElementById("assistant-form");
@@ -38,48 +47,124 @@
     input.disabled = on;
     send.disabled = on;
     if (mic) mic.disabled = on;
-    if (character) character.classList.toggle("is-speaking", false);
   }
+
+  function post(url, body) {
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(function (response) {
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      return response.json();
+    });
+  }
+
+  /* ---------------------------------------------------------------- speech */
+
+  /* Sentences waiting for Zio, in order. The next is sent only once the last
+   * has been said, so two never overlap and the voice service's short queue
+   * never fills with an answer while a time warning needs a place in it. */
+  var unsaid = [];
+  var saying = false;
+
+  function say(text) {
+    unsaid.push(text);
+    sayNext();
+  }
+
+  function sayNext() {
+    if (saying || !unsaid.length) return;
+    saying = true;
+    if (character) character.classList.add("is-speaking");
+    post("/assistant/say", { text: unsaid.shift() })
+      .catch(function () {})
+      .then(function () {
+        saying = false;
+        if (!unsaid.length && character) character.classList.remove("is-speaking");
+        sayNext();
+      });
+  }
+
+  /* ---------------------------------------------------------------- asking */
 
   function ask(question) {
     question = (question || "").trim();
     if (!question || busy) return;
     bubble(question, "child");
     input.value = "";
+    unsaid = []; /* what is still unsaid of the last answer is not said now */
     setBusy(true);
-    var thinking = bubble(strings.thinking, "zio");
-    thinking.classList.add("bubble--thinking");
+    var answer = bubble(strings.thinking, "zio");
+    answer.classList.add("bubble--thinking");
+    var shown = 0;
+    var polls = 0;
+    var misses = 0;
     var slow = window.setTimeout(function () {
-      thinking.textContent = strings.loading;
+      if (!shown) answer.textContent = strings.loading;
     }, SLOW_MS);
 
-    fetch("/assistant/ask", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question: question }),
-    })
-      .then(function (response) {
-        return response.json();
-      })
-      .then(function (reply) {
-        thinking.classList.remove("bubble--thinking");
-        thinking.classList.toggle("bubble--refused", !!reply.refused);
-        thinking.textContent = reply.text || strings.heard_nothing;
-        if (character) {
-          character.classList.add("is-speaking");
-          window.setTimeout(function () {
-            character.classList.remove("is-speaking");
-          }, Math.min(12000, 1500 + (reply.text || "").length * 70));
-        }
-      })
+    function add(text, aloud) {
+      if (!shown) {
+        answer.textContent = "";
+        answer.classList.remove("bubble--thinking");
+      }
+      var sentence = document.createElement("span");
+      sentence.textContent = (shown ? " " : "") + text;
+      answer.appendChild(sentence);
+      shown += 1;
+      answer.scrollIntoView({ block: "end", behavior: "smooth" });
+      if (aloud) say(text);
+    }
+
+    function finish(ending, refused, aloud) {
+      window.clearTimeout(slow);
+      if (ending) {
+        if (refused && !shown) answer.classList.add("bubble--refused");
+        add(ending, aloud);
+      } else if (!shown) {
+        add(strings.heard_nothing, false);
+      }
+      setBusy(false);
+      input.focus();
+    }
+
+    function take(reply) {
+      (reply.sentences || []).forEach(function (text) {
+        add(text, true);
+      });
+      if (reply.done || !reply.id) {
+        finish(reply.ending, reply.refused, true);
+      } else if (++polls > MAX_POLLS) {
+        finish(strings.resting, true, true);
+      } else {
+        window.setTimeout(function () {
+          more(reply.id);
+        }, POLL_MS);
+      }
+    }
+
+    function more(id) {
+      post("/assistant/more", { id: id })
+        .then(function (reply) {
+          misses = 0;
+          take(reply);
+        })
+        .catch(function () {
+          if (++misses >= MAX_MISSES) {
+            finish(strings.mic_failed, true, false);
+          } else {
+            window.setTimeout(function () {
+              more(id);
+            }, POLL_MS);
+          }
+        });
+    }
+
+    post("/assistant/ask", { question: question })
+      .then(take)
       .catch(function () {
-        thinking.classList.remove("bubble--thinking");
-        thinking.textContent = strings.mic_failed;
-      })
-      .finally(function () {
-        window.clearTimeout(slow);
-        setBusy(false);
-        input.focus();
+        finish(strings.mic_failed, true, false);
       });
   }
 

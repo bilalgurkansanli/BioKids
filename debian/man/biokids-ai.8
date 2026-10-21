@@ -12,8 +12,10 @@ biokids\-ai \- the BioKids assistant service
 answers the questions a child types or says to the assistant in the
 BioKids launcher, with a language model that runs on this computer.
 Every question passes a word list and the model's own classification before
-it is answered, and every answer passes the word list again; a question that
-is refused gets a fixed sentence, and the daemon records it for the parent.
+it is answered. The answer is shown a sentence at a time as the model writes
+it, and every sentence passes the word list again before it is shown; a
+question that is refused, or an answer stopped part\-way, ends with a fixed
+sentence, and the daemon records it for the parent.
 .PP
 It runs as the
 .B biokids\-ai

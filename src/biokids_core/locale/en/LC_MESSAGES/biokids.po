@@ -1057,6 +1057,9 @@ msgstr "That's a lovely question. Your family can explain it best, so ask them."
 msgid "assistant.refuse.unavailable"
 msgstr "I'm resting right now. Can you ask me again in a little while?"
 
+msgid "assistant.refuse.cut"
+msgstr "That's as much as I can tell you about this. You could ask a grown-up in your family about the rest."
+
 msgid "assistant.refuse.slow_down"
 msgstr "That's a lot of questions! Let's rest a little, then you can ask again."
 

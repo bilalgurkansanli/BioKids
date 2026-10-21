@@ -26,7 +26,7 @@ parental-control tool that implies more protection than it provides is worse tha
 | Opening a sibling's launcher, or posting to it | the `launchers` nftables chain: a launcher port accepts only its own child's uid (D-188) |
 | Changing the DNS server in settings | settings app hidden; nftables sends the children's port 53 to the filter whatever server is set |
 | Using a DoH-capable site or app | `DnsOverHttpsMode: off`; DoH hosts in the blocklist; the children's DoT and HTTPS to known DoH resolvers rejected |
-| Asking the assistant something harmful | word list, classifier and a checked answer; a fixed refusal, and the parent is told (D-165) |
+| Asking the assistant something harmful | word list, classifier, and every sentence of the answer checked before it is shown (D-216); a fixed refusal, and the parent is told (D-165) |
 | A website opening the microphone or camera | `AudioCaptureAllowedUrls` names the launcher only; `VideoCaptureAllowed: false` (D-166) |
 | Installing another browser | no sudo, no polkit, no Flatpak |
 | Killing the daemon | no permission; crash triggers lockdown |

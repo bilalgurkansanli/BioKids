@@ -201,6 +201,37 @@ async def test_a_launch_request_names_the_app_but_never_the_child(
     assert response.data["reason_code"] == "app.not_allowed"
 
 
+async def test_the_rest_of_an_answer_is_asked_for_the_caller_alone(
+    running: dict[str, Any],
+) -> None:
+    """D-216: the answer id names an answer; whose it is, the kernel says."""
+
+    class Gate:
+        def __init__(self) -> None:
+            self.asked: list[tuple[int, str]] = []
+
+        async def more(self, child_id: int, answer_id: str) -> dict[str, Any]:
+            self.asked.append((child_id, answer_id))
+            return {"done": False, "sentences": ["Bir."]}
+
+        async def aclose(self) -> None:
+            return None
+
+    gate = Gate()
+    server = ShellServer(running["supervisor"], running["bus"], assistant=gate)  # type: ignore[arg-type]
+    elif_id = server.supervisor.by_user["elif"]
+    kerem_id = server.supervisor.by_user["kerem"]
+
+    response, _ = await server._dispatch(
+        caller_for(server, "elif"),
+        Request(
+            op=str(ShellOp.ASSISTANT_MORE), args={"answer_id": "x" * 500, "child_id": kerem_id}
+        ).encode(),
+    )
+    assert response.ok and response.data["sentences"] == ["Bir."]
+    assert gate.asked == [(elif_id, "x" * 64)], "the caller's child, a bounded id"
+
+
 async def test_asking_a_parent_files_a_request_against_the_caller(
     running: dict[str, Any], db: Database
 ) -> None:

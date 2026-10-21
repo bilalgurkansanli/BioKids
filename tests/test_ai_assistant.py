@@ -14,6 +14,7 @@ import asyncio
 import hashlib
 import io
 import json
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -63,6 +64,21 @@ class ScriptedModel:
         self.answered.append((question, age, locale))
         self.contexts.append(context)
         return self.answer_text
+
+    async def stream_answer(
+        self,
+        question: str,
+        age: int,
+        locale: str,
+        persona: str,
+        name: str = "",
+        wait_s: float | None = None,
+        context: str = "",
+    ) -> AsyncIterator[str]:
+        """The answer three characters at a time, as a model's tokens come (D-216)."""
+        text = await self.answer(question, age, locale, persona, name, wait_s, context)
+        for start in range(0, len(text), 3):
+            yield text[start : start + 3]
 
 
 async def test_an_ok_question_is_answered_after_it_was_checked() -> None:
