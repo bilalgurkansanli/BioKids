@@ -2,7 +2,8 @@
 
 `login` is the way in, `today` the live screen and its buttons, `requests` what
 the children asked for, `children` everything set per child, `voices` the
-parent's own recordings, `settings` the family-wide ones, `history` one day and
+parent's own recordings, `settings` the family-wide ones, `parents` who may
+sign in (D-218), `history` one day and
 the fortnight before it, `insights` a week or a month in plain words, `audit`
 the log and `misc` what is not a screen at all: the health check and the PWA
 files. The wizard is separate (`biokids_panel.wizard`), because it runs before

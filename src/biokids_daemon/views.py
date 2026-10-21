@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from biokids_core import repo
+from biokids_core.appearance import Appearance
 from biokids_core.policy import evaluate, general_allowance_seconds
 from biokids_core.types import ActivityContext
 from biokids_daemon.access_requests import AccessRequestsMixin
@@ -136,6 +137,13 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
             "managed": policy is not None,
             "supervision_indicator": child.supervision_indicator if child else "badge",
             "first_run_done": bool(child.first_run_done) if child else True,
+            # Text size, contrast and the reading font a parent chose for this
+            # child's screen (D-217); the launcher puts them on <html>.
+            "appearance": (
+                Appearance.of(child.text_size, child.high_contrast, child.reading_font)
+                if child
+                else Appearance()
+            ).as_dict(),
             "tiles": tiles,
             "asked_for_time": self.pending_request(child_id, "time"),
             "remaining_seconds": decision.remaining_seconds,

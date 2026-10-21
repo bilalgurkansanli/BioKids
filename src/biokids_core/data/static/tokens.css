@@ -47,8 +47,9 @@
   --font-ui: "Inter", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-kid: "Fredoka", "Baloo 2", "Comic Neue", var(--font-ui);
 
-  /* Set by the parent panel's accessibility settings and inherited by the
-   * launcher, which is why it is a token and not a launcher-local value. */
+  /* The size of the text, as a factor on the root font size: everything sized
+   * in rem grows with it. Set through `data-text-size` on <html> (below), by a
+   * parent for themselves in the panel and for each child in the launcher. */
   --font-scale: 1;
 
   /* Interactive target sizes. UX.md §2.4: 64px for 4–7, 44px for 8–10. */
@@ -87,32 +88,48 @@
   font-display: swap;
 }
 
-/* A dyslexia-friendly option, offered in the parent panel (UX.md §5). It is
- * applied by setting `data-font="dyslexic"` on <html>. */
-@font-face {
-  font-family: "OpenDyslexic";
-  src: url("/static/fonts/OpenDyslexic-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
+/* What a parent chose under Görünüm, for themselves, or Ekran, for a child
+ * (D-217). Three attributes on <html>, set by the server; nothing else in a
+ * page knows about them, and without them every page is exactly as before.
+ * biokids_core/appearance.py holds the values each may take. */
 
+/* Text size: Normal, Büyük, Çok büyük. */
+html[data-text-size="large"] { --font-scale: 1.25; }
+html[data-text-size="x-large"] { --font-scale: 1.5; }
+
+/* The reading font, for a child who finds reading hard: OpenDyslexic, from
+ * Debian's fonts-opendyslexic, which biokids-desktop recommends. Found among
+ * the machine's fonts by name, so there is no @font-face for it: one pointing
+ * at a file that is not there would hide the installed font behind it. Where
+ * it is not installed the stacks go on to the usual font. Spelled out rather
+ * than `"OpenDyslexic", var(--font-ui)`, which names itself and is no value at
+ * all - the page would fall back to the browser's serif. */
 html[data-font="dyslexic"] {
-  --font-ui: "OpenDyslexic", var(--font-ui);
-  --font-kid: "OpenDyslexic", var(--font-kid);
+  --font-ui: "OpenDyslexic", "Inter", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-kid: "OpenDyslexic", "Fredoka", "Baloo 2", "Comic Neue", "Inter", "Noto Sans", system-ui, sans-serif;
 }
 
-/* High contrast, also a parent-panel setting. Colour is never the only signal
- * anywhere in BioKids, so this only has to raise contrast, not add meaning. */
+/* High contrast. Colour is never the only signal anywhere in BioKids, so this
+ * only has to raise contrast, not add meaning. Text in --ink and --ink-soft
+ * reaches 7:1 on white (AAA); white on --ok, --danger, --warn and --bio-indigo
+ * at least 4.5:1 (AA); every colour a border, a ring or a bar is drawn in at
+ * least 3:1 against white (tests/test_appearance.py measures each pair). --line
+ * stays a middle grey, not a dark one: it is also the empty part of the rings
+ * and bars, which must still look different from the part that is filled. The
+ * brand colours darken with the rest, because the panel's links and buttons
+ * and the launcher's tile borders are drawn in them. */
 html[data-contrast="high"] {
   --bg: #FFFFFF;
   --surface: #FFFFFF;
   --ink: #000000;
   --ink-soft: #3A3430;
-  --line: #A79C92;
-  --ok: #1B7A46;
+  --line: #8F8780;
+  --ok: #0F6B37;
   --warn: #9A5B00;
   --danger: #A3160C;
+  --bio-indigo: #2F379E;
+  --bio-teal: #0E6E64;
+  --bio-coral: #B4320F;
 }
 
 @media (prefers-reduced-motion: reduce) {

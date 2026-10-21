@@ -1,0 +1,63 @@
+/* The launcher drawn the way a parent chose for this child (D-217).
+ *
+ * Çocuklar → Düzenle → Ekran sets three attributes on <html>: data-text-size,
+ * data-contrast and data-font. tokens.css turns them into token overrides -
+ * the root font size, the colours, the font stacks - and everything sized in
+ * rem follows. This file is the little that does not follow by itself: the
+ * tiles, whose size and label are in pixels, and two places where the high
+ * contrast colours meet a colour written out in shell.css.
+ *
+ * Without the attributes (data-text-size="normal", data-contrast="normal"),
+ * nothing here matches and the launcher is exactly as before. Measured at
+ * 1280 x 800 with the young band at the largest size (tests/test_appearance.py
+ * and the VM runbook): fewer tiles a row, the grid scrolling inside itself as
+ * it always could, nothing wider than the screen. */
+
+/* ------------------------------------------------------------- text size */
+
+/* The tiles grow less than the words in them: a name has room, and a row still
+ * holds four of the young band's tiles at 1280 pixels. */
+html[data-text-size="large"] { --tile-grow: 1.1; }
+html[data-text-size="x-large"] { --tile-grow: 1.2; }
+
+html[data-text-size="large"] .tile,
+html[data-text-size="x-large"] .tile {
+  width: calc(var(--tile-size) * var(--tile-grow));
+  /* A tile whose name still takes three lines grows downward rather than
+   * spilling out of its border; its row grows with it. */
+  height: auto;
+  min-height: calc(var(--tile-size) * var(--tile-grow));
+}
+
+/* `.tile .tile__label`, not `.tile__label`: the older band's own label rule in
+ * shell.css is more specific than a bare one, and the labels stayed small. */
+html[data-text-size="large"] .tile .tile__label,
+html[data-text-size="x-large"] .tile .tile__label {
+  font-size: calc(var(--tile-label) * var(--font-scale));
+  /* One long word at 42 pixels can be wider than its tile; it breaks rather
+   * than running over the edge. */
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+/* The greeting gives way before the ring does: the ring is the one thing that
+ * must stay in the top right corner (D-43b). */
+html[data-text-size="large"] .hello,
+html[data-text-size="x-large"] .hello {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------- high contrast */
+
+/* The warning banner writes dark brown on --warn; in high contrast --warn is
+ * dark itself, so the words turn white (5.4:1). */
+html[data-contrast="high"] .banner[data-level="warn"] { color: #FFFFFF; }
+
+/* The ring's empty part stays light, so the minutes still left - drawn in the
+ * darker high-contrast green, amber or red - stand out from it at a glance. */
+html[data-contrast="high"] .ring__track,
+html[data-contrast="high"] .notice__ring-track { stroke: #E2DCD6; }
+
+/* Every tile has a border a child can see, not a tint of one. */
+html[data-contrast="high"] .tile { border-color: var(--ink-soft); }

@@ -151,7 +151,11 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
   (D-164), or a site served on this machine with nothing behind it yet, such as
   Vikipedi before the encyclopedia is downloaded (D-190).
 - `prefers-reduced-motion` is respected everywhere.
-- High contrast mode and a font-scale slider live in the parent panel, not the child UI.
+- Text size, high contrast and the reading font are chosen for each child in the
+  parent panel (**Çocuklar → Düzenle → Ekran**, D-217), never on the child's screen.
+  They change the launcher and the browser's start page; at the largest size the
+  tiles grow less than the words in them, so a row holds fewer and the grid scrolls,
+  and nothing is wider than the screen.
 
 ### 2.5 Screens
 
@@ -164,7 +168,7 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
    tiles (§2.4, D-208).
 3. **Blocked** — Zio or Sio looking concerned, one sentence ("Burası senin için
    değil"), and a large **"Büyüğüme sor"** button: it names no parent, because the
-   request goes to whoever holds the one parent account (D-135). Never a URL, never an
+   request goes to every parent and any of them may answer it (D-135, D-218). Never a URL, never an
    error code, never the word "forbidden". A site the policy or the DNS filter closed
    lands here too: the extension sends the tab to it instead of Chromium's error page
    (D-187).
@@ -320,10 +324,24 @@ Geçmiş / History       → fourteen days of minutes, and one day's apps, sites
                          requests (D-192)
 Analiz / Insights      → a week or a month in plain words, then the numbers (D-206)
 Kayıtlar / Audit log
-Ayarlar / Settings     → PIN, passphrase, email, phone access, language, and Zio
-                         and Sio's voice: the natural voice to download (D-196)
-                         and the parent's own (D-174)
+Ayarlar / Settings     → language, Görünüm (text size and contrast, the signed-in
+                         parent's own, D-217), email, Zio and Sio's voice: the
+                         natural voice to download (D-196) and the parent's own
+                         (D-174), phone access, Ebeveynler (D-218), your PIN, the
+                         family's passphrase
 ```
+
+**Ebeveynler** (`/settings/parents`, D-218) lists everyone who can sign in, with
+"(siz)" beside the signed-in parent, and lets them change their own name. Under
+**Ebeveyn ekle**, closed by default: the new parent's name, their own PIN twice, their
+recovery code shown once with "Yeni ebeveyn bu kodu bir yere yazdı", and the
+passphrase. Each other parent has **Kaldır**, red, behind the passphrase, saying that
+they will no longer sign in and that what they did stays in Kayıtlar under their name.
+One line says what stays shared: the passphrase, the mail settings and the children's
+requests. With two or more parents the sign-in page first asks **"Kim giriş
+yapıyor?"**, a big button per name, then that parent's PIN with "Başka biri
+misiniz?"; with one, it is the PIN box it always was. Kayıtlar names the parent on
+each row, and İstekler says who answered.
 
 **İstekler / Requests** is not in the menu: it is one tap from Today, where the badge
 and the banner are, because a child is waiting at the computer. A request about a
@@ -406,8 +424,10 @@ understood; it is for the evening, not for the child waiting at the computer.
 Nine steps, each skippable with a sane default, under five minutes total.
 
 1. Language
-2. Parent account and PIN
-3. Passphrase and the 8-word recovery code (shown once, with a "I wrote it down" check)
+2. Parent account and PIN: the first parent; any other is added later under
+   **Ayarlar → Ebeveynler** (D-218)
+3. Passphrase and the 8-word recovery code (shown once, with a "I wrote it down" check);
+   the passphrase becomes the family's
 4. Add a child: name, birth year, avatar
 5. Choose apps from the catalog (pre-selected by age). Volume, brightness and
    shutdown are not offered as boxes: every child has them (D-194).
@@ -450,9 +470,13 @@ rendered without the session so the cached copy holds no name and no token (D-19
 ### 3.6 A child's details
 
 **Çocuklar → Düzenle** (`/children/{id}/edit`, D-191): name, birth year, picture and
-language, and under **Gelişmiş** the supervision indicator — shown, a small icon, or
+language; under **Ekran** (D-217), folded away until something is chosen, the text
+size (Normal, Büyük, Çok büyük), high contrast, and the reading font, OpenDyslexic,
+with a line saying so when it is not installed on this computer; and under
+**Gelişmiş** the supervision indicator — shown, a small icon, or
 hidden (the first-run explanation still runs, D-76). The account name is shown, not
-editable. Saving a new name or picture updates the login screen.
+editable. Saving a new name or picture updates the login screen; saving the screen
+choices redraws the launcher.
 
 At the bottom, closed by default, **"Elif adlı çocuğu BioKids'ten kaldır"**: red, behind the
 passphrase, and saying plainly what it does — times, apps, requests and history are
@@ -572,7 +596,14 @@ title says so when that mail is on, rather than "hiçbir yere gönderilmez".
 - WCAG AA contrast minimum everywhere; AAA on the child launcher.
 - Full keyboard navigation with a clearly visible focus ring.
 - Proper landmarks and labels; the launcher is usable with a screen reader.
-- A dyslexia-friendly font option (OpenDyslexic, vendored) in the parent panel.
-- A font-scale slider from 100% to 175%, applied to the child launcher.
+- Text size in three steps, Normal, Büyük and Çok büyük (100, 125 and 150 per cent),
+  and high contrast: for each parent under **Ayarlar → Görünüm**, kept with their
+  account so it follows them to the phone, and for each child under **Çocuklar →
+  Düzenle → Ekran** (D-217). Three attributes on `<html>` (`data-text-size`,
+  `data-contrast`, `data-font`) that `tokens.css` turns into token overrides. In high
+  contrast, words reach 7:1 and lines, rings and borders 3:1 (`tests/test_appearance.py`).
+- A reading font for a child, OpenDyslexic, from Debian's `fonts-opendyslexic`, which
+  biokids-desktop recommends. Not vendored: the browser finds it among the machine's
+  fonts, and without it the usual font stays.
 - Colour is never the only signal: the time ring also changes thickness, and warning
   banners carry an icon.

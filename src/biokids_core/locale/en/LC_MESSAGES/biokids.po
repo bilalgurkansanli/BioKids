@@ -438,6 +438,161 @@ msgstr "That passphrase is not right."
 msgid "auth.session_expired"
 msgstr "Your session timed out. Please sign in again."
 
+# --- more than one parent (D-218), appearance (D-217) ---
+
+msgid "login.who"
+msgstr "Who is signing in?"
+
+msgid "login.pin.help.own"
+msgstr "Your own 6-digit PIN: set in the setup, or when you were added."
+
+msgid "login.not_you"
+msgstr "Not you?"
+
+msgid "login.choose"
+msgstr "Choose who you are, then type your PIN again."
+
+msgid "parents.title"
+msgstr "Parents"
+
+msgid "parents.intro"
+msgstr "Everyone who can sign in to the panel with their own name and PIN. What each of them does appears under their name in the audit log."
+
+msgid "parents.you"
+msgstr "you"
+
+msgid "parents.unnamed"
+msgstr "Parent {number}"
+
+msgid "parents.teaser"
+msgstr "Each parent signs in with their own PIN. Adding or removing a parent needs the passphrase."
+
+msgid "parents.open"
+msgstr "Manage parents"
+
+msgid "parents.add"
+msgstr "Add a parent"
+
+msgid "parents.add.help"
+msgstr "Add them while they are with you: let them type their own PIN and keep their own recovery code."
+
+msgid "parents.add.name"
+msgstr "Their name"
+
+msgid "parents.name.help"
+msgstr "The sign-in page shows a button with this name."
+
+msgid "parents.add.pin.help"
+msgstr "Their own PIN: they will use it to sign in from their phone."
+
+msgid "parents.recovery.title"
+msgstr "Their recovery code"
+
+msgid "parents.recovery.help"
+msgstr "The only way back if they forget their PIN. Let them write it on paper; it is shown once."
+
+msgid "parents.recovery.confirm"
+msgstr "The new parent has written this code down"
+
+msgid "parents.recovery.not_confirmed"
+msgstr "Confirm that the new parent has written the code down before adding them."
+
+msgid "parents.add.confirm"
+msgstr "Add this parent"
+
+msgid "parents.added"
+msgstr "Parent added. They can now sign in with their own name and PIN."
+
+msgid "parents.removed"
+msgstr "Parent removed. They can no longer sign in."
+
+msgid "parents.remove"
+msgstr "Remove"
+
+msgid "parents.remove.body"
+msgstr "{name} will no longer be able to sign in; their PIN and recovery code are deleted. What they did stays in the audit log under their name."
+
+msgid "parents.remove.yourself"
+msgstr "This is you: removing yourself signs you out. The family passphrase and the mail settings stay with the other parent."
+
+msgid "parents.remove.confirm"
+msgstr "Remove {name}"
+
+msgid "parents.remove.last"
+msgstr "The last parent cannot be removed; nobody could sign in."
+
+msgid "parents.name.missing"
+msgstr "Type a name; the sign-in page shows it."
+
+msgid "parents.name.taken"
+msgstr "There is already a parent with this name. Choose another one."
+
+msgid "parents.full"
+msgstr "At most {max} parents can be added."
+
+msgid "parents.shared"
+msgstr "The family passphrase, the mail settings and the children's requests are shared: every parent uses the same passphrase and can answer any request."
+
+msgid "settings.pin.yours"
+msgstr "Your PIN"
+
+msgid "settings.passphrase.shared"
+msgstr "This is the family's passphrase: every parent uses the same one."
+
+msgid "appearance.title"
+msgstr "Appearance"
+
+msgid "appearance.help"
+msgstr "Just for you: the panel looks like this on your phone too, and the other parent's does not change."
+
+msgid "appearance.text_size"
+msgstr "Text size"
+
+msgid "appearance.text_size.normal"
+msgstr "Normal"
+
+msgid "appearance.text_size.large"
+msgstr "Large"
+
+msgid "appearance.text_size.x-large"
+msgstr "Extra large"
+
+msgid "appearance.contrast"
+msgstr "High contrast"
+
+msgid "appearance.contrast.help"
+msgstr "Black text and darker lines: easier to read."
+
+msgid "child.screen"
+msgstr "Screen"
+
+msgid "child.screen.help"
+msgstr "The words on this child's screen: on the launcher and on the browser's start page."
+
+msgid "child.screen.contrast.help"
+msgstr "Black text, and a clear edge round every tile."
+
+msgid "child.screen.font"
+msgstr "Easy-reading font"
+
+msgid "child.screen.font.help"
+msgstr "OpenDyslexic: for children who find letters hard to tell apart."
+
+msgid "child.screen.font.missing"
+msgstr "This font is not installed on this computer (the fonts-opendyslexic package); until it is, the text does not change."
+
+msgid "audit.action.parent_added"
+msgstr "Parent added"
+
+msgid "audit.action.parent_removed"
+msgstr "Parent removed"
+
+msgid "audit.action.parent_renamed"
+msgstr "A parent's name changed"
+
+msgid "audit.action.appearance_changed"
+msgstr "Panel appearance changed"
+
 # --- today screen ---
 
 msgid "today.title"
@@ -1906,7 +2061,7 @@ msgid "help.pin.q"
 msgstr "I forgot my PIN."
 
 msgid "help.pin.a"
-msgstr "On the sign-in page, press \"Forgot my PIN\" and enter the recovery code you wrote down during setup. If the code is lost too, open a terminal on this computer and type:"
+msgstr "On the sign-in page, press \"Forgot my PIN\" and enter your own recovery code: the one you wrote down during setup, or when you were added. If the code is lost too, open a terminal on this computer and type this; with more than one parent it asks whose PIN it is:"
 
 msgid "help.off.q"
 msgstr "Can I turn BioKids off for a while?"

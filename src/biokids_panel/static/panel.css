@@ -63,6 +63,9 @@ a {
 
 .topbar {
   display: flex;
+  /* With a larger text size (D-217) the two buttons go under the name on a
+   * phone rather than pushing the whole page sideways. */
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-3);
@@ -138,6 +141,19 @@ a {
   font-size: .65rem;
   font-weight: 600;
   padding: 1px 6px;
+}
+
+/* With a larger text size (D-217) the phone's bar still holds all six entries
+ * at 360 px: the words grow by a tenth rather than by the whole factor, and
+ * give up their side padding. The icons grow in full; they are what a thumb
+ * looks for. */
+@media (max-width: 39.99rem) {
+  html[data-text-size="large"] .nav a,
+  html[data-text-size="x-large"] .nav a {
+    min-width: 0;
+    padding-inline: 2px;
+    font-size: calc(.72rem * 1.1 / var(--font-scale));
+  }
 }
 
 @media (min-width: 40rem) {
@@ -424,6 +440,42 @@ input[type="radio"] {
   text-align: center;
   padding-left: .5em;
 }
+
+/* "Kim giriş yapıyor?" (D-218): a parent's name is the biggest thing on the
+ * sign-in page, one per row on a phone, side by side where there is room. */
+.who {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: var(--sp-3);
+}
+
+.who__name {
+  min-height: var(--target-young);
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.who__chosen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-3);
+  font-size: 1.15rem;
+}
+
+/* Ayarlar → Ebeveynler: one line per parent, the button at the end. */
+.parent-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.parent-row:last-child { border-bottom: 0; }
+.parent-row > details { flex: 1 1 100%; }
 
 fieldset {
   border: 1px solid var(--line);

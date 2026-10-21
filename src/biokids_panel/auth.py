@@ -12,6 +12,11 @@ Three secrets, three jobs (D-48):
 The lockout counter lives on the `parent` row rather than in memory, so
 restarting the panel — which a child could do by cutting the power — does not
 clear it.
+
+A family may have more than one parent (D-218). Each has their own PIN, their
+own lockout and their own recovery code, so a child who locks one parent out
+has not locked out the other, and the audit log says which of them did what.
+The passphrase is the family's: one, whoever is signed in.
 """
 
 from __future__ import annotations
@@ -44,6 +49,13 @@ class LoginResult:
     error_key: str = ""
     remaining_attempts: int = 0
     lockout_minutes: int = 0
+    parent_id: int | None = None
+    """Whose PIN this was about, so a refusal can ask the same parent again."""
+
+
+CHOOSE_KEY = "login.choose"
+"""The answer to a PIN that names no parent, or one who cannot sign in: pick
+who you are and type it again. No PIN is checked and no counter moves."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,24 +122,49 @@ def _next_lockout_minutes(parent: Parent, config: Config) -> int:
 # --------------------------------------------------------------------- login
 
 
+def who_signs_in(session: Session, parent_id: int | None) -> Parent | None:
+    """The parent a PIN is for.
+
+    With one parent, that parent, whatever the form said: the form an upgrade
+    found is the one with no choice on it, and it must go on working (D-218).
+    With several, the one the parent picked - and nobody when the pick names no
+    one who can sign in, a removed parent included.
+    """
+    parents = repo.list_parents(session)
+    if len(parents) == 1 and parent_id in (None, parents[0].id):
+        return parents[0]
+    if parent_id is None:
+        return None
+    return next((parent for parent in parents if parent.id == parent_id), None)
+
+
 def attempt_login(
     session: Session,
     config: Config,
     pin: str,
     *,
+    parent_id: int | None = None,
     user_agent: str = "",
     now: dt.datetime | None = None,
 ) -> LoginResult:
-    """Check a PIN and, on success, mint a session token.
+    """Check one parent's PIN and, on success, mint a session token.
 
-    Every attempt goes to the audit log, successful or not (D-48). A parent
-    looking at the audit log after a suspicious afternoon should be able to see
-    exactly how many times someone tried.
+    Every attempt goes to the audit log, successful or not (D-48), under the
+    parent it was for. A parent looking at the audit log after a suspicious
+    afternoon should be able to see exactly how many times someone tried, and
+    at whose PIN.
+
+    The lockout is that parent's alone (D-218): five wrong guesses at Anne's PIN
+    do not stop Baba signing in. The names are on the sign-in page for anyone to
+    see, so they are not what is protected; the PIN is, and it is counted per
+    person.
     """
     now = now or utcnow()
-    parent = repo.get_parent(session)
-    if parent is None:
+    if not repo.list_parents(session):
         return LoginResult(ok=False, error_key="error.invalid_input")
+    parent = who_signs_in(session, parent_id)
+    if parent is None:
+        return LoginResult(ok=False, error_key=CHOOSE_KEY)
 
     locked = lockout_remaining_minutes(parent, now)
     if locked:
@@ -138,7 +175,9 @@ def attempt_login(
             detail={"minutes_remaining": locked},
             severity="warning",
         )
-        return LoginResult(ok=False, error_key="login.locked", lockout_minutes=locked)
+        return LoginResult(
+            ok=False, error_key="login.locked", lockout_minutes=locked, parent_id=parent.id
+        )
 
     if not security.verify_secret(parent.pin_hash, pin.strip()):
         failures = _count_failure(session, parent)
@@ -158,7 +197,9 @@ def attempt_login(
                 detail=detail,
                 severity="warning",
             )
-            return LoginResult(ok=False, error_key="login.locked", lockout_minutes=minutes)
+            return LoginResult(
+                ok=False, error_key="login.locked", lockout_minutes=minutes, parent_id=parent.id
+            )
 
         repo.audit(
             session,
@@ -167,7 +208,9 @@ def attempt_login(
             detail=detail,
             severity="warning",
         )
-        return LoginResult(ok=False, error_key="login.wrong", remaining_attempts=remaining)
+        return LoginResult(
+            ok=False, error_key="login.wrong", remaining_attempts=remaining, parent_id=parent.id
+        )
 
     parent.pin_failures = 0
     parent.pin_locked_until = None
@@ -187,7 +230,7 @@ def attempt_login(
     )
     repo.audit(session, actor=f"parent:{parent.id}", action="login_ok")
     session.flush()
-    return LoginResult(ok=True, token=token)
+    return LoginResult(ok=True, token=token, parent_id=parent.id)
 
 
 def resolve(
@@ -220,8 +263,11 @@ def resolve(
 
     row.last_seen_at = now
     parent = session.get(Parent, row.parent_id)
-    if parent is None:  # pragma: no cover - a deleted parent is not a normal state
+    if parent is None or parent.removed_at is not None:
+        # Removing a parent deletes their sessions (D-218); this is the second
+        # lock on the same door, for a row that somehow outlived it.
         session.delete(row)
+        session.flush()
         return AuthState(parent=None, session=None)
     return AuthState(parent=parent, session=row)
 
@@ -281,14 +327,18 @@ def confirm_passphrase(
 ) -> bool:
     """Open the grace window for destructive actions, or refuse.
 
-    An install with no passphrase takes the PIN, re-entered, instead: never a
-    dead end (principle 4). Either way a failure is audited and counts towards
+    The passphrase is the family's, whichever parent is signed in (D-218): it
+    is the one secret that turns protection off, and a second parent with a
+    second passphrase would be a second way to do that. An install with no
+    passphrase takes the signed-in parent's own PIN, re-entered, instead: never
+    a dead end (principle 4). Either way a failure is audited and counts towards
     `passphrase_locked`.
     """
     if state.parent is None or state.session is None:
         return False
     now = now or utcnow()
-    stored = state.parent.passphrase_hash or state.parent.pin_hash
+    family = repo.family_passphrase_hash(session)
+    stored = family or state.parent.pin_hash
     if passphrase_locked(session, now=now) or not security.verify_secret(
         stored, passphrase.strip()
     ):
@@ -296,7 +346,7 @@ def confirm_passphrase(
             session,
             actor=f"parent:{state.parent.id}",
             action="passphrase_failed",
-            detail={} if state.parent.passphrase_hash else {"via": "pin_fallback"},
+            detail={} if family else {"via": "pin_fallback"},
             severity="warning",
         )
         session.flush()
@@ -314,12 +364,22 @@ def attempt_recovery(
     code: str,
     new_pin: str,
 ) -> LoginResult:
-    """The eight-word code, then a new PIN. Logged loudly (D-50)."""
-    parent = repo.get_parent(session)
-    if parent is None:
+    """The eight-word code, then a new PIN. Logged loudly (D-50).
+
+    Each parent has their own code (D-218), and the code says whose it is: it
+    is checked against every parent who can sign in, and the PIN that changes
+    is the one belonging to the code. Nobody is asked to pick a name first, so
+    a code cannot reset somebody else's PIN by being typed under their name.
+    Something that is not a code at all is refused before any hash is computed.
+    """
+    parents = repo.list_parents(session)
+    if not parents:
         return LoginResult(ok=False, error_key="error.invalid_input")
 
-    if not security.verify_recovery_code(parent.recovery_hash, code):
+    parent = next(
+        (p for p in parents if security.verify_recovery_code(p.recovery_hash, code)), None
+    )
+    if parent is None:
         repo.audit(
             session,
             actor="system",
@@ -342,11 +402,12 @@ def attempt_recovery(
         session,
         actor="system",
         action="recovery_used",
+        target=f"parent:{parent.id}",
         detail={"note": "the PIN was reset with the eight-word recovery code"},
         severity="alert",
     )
     session.flush()
-    return LoginResult(ok=True)
+    return LoginResult(ok=True, parent_id=parent.id)
 
 
 # ---------------------------------------------------------------------- CSRF

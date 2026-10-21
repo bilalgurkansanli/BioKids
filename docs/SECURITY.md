@@ -34,7 +34,8 @@ parental-control tool that implies more protection than it provides is worse tha
 | Creating a new user account | no sudo, `useradd` unavailable |
 | Reading the parent's files | standard Unix permissions, separate home |
 | Finding the parent panel | PIN gate; nftables rejects the children's connections to the panel's port and the tailnet (D-171) |
-| Guessing the PIN | argon2id, 5 attempts then 15-minute lockout, audited |
+| Guessing the PIN | argon2id, 5 attempts then 15-minute lockout, audited; with two parents each PIN has its own count and lockout (D-218, section 3) |
+| Adding a parent of their own, with a PIN they know | behind the family's passphrase, audited and mailed (D-218) |
 
 ### Out of scope — document, do not pretend
 
@@ -126,15 +127,49 @@ under the archive's own `piper/` (D-196).
 
 | Secret | Storage |
 |---|---|
-| Parent PIN | argon2id hash, `m=64MiB, t=3, p=4` |
-| Parent passphrase | argon2id, same parameters |
-| Recovery code | argon2id of the normalised 8-word phrase |
+| Parent PIN, one per parent | argon2id hash, `m=64MiB, t=3, p=4` |
+| The family's passphrase, one for every parent | argon2id, same parameters |
+| Recovery code, one per parent | argon2id of the normalised 8-word phrase |
 | SMTP password | encrypted with a key in `/etc/biokids/secret.key` (0600 root), with the rest of the mail settings (D-177) |
 | Browser extension signing key | generated on the machine at install, `/var/lib/biokids/extension-key.pem`, 0600; never in the repository (D-187) |
 | APT repo signing key | GitHub Secrets only. Never in the repo, never on the device |
 
 No secret is ever logged, echoed in an error message, or included in a data export.
 The export feature explicitly redacts them.
+
+### More than one parent (D-218)
+
+A family may have up to four parents who sign in, each under their own name.
+
+- **Each parent's own:** the PIN, its five attempts and its lockout, the recovery code
+  (shown once when they are added, as in the wizard), their panel sessions, and the
+  text size and contrast they chose (D-217). Everything a parent does is audited as
+  `parent:<id>`, and the audit log shows the name.
+- **The family's:** the passphrase that guards switching protection off, the mail
+  settings, and the children's requests, which any parent may answer (`decided_by`
+  says who). One passphrase, because it is the one secret that turns BioKids off and
+  a second parent with a second one would be a second way to do that. It is kept on
+  the first parent still in use, and changing it needs the current one whoever is
+  signed in; read from the signed-in parent's own row, a second parent would have been
+  "setting the first passphrase" with no proof at all.
+- **Signing in.** With two or more parents the page asks "Kim giriş yapıyor?" first;
+  the names are there for anyone to read, so the PIN is the secret, and a PIN posted
+  under no name, or under one who cannot sign in, is answered with the question again
+  and counts against nobody. A child who exhausts one parent's five attempts has not
+  locked out the other - and two parents are two PINs to guess, each with its own
+  five tries and doubling lockout.
+- **Adding and removing** a parent both need the passphrase. Adding is a warning in the
+  audit log and is mailed with the alerts; so is removing. The last parent is never
+  removed, nor the signed-in parent when no other parent could sign in. A removed
+  parent keeps their row and name - so the log can still name them and their id is
+  never reused - with every secret on it cleared and every session deleted; what they
+  held for the family moves to the parent who now comes first.
+- **Recovery.** A recovery code is checked against every parent and resets the PIN of
+  the parent it belongs to. `biokids-admin reset-pin` asks whose PIN, or takes
+  `--parent NAME`; a name is not a secret, the PIN still never goes on the command line.
+- A wrong passphrase on Ayarlar → Parola counts towards the gate's five-in-fifteen-
+  minutes limit like any other: before D-218 that form was a place to guess it with no
+  limit at all, for anyone with a PIN.
 
 ---
 

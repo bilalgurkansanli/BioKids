@@ -6,7 +6,11 @@
   manager's job and is documented as such (SECURITY.md §1).
 #}
 <!DOCTYPE html>
-<html lang="{{ locale }}">
+{# Text size, contrast and font as a parent chose them for this child (D-217):
+   tokens.css turns the attributes into token overrides, display.css fits the
+   tiles around the larger words. #}
+<html lang="{{ locale }}" data-text-size="{{ appearance.text_size }}"
+      data-contrast="{{ appearance.contrast }}" data-font="{{ appearance.font }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -20,6 +24,7 @@
   <link rel="stylesheet" href="/static/shared/tokens.css?v={{ asset_version }}">
   <link rel="stylesheet" href="/static/shell.css?v={{ asset_version }}">
   <link rel="stylesheet" href="/static/daily.css?v={{ asset_version }}">
+  <link rel="stylesheet" href="/static/display.css?v={{ asset_version }}">
   <link rel="icon" href="/static/icons/icon-192.png" sizes="192x192">
 </head>
 <body>

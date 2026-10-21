@@ -36,8 +36,10 @@ log = logging.getLogger(__name__)
 
 LAST_AUDIT: Final = "mail.last_audit_id"
 LAST_WEEK: Final = "mail.last_weekly"
-MAILED_ACTIONS: Final = frozenset({"access_requested"})
-"""Not alerts, but a parent wants them at once: a child is waiting for an answer."""
+MAILED_ACTIONS: Final = frozenset({"access_requested", "parent_added", "parent_removed"})
+"""Not alerts, but a parent wants them at once: a child is waiting for an answer,
+or somebody can now sign in to the panel who could not before - or the other
+way round (D-218)."""
 BACKOFF: Final = (60, 300, 900, 3600)
 MAX_ROWS: Final = 40
 WEEKLY_HOUR: Final = 19
@@ -113,7 +115,8 @@ class Notifier:
             return False
 
         names = _child_names(session)
-        lines = [_describe(row, names, tr) for row in rows]
+        parents = repo.parent_names(session)
+        lines = [_describe(row, names, tr, parents) for row in rows]
         lines += [
             tr(
                 "mail.assistant_alert",
@@ -221,11 +224,20 @@ def _child_names(session: Session) -> dict[int, str]:
     return {child.id: child.display_name for child in session.scalars(select(Child))}
 
 
-def _describe(row: AuditLog, names: dict[int, str], tr: Translator) -> str:
+def _describe(
+    row: AuditLog,
+    names: dict[int, str],
+    tr: Translator,
+    parents: dict[int, str] | None = None,
+) -> str:
     what = tr(f"audit.action.{row.action}")
     target = row.target or ""
     if target.startswith("child:") and target[6:].isdigit():
         return f"{names.get(int(target[6:]), '?')}: {what}"
+    if target.startswith("parent:") and target[7:].isdigit():
+        # "Baba: Ebeveyn eklendi" - which parent the line is about (D-218).
+        name = (parents or {}).get(int(target[7:]), "")
+        return f"{name}: {what}" if name else what
     return what
 
 

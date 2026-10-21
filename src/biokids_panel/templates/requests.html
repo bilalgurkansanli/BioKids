@@ -65,6 +65,8 @@
           {{ _('requests.asks.' ~ row.kind, name=row.child) }}
           {% if row.kind != 'time' and row.what %}({{ row.what }}){% endif %}
           — <strong>{{ _('requests.status.' ~ row.status, minutes=row.minutes) }}</strong>
+          {# Who answered, once there is more than one parent who could (D-218). #}
+          {% if several_parents and row.by %}<span class="muted">· {{ row.by }}</span>{% endif %}
         </li>
       {% endfor %}
     </ul>

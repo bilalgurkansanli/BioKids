@@ -130,7 +130,6 @@ Ideas that are still worth having, in no order. None is promised.
 - weekly reports in the panel, not only in the Sunday mail (D-37, D-177)
 - launcher ports that cannot collide: two children whose uids differ by a multiple of
   100 share one today, and only one of them can be logged in at a time (D-188)
-- accessibility: contrast, font scaling, a dyslexia-friendly font (`docs/UX.md` §5)
 - a documentation site, screenshots of the launcher, a short demo video
 - translation infrastructure so other languages can be contributed
 - the screen watcher, only if it can be built without breaking principles 1 and 2

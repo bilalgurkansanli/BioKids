@@ -438,6 +438,161 @@ msgstr "Parola doğru değil."
 msgid "auth.session_expired"
 msgstr "Oturumunuz zaman aşımına uğradı. Tekrar giriş yapın."
 
+# --- birden çok ebeveyn (D-218), görünüm (D-217) ---
+
+msgid "login.who"
+msgstr "Kim giriş yapıyor?"
+
+msgid "login.pin.help.own"
+msgstr "Kendi 6 haneli PIN'iniz: kurulumda ya da sizi eklerken belirlenen."
+
+msgid "login.not_you"
+msgstr "Başka biri misiniz?"
+
+msgid "login.choose"
+msgstr "Kim olduğunuzu seçip PIN'inizi yeniden yazın."
+
+msgid "parents.title"
+msgstr "Ebeveynler"
+
+msgid "parents.intro"
+msgstr "Panele kendi adı ve kendi PIN'iyle girebilen herkes. Her birinin yaptığı, Kayıtlar'da adıyla görünür."
+
+msgid "parents.you"
+msgstr "siz"
+
+msgid "parents.unnamed"
+msgstr "Ebeveyn {number}"
+
+msgid "parents.teaser"
+msgstr "Her ebeveyn kendi PIN'iyle girer. Ebeveyn eklemek ve kaldırmak için parola gerekir."
+
+msgid "parents.open"
+msgstr "Ebeveynleri yönet"
+
+msgid "parents.add"
+msgstr "Ebeveyn ekle"
+
+msgid "parents.add.help"
+msgstr "Yeni ebeveyn yanınızdayken ekleyin: PIN'ini kendisi yazsın, kurtarma kodunu kendisi saklasın."
+
+msgid "parents.add.name"
+msgstr "Adı"
+
+msgid "parents.name.help"
+msgstr "Giriş ekranında bu adı taşıyan bir düğme görünür."
+
+msgid "parents.add.pin.help"
+msgstr "Kendi PIN'i: panele telefonundan girerken bunu kullanacak."
+
+msgid "parents.recovery.title"
+msgstr "Onun kurtarma kodu"
+
+msgid "parents.recovery.help"
+msgstr "PIN'ini unutursa tek yol bu. Kendisi bir kağıda yazsın; bir daha gösterilmeyecek."
+
+msgid "parents.recovery.confirm"
+msgstr "Yeni ebeveyn bu kodu bir yere yazdı"
+
+msgid "parents.recovery.not_confirmed"
+msgstr "Eklemeden önce yeni ebeveynin kodu yazdığını onaylayın."
+
+msgid "parents.add.confirm"
+msgstr "Ebeveyni ekle"
+
+msgid "parents.added"
+msgstr "Ebeveyn eklendi. Artık kendi adı ve PIN'iyle girebilir."
+
+msgid "parents.removed"
+msgstr "Ebeveyn kaldırıldı. Artık panele giremez."
+
+msgid "parents.remove"
+msgstr "Kaldır"
+
+msgid "parents.remove.body"
+msgstr "{name} artık panele giremez; PIN'i ve kurtarma kodu silinir. Yaptıkları Kayıtlar'da adıyla kalır."
+
+msgid "parents.remove.yourself"
+msgstr "Bu sizsiniz: kaldırınca panelden çıkarsınız. Aile parolası ve e-posta ayarları diğer ebeveynde kalır."
+
+msgid "parents.remove.confirm"
+msgstr "{name} adlı ebeveyni kaldır"
+
+msgid "parents.remove.last"
+msgstr "Son ebeveyn kaldırılamaz; o zaman panele kimse giremezdi."
+
+msgid "parents.name.missing"
+msgstr "Bir ad yazın; giriş ekranında görünecek."
+
+msgid "parents.name.taken"
+msgstr "Bu adda bir ebeveyn zaten var. Başka bir ad seçin."
+
+msgid "parents.full"
+msgstr "En fazla {max} ebeveyn eklenebilir."
+
+msgid "parents.shared"
+msgstr "Aile parolası, e-posta ayarları ve çocukların istekleri ortaktır: her ebeveyn aynı parolayı kullanır ve her isteği yanıtlayabilir."
+
+msgid "settings.pin.yours"
+msgstr "PIN'iniz"
+
+msgid "settings.passphrase.shared"
+msgstr "Bu, ailenin ortak parolasıdır: her ebeveyn aynı parolayı kullanır."
+
+msgid "appearance.title"
+msgstr "Görünüm"
+
+msgid "appearance.help"
+msgstr "Yalnızca sizin için: panel telefonunuzda da böyle görünür, diğer ebeveyninki değişmez."
+
+msgid "appearance.text_size"
+msgstr "Yazı büyüklüğü"
+
+msgid "appearance.text_size.normal"
+msgstr "Normal"
+
+msgid "appearance.text_size.large"
+msgstr "Büyük"
+
+msgid "appearance.text_size.x-large"
+msgstr "Çok büyük"
+
+msgid "appearance.contrast"
+msgstr "Yüksek kontrast"
+
+msgid "appearance.contrast.help"
+msgstr "Yazılar siyah, çizgiler koyu: okumak daha kolay."
+
+msgid "child.screen"
+msgstr "Ekran"
+
+msgid "child.screen.help"
+msgstr "Bu çocuğun ekranındaki yazılar: başlatıcıda ve tarayıcının açılış sayfasında."
+
+msgid "child.screen.contrast.help"
+msgstr "Yazılar siyah, kutuların kenarları belirgin."
+
+msgid "child.screen.font"
+msgstr "Okuma kolaylığı yazı tipi"
+
+msgid "child.screen.font.help"
+msgstr "OpenDyslexic: harfleri birbirinden ayırmakta zorlanan çocuklar için."
+
+msgid "child.screen.font.missing"
+msgstr "Bu yazı tipi bu bilgisayarda kurulu değil (fonts-opendyslexic paketi); kurulana kadar yazılar değişmez."
+
+msgid "audit.action.parent_added"
+msgstr "Ebeveyn eklendi"
+
+msgid "audit.action.parent_removed"
+msgstr "Ebeveyn kaldırıldı"
+
+msgid "audit.action.parent_renamed"
+msgstr "Ebeveynin adı değişti"
+
+msgid "audit.action.appearance_changed"
+msgstr "Panelin görünümü değişti"
+
 # --- bugün ekranı ---
 
 msgid "today.title"
@@ -1906,7 +2061,7 @@ msgid "help.pin.q"
 msgstr "PIN'imi unuttum."
 
 msgid "help.pin.a"
-msgstr "Giriş sayfasında \"PIN'imi unuttum\"a basın ve kurulumda kâğıda yazdığınız kurtarma kodunu girin. Kod da kaybolduysa bu bilgisayarda bir uçbirim açıp şunu yazın:"
+msgstr "Giriş sayfasında \"PIN'imi unuttum\"a basın ve kendi kurtarma kodunuzu girin: kurulumda ya da sizi eklerken kâğıda yazdığınız kod. Kod da kaybolduysa bu bilgisayarda bir uçbirim açıp şunu yazın; birden çok ebeveyn varsa kimin PIN'i olduğunu sorar:"
 
 msgid "help.off.q"
 msgstr "BioKids'i bir süreliğine kapatabilir miyim?"

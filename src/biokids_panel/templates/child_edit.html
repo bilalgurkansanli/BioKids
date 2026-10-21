@@ -48,6 +48,39 @@
 
     <p class="muted small">{{ _('child.unix_user') }}: <code>{{ child.unix_user }}</code></p>
 
+    {# D-217: how the launcher and the child's browser start page are drawn
+       for this child. Folded away like Gelişmiş, so the screen keeps to seven
+       controls (UX.md 3.3), and open when something is already chosen. The
+       marker says the fieldset was on the page, so its checkboxes' absence
+       means "off" only when they were there to tick. #}
+    <details class="advanced" id="screen" {% if not screen.is_default %}open{% endif %}>
+      <summary>{{ _('child.screen') }}</summary>
+      <span class="help">{{ _('child.screen.help') }}</span>
+      <input type="hidden" name="screen" value="1">
+      <div class="field">
+        <label for="ts">{{ _('appearance.text_size') }}</label>
+        <select id="ts" name="text_size">
+          {% for size in text_sizes %}
+            <option value="{{ size }}" {% if screen.text_size == size %}selected{% endif %}>
+              {{ _('appearance.text_size.' ~ size) }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="checkline">
+        <input type="checkbox" id="child-hc" name="high_contrast" {% if screen.high_contrast %}checked{% endif %}>
+        <label for="child-hc">{{ _('appearance.contrast') }}
+          <span class="help">{{ _('child.screen.contrast.help') }}</span></label>
+      </div>
+      <div class="checkline">
+        <input type="checkbox" id="child-font" name="reading_font" {% if screen.reading_font %}checked{% endif %}>
+        <label for="child-font">{{ _('child.screen.font') }}
+          <span class="help">
+            {% if reading_font_installed %}{{ _('child.screen.font.help') }}{% else %}{{ _('child.screen.font.missing') }}{% endif %}
+          </span></label>
+      </div>
+    </details>
+
     <details class="advanced">
       <summary>{{ _('common.advanced') }}</summary>
       <fieldset>

@@ -36,7 +36,8 @@ Ask the daemon for each child's state: logged in or not, the minutes left
 today, and the application in use.
 Fails if the daemon is not answering.
 .TP
-.BR reset\-pin " [" \-\-stdin ]
+.BR reset\-pin " [" \-\-stdin "] [" \-\-parent
+.IR name ]
 Set a new parent PIN.
 The PIN is asked for twice and never echoed.
 It is not accepted as an argument, because arguments are visible to every
@@ -44,9 +45,17 @@ user on the machine.
 With
 .BR \-\-stdin ,
 one line is read from standard input instead, for scripts.
-This also clears any lockout left by wrong PIN attempts.
+When the family has more than one parent, it asks whose PIN to change, by
+name, or takes it from
+.BR \-\-parent ;
+with
+.B \-\-stdin
+the name must be given that way.
+A name is not a secret: the panel's sign-in page shows them all.
+This also clears any lockout left by wrong PIN attempts, for that parent
+only.
 It is one of the two ways back in after a forgotten PIN; the other is the
-recovery code the setup wizard showed.
+parent's own recovery code, shown by the setup wizard or when they were added.
 .TP
 .BI provision\-child " user"
 Make sure the child account

@@ -1,4 +1,5 @@
-"""The family-wide settings: language, PIN, passphrase, mail and phone access."""
+"""The settings: language, the parent's own PIN and appearance, the family's
+passphrase, mail and phone access, and who the parents are."""
 
 from __future__ import annotations
 
@@ -8,8 +9,8 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Response
 from fastapi.responses import HTMLResponse
 
-from biokids_core import mail, repo, security
-from biokids_panel import auth
+from biokids_core import appearance, mail, repo, security
+from biokids_panel import auth, parents
 from biokids_panel.common import View, see_other
 
 log = logging.getLogger(__name__)
@@ -23,13 +24,51 @@ def settings_view(view: View) -> Response:
         return blocked
     from biokids_panel import phone
 
+    session = view.session
+    everyone = repo.list_parents(session)
     return view.render(
         "settings.html",
-        family=repo.get_family(view.session),
+        family=repo.get_family(session),
         daemon_up=view.ctx.client.available(),
-        mail_settings=mail.load_settings(view.session, view.ctx.config),
-        **phone.view(view.ctx, view.session),
+        mail_settings=mail.load_settings(session, view.ctx.config),
+        text_sizes=appearance.TEXT_SIZES,
+        parents=parents.shown(everyone, view.tr),
+        several_parents=len(everyone) > 1,
+        **phone.view(view.ctx, session),
     )
+
+
+@router.post("/settings/appearance")
+def settings_appearance(
+    view: View,
+    text_size: Annotated[str, Form()] = "",
+    high_contrast: Annotated[str, Form()] = "",
+    csrf_token: Annotated[str, Form()] = "",
+) -> Response:
+    """Text size and contrast for the signed-in parent (D-217).
+
+    On their own row, not in a cookie: chosen once at the computer, it is
+    there on the phone too, and the other parent's panel is not changed.
+    """
+    if blocked := view.guard_form(csrf_token, "/settings?error=csrf#appearance"):
+        return blocked
+    parent = view.state.parent
+    if parent is None:
+        return see_other("/settings?error=csrf#appearance")
+    before = appearance.Appearance.of(parent.text_size, parent.high_contrast)
+    after = appearance.Appearance.of(text_size, high_contrast == "on")
+    if after != before:
+        parent.text_size = after.text_size
+        parent.high_contrast = after.high_contrast
+        repo.audit(
+            view.session,
+            actor=view.actor,
+            action="appearance_changed",
+            target=f"parent:{parent.id}",
+            detail={"before": before.as_dict(), "after": after.as_dict()},
+        )
+        view.session.commit()
+    return see_other("/settings?saved=1#appearance")
 
 
 @router.post("/settings/mail")
@@ -156,26 +195,44 @@ def settings_passphrase(
     add. An install that skipped the wizard's third step has no passphrase,
     and without somewhere to set one the gate would lock a parent out of
     their own settings with no way back — which is principle #4 exactly.
+
+    The passphrase is the family's (D-218): it is kept on the first parent,
+    whoever changes it, and changing it needs the current one whoever is
+    signed in. Read from the signed-in parent's own row, a second parent -
+    whose row has none - would have been "setting the first one" and could
+    have replaced it without knowing it.
     """
     if blocked := view.guard():
         return blocked
     parent = view.state.parent
-    if parent is None or not view.csrf_ok(csrf_token):
+    holder = repo.get_parent(view.session)
+    if parent is None or holder is None or not view.csrf_ok(csrf_token):
         return see_other("/settings?error=csrf")
     if not security.verify_secret(parent.pin_hash, current_pin.strip()):
         return see_other("/settings?error=pin")
     # Changing an existing passphrase needs the old one; setting the first
-    # one does not, because there is nothing to prove.
-    if parent.passphrase_hash and not security.verify_secret(
-        parent.passphrase_hash, current_passphrase.strip()
+    # one does not, because there is nothing to prove. A wrong one counts
+    # towards the gate's limit like any other (D-171): this form was a place
+    # to guess the passphrase with no limit at all, for anyone with a PIN.
+    if holder.passphrase_hash and (
+        auth.passphrase_locked(view.session)
+        or not security.verify_secret(holder.passphrase_hash, current_passphrase.strip())
     ):
+        repo.audit(
+            view.session,
+            actor=view.actor,
+            action="passphrase_failed",
+            detail={"via": "settings"},
+            severity="warning",
+        )
+        view.session.commit()
         return see_other("/settings?error=passphrase")
     try:
         chosen = security.validate_passphrase(new_passphrase)
     except ValueError as exc:
         return see_other(f"/settings?error={exc}")
 
-    parent.passphrase_hash = security.hash_secret(chosen)
+    holder.passphrase_hash = security.hash_secret(chosen)
     repo.audit(
         view.session,
         actor=view.actor,

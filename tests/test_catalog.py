@@ -142,6 +142,10 @@ COMPANIONS = {"tuxpaint-stamps-default": "tuxpaint"}
 """Recommended for what they add to a catalogue app, not as a tile of their own:
 Tux Paint alone has six stamps, all of Tux (D-210)."""
 
+FOR_THE_LAUNCHER = {"fonts-opendyslexic"}
+"""Recommended for the launcher itself, not for an app: the reading font a parent
+can choose for a child (D-217)."""
+
 
 def test_every_app_package_comes_with_the_child_desktop(entries: list[CatalogEntry]) -> None:
     """biokids-desktop brings them as Recommends: never Depends, so a parent can
@@ -153,9 +157,11 @@ def test_every_app_package_comes_with_the_child_desktop(entries: list[CatalogEnt
     for package in packages - {"thunar"}:  # Thunar is part of xfce4 itself
         assert package in recommends | suggests, f"{package} is not offered by biokids-desktop"
         assert package not in depends, f"{package} must not be a Depends"
-    assert recommends - set(COMPANIONS) <= packages, (
-        f"recommended but not in the catalogue: {recommends - set(COMPANIONS) - packages}"
+    extras = set(COMPANIONS) | FOR_THE_LAUNCHER
+    assert recommends - extras <= packages, (
+        f"recommended but not in the catalogue: {recommends - extras - packages}"
     )
+    assert recommends >= FOR_THE_LAUNCHER
     for companion, app in COMPANIONS.items():
         assert companion in recommends and app in packages, companion
 

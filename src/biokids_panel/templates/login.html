@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ _('login.title') }} · {{ _('panel.title') }}{% endblock %}
 
+{#
+  With one parent: the PIN box, as it always was. With two or more (D-218):
+  "Kim giriş yapıyor?" and a big button per parent first, then that parent's
+  PIN. The names are on this page for anyone to read; the PIN is the secret,
+  and each parent's has its own five tries.
+#}
 {% block content %}
   <h1>{{ _('login.title') }}</h1>
 
@@ -11,29 +17,48 @@
     <div class="notice notice--ok" role="status">{{ _('audit.action.pin_changed') }}</div>
   {% endif %}
 
-  {% if lockout_minutes %}
-    {# The POST said why. A reload, a reopened PWA or coming back on a phone
-       rendered the same page with the PIN box and the button both disabled and
-       not one word of explanation - a parent who has forgotten their PIN and is
-       already anxious meets a form that does nothing. #}
-    <div class="notice notice--danger" role="alert">
-      {{ _('login.locked', minutes=lockout_minutes) }}
-    </div>
-  {% endif %}
+  {% if choosing %}
+    <form class="card" method="get" action="/login">
+      <input type="hidden" name="next" value="{{ next }}">
+      <h2 id="who">{{ _('login.who') }}</h2>
+      <div class="who" role="group" aria-labelledby="who">
+        {% for p in parents %}
+          <button class="btn who__name" type="submit" name="parent" value="{{ p.id }}">{{ p.name }}</button>
+        {% endfor %}
+      </div>
+    </form>
+  {% else %}
+    {% if lockout_minutes %}
+      {# The POST said why. A reload, a reopened PWA or coming back on a phone
+         rendered the same page with the PIN box and the button both disabled and
+         not one word of explanation - a parent who has forgotten their PIN and is
+         already anxious meets a form that does nothing. #}
+      <div class="notice notice--danger" role="alert">
+        {{ _('login.locked', minutes=lockout_minutes) }}
+      </div>
+    {% endif %}
 
-  <form class="card" method="post" action="/login">
-    <input type="hidden" name="next" value="{{ next }}">
-    <div class="field">
-      <label for="pin">{{ _('login.pin') }}</label>
-      <input class="pin-input" id="pin" name="pin" type="password" inputmode="numeric"
-             autocomplete="current-password" pattern="[0-9]{6}" maxlength="6"
-             required autofocus {% if lockout_minutes %}disabled{% endif %}>
-      <span class="help">{{ _('login.pin.help') }}</span>
-    </div>
-    <button class="btn btn--primary" type="submit" {% if lockout_minutes %}disabled{% endif %}>
-      {{ _('login.submit') }}
-    </button>
-  </form>
+    <form class="card" method="post" action="/login">
+      <input type="hidden" name="next" value="{{ next }}">
+      {% if several and who %}
+        <input type="hidden" name="parent" value="{{ who.id }}">
+        <p class="who__chosen">
+          <strong>{{ who.name }}</strong>
+          <a href="/login?next={{ next|urlencode }}">{{ _('login.not_you') }}</a>
+        </p>
+      {% endif %}
+      <div class="field">
+        <label for="pin">{{ _('login.pin') }}</label>
+        <input class="pin-input" id="pin" name="pin" type="password" inputmode="numeric"
+               autocomplete="current-password" pattern="[0-9]{6}" maxlength="6"
+               required autofocus {% if lockout_minutes %}disabled{% endif %}>
+        <span class="help">{{ _('login.pin.help.own') if several else _('login.pin.help') }}</span>
+      </div>
+      <button class="btn btn--primary" type="submit" {% if lockout_minutes %}disabled{% endif %}>
+        {{ _('login.submit') }}
+      </button>
+    </form>
+  {% endif %}
 
   <p class="row row--wrap">
     <a href="/recovery">{{ _('login.forgot') }}</a>

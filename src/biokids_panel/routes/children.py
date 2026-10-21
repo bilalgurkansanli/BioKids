@@ -14,6 +14,7 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from biokids_core import repo, search_filter
+from biokids_core.appearance import TEXT_SIZES, Appearance, reading_font_installed
 from biokids_core.catalog import (
     ALWAYS_ON_TILES,
     Catalog,
@@ -125,6 +126,10 @@ def child_edit_save(
     avatar: Annotated[str, Form()] = "",
     locale: Annotated[str, Form()] = "",
     supervision_indicator: Annotated[str, Form()] = "",
+    screen: Annotated[str, Form()] = "",
+    text_size: Annotated[str, Form()] = "",
+    high_contrast: Annotated[str, Form()] = "",
+    reading_font: Annotated[str, Form()] = "",
     csrf_token: Annotated[str, Form()] = "",
 ) -> Response:
     page = f"/children/{child_id}/edit"
@@ -149,6 +154,14 @@ def child_edit_save(
         child.locale = locale
     if supervision_indicator in INDICATORS:
         child.supervision_indicator = supervision_indicator
+    if screen:
+        # The Ekran fieldset (D-217) was on the page that posted: its two
+        # checkboxes say "off" by being absent, which a form without the
+        # fieldset must not be taken to mean.
+        chosen = Appearance.of(text_size, high_contrast == "on", reading_font == "on")
+        child.text_size = chosen.text_size
+        child.high_contrast = chosen.high_contrast
+        child.reading_font = chosen.reading_font
     after = _child_snapshot(child)
     if after == before:
         return see_other(f"{page}?saved=1")
@@ -366,7 +379,7 @@ def time_save(
             # passphrase. Ask for the PIN again rather than refusing
             # outright, and point at the settings screen: a gate with no
             # key is how a parent gets locked out of their own machine.
-            no_passphrase=not (state.parent and state.parent.passphrase_hash),
+            no_passphrase=not repo.family_passphrase_hash(session),
         )
 
     policy.weekday_quota_min = max(0, min(weekday_quota_min, 24 * 60))
@@ -670,8 +683,11 @@ def _edit_page(
         child=child,
         this_year=dt.date.today().year,
         indicators=INDICATORS,
+        screen=Appearance.of(child.text_size, child.high_contrast, child.reading_font),
+        text_sizes=TEXT_SIZES,
+        reading_font_installed=reading_font_installed(),
         passphrase_fresh=state.passphrase_fresh(),
-        no_passphrase=not (state.parent and state.parent.passphrase_hash),
+        no_passphrase=not repo.family_passphrase_hash(view.session),
         **values,
     )
 
@@ -683,6 +699,9 @@ def _child_snapshot(child: Child) -> dict[str, Any]:
         "avatar": child.avatar,
         "locale": child.locale,
         "supervision_indicator": child.supervision_indicator,
+        "text_size": child.text_size,
+        "high_contrast": bool(child.high_contrast),
+        "reading_font": bool(child.reading_font),
     }
 
 
