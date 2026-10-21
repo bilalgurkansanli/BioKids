@@ -15,8 +15,10 @@ log = logging.getLogger(__name__)
 
 CHAT_PATH: Final = "/v1/chat/completions"
 CLASSIFY_TIMEOUT_S: Final = 60.0
-ANSWER_TIMEOUT_S: Final = 120.0
-"""For the whole answer, streamed or not: the first word to the last (D-216)."""
+ANSWER_TIMEOUT_S: Final = 180.0
+"""For the whole answer, streamed or not: the first word to the last (D-216).
+An 8-10 answer may be 380 tokens, about 127 seconds at the three tokens a second
+the development VM manages: at 120 it ended in "Şu an biraz dinleniyorum"."""
 WARMUP_TIMEOUT_S: Final = 600.0
 """Loading the model and reading both prompts for the first time. Nobody is
 waiting for it - a question waits for the warm-up instead - and cut short at

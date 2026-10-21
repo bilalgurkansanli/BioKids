@@ -94,6 +94,17 @@ biokids (0.1.0-2) trixie; urgency=medium
     ("Müzik Atölyesi") in the catalogue; rows of tiles are centred;
     biokids-desktop recommends kdiamond and tuxpaint-stamps-default (D-210).
   * biokids-panel: no "coming soon" card in Settings.
+  * biokids-shell: a sticker album for days spent learning (D-211);
+    Resimlerim, the child's own pictures (D-212); three more weekly
+    themes (D-213).
+  * The evening's end is bedtime: night words, a calm screen and gentle
+    dimming (D-214). Special days from Today and holidays on the time
+    screen; migration 5d2f8a61c3e4 and the day_changed operation (D-215).
+  * biokids-ai: the assistant's answer arrives a sentence at a time, each
+    checked before it is shown (D-216).
+  * Text size, high contrast and a reading font; biokids-desktop recommends
+    fonts-opendyslexic (D-217). A second parent with their own PIN;
+    biokids-admin reset-pin --parent; migration b7e41d2c9a63 (D-218).
 
  -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Wed, 07 Oct 2026 12:00:00 +0300
 

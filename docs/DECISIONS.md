@@ -1541,3 +1541,98 @@ gözüküyor, kötü gözüküyor." One more thing on each, they asked.
 - **Every row is centred**, on the home grid and the start page alike: a wrapping flexbox
   of fixed-size tiles instead of a grid that holds the last row to the left. Home keeps six
   220-pixel tiles a row at 1600; the start page's young tiles are 200 pixels, seven a row.
+
+**D-211 [owner] Çıkartma albümüm: a sticker for each day spent learning.** (2026-10-21)
+Reward learning, never with screen time. A day earns its sticker with at least 15 minutes
+in apps of the learning category - the seconds `usage_tick` already files, with each
+tile's category as the parent set it; games never count; the day is the ledger's local
+day. Nothing is stored: `biokids_core.album` reads `usage_tick` for past days and the
+ledger for today, and the shell state carries `album`. 64 emoji in eight sets; the date
+picks one (`ordinal × 9 mod 64`), so none repeats within 64 days. ⭐ and the count beside
+the child's name open `/album`: this week as seven circles, a sentence a parent can read
+aloud, the stickers, and the child's own learning tiles. Zio celebrates a new sticker
+once a day (the date is kept in the child's home). Analiz mentions two or more stickers.
+
+**D-212 [owner] Resimlerim: the pictures a child made, on their own launcher.** (2026-10-21)
+A built-in tile (`drawings`, 4-10, suggested) that is a page of the launcher, which runs
+as the child: Tux Paint's `~/.tuxpaint/saved/` (not its thumbnails) and the Pictures
+folder (`XDG_PICTURES_DIR`, `~/Resimler`, `~/Pictures`), top level, newest 500. A picture
+is a folder key and a plain file name; never a link, owned by the child (checked on the
+open file), PNG/JPEG/GIF/WebP/BMP by name and first bytes, never SVG; another site's
+fetch is refused. A grid of big thumbnails and a full-screen viewer with 84-pixel ‹ › ✕.
+Nothing about the pictures reaches the daemon, the database or the panel.
+
+**D-213 [owner] Three more weeks of surprises: online safety, feelings, jobs.** (2026-10-21)
+Bugünün sürprizi (D-203) gets **İnternette güvenlik**, **Duygularımız** and **Meslekler**,
+fifteen cards each in the others' mix (223 in all). Online safety says what to do and whom
+to tell, never what could go wrong; a test keeps words of danger out of it. The rotation
+is fifteen weeks; the week of an upgrade may change theme once.
+
+**D-214 [owner] Good night: an evening's ending is bedtime.** (2026-10-21)
+When the day ends at night - its last allowed window closes, or its time runs out, at
+18:30 or later (or before 05:00) - the last ten minutes and the end screen are in a calm
+night tone; when and how the day ends do not change (a test compares every command the
+daemon runs at 16:00 and at 19:50). `policy.bedtime_in` decides it, counting only what
+ends a day: never a gap between windows (D-143), a limit per kind of app or a break.
+- The engine asks for `bedtime_10/5/1` and `bedtime` instead of `warn_*` and `time_up`,
+  Zio sleepy; a machine without the night lines, or a parent's own recording of the day
+  line (D-174), is used instead. The warnings are drawn in the night's blue, the end
+  screen says "İyi geceler, {name}." and "Yarın görüşürüz.".
+- The screen dims in four steps to 60% of the child's own level, only while their
+  session is on screen, and the level is put back when the evening moves away, when the
+  launcher stops, or at the next session (kept in `~/.local/state/biokids/`).
+
+**D-215 [owner] Special days: today, and holidays.** (2026-10-21)
+On **Bugün**, "🎉 Bugün özel bir gün mü?" gives today only +30 dk, +1 sa, +2 sa or **Süre
+sınırı yok** (no daily quota; the allowed hours still apply). **Süre kuralları → Özel
+günler** lists them and adds a range ("Tatil", up to 100 days) that follows the weekend's
+rules or a quota of its own. Each is shown, audited and removable.
+- Table `day_override` (migration `5d2f8a61c3e4`), read where the day's quota and
+  windows are picked, so warnings, the end of the day, Today and history follow. Extra
+  minutes add up, "no limit" and "weekend rules" hold if any says so, the later own
+  quota wins; granted and earned minutes still add, category limits still apply.
+- Never the past: a range starts today at the earliest; cancelling one under way cuts it
+  to yesterday, so history keeps the quota those days had. The daemon's new `day_changed`
+  lets a child whose day just got longer back in, as "+10 dk" does (D-144), never from
+  the filter's lock (D-172); a reload no longer forgets that lock.
+
+**D-216 [owner] "Sor Bana" answers a sentence at a time.** (2026-10-21)
+On the VM the model writes about three tokens a second, and a child looked at
+"Düşünüyorum…" for twenty to forty seconds. What the assistant allows does not change:
+the word list and the classifier run before anything is shown, refusals are catalogue
+sentences, alerts and rate limits are as before.
+- llama-server streams; `biokids_ai.sentences` splits Turkish sentences (not after an
+  abbreviation, an initial, a number or a Roman numeral; long ones at a comma). Each is
+  screened with everything shown before it. The first one stopped ends the answer with
+  "Bu konuda sana bu kadarını anlatabilirim. Gerisini ailenden bir büyüğe
+  sorabilirsin." (self-harm keeps its own sentence with 183 and 112), and the parent is
+  told as before. A model that dies, or the answer's 180 seconds running out, ends it
+  with "Şu an biraz dinleniyorum".
+- Polling, not a streamed reply: `ask` returns once the question is accepted, `more`
+  returns new sentences; the page asks every 500 ms through the daemon's
+  `ASSISTANT_MORE`, which answers only about the calling child's answer. A launcher quiet
+  for 15 seconds has gone; the service stops an answer nobody read for 60.
+- Zio reads one sentence at a time (`/assistant/say` answers when the line finished), in
+  order and never more than one in the voice service's queue, so a time warning is never
+  pushed out.
+
+**D-217 [owner] Text size, high contrast and a reading font, for each parent and each child.** (2026-10-21)
+**Ayarlar → Görünüm** for the signed-in parent (on their own row, so it follows them to the
+phone): Normal, Büyük, Çok büyük (100/125/150%) and high contrast. **Çocuklar → Düzenle →
+Ekran** for each child: the same and OpenDyslexic, sent in the launcher's state and
+written on `<html>` of every launcher page. Tokens only: `--font-scale`, a high-contrast
+palette measured by a test (words 7:1, buttons 4.5:1, lines 3:1). Two broken hooks in
+`tokens.css` were fixed (a self-referencing font stack, a `@font-face` for a file never
+shipped). The font is Debian's `fonts-opendyslexic`, a Recommends of biokids-desktop;
+without it the usual font returns and Ekran says so.
+
+**D-218 [owner] A second parent, with their own name, PIN and recovery code.** (2026-10-21)
+**Ayarlar → Ebeveynler** adds a parent (name, PIN twice, a recovery code shown once) or
+removes one, both behind the passphrase; at most four; never the last. With two or more,
+sign-in asks "Kim giriş yapıyor?" and then that parent's PIN. Each parent's own: PIN,
+lockout, recovery code, sessions, panel look. The family's: the passphrase (one secret
+turns protection off), mail and requests. Kayıtlar names who did what, İstekler who
+answered. A removed parent keeps their row and name (`removed_at`) with every secret
+cleared. `biokids-admin reset-pin --parent NAME`. Found on the way: a second parent could
+have replaced the family's passphrase without knowing it, and a wrong current passphrase
+on Ayarlar → Parola was never counted; both fixed. Migration `b7e41d2c9a63`.

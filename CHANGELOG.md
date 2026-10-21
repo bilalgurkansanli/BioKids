@@ -18,7 +18,7 @@ Nothing yet.
 ## [0.1.0-2] - 2026-10-07
 
 The v1.0 release candidate. Not published: the APT repository waits for its archive
-key (`docs/ROADMAP.md`). Decisions D-171 to D-210; read them in `docs/DECISIONS.md`.
+key (`docs/ROADMAP.md`). Decisions D-171 to D-218; read them in `docs/DECISIONS.md`.
 An upgrade from 0.1.0-1 runs whichever of the migrations `3e8b51c0d2a7` (request
 kinds), `9a4f2c7e1b36` (day schedules) and `c41d8e0f5a92` (the cuts) the database has
 not seen, after `biokids-admin backup-db` has copied it; it moves the virtual-terminal
@@ -27,6 +27,23 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
 
 ### Added
 
+- **Çıkartma albümüm** (D-211): a sticker for each day with 15 minutes in learning apps,
+  never screen time; ⭐ beside the child's name opens the album, and Zio celebrates once
+  a day.
+- **Resimlerim** (D-212): a tile that shows the pictures the child made in Boya and Çizim,
+  read by their own launcher and sent nowhere.
+- **Three more themes for Bugünün sürprizi** (D-213): İnternette güvenlik, Duygularımız
+  and Meslekler.
+- **Good night** (D-214): an evening's last ten minutes and end screen are bedtime, and
+  the screen dims gently; the lock, countdown and end action are unchanged.
+- **Special days** (D-215): one tap on Today gives today more time or no daily limit; a
+  holiday can follow the weekend's rules. Migration `5d2f8a61c3e4`.
+- **"Sor Bana" answers a sentence at a time** (D-216), each sentence checked before it is
+  shown and read by Zio in turn.
+- **Text size, high contrast and a reading font** (D-217), for each parent's panel and
+  each child's launcher; biokids-desktop recommends fonts-opendyslexic.
+- **A second parent** (D-218) with their own name, PIN and recovery code; sign-in asks
+  who is signing in. Migration `b7e41d2c9a63`.
 - **Two more tiles, and rows that look full** (D-210): **Elmaslar** (KDiamond), a
   diamond-matching game that needs no reading, and **Müzik Atölyesi** (Chrome Music Lab),
   music experiments with no ads and no account, both ticked for a new child of 4 to 10.
@@ -181,6 +198,10 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
 
 ### Fixed
 
+- **A grant was counted twice in the launcher's ring**, which a child given +30 dk could
+  never see empty.
+- **A second parent could have replaced the family's passphrase** without knowing it, and
+  a wrong current passphrase on Ayarlar → Parola was never counted (D-218).
 - **"Kapat" did not switch the computer off** (D-209). With an app open the launcher gave
   up waiting and showed the home screen again; with anyone else logged in - an ssh login
   included - it refused without a word. It now answers at once ("Bilgisayar kapanıyor…"),
