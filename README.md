@@ -13,7 +13,7 @@ clock cannot cheat, harmful sites are closed for the children's accounts only, a
 nothing about the family leaves the machine. It ships as Debian packages; the control
 part is called BioGuard in the documentation.
 
-> **v1.0 release candidate (0.1.0-2).** The packages build, pass lintian, install,
+> **BioKids 1.5.0.** The packages build, pass lintian, install,
 > upgrade and purge on a Debian 13 VM, and the setup wizard, login by picture and phone
 > access have been run there. The full exit criterion — a 20-minute quota set from a
 > phone, spoken warnings, shutdown, reboot and a moved clock — is the last run before

@@ -15,13 +15,15 @@ Debian version, because that is what `apt policy biokids` shows.
 
 Nothing yet.
 
-## [0.1.0-2] - 2026-10-07
+## [1.5.0-1] - 2026-10-21
 
-The v1.0 release candidate. Not published: the APT repository waits for its archive
-key (`docs/ROADMAP.md`). Decisions D-171 to D-218; read them in `docs/DECISIONS.md`.
-An upgrade from 0.1.0-1 runs whichever of the migrations `3e8b51c0d2a7` (request
-kinds), `9a4f2c7e1b36` (day schedules) and `c41d8e0f5a92` (the cuts) the database has
-not seen, after `biokids-admin backup-db` has copied it; it moves the virtual-terminal
+The first release of the packages, numbered by the rounds it took: 1.0 was the release
+candidate built as 0.1.0-2, and five rounds of the owner's tests followed (D-219).
+Decisions D-171 to D-219; read them in `docs/DECISIONS.md`. An upgrade from 0.1.0-1 or
+0.1.0-2 runs whichever of the migrations `3e8b51c0d2a7` (request kinds),
+`9a4f2c7e1b36` (day schedules), `c41d8e0f5a92` (the cuts), `077ca4545f23` (screen time
+per hour), `5d2f8a61c3e4` (special days) and `b7e41d2c9a63` (parents and appearance)
+the database has not seen, after `biokids-admin backup-db` has copied it; it moves the virtual-terminal
 guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
 `/etc/biokids/ext.token`.
 

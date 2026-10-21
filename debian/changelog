@@ -1,7 +1,9 @@
-biokids (0.1.0-2) trixie; urgency=medium
+biokids (1.5.0-1) trixie; urgency=medium
 
-  * Release candidate for v1.0: the packages, from the project's own APT
-    repository. The ISO moves to v1.1 (D-185).
+  * BioKids 1.5.0: the packages, from the project's own APT repository.
+    Numbered by the rounds it took: 1.0 was the release candidate built as
+    0.1.0-2, and five rounds of the owner's tests followed (D-219). The
+    ISO comes after (D-185).
   * biokids-shell ships the BioKids browser extension's source; its
     postinst packs and signs it with a key made on the machine
     (biokids-admin pack-extension), and the daemon force-installs it. A
@@ -106,7 +108,7 @@ biokids (0.1.0-2) trixie; urgency=medium
     fonts-opendyslexic (D-217). A second parent with their own PIN;
     biokids-admin reset-pin --parent; migration b7e41d2c9a63 (D-218).
 
- -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Wed, 07 Oct 2026 12:00:00 +0300
+ -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Wed, 21 Oct 2026 12:00:00 +0300
 
 biokids (0.1.0-1) trixie; urgency=medium
 

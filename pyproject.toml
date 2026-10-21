@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "biokids"
-version = "0.1.0"
+version = "1.5.0"
 description = "Parental controls for Debian that run entirely on your own machine"
 readme = "README.md"
 license = { text = "MIT" }

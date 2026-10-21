@@ -6,13 +6,14 @@ criterion.
 
 There is no deadline. The effort estimates assume roughly one focused day per week.
 
-Two releases, decided by the owner on 2026-10-07 (D-185): **v1.0 is the packages**,
-installed from the project's APT repository on an existing Debian 13; **v1.1 is the
+Two releases, decided by the owner on 2026-10-07 (D-185): **the packages**, installed
+from the project's APT repository on an existing Debian 13, published as **1.5.0**
+(D-219: 1.0 was the release candidate, and five rounds of tests followed); then **the
 ISO**. What did not make v1 is listed under *Cut from v1*, with its decision.
 
 ---
 
-## v1.0 — the packages  *(release candidate: 0.1.0-2)*
+## v1.5.0 — the packages  *(was the v1.0 release candidate, 0.1.0-2)*
 
 **Goal:** a family installs BioKids on stock Debian 13 with apt, from the project's own
 repository (D-27), sets a daily limit, and the child's session enforces it with spoken
@@ -20,7 +21,7 @@ warnings, manageable from a phone.
 
 ### What is built
 
-Every item below is written, tested, and in the `0.1.0-2` packages.
+Every item below is written, tested, and in the `1.5.0-1` packages.
 
 - **Time.** `CLOCK_BOOTTIME` accounting that a changed clock cannot cheat (D-40,
   D-172); daily quotas, time windows and per-weekday schedules (D-176); forced breaks
@@ -61,20 +62,18 @@ and install, the wizard completes, a child logs in by their picture, the panel o
 a phone over Tailscale, upgrade, remove and purge behave, and the virtual-terminal
 guards hold.
 
-**What is left before v1.0 is tagged:**
+**What is left before v1.5.0 is tagged:**
 
 1. `docs/VM-RUNBOOK.md` §7 — the criterion on a fresh VM, recorded — and §8, the
-   checks for what 0.1.0-2 added.
+   checks for what the release adds.
 2. The archive key. `biokids-archive-keyring` cannot be built until
    `debian/biokids-archive-keyring.asc` is committed (`debian/README.source`), and its
    fingerprint belongs in the README. Until then the release workflow cannot publish
    the APT repository.
-3. The two contact placeholders: the security address in `SECURITY.md` and the
-   enforcement address in `CODE_OF_CONDUCT.md`.
-4. The version. `release.yml` publishes only a tag that matches the upstream version
-   in `debian/changelog`, so a `v1.0.0` tag needs a `1.0.0-1` entry (and
-   `pyproject.toml` and `biokids_core.__version__` to match); `0.1.0-2` itself could
-   only be tagged `v0.1.0`.
+
+The contact address is set (`SECURITY.md`, `CODE_OF_CONDUCT.md`), and the version is
+1.5.0 everywhere `release.yml` compares it: `debian/changelog` (1.5.0-1),
+`pyproject.toml` and `biokids_core.__version__`; the tag is `v1.5.0`.
 
 The voice question is closed (D-137): no Turkish Piper voice may be redistributed and
 `piper-tts` is not in Debian 13, so espeak-ng speaks and Piper is used wherever a family
@@ -83,7 +82,7 @@ Turkish voice from their authors (D-196).
 
 ---
 
-## v1.1 — the ISO
+## Next — the ISO
 
 **Goal:** a stranger downloads the ISO, writes it to a USB stick, installs it on an old
 laptop, and has a working supervised machine in under 20 minutes without reading
@@ -127,7 +126,6 @@ Ideas that are still worth having, in no order. None is promised.
 - per-application network control via nftables cgroups (D-66)
 - per-app category overrides under Advanced (D-44)
 - an opt-in extra blocklist for ads and tracking (D-62)
-- weekly reports in the panel, not only in the Sunday mail (D-37, D-177)
 - launcher ports that cannot collide: two children whose uids differ by a multiple of
   100 share one today, and only one of them can be logged in at a time (D-188)
 - a documentation site, screenshots of the launcher, a short demo video
@@ -156,9 +154,9 @@ Do not start these. They are recorded so they stop being distractions.
 
 ## Milestones worth announcing publicly
 
-1. v1.0 on the APT repository — a post with the screen recording of
+1. v1.5.0 on the APT repository — a post with the screen recording of
    `docs/VM-RUNBOOK.md` §7.5
-2. First ISO (v1.1) — a Reddit r/linux post and a DistroWatch submission
+2. The first ISO — a Reddit r/linux post and a DistroWatch submission
 
 Do not submit to DistroWatch before the ISO installs on real hardware. They do not list
 unfinished projects and a rejection is hard to undo.

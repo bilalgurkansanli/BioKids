@@ -1636,3 +1636,10 @@ answered. A removed parent keeps their row and name (`removed_at`) with every se
 cleared. `biokids-admin reset-pin --parent NAME`. Found on the way: a second parent could
 have replaced the family's passphrase without knowing it, and a wrong current passphrase
 on Ayarlar → Parola was never counted; both fixed. Migration `b7e41d2c9a63`.
+
+**D-219 [owner] The first release is 1.5.0.** (2026-10-21)
+The owner asked that the version show the work it took, not "1.0.0". 1.0 was the release
+candidate built as 0.1.0-2 (D-185); five rounds of the owner's tests followed (D-195 to
+D-218), so the first published packages are 1.5.0, Debian revision 1.5.0-1, tag
+`v1.5.0`. The ISO comes after, under its own number. Debian orders 1.5.0-1 after
+0.1.0-2, so an upgrade is an ordinary upgrade.
