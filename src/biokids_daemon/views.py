@@ -152,7 +152,7 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
             "asked_for_time": self.pending_request(child_id, "time"),
             "remaining_seconds": decision.remaining_seconds,
             "remaining_minutes": decision.remaining_minutes,
-            "quota_seconds": ring if ring is not None else quota + state.granted_s,
+            "quota_seconds": ring if ring is not None else quota,
             "used_seconds": state.general_used_s,
             "earned_seconds": state.earned_s,
             "break_seconds": state.break_remaining_s,

@@ -1922,6 +1922,19 @@ async def test_earned_minutes_make_the_ring_move(
     assert state["quota_seconds"] > 60 * 60, "the earned minutes are missing from the total"
 
 
+async def test_granted_minutes_are_in_the_ring_once(
+    supervisor: Supervisor, session: Session, source: FakeSessionSource
+) -> None:
+    """general_allowance_seconds already holds the grant; adding it again drew a
+    ring that a "+30 dk" child could never see empty."""
+    set_quota(session, 1, 60)
+    await supervisor.start()
+    source.log_in("elif")
+    await supervisor.grant_time(1, 30 * 60)
+
+    assert supervisor.shell_state(1)["quota_seconds"] == 90 * 60
+
+
 # ---------------------------------------------------- a punishment outlives a day
 
 
