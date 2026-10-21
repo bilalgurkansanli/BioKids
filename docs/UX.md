@@ -549,7 +549,9 @@ the wizard at once in the desktop that is open, and until setup is complete it o
 again at every login; a "BioKids Ebeveyn Paneli" shortcut is put on the parent's
 desktop once, and the panel is in the applications menu. On the login screen each
 child is their own picture and name, over Zio and Sio, never the operating system's
-logo.
+logo. The parent's own account is shown by the name they gave the wizard, with a
+house (D-221), not by its user name beside a grey silhouette; a name or a picture the
+parent chose themselves is kept.
 
 **Yardım / Help** (`/help`) is in the top bar and on the sign-in page: the questions
 parents ask first, each answered in the words the screens use. It is open before

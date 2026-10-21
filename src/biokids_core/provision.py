@@ -62,6 +62,14 @@ AVATAR_DIR = Path(__file__).resolve().parent / "data" / "avatars"
 """The panel's avatars as pictures, for the login screen (D-170).
 `dev/make_greeter_art.py avatars` draws them."""
 DEFAULT_AVATAR = "fox"
+PARENT_AVATAR = "parent"
+"""The parent's own account on the login screen (D-221): a house, which no child
+can pick for themselves, so the grown-up's login never looks like a child's."""
+ACCOUNTS_ICON_DIR = Path("/var/lib/AccountsService/icons")
+HUMAN_UID_MIN = 1000
+HUMAN_UID_MAX = 60000
+"""Debian's range for people's accounts (adduser.conf FIRST_UID, LAST_UID)."""
+NO_LOGIN_SHELLS = ("nologin", "false")
 ACCOUNTS_BUS = "org.freedesktop.Accounts"
 _ACCOUNTS_USER_RE = re.compile(r'"(/org/freedesktop/Accounts/User[0-9]+)"')
 
@@ -276,6 +284,117 @@ def real_name(display_name: str) -> str:
     return " ".join(display_name.replace(",", " ").replace(":", " ").split())[:64]
 
 
+@dataclass(frozen=True, slots=True)
+class Account:
+    """One line of /etc/passwd, as far as the login screen cares."""
+
+    name: str
+    uid: int
+    gecos: str
+    shell: str
+
+    @property
+    def shown_name(self) -> str:
+        """The first GECOS field: what a greeter shows instead of the user name."""
+        return self.gecos.split(",", 1)[0].strip()
+
+
+def people(entries: Sequence[Account]) -> list[Account]:
+    """The accounts a person logs in to: in Debian's range, with a real shell."""
+    return [
+        account
+        for account in entries
+        if HUMAN_UID_MIN <= account.uid < HUMAN_UID_MAX
+        and Path(account.shell).name not in NO_LOGIN_SHELLS
+    ]
+
+
+def parent_account(entries: Sequence[Account], children: Sequence[str]) -> Account | None:
+    """The one person's account on the machine that is not a child's (D-221).
+
+    None when there is none, or more than one: then nothing says which is the
+    parent who ran the wizard, and the login screen is left as the family made it.
+    """
+    grown_ups = [account for account in people(entries) if account.name not in children]
+    return grown_ups[0] if len(grown_ups) == 1 else None
+
+
+def needs_a_name(account: Account) -> bool:
+    """Whether the login screen shows this account by its user name.
+
+    Only then is the wizard's name given to it: a parent who wrote their full
+    name when they installed Debian keeps it.
+    """
+    shown = account.shown_name
+    return not shown or shown.casefold() == account.name.casefold()
+
+
+def _accounts() -> list[Account]:
+    if _pwd is None:
+        return []
+    return [
+        Account(entry.pw_name, int(entry.pw_uid), entry.pw_gecos or "", entry.pw_shell or "")
+        for entry in _pwd.getpwall()
+    ]
+
+
+def set_parent_greeter_identity(display_name: str, children: Sequence[str]) -> tuple[bool, str]:
+    """Show the parent's own account on the login screen by name, with a house (D-221).
+
+    After the wizard the greeter showed the children by name and picture, and the
+    parent as their bare user name - "bilal" - beside Debian's grey silhouette.
+    The wizard asks the parent's name; this gives it to the one account on the
+    machine that is a person's and not a child's, if it has no name of its own,
+    and a picture if it has none. The user name and the password never change.
+    """
+    account = parent_account(_accounts(), children)
+    if account is None:
+        return False, "no single parent account to name"
+    problems: list[str] = []
+    name = real_name(display_name)
+    if name and needs_a_name(account):
+        ok, problem = _run(["usermod", "--comment", name, account.name])
+        if not ok:
+            problems.append(f"name: {problem}")
+    if not (ACCOUNTS_ICON_DIR / account.name).exists():
+        problem = _set_icon(account.name, avatar_picture(PARENT_AVATAR))
+        if problem:
+            problems.append(f"picture: {problem}")
+    return not problems, "; ".join(problems)
+
+
+def _set_icon(unix_user: str, picture: Path) -> str:
+    """Give AccountsService the picture for this account; "" or what went wrong."""
+    found = _output(
+        [
+            "busctl",
+            "call",
+            ACCOUNTS_BUS,
+            "/org/freedesktop/Accounts",
+            ACCOUNTS_BUS,
+            "FindUserByName",
+            "s",
+            unix_user,
+        ]
+    )
+    match = _ACCOUNTS_USER_RE.search(found or "")
+    if match is None:
+        return "AccountsService did not answer"
+    ok, problem = _run(
+        [
+            "busctl",
+            "call",
+            ACCOUNTS_BUS,
+            match.group(1),
+            f"{ACCOUNTS_BUS}.User",
+            "SetIconFile",
+            "s",
+            str(picture),
+        ]
+    )
+    return "" if ok else problem
+
+
 def set_greeter_identity(unix_user: str, display_name: str, avatar: str) -> tuple[bool, str]:
     """Put the child's name and picture on the login screen (D-170).
 
@@ -296,36 +415,9 @@ def set_greeter_identity(unix_user: str, display_name: str, avatar: str) -> tupl
         ok, problem = _run(["usermod", "--comment", name, unix_user])
         if not ok:
             problems.append(f"name: {problem}")
-    found = _output(
-        [
-            "busctl",
-            "call",
-            ACCOUNTS_BUS,
-            "/org/freedesktop/Accounts",
-            ACCOUNTS_BUS,
-            "FindUserByName",
-            "s",
-            unix_user,
-        ]
-    )
-    match = _ACCOUNTS_USER_RE.search(found or "")
-    if match is None:
-        problems.append("picture: AccountsService did not answer")
-    else:
-        ok, problem = _run(
-            [
-                "busctl",
-                "call",
-                ACCOUNTS_BUS,
-                match.group(1),
-                f"{ACCOUNTS_BUS}.User",
-                "SetIconFile",
-                "s",
-                str(avatar_picture(avatar)),
-            ]
-        )
-        if not ok:
-            problems.append(f"picture: {problem}")
+    problem = _set_icon(unix_user, avatar_picture(avatar))
+    if problem:
+        problems.append(f"picture: {problem}")
     return not problems, "; ".join(problems)
 
 

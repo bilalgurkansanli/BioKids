@@ -682,6 +682,115 @@ def test_without_accountsservice_the_child_keeps_a_name_and_can_still_log_in(
     assert "AccountsService" in why
 
 
+# ------------------------------------------------ the parent's own account (D-221)
+
+
+def _account(name: str, uid: int, gecos: str = "", shell: str = "/bin/bash") -> prov.Account:
+    return prov.Account(name, uid, gecos, shell)
+
+
+PASSWD = [
+    _account("root", 0, "root"),
+    _account("lightdm", 120, "Light Display Manager", "/bin/false"),
+    _account("bilal", 1000, ",,,"),
+    _account("ahmet", 1001, "Ahmet"),
+    _account("nobody", 65534, "nobody", "/usr/sbin/nologin"),
+]
+
+
+def test_the_parent_is_the_one_person_who_is_not_a_child() -> None:
+    parent = prov.parent_account(PASSWD, ["ahmet"])
+    assert parent is not None
+    assert parent.name == "bilal"
+
+
+def test_two_grown_ups_leave_the_login_screen_as_the_family_made_it() -> None:
+    """Nothing says which of them ran the wizard, so neither is renamed."""
+    family = [*PASSWD, _account("ayse", 1002)]
+    assert prov.parent_account(family, ["ahmet"]) is None
+
+
+def test_a_removed_childs_hidden_account_is_not_a_grown_up() -> None:
+    family = [*PASSWD, _account("elif", 1002, "Elif", "/usr/sbin/nologin")]
+    parent = prov.parent_account(family, ["ahmet"])
+    assert parent is not None
+    assert parent.name == "bilal"
+
+
+def test_a_child_whose_row_is_missing_is_still_not_the_parent() -> None:
+    assert prov.parent_account(PASSWD, []) is None
+
+
+@pytest.mark.parametrize(
+    ("gecos", "named"),
+    [("", True), (",,,", True), ("bilal", True), ("Bilal,,,", True), ("Bilal Şanlı,,,", False)],
+)
+def test_only_an_account_shown_by_its_user_name_gets_the_wizards_name(
+    gecos: str, named: bool
+) -> None:
+    assert prov.needs_a_name(_account("bilal", 1000, gecos)) is named
+
+
+def _parent_greeter(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, passwd: list[prov.Account]
+) -> list[list[str]]:
+    ran: list[list[str]] = []
+
+    def output(argv: list[str]) -> str | None:
+        ran.append(list(argv))
+        return 'o "/org/freedesktop/Accounts/User1000"'
+
+    def run(argv: list[str]) -> tuple[bool, str]:
+        ran.append(list(argv))
+        return True, ""
+
+    monkeypatch.setattr(prov, "_accounts", lambda: passwd)
+    monkeypatch.setattr(prov, "_output", output)
+    monkeypatch.setattr(prov, "_run", run)
+    monkeypatch.setattr(prov, "ACCOUNTS_ICON_DIR", tmp_path)
+    return ran
+
+
+def test_the_login_screen_shows_the_parent_by_the_wizards_name_with_a_house(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """After the wizard the greeter showed the children by name and the parent as "bilal"."""
+    ran = _parent_greeter(monkeypatch, tmp_path, PASSWD)
+    assert prov.set_parent_greeter_identity("Bilal", ["ahmet"]) == (True, "")
+    assert ran[0] == ["usermod", "--comment", "Bilal", "bilal"]
+    assert ran[1][-3:] == ["FindUserByName", "s", "bilal"]
+    assert ran[2][-1].endswith("parent.png")
+
+
+def test_the_parents_own_name_and_picture_are_kept(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    named = [_account("bilal", 1000, "Bilal Şanlı,,,"), _account("ahmet", 1001, "Ahmet")]
+    (tmp_path / "bilal").write_bytes(b"their own photo")
+    ran = _parent_greeter(monkeypatch, tmp_path, named)
+    assert prov.set_parent_greeter_identity("Babam", ["ahmet"]) == (True, "")
+    assert ran == []
+
+
+def test_with_no_single_parent_nothing_is_touched(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    ran = _parent_greeter(monkeypatch, tmp_path, [*PASSWD, _account("ayse", 1002)])
+    shown, why = prov.set_parent_greeter_identity("Bilal", ["ahmet"])
+    assert not shown
+    assert "parent" in why
+    assert ran == []
+
+
+def test_the_parents_picture_is_not_a_childs_animal() -> None:
+    from biokids_panel.context import AVATARS
+
+    picture = prov.avatar_picture(prov.PARENT_AVATAR)
+    assert picture.name == "parent.png"
+    assert picture.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+    assert prov.PARENT_AVATAR not in {slug for slug, _emoji in AVATARS}
+
+
 # ------------------------------------------------------- removing a child (D-191)
 
 

@@ -109,6 +109,9 @@ biokids (1.5.0-1) trixie; urgency=medium
     biokids-admin reset-pin --parent; migration b7e41d2c9a63 (D-218).
   * biokids-admin reset-passphrase sets a forgotten family passphrase
     again (D-220).
+  * The login screen shows the parent's own account by the name given to
+    the wizard, with a house picture, unless it has a name or picture of
+    its own (D-221).
 
  -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Wed, 21 Oct 2026 12:00:00 +0300
 

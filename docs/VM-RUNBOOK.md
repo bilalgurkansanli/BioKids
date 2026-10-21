@@ -509,7 +509,9 @@ greeter.
    field** — only "Oturum aç" (D-155). A password field means the login-by-picture
    service is not in use: check `sudo lightdm --show-config | grep pam-service`
    and `id elif` (must include `biokids-child`). No Elif at all means §3.1
-   failed and you are testing the wrong thing.
+   failed and you are testing the wrong thing. The parent's own account is
+   shown by the name typed in the wizard with a house, not as `bilal` beside a
+   grey silhouette (D-221) — unless that account already had a full name.
 2. The session lands directly in the launcher — full screen, tiles, the time
    ring. Not an XFCE desktop.
 3. **Zio or Sio is visible** on the first-run card. An empty character slot means

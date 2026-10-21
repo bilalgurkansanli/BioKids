@@ -53,9 +53,14 @@ DISC = {
     "turtle": "#D8F3EE",
     "whale": "#DCEBFB",
     "bee": "#FFF3C4",
+    "parent": "#D6EFE4",
 }
 """A soft colour behind each animal, so two children's pictures differ at a
 glance even before the animal is recognised."""
+
+PARENT = ("parent", "🏡")
+"""The parent's own account (D-221): a house, which is not among the children's
+animals, so the grown-up's login never looks like a child's."""
 
 MARK = f"""<svg viewBox="0 0 100 100" width="96" height="96" aria-hidden="true">
   <rect x="4" y="4" width="92" height="92" rx="22" fill="{INDIGO}"/>
@@ -152,7 +157,7 @@ def make_avatars(font_path: Path) -> int:
     font = ImageFont.truetype(str(font_path), EMOJI_STRIKE)
     size = AVATAR_SIZE
     big = size * 4  # drawn large and scaled down, for a smooth edge
-    for slug, emoji in AVATARS:
+    for slug, emoji in [*AVATARS, PARENT]:
         disc = Image.new("RGBA", (big, big), (0, 0, 0, 0))
         ImageDraw.Draw(disc).ellipse((0, 0, big - 1, big - 1), fill=DISC.get(slug, "#EEEEEE"))
         disc = disc.resize((size, size), Image.Resampling.LANCZOS)

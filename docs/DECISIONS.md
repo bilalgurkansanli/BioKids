@@ -1654,3 +1654,17 @@ machine is the proof, as for `reset-pin`. The gate's five-in-fifteen-minutes cou
 starts at the last change, so guesses at the old passphrase do not lock out the new one.
 Also, by the owner: the evening of D-214 starts at 19:00, and D-215's taps are +1 sa,
 +2 sa and no limit - Today's own "+30 dk" was one too many beside them.
+
+**D-221 [owner] The parent's own account on the login screen has their name and a house.** (2026-10-21)
+After the wizard the greeter showed each child by name and picture (D-170) and the parent
+as their bare user name, "bilal", beside Debian's grey silhouette: the one account a
+family sees as "the computer's", not as a person. When a child is provisioned, and from
+`biokids-admin refresh-greeter`, the one account on the machine that is a person's
+(uid 1000-59999, a login shell) and not a child's gets the name the parent gave the
+wizard as its GECOS name, if it has none or only its user name, and a house picture
+(`parent.png`, 🏡) if AccountsService has no picture for it. A house is not among the
+children's animals, so the grown-up's login never looks like a child's. With two or more
+such accounts nothing says which parent ran the wizard, and nothing is changed. The user
+name and the password are never touched, and a name or photo the parent set themselves
+is kept. It runs in biokids-provision@, root and outside the panel's sandbox, like the
+children's names.

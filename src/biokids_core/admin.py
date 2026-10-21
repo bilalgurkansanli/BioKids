@@ -53,6 +53,7 @@ from biokids_core.provision import (
     account_exists,
     provision,
     set_greeter_identity,
+    set_parent_greeter_identity,
     unprovision,
 )
 
@@ -809,7 +810,33 @@ def cmd_refresh_greeter(args: argparse.Namespace, config: Config) -> int:
             continue
         shown, why = set_greeter_identity(unix_user, display_name, avatar)
         print(f"{unix_user}: {'name and picture set' if shown else why}")
+    show_parent_on_greeter(config)
     return 0
+
+
+def show_parent_on_greeter(config: Config, *, child: str = "") -> None:
+    """The parent's own account by the wizard's name, with a house (D-221).
+
+    From provisioning a child - the wizard's own step, root and outside the
+    panel's sandbox - and from refresh-greeter. Never fails either: the login
+    screen keeping the user name is no reason to stop. `child` is the account
+    just provisioned, a child even if its row is not there to say so.
+    """
+    database = Database(config)
+    try:
+        with database.session() as session:
+            parent = repo.get_parent(session)
+            name = parent.display_name if parent is not None else ""
+            children = [row.unix_user for row in repo.list_children(session)]
+    except Exception as exc:  # pragma: no cover - no database yet is nothing to show
+        log.warning("could not read the parent's name: %s", exc)
+        return
+    finally:
+        database.dispose()
+    if not name:
+        return
+    shown, why = set_parent_greeter_identity(name, [*children, child] if child else children)
+    print(f"the parent's account: {'name and picture set' if shown else why}")
 
 
 def cmd_unprovision_child(args: argparse.Namespace, config: Config) -> int:
@@ -868,6 +895,7 @@ def cmd_provision_child(args: argparse.Namespace, config: Config) -> int:
         print(f"problem: {problem}", file=sys.stderr)
     if not result.ok:
         return 1
+    show_parent_on_greeter(config, child=result.unix_user)
 
     database = Database(config)
     try:
