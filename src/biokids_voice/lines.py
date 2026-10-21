@@ -52,11 +52,16 @@ DEFAULT_EVENTS: Final = (
     "warn_1",
     "time_up",
     "window_waiting",
+    "bedtime_10",
+    "bedtime_5",
+    "bedtime_1",
+    "bedtime",
     "request_approved",
     "request_denied",
 )
-"""What Phase 0 ships. VOICE.md §5 lists six more events for later phases; they
-need no code, only two more text files each."""
+"""What Phase 0 ships, and the night's warnings and good night (D-214). VOICE.md
+§5 lists more events for later phases; they need no code, only two more text
+files each."""
 
 PLACEHOLDERS: Final = ("name", "minutes", "app")
 """The substitutions a line may use. Anything else is dropped rather than shown."""

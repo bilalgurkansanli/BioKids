@@ -835,6 +835,12 @@ espeak-ng speaks with its own female and male variants. Either is a pass.
 6. At zero: the lock screen with a 120-second countdown, then the machine powers
    off.
 
+A run whose twenty minutes end at half past six in the evening or later ends at
+night (D-214): the warnings are the night's ("Akşam oldu Elif. 10 dakika sonra
+yatma vakti."), the end screen is "İyi geceler, Elif." and the screen dims a
+little. The minutes, the lock, the countdown and the poweroff are the same, so
+that is a pass too; §8.15 checks it on purpose.
+
 **Do not shorten the wait with `dev/fakeclock.py` for the recording.** That
 script drives an injected clock in-process; it proves the ledger's arithmetic and
 cannot tell you whether the real daemon speaks through real PipeWire. Use it
@@ -1387,6 +1393,70 @@ does not (`sudo apt install kdiamond tuxpaint-stamps-default` then).
    same, Song Maker included.
 5. **Boya**: the stamp tool (the rubber stamp) has animals, food, vehicles and
    plants, not only Tux.
+
+### 8.15 Good night (D-214)
+
+The end of an evening. Take a snapshot: the second pass ends with the VM off. Set
+Elif's weekday hours to end in a quarter of an hour, after 18:30 - say the clock
+reads 19:40, then **16:00–19:55** - with a quota she will not reach, and the end
+action **Bilgisayarı kapat**. Turn the screen's brightness up first (the ☀️
+slider), and note the level:
+
+```bash
+brightnessctl -m 2>/dev/null || xrandr --verbose --current | grep -i brightness
+```
+
+1. Log Elif in and open Boya. **Pass, at 19:45:** the launcher comes in front for a
+   few seconds, as at every warning (§7.2), but in the night's colours - dark blue,
+   no red, no pulse - with Zio sleepy and a night sentence ("Akşam oldu Elif…" or
+   "Yavaş yavaş toparlanalım…"), spoken. At 19:50 and 19:54 the same, with five and
+   one minute. The screen gets a little darker at 19:45, 19:47:30, 19:50 and
+   19:52:30 (90, 80, 70 and 60 percent of the level you noted), on a laptop's
+   backlight or, on the VM, the output's brightness.
+2. **Pass, at 19:55:** "İyi geceler, Elif." and "Yarın görüşürüz.", heard (for a
+   child of four to seven as for an older one: it is the daemon's line), with the
+   same "İşini kaydet. Bilgisayar birazdan kapanacak." and the same 120-second
+   countdown as by day, in blue rather than red; then the VM powers off.
+3. Boot, log Elif in. **Pass:** the brightness is back at the level you noted
+   before the launcher's home screen is up, and
+   `ls ~elif/.local/state/biokids/` no longer lists `brightness-before-bedtime`.
+4. **A longer evening after all.** Set the hours to end in twelve minutes again and
+   wait for the first dimming step; then, on the time screen, make them end an hour
+   later and save. **Pass:** within a tick the screen is back at its full level,
+   and nothing more is said until the new ten minutes.
+5. **By day.** With the hours back to normal and a quota that runs out at, say,
+   15:00: the warnings and the end screen are the daytime ones ("Bugünlük bu
+   kadar"), and the screen is not dimmed.
+
+### 8.16 Special days (D-215)
+
+On the phone, with Elif's weekday quota at 20 minutes, her hours **16:00–20:00** and
+the end action **Ekranı kilitle**, so the first pass does not end with the VM off.
+
+1. Let her use the 20 minutes until the lock screen. On **Bugün**, open **Bugün özel
+   bir gün mü?** and tap **+1 sa**. **Pass:** "Elif için bugün özel gün."; the card
+   says "🎉 Bugün özel gün: +1 sa" with **Kaldır**; within a few seconds Elif's lock
+   screen goes and the launcher shows an hour more. The audit log has "Özel gün
+   eklendi".
+2. Tap **+2 sa**. **Pass:** the line now says +2 sa: one choice, not three hours.
+3. **Kaldır** on that line, and confirm. **Pass:** "Elif için özel gün kaldırıldı.";
+   within about ten seconds Elif's screen locks again with the usual countdown,
+   because the twenty minutes are used up.
+4. **Süre sınırı yok.** **Pass:** Elif is back in; the ring is drawn against the
+   hours left until 20:00, not as a red sliver; at 19:50 the night's warning
+   comes, and at 20:00 the end - the allowed hours still apply.
+5. **A holiday.** On **Çocuklar → Süre kuralları**, under **Özel günler → Birkaç gün
+   için**, a range from tomorrow to a week later, named "Tatil", **Hafta sonu
+   gibi**. **Pass:** "Tatil (…): hafta sonu kuralları" in the list. Set the VM's date
+   to the day after tomorrow (§7.4's commands): the weekend's quota and hours apply,
+   on a weekday. Put the date back.
+6. **Cancelled half-way.** With the date set inside the range, **Kaldır** on it.
+   **Pass:** today and the days after follow the weekday rules again, and
+   `sudo bkq "select start_day, end_day from day_override"` shows the range cut to
+   the day before, not deleted: **Geçmiş** still draws those days against the
+   weekend's quota.
+7. A range ending yesterday, typed by hand into the form's dates, is refused with
+   "Bu günler geçmişte kaldı."
 
 ---
 

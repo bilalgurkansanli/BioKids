@@ -215,4 +215,86 @@
       <a class="btn btn--quiet" href="/children">{{ _('common.cancel') }}</a>
     </div>
   </form>
+
+  {#
+    Special days (D-215): today with one tap, and a holiday of several days.
+    Forms of their own, outside the rules above, because they are exceptions
+    to those rules and take effect without saving them. Today links here.
+  #}
+  <section class="card special-days" id="special" aria-labelledby="special-title">
+    <h2 id="special-title"><span aria-hidden="true">🎉</span> {{ _('special.title') }}</h2>
+    <p class="help">{{ _('special.help') }}</p>
+
+    {% if specials %}
+      <ul class="special-list">
+        {% for special in specials %}
+          <li class="special-line">
+            <span class="special-line__text">{{ special.text }}</span>
+            <form method="post" action="/children/{{ child.id }}/special/{{ special.id }}/cancel"
+                  {% if special.today %}
+                  data-confirm="{{ _('special.remove.confirm', name=child.display_name) }}"
+                  onsubmit="return confirm(this.dataset.confirm)"
+                  {% endif %}>
+              <input type="hidden" name="csrf_token" value="{{ csrf }}">
+              <input type="hidden" name="next" value="/children/{{ child.id }}/time#special">
+              <button class="btn btn--quiet" type="submit">{{ _('special.remove') }}</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted small">{{ _('special.none') }}</p>
+    {% endif %}
+
+    <h3 class="special-days__sub">{{ _('special.today.title') }}</h3>
+    <p class="help">{{ _('special.today.help') }}</p>
+    {% with special_child=child.id, special_next="/children/" ~ child.id ~ "/time#special" %}
+      {% include "partials/special_choices.html" %}
+    {% endwith %}
+
+    <details class="advanced" {% if request.query_params.get('error', '').startswith('special.') %}open{% endif %}>
+      <summary>{{ _('special.range.title') }}</summary>
+      <form method="post" action="/children/{{ child.id }}/special/range">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <p class="help">{{ _('special.range.help') }}</p>
+        <div class="row row--wrap">
+          <div class="field grow">
+            <label for="special-start">{{ _('special.range.start') }}</label>
+            <input id="special-start" name="start" type="date" required
+                   min="{{ today.isoformat() }}" value="{{ today.isoformat() }}">
+          </div>
+          <div class="field grow">
+            <label for="special-end">{{ _('special.range.end') }}</label>
+            <input id="special-end" name="end" type="date" required
+                   min="{{ today.isoformat() }}" value="{{ today.isoformat() }}">
+          </div>
+        </div>
+        <div class="field">
+          <label for="special-label">{{ _('special.range.label') }}</label>
+          <input id="special-label" name="label" type="text" maxlength="40"
+                 placeholder="{{ _('special.range.label.example') }}">
+        </div>
+        <fieldset>
+          <legend>{{ _('special.range.rule') }}</legend>
+          <div class="checkline">
+            <input type="radio" id="special-weekend" name="rule" value="weekend" checked>
+            <label for="special-weekend">
+              {{ _('special.range.rule.weekend') }}
+              <span class="help">{{ _('special.range.rule.weekend.help') }}</span>
+            </label>
+          </div>
+          <div class="checkline">
+            <input type="radio" id="special-quota" name="rule" value="quota">
+            <label for="special-quota">{{ _('special.range.rule.quota') }}</label>
+          </div>
+          <div class="field">
+            <label for="special-minutes">{{ _('common.minutes') }}</label>
+            <input id="special-minutes" name="quota_minutes" type="number" min="0" max="1440"
+                   step="5" inputmode="numeric" value="{{ policy.weekend_quota_min }}">
+          </div>
+        </fieldset>
+        <button class="btn btn--primary" type="submit">{{ _('special.range.add') }}</button>
+      </form>
+    </details>
+  </section>
 {% endblock %}

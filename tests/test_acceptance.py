@@ -285,9 +285,12 @@ async def test_the_phase_0_exit_criterion(machine: Machine, clock: FakeClock) ->
     assert "clock_jump" in machine.audit_actions()
 
     # --- warnings at ten, five and one minute, in Turkish --------------------
+    # The jump left the clock after seven in the evening, so this day ends at
+    # night: the same warnings at the same minutes, in the night's words
+    # (D-214). The daytime ones are test_daemon's, at four in the afternoon.
     await machine.run_for(QUOTA_MINUTES * 60)
-    warnings = [event for event in machine.spoken() if event.startswith("warn_")]
-    assert warnings == ["warn_10", "warn_5", "warn_1"]
+    warnings = [e for e in machine.spoken() if e.startswith(("warn_", "bedtime_"))]
+    assert warnings == ["bedtime_10", "bedtime_5", "bedtime_1"]
 
     from biokids_core.i18n import translator
 
@@ -296,7 +299,7 @@ async def test_the_phase_0_exit_criterion(machine: Machine, clock: FakeClock) ->
     # --- zero: the screen locks, and the child's launcher says so -----------
     assert machine.runner.ran("loginctl", "lock-session")
     assert not machine.runner.ran("systemctl", "poweroff"), "not during the countdown"
-    assert "Bugünlük bu kadar" in launcher.get("/").text
+    assert "İyi geceler, Elif." in launcher.get("/").text
 
     # --- then the machine shuts down ----------------------------------------
     await machine.run_for(150)

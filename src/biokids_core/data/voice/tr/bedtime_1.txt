@@ -1,0 +1,5 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}
+# Akşam, günün son dakikası (D-214).
+Bir dakika kaldı {name}. Birazdan iyi geceler.
+Son bir dakika. Yatma vakti geldi sayılır.
+Bir dakika kaldı. Son dokunuşlarını yap, sonra uyku.

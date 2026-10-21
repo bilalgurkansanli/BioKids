@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}
+# The end of the day in the evening (D-214). The screen says: "Good night, {name}. See you tomorrow."
+Good night, {name}. See you tomorrow.
+Good night, {name}. Sweet dreams, see you tomorrow.
+Good night. See you tomorrow.

@@ -1,0 +1,28 @@
+{% extends "_full.html" %}
+{#
+  The end of a day that ends in the evening (D-214): the time ran out, or the
+  last allowed hours closed, at about seven or later. Bedtime rather than a cold
+  lock - the night's colours, Zio sleepy, "İyi geceler" - and nothing else
+  different: the same countdown and the same end action as the time-up screen,
+  said as plainly. Not spoken by the page: the daemon's good-night line is the
+  end of the day's, heard as the time-up line always was (D-175's rule).
+#}
+{% set tone = 'full--night' %}
+{% set persona = 'zio' %}
+{% set expression = 'sleepy' %}
+{% block title %}{{ _('shell.bedtime.title', name=state.display_name) }}{% endblock %}
+{% block inner %}
+  <h1>{{ _('shell.bedtime.title', name=state.display_name) }}</h1>
+  {% set end_action = state.end_action | default('', true) %}
+  {% if state.countdown_seconds %}
+    {% if end_action in ('poweroff', 'lock', 'logout') %}
+      <p>{{ _('shell.timeup.body.' ~ end_action) }}</p>
+    {% else %}
+      <p>{{ _('shell.timeup.body') }}</p>
+    {% endif %}
+    <p class="countdown countdown--night" id="countdown" data-seconds="{{ state.countdown_seconds }}">
+      {{ _('shell.timeup.countdown', seconds=state.countdown_seconds) }}
+    </p>
+  {% endif %}
+  <p>{{ _('shell.timeup.tomorrow') }}</p>
+{% endblock %}

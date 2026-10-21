@@ -313,6 +313,15 @@ def test_a_warning_fires_on_the_window_closing_too() -> None:
     at_1955 = dt.datetime(2026, 9, 21, 19, 55, 0)
     decision = evaluate(policy, state(), ActivityContext(), at_1955)
     assert decision.speak is not None
+    # The last window closing at eight is a night ending: the night's words (D-214).
+    assert decision.speak.event == "bedtime_5"
+
+    at_1355 = dt.datetime(2026, 9, 21, 13, 55, 0)
+    daytime = make_policy(
+        weekday_quota_min=600, weekday_windows=(TimeWindow.parse("10:00-14:00"),)
+    )
+    decision = evaluate(daytime, state(), ActivityContext(), at_1355)
+    assert decision.speak is not None
     assert decision.speak.event == "warn_5"
 
 
@@ -492,7 +501,8 @@ def test_after_the_last_window_the_day_really_is_over() -> None:
     decision = evaluate(policy, state(), ActivityContext(), at_2100)
 
     assert decision.reason_code == Reason.WINDOW_CLOSED
-    assert decision.speak is not None and decision.speak.event == "time_up"
+    # Nine in the evening: good night rather than "that is all for today" (D-214).
+    assert decision.speak is not None and decision.speak.event == "bedtime"
 
 
 def test_before_the_only_window_of_the_day_the_child_is_waiting_not_finished() -> None:

@@ -15,7 +15,7 @@ from typing import Any
 
 from biokids_core import repo
 from biokids_core.ipc import EventKind
-from biokids_core.policy import evaluate
+from biokids_core.policy import bedtime_in, evaluate
 from biokids_core.types import ActivityContext, Category, Decision, ShutdownOutcome
 from biokids_daemon.base import ChildRuntime, log
 from biokids_daemon.end_sequence import EndSequenceMixin
@@ -290,6 +290,46 @@ class OperationsMixin(EndSequenceMixin):
             remaining_minutes=decision.remaining_minutes,
             used_seconds=state.general_used_s,
             granted=seconds,
+        )
+        return {"child_id": child_id, "remaining_seconds": decision.remaining_seconds}
+
+    async def day_changed(self, child_id: int) -> dict[str, Any]:
+        """A parent made today special, or took it back (D-215).
+
+        The rules are re-read as for any change on the time screen, and then one
+        thing more, which a plain reload does not do: a child whose day is now
+        longer - "+60 today", tapped after the time ran out - is let back in,
+        as "+10 dk" does (D-144). A lock nobody lifts leaves the child at the
+        prompt of an account with no password (D-99). Only a lock the end of the
+        day put on: never one the DNS filter holds (D-172).
+
+        A day that got shorter needs nothing here: the next tick ends it, with
+        the warnings and the countdown it would always have had.
+        """
+        self.reload()
+        runtime = self._require(child_id)
+        reading = self.clock.read()
+        day = reading.wall.date()
+        state = self.ledger.state(child_id, day)
+        decision = evaluate(
+            runtime.policy, state, ActivityContext(session_active=True), reading.wall
+        )
+        if decision.allow and decision.remaining_seconds > 0:
+            ended = self.ledger.has_end_sequence(child_id, day)
+            self._clear_end_sequence(runtime, day, decision.remaining_seconds)
+            if ended and not runtime.locked_for_filter:
+                await self._unlock(runtime)
+        self.ledger.rearm_warnings(child_id, day, decision.remaining_seconds)
+        self.ledger.persist()
+        self.session.commit()
+        self.bus.publish(
+            EventKind.TICK,
+            child_id=child_id,
+            remaining_seconds=decision.remaining_seconds,
+            remaining_minutes=decision.remaining_minutes,
+            used_seconds=state.general_used_s,
+            online=self.watcher.presence(runtime.unix_user).active,
+            bedtime_seconds=bedtime_in(runtime.policy, state, reading.wall),
         )
         return {"child_id": child_id, "remaining_seconds": decision.remaining_seconds}
 

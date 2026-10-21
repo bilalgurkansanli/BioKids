@@ -137,6 +137,11 @@ nftables table carries a `launchers` chain that rejects a connection to a child'
 from any other uid (`docs/SECURITY.md` §5): a launcher answers as its child on
 `shell.sock`, so only that child's own processes may reach it.
 
+Its relay (`relay.py`) holds one subscription to the child's events: it carries
+spoken lines to the voice service, brings the launcher forward for a warning
+(D-160), and in an evening's last ten minutes lowers the screen's brightness in steps
+(`dimmer.py`, D-214), putting the child's own level back afterwards.
+
 ### `biokids-voice` (child user, user service)
 
 Receives `speak(event, persona, priority)` over a unix socket. Plays a parent's own
@@ -242,6 +247,9 @@ remaining = (daily_quota + earned_today) - general_used
             − (penalty active ⇒ 0)
 ```
 
+`daily_quota` is that day's own: the weekday or weekend quota, a day of the week's
+(D-176), or a special day's (§3.6, D-215).
+
 Persisted every 30 s and on every state change, so a hard power cut loses at most 30 s.
 
 Every second added to `general` is also filed under its local wall-clock hour
@@ -280,6 +288,25 @@ Parent-configurable end action: `lock` \| `logout` \| `poweroff` (default `power
 matching the owner's spec). Open applications receive a normal termination signal
 sequence so files can be saved.
 
+**At night it is bedtime** (D-214). When the day ends in the evening - its last
+window closes, or its time runs out, at 18:30 or later (or before 05:00) - the
+last ten minutes and the end screen are bedtime rather than a cold lock.
+`policy.bedtime_in(policy, state, now)` answers, purely, "how many seconds until a
+night ending at most ten minutes away", or None: it counts only what ends a day
+(the quota; the window, when no other opens later that day) and never a gap
+between two windows, a category limit or a break. The engine then picks the
+night's lines - `bedtime_10`, `bedtime_5`, `bedtime_1`, and `bedtime` for
+`time_up`, with Zio sleepy - and the daemon sends `bedtime` with the warning and
+`bedtime_seconds` with every tick. The launcher draws the warning and the end
+screen ("İyi geceler, {name}. Yarın görüşürüz.") in the night's colours, and its
+relay lowers the brightness in four steps to 60% of the child's own level
+(`biokids_shell/dimmer.py`), putting it back when the night ending moves away,
+when the launcher stops, or at the next session's start. The action, the reason,
+the remaining seconds, the countdown and the end action are exactly the
+daytime ones; a test runs the same day at 16:00 and at 19:50 and compares every
+command. The voice service says the daytime line where it has no night one, and
+a parent's own recording of the daytime line (D-174) wins over the night text.
+
 **Kapat**, the child's tile (D-100) or the parent's button on Today, takes the same
 steps without the countdown, and is answered before they are taken (D-209). The daemon
 decides, audits and answers at once; then a task the supervisor holds stops the apps
@@ -293,6 +320,34 @@ just before the machine goes. When the poweroff fails, the child's session is en
 or, failing that, locked - and the parent's poweroff locks every child's screen; either
 way an `alert` audit row reaches the parent (principle 3). A daemon stopped meanwhile
 cancels what is left rather than switching off later, during an upgrade.
+
+### 3.6 Special days
+
+A parent can make a day different (D-215): from Today with one tap - +30 minutes, +1
+or +2 hours, or no daily limit with the allowed hours still in force - for today
+only; or from the time screen for a range of dates ("Tatil: 20–31 Ocak") that follows
+the weekend's quota and hours, or a quota of its own. Rows of `day_override` (§5),
+read into `ChildPolicy.special_days`, and used where the engine picks a day's quota
+and windows (`quota_minutes(day)`, `windows(day)`), so everything downstream - the
+warnings, the end of the day, Today, history - follows without knowing about them.
+
+- Several may cover one day, and they combine: extra minutes add up, "no limit" and
+  "weekend rules" hold if any says so, and of two quotas of their own the later wins.
+  A tap replaces the day's earlier tap; it never replaces a range.
+- "Weekend rules" applies to weekdays; a Saturday inside a holiday keeps what the
+  parent set for Saturday (D-176). "No limit" is a quota of 1440 minutes, which a
+  calendar day cannot use up, and the ring is then drawn against the window the
+  child is in (`no_limit_ring_seconds`).
+- Granted and earned minutes still add on top; limits per kind of app still apply.
+- Never the past: a range is saved from today on (a start in the past moves to
+  today), and cancelling one half-way cuts it to yesterday rather than deleting it,
+  so history draws those days against the quota they were enforced with. At most 100
+  days.
+- The panel tells the daemon with `day_changed`, not a plain reload: besides
+  re-reading the rules, a child whose day just got longer is let back in, as "+10
+  dk" does (a lock nobody lifts is a child at a password prompt, D-99) - but only a
+  lock the end of the day put on, never the DNS filter's (D-172). A day that got
+  shorter needs nothing: the next tick ends it, with the usual countdown.
 
 ---
 
@@ -332,6 +387,11 @@ Precedence, highest first:
 Never build a user-facing sentence in the engine. This is what keeps Turkish and
 English honest.
 
+Which day's quota and windows apply is the policy's own question, special days
+included (§3.6). Beside `evaluate` sits `bedtime_in` (§3.5, D-214), which changes
+only the `speak` of a decision - the event and the face - and is read by nothing
+that enforces.
+
 ---
 
 ## 5. Data model (SQLite)
@@ -349,6 +409,8 @@ policy(child_id, weekday_quota_min, weekend_quota_min, windows_json, schedule_js
        end_action, break_*, earn_*, filter_mode, assistant_enabled, assistant_voice,
        voice_enabled, voice_events_json)
 category_limit(child_id, category, minutes)              -- set on the time screen (D-193)
+day_override(id, child_id, start_day, end_day, extra_minutes, quota_minutes, no_limit,
+             weekend_rules, label, created_at)          -- special days (D-215)
 app(slug, name_tr, name_en, exec_cmd, icon, default_category, min_age, max_age, kind, url)
 child_app(child_id, app_slug, enabled, category_override, position)
 filter_rule(id, child_id, kind /* allow|block */, pattern, source)
@@ -376,7 +438,7 @@ transaction; a failure is logged and tried again the next day. The windows are
 | Key | Default | Deletes |
 |---|---|---|
 | `activity_days` | 30 | `usage_event` (visited sites, ledger gaps), `ai_alert` and `usage_hour` (D-206) |
-| `usage_days` | 400 | `usage_tick` and `ledger_day` |
+| `usage_days` | 400 | `usage_tick`, `ledger_day`, and `day_override` rows that ended before (D-215) |
 | `audit_days` | 365 | `audit_log` |
 | `requests_days` | 90 | `access_request` |
 

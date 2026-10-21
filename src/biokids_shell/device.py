@@ -124,6 +124,31 @@ async def set_brightness(percent: int) -> bool:
     return False
 
 
+_XRANDR_BRIGHTNESS = re.compile(r"Brightness:\s*([0-9.]+)")
+
+
+async def get_brightness() -> int | None:
+    """The brightness as a percentage, read the way `set_brightness` writes it.
+
+    The backlight first, then the output's software brightness. None when
+    neither answers. Asked once, before the evening dims the screen (D-214), so
+    that what is put back the next time is the child's own level rather than a
+    guess.
+    """
+    out = await _output(["brightnessctl", "-m"])
+    if out is not None:
+        # "intel_backlight,backlight,1200,50%,2400": the field with the sign.
+        for field in out.splitlines()[0].split(",") if out.strip() else []:
+            if field.endswith("%") and field[:-1].isdigit():
+                return clamp(int(field[:-1]), low=20)
+    out = await _output(["xrandr", "--verbose", "--current"])
+    if out is not None:
+        match = _XRANDR_BRIGHTNESS.search(out)
+        if match is not None:
+            return clamp(round(float(match.group(1)) * 100), low=20)
+    return None
+
+
 async def _primary_output() -> str | None:
     """The connected display `xrandr` would change. None if X is not there."""
     if shutil.which("xrandr") is None:

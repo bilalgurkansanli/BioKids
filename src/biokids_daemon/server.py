@@ -246,6 +246,7 @@ class DaemonServer:
             Op.VOICE_SETUP: self._voice_setup,
             Op.DECIDE_REQUEST: self._decide_request,
             Op.UNLOCK_NOW: self._unlock_now,
+            Op.DAY_CHANGED: self._day_changed,
         }
 
     async def _ping(self, request: Request) -> Response:
@@ -316,6 +317,10 @@ class DaemonServer:
             child_id, str(request.args.get("actor", "parent"))
         )
         return Response(id=request.id, ok=ok, data={"unlocked": ok})
+
+    async def _day_changed(self, request: Request) -> Response:
+        data = await self.supervisor.day_changed(_int_arg(request, "child_id"))
+        return Response(id=request.id, ok=True, data=data)
 
     async def _start_timeout(self, request: Request) -> Response:
         child_id = _int_arg(request, "child_id")

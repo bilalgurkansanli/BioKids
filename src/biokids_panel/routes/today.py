@@ -20,6 +20,7 @@ from biokids_core.i18n import Translator
 from biokids_core.ipc import AsyncDaemonClient, Op
 from biokids_panel.common import View, _call_daemon, _daemon_status, see_other
 from biokids_panel.context import PanelContext
+from biokids_panel.routes import special_days
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ def today(view: View) -> Response:
         "today.html",
         children=children,
         daemon_up=reachable,
+        specials=special_lines(view, children),
         notice=_action_notice(view.request, view.tr, children),
         # Questions the assistant refused and the parent has not seen (D-165):
         # above the cards, like a pending request, because they are why a
@@ -117,11 +119,33 @@ def today_cards(view: View) -> Response:
     if blocked := view.guard():
         return blocked
     status, reachable = _daemon_status(view.ctx, view.session)
+    children = status.get("children", [])
     return view.render(
         "partials/child_cards.html",
-        children=status.get("children", []),
+        children=children,
         daemon_up=reachable,
+        specials=special_lines(view, children),
     )
+
+
+def special_lines(view: View, children: Sequence[dict[str, Any]]) -> dict[int, Any]:
+    """Today's special days per child (D-215), from the database.
+
+    Like the week card, a convenience a failure costs and Today survives: the
+    line goes, the cards and their buttons stay.
+    """
+    try:
+        return special_days.lines_for(
+            view.session,
+            [int(child.get("child_id", 0)) for child in children],
+            view.tr,
+            dt.date.today(),
+        )
+    except Exception:
+        log.exception("could not read today's special days; Today is shown without them")
+        with contextlib.suppress(Exception):
+            view.session.rollback()
+        return {}
 
 
 @router.get("/events")
@@ -240,6 +264,8 @@ def _action_notice(
         ("granted", "today.grant.done"),
         ("locked", "today.lock.done"),
         ("unlocked", "today.unlock.done"),
+        ("special", "special.done"),
+        ("special_removed", "special.removed"),
     ):
         raw = query.get(flag, "")
         if raw:

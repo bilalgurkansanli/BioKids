@@ -1174,6 +1174,60 @@ td.num { white-space: nowrap; font-variant-numeric: tabular-nums; }
   text-decoration: none;
 }
 
+/* Special days (D-215): "Bugün özel gün: +60 dk" on the card and the time
+ * screen, each with its own "Kaldır"; and the one-tap choices, closed on the
+ * card so it still reads in three seconds. */
+.special-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--bio-amber) 14%, var(--surface));
+}
+
+.special-line__text { font-weight: 600; }
+.special-line form { display: flex; }
+.special-line .btn { flex: 0 0 auto; }
+
+.special-list {
+  list-style: none;
+  margin: 0 0 var(--sp-3);
+  padding: 0;
+}
+
+.special-pick {
+  margin-top: var(--sp-2);
+}
+
+.special-pick > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--ink-soft);
+  min-height: var(--target-older);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.special-choices { margin: var(--sp-2) 0; }
+
+.special-pick__more {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target-older);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.special-days__sub {
+  margin: var(--sp-4) 0 var(--sp-1);
+  font-size: 1rem;
+}
+
 /* ------------------------------------------------------------------- guide */
 /* D-195: numbered steps that say when they are done - the phone-access card
  * and the wizard's closing screen. The number is drawn, not written, so the

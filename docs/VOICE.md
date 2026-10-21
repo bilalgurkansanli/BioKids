@@ -188,8 +188,15 @@ events are marked.
 | `break_start` | off | "Biraz mola verelim, beş dakika." |
 | `break_end` | off | "Mola bitti, devam edebilirsin." |
 | `earned` | on | "Aferin! On beş dakika kazandın." |
-| `bedtime` | off | "Geç oldu, artık yatma vakti." |
+| `bedtime_10`, `bedtime_5`, `bedtime_1` | on | "Akşam oldu Elif. 10 dakika sonra yatma vakti." |
+| `bedtime` | on | "İyi geceler, Elif. Yarın görüşürüz." |
 | `request_approved` | on | "Annen izin verdi, şimdi girebilirsin." |
+
+The `bedtime` lines are the evening's (D-214): when a day ends at night, the engine
+asks for `bedtime_10` instead of `warn_10` and `bedtime` instead of `time_up`, with Zio
+sleepy. A machine with no night line says the daytime one, and a parent's own
+recording of the daytime line (D-174) is played for the night one too: their voice
+matters more than the night's wording. `bedtime` is high priority, like `time_up`.
 
 Lines are **data, not code**: `/usr/share/biokids/voice/<locale>/<event>.txt`, one
 variant per line, chosen at random so it does not feel mechanical. The parent can edit
@@ -205,7 +212,8 @@ Default is `alternate`, so the child hears both.
 
 - **Never interrupt.** If a line is already playing, queue. Maximum queue depth 3;
   drop the oldest low-priority line rather than talking over anything.
-- **Priority:** `time_up` and `blocked` are high; everything else is normal.
+- **Priority:** `time_up`, its evening form `bedtime`, and `blocked` are high;
+  everything else is normal.
 - **Duck, don't mute.** Lower other audio to 30% via PipeWire for the duration, then
   restore. Muting a child's video abruptly is jarring.
 - **Respect quiet hours.** A parent-set window where the character card appears silently.

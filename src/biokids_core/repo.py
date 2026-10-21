@@ -19,7 +19,7 @@ from collections.abc import Sequence
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from biokids_core import search_filter
+from biokids_core import search_filter, special_days
 from biokids_core.db.models import (
     AccessRequest,
     AiAlert,
@@ -138,6 +138,7 @@ def load_policy(
             for day, entry in row.schedule.items()
             if "windows" in entry
         },
+        special_days=special_days.load(session, child.id),
         end_action=_enum_or(EndAction, row.end_action, EndAction.POWEROFF),
         warn_minutes=_warn_minutes(session),
         lock_countdown_seconds=row.lock_countdown_seconds,

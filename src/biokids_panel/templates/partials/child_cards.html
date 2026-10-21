@@ -28,7 +28,13 @@
 
 {% for child in children %}
   {% set remaining = child.remaining_seconds|int %}
-  {% set quota = child.quota_seconds|int + child.granted_seconds|default(0)|int %}
+  {# A day with no daily limit (D-215) is drawn against the window it is in;
+     the daemon sends that as `ring_seconds`, and nothing on other days. #}
+  {% if child.ring_seconds %}
+    {% set quota = child.ring_seconds|int %}
+  {% else %}
+    {% set quota = child.quota_seconds|int + child.granted_seconds|default(0)|int %}
+  {% endif %}
   {% set fraction = (remaining / quota) if quota > 0 else 0 %}
   {% set tone = 'danger' if fraction <= 0.10 else ('warn' if fraction <= 0.25 else 'ok') %}
 
@@ -105,6 +111,23 @@
       </div>
     </div>
 
+    {# Today's special days (D-215), read from the database: there with the
+       daemon down, each with its own way back. #}
+    {% for special in (specials|default({})).get(child.child_id, []) %}
+      <div class="special-line">
+        <span class="special-line__text">
+          <span aria-hidden="true">🎉</span> {{ special.text }}
+        </span>
+        <form method="post" action="/children/{{ child.child_id }}/special/{{ special.id }}/cancel"
+              data-confirm="{{ _('special.remove.confirm', name=child.display_name) }}"
+              onsubmit="return confirm(this.dataset.confirm)">
+          <input type="hidden" name="csrf_token" value="{{ csrf }}">
+          <input type="hidden" name="next" value="/today">
+          <button class="btn btn--quiet" type="submit">{{ _('special.remove') }}</button>
+        </form>
+      </div>
+    {% endfor %}
+
     {% if child.managed and not child.unknown %}
     <div class="actions">
       {% for extra in (10, 30) %}
@@ -130,6 +153,21 @@
         <button class="btn btn--danger" type="submit">{{ _('today.poweroff') }}</button>
       </form>
     </div>
+    {#
+      "Bugün özel gün" (D-215): one tap for today only, under the everyday
+      buttons and closed, so the card still reads in three seconds. A holiday
+      of several days is set on the time screen, one tap away.
+    #}
+    <details class="special-pick">
+      <summary><span aria-hidden="true">🎉</span> {{ _('special.today.title') }}</summary>
+      <p class="help">{{ _('special.today.help') }}</p>
+      {% with special_child=child.child_id, special_next="/today" %}
+        {% include "partials/special_choices.html" %}
+      {% endwith %}
+      <a class="special-pick__more" href="/children/{{ child.child_id }}/time#special">
+        {{ _('special.range.link') }} →
+      </a>
+    </details>
     {% elif not child.managed %}
     <p class="muted small">{{ _('time.enabled.help') }}</p>
     <a class="btn" href="/children/{{ child.child_id }}/time">{{ _('time.title') }}</a>

@@ -347,6 +347,8 @@ svg {
 .full--calm { background: color-mix(in srgb, var(--bio-teal) 10%, var(--bg)); }
 .full--warm { background: color-mix(in srgb, var(--bio-amber) 14%, var(--bg)); }
 .full--night { background: color-mix(in srgb, var(--bio-indigo) 12%, var(--bg)); }
+/* Good night (D-214): the countdown is the same; it is not red. */
+.full--night .countdown--night { color: var(--bio-indigo); }
 
 .big-btn {
   /* A link drawn as a button ("Geri dön") centres its words as a <button>
@@ -474,6 +476,17 @@ svg {
 .notice[data-level="warn"] { --notice-accent: var(--warn); --notice-glow: #FFE6C2; }
 .notice[data-level="danger"] { --notice-accent: var(--danger); --notice-glow: #FFDDD7; }
 
+/* The evening's last ten minutes (D-214): the same pause, in the good-night
+ * screen's colours. Calm whatever the minute - no amber, no red, no pulse -
+ * because what is coming is bedtime, not an alarm. */
+.notice[data-tone="night"] {
+  --notice-accent: var(--bio-indigo);
+  --notice-glow: color-mix(in srgb, var(--bio-indigo) 22%, var(--bg));
+  background:
+    radial-gradient(circle at 50% 36%, var(--notice-glow) 0%, transparent 64%),
+    color-mix(in srgb, var(--bio-indigo) 12%, var(--bg));
+}
+
 .notice__stage {
   display: flex;
   flex-direction: column;
@@ -578,7 +591,9 @@ svg {
 
 /* The last minute pulses, like the ring in the header. Its own keyframes,
  * because `pulse` animates `transform` and would undo the rotation. */
-.notice[data-level="danger"] .notice__ring { animation: notice-pulse 1.2s ease-in-out infinite; }
+.notice[data-level="danger"]:not([data-tone="night"]) .notice__ring {
+  animation: notice-pulse 1.2s ease-in-out infinite;
+}
 
 @keyframes notice-pulse {
   0%, 100% { transform: rotate(-90deg) scale(1); }

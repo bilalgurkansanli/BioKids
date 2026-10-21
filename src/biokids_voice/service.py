@@ -70,7 +70,7 @@ EXPRESSIONS: Final = ("neutral", "happy", "concerned", "sleepy")
 PRIORITY_HIGH: Final = "high"
 PRIORITY_NORMAL: Final = "normal"
 
-HIGH_PRIORITY_EVENTS: Final = frozenset({"time_up", "blocked"})
+HIGH_PRIORITY_EVENTS: Final = frozenset({"time_up", "bedtime", "blocked"})
 """VOICE.md §6 makes urgency a property of the event, not of the caller.
 
 A daemon that forgets the field must not be able to leave the last line of the
@@ -81,9 +81,30 @@ EXPRESSION_BY_EVENT: Final[dict[str, str]] = {
     "earned": "happy",
     "blocked": "concerned",
     "bedtime": "sleepy",
+    "bedtime_10": "sleepy",
+    "bedtime_5": "sleepy",
+    "bedtime_1": "sleepy",
 }
 """The face VOICE.md §7 asks for when the caller does not name one. Warnings —
 and everything not listed — stay `neutral`."""
+
+NIGHT_PREFIX: Final = "bedtime"
+
+
+def daytime_event(event: str) -> str | None:
+    """The daytime line a night line stands in for (D-214), or None.
+
+    `bedtime` is the night's `time_up`, and `bedtime_10` its `warn_10`. A
+    parent who recorded the daytime one in their own voice (D-174) is heard at
+    night too - their voice matters more than the night's wording - and a
+    machine with no night lines says the daytime ones rather than nothing.
+    """
+    if event == NIGHT_PREFIX:
+        return "time_up"
+    if event.startswith(f"{NIGHT_PREFIX}_"):
+        return f"warn_{event[len(NIGHT_PREFIX) + 1 :]}"
+    return None
+
 
 STATUS_QUEUED: Final = "queued"
 STATUS_DROPPED: Final = "dropped"
@@ -284,10 +305,15 @@ class VoiceService:
         variables = args.get("vars")
         # No session: this process cannot open the database (see lines.py). A
         # family's own wording reaches it through the installed text files.
-        recorded = recorded_voice.lookup(self._config.paths.recorded_voice_dir, locale, event)
-        line = self._lines.render(
-            event, locale, variables if isinstance(variables, dict) else {}
-        )
+        recordings = self._config.paths.recorded_voice_dir
+        values = variables if isinstance(variables, dict) else {}
+        daytime = daytime_event(event)
+        recorded = recorded_voice.lookup(recordings, locale, event)
+        if recorded is None and daytime is not None:
+            recorded = recorded_voice.lookup(recordings, locale, daytime)
+        line = self._lines.render(event, locale, values)
+        if line is None and daytime is not None:
+            line = self._lines.render(daytime, locale, values)
         if recorded is not None and self._audio:
             # A parent said this one themselves (D-174). Their sentence is what
             # the card shows, and their face - Zio or Sio - is the one on it.

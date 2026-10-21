@@ -1,0 +1,5 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}
+# Akşam günün sonu (D-214). Ekranda yazan: "İyi geceler, {name}. Yarın görüşürüz."
+İyi geceler, {name}. Yarın görüşürüz.
+İyi geceler, {name}. Tatlı rüyalar, yarın görüşürüz.
+İyi geceler. Yarın görüşürüz.

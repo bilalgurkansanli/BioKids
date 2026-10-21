@@ -248,6 +248,15 @@ msgstr "{seconds} saniye"
 msgid "shell.timeup.tomorrow"
 msgstr "Yarın görüşürüz."
 
+msgid "shell.bedtime.title"
+msgstr "İyi geceler, {name}."
+
+msgid "shell.bedtime.warning"
+msgstr "Yatma vakti yaklaşıyor. {minutes} dakikan kaldı."
+
+msgid "shell.bedtime.line"
+msgstr "İyi geceler. Yarın görüşürüz."
+
 msgid "shell.locked.title"
 msgstr "Şimdilik ara veriyoruz"
 
@@ -497,6 +506,114 @@ msgstr "Saatini bekliyor"
 msgid "today.window_closed"
 msgstr "kullanım saati dışında"
 
+msgid "special.title"
+msgstr "Özel günler"
+
+msgid "special.help"
+msgstr "Bayram, doğum günü, tatil: bu günlerde kurallar farklı olabilir. Oyun gibi türlere koyduğunuz sınırlar aynen geçerli."
+
+msgid "special.none"
+msgstr "Şu an özel gün yok."
+
+msgid "special.today.title"
+msgstr "Bugün özel bir gün mü?"
+
+msgid "special.today.help"
+msgstr "Yalnızca bugün için; yarın her şey her zamanki gibi. İkinci seçim ilkinin yerine geçer."
+
+msgid "special.choice.plus"
+msgstr "+{duration}"
+
+msgid "special.choice.no_limit"
+msgstr "Süre sınırı yok"
+
+msgid "special.today.extra"
+msgstr "Bugün özel gün: +{duration}"
+
+msgid "special.today.no_limit"
+msgstr "Bugün özel gün: süre sınırı yok, izinli saatler geçerli"
+
+msgid "special.when.today"
+msgstr "Bugün"
+
+msgid "special.when.range"
+msgstr "{start} – {end}"
+
+msgid "special.when.labelled"
+msgstr "{label} ({dates})"
+
+msgid "special.range.weekend"
+msgstr "{when}: hafta sonu kuralları"
+
+msgid "special.range.no_limit"
+msgstr "{when}: süre sınırı yok"
+
+msgid "special.range.quota"
+msgstr "{when}: günde {duration}"
+
+msgid "special.remove"
+msgstr "Kaldır"
+
+msgid "special.remove.confirm"
+msgstr "{name} için bu özel gün kaldırılsın mı? Bugünden başlayarak her zamanki kurallar geçerli olur; bugünkü süre dolduysa ekran birazdan kapanır."
+
+msgid "special.done"
+msgstr "{name} için bugün özel gün."
+
+msgid "special.removed"
+msgstr "{name} için özel gün kaldırıldı. Her zamanki kurallar geçerli."
+
+msgid "special.range.link"
+msgstr "Tatil gibi birkaç gün için"
+
+msgid "special.range.title"
+msgstr "Birkaç gün için: tatil, bayram"
+
+msgid "special.range.help"
+msgstr "İlk ve son gün dahil. Geçmiş günler değişmez."
+
+msgid "special.range.start"
+msgstr "İlk gün"
+
+msgid "special.range.end"
+msgstr "Son gün"
+
+msgid "special.range.label"
+msgstr "Adı (isteğe bağlı)"
+
+msgid "special.range.label.example"
+msgstr "Tatil"
+
+msgid "special.range.rule"
+msgstr "Bu günlerde"
+
+msgid "special.range.rule.weekend"
+msgstr "Hafta sonu gibi"
+
+msgid "special.range.rule.weekend.help"
+msgstr "Hafta sonunun süresi ve saatleri geçerli olur."
+
+msgid "special.range.rule.quota"
+msgstr "Günde şu kadar dakika"
+
+msgid "special.range.add"
+msgstr "Ekle"
+
+msgid "special.error.order"
+msgstr "Son gün, ilk günden önce olamaz."
+
+msgid "special.error.past"
+msgstr "Bu günler geçmişte kaldı. Bugünden sonraki günleri seçin."
+
+msgid "special.error.too_long"
+msgstr "En fazla 100 gün seçilebilir."
+
+msgid "special.error.dates"
+msgstr "İlk ve son günü seçin."
+
+msgid "special.error.minutes"
+msgstr "Günde kaç dakika olacağını yazın."
+
 msgid "today.unknown"
 msgstr "durum bilinmiyor"
 
@@ -669,6 +786,12 @@ msgstr "Kural değiştirildi"
 
 msgid "audit.action.time_granted"
 msgstr "Süre eklendi"
+
+msgid "audit.action.special_day_set"
+msgstr "Özel gün eklendi"
+
+msgid "audit.action.special_day_removed"
+msgstr "Özel gün kaldırıldı"
 
 msgid "audit.action.session_unlocked"
 msgstr "Oturum kilidi açıldı"
