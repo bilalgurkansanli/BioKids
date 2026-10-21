@@ -137,6 +137,16 @@ nftables table carries a `launchers` chain that rejects a connection to a child'
 from any other uid (`docs/SECURITY.md` §5): a launcher answers as its child on
 `shell.sock`, so only that child's own processes may reach it.
 
+Two of its pages are the child's own things. **Çıkartma albümüm** (D-211,
+`biokids_core.album`): the daemon's shell state carries `album` - today's date as the
+ledger counts it, the days with at least 15 minutes of learning (`usage_tick` for the
+past, the ledger, unwritten seconds included, for today) and today's seconds - and the
+launcher works out each date's sticker from the date. Nothing is stored; the one thing
+the launcher keeps is the date it last celebrated a sticker, in the child's home. A
+sticker is never minutes. **Resimlerim** (D-212, `biokids_shell.pictures`): the
+launcher, running as the child, reads the child's picture folders and serves the
+pictures to its own pages only; nothing about them reaches the daemon or the panel.
+
 ### `biokids-voice` (child user, user service)
 
 Receives `speak(event, persona, priority)` over a unix socket. Plays a parent's own

@@ -1,0 +1,29 @@
+{#
+  Today's sticker, celebrated once (D-211). Zio, happy, the sticker and one
+  sentence, which Zio also says - decided by the server, once a day for this
+  child, whichever page or poll comes first (ShellState.take_cheer).
+
+  Drawn by the server when the page that takes it is drawn, so it shows with
+  scripts off; its ✕ is then a link back to the same page, where it is gone.
+  When the sticker is earned while an app is in front, album.js asks as the
+  launcher comes back and fills this same box in. Never in the way: it sits
+  above the footer, clear of the tiles' first row, and goes by itself.
+#}
+<aside class="cheer" id="cheer" role="status" aria-live="polite"
+       {% if not cheer %}hidden{% endif %}>
+  <div class="cheer__zio" aria-hidden="true">
+    {{ characters.zio|expression('happy')|safe if characters.zio else '' }}
+  </div>
+  <div class="cheer__bubble">
+    <span class="cheer__sticker" id="cheer-sticker" aria-hidden="true">{{ cheer.sticker if cheer else '' }}</span>
+    <p class="cheer__line" id="cheer-line">{{ cheer.text if cheer else '' }}</p>
+    {% if not on_album|default(false) %}
+      <a class="cheer__go" href="/album"
+         {% if young %}data-speak="{{ _('album.cheer.open') }}"{% endif %}>
+        <span aria-hidden="true">📖</span> {{ _('album.cheer.open') }}
+      </a>
+    {% endif %}
+  </div>
+  <a class="cheer__close" id="cheer-close" href="{{ request.url.path }}"
+     aria-label="{{ _('album.cheer.close') }}" title="{{ _('album.cheer.close') }}">✕</a>
+</aside>

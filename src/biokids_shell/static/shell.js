@@ -218,6 +218,10 @@
           refused(slug, entry, (result && result.reason) || "");
         } else if (result.builtin === "shutdown") {
           window.location.href = "/shutdown";
+        } else if (result.page) {
+          /* A tile that is a page of the launcher's own (D-212). */
+          endOpening(slug, entry);
+          window.location.href = result.page;
         } else if (result.builtin) {
           endOpening(slug, entry);
         } else if (result.tracked) {
@@ -285,7 +289,10 @@
         return response.json();
       })
       .then(function (result) {
-        if (result && result.ok) {
+        if (result && result.ok && result.page) {
+          launched = true;
+          window.location.replace(result.page);
+        } else if (result && result.ok) {
           /* The app is starting in its own window. Put the launcher back so the
            * child is never left looking at a loading screen that has finished.
            * Straight away: the app's window covers this one at once, and

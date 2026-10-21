@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}{{ _('album.title') }}{% endblock %}
+
+{#
+  Çıkartma albümüm (D-211). Top to bottom: this week, Monday to Sunday, with a
+  sticker on each day that earned one and today's circle filling up; the week
+  in a sentence or two a parent can read aloud; the stickers, newest first, big;
+  and the child's own tiles that earn one. Everything is drawn here and reads
+  with scripts off. 4-7 hear a sticker's name, and the sentences, on a tap
+  (data-speak, D-175).
+#}
+{% block body %}
+{% set said = words.week ~ ' ' ~ words.today %}
+<div class="screen album" data-band="{{ band }}">
+  <header class="head">
+    <a class="big-btn big-btn--quiet assistant__home" href="/"
+       {% if young %}data-speak="{{ _('assistant.home') }}"{% endif %}>
+      <span aria-hidden="true">🏠</span> {{ _('assistant.home') }}
+    </a>
+    <h1 class="album__title" {% if young %}data-speak="{{ _('album.title') }}"{% endif %}>
+      <span aria-hidden="true">📖</span> {{ _('album.title') }}
+    </h1>
+    <span class="album-chip album-chip--still" aria-label="{{ _('album.chip', count=album.count) }}">
+      <span aria-hidden="true">⭐</span>
+      <span class="album-chip__count" aria-hidden="true">{{ album.count }}</span>
+    </span>
+  </header>
+
+  <main class="album__main">
+    <section class="album-week" aria-labelledby="album-week-title">
+      <h2 class="album__heading" id="album-week-title">{{ _('album.week.title') }}</h2>
+      <ol class="album-week__days">
+        {% for wd in album.week %}
+          {% set day_name = _('day.' ~ wd.day.weekday()) %}
+          {% if wd.sticker %}
+            {% set label = day_name ~ ': ' ~ _(wd.sticker.key) %}
+            {% set kind = 'earned' %}
+          {% elif wd.today %}
+            {% set label = _('album.day.progress', day=day_name, done=(album.today_seconds // 60), goal=album.goal_minutes) %}
+            {% set kind = 'today' %}
+          {% elif wd.future %}
+            {% set label = _('album.day.later', day=day_name) %}
+            {% set kind = 'later' %}
+          {% else %}
+            {% set label = _('album.day.none', day=day_name) %}
+            {% set kind = 'none' %}
+          {% endif %}
+          <li class="album-day album-day--{{ kind }}{{ ' is-today' if wd.today else '' }}">
+            <span class="album-day__name" aria-hidden="true">{{ _('day.short.' ~ wd.day.weekday()) }}</span>
+            <span class="album-day__spot" role="img" aria-label="{{ label }}"
+                  {% if kind == 'today' %}style="--progress: {{ (album.progress * 100)|round|int }}%"{% endif %}
+                  {% if young and wd.sticker %}data-speak="{{ _(wd.sticker.key) }}"{% endif %}>
+              {# Today's sticker is a surprise until it is earned. #}
+              {% if wd.sticker %}{{ wd.sticker.emoji }}{% elif kind == 'today' %}<span class="album-day__surprise" aria-hidden="true">?</span>{% endif %}
+            </span>
+          </li>
+        {% endfor %}
+      </ol>
+      <p class="album-week__words" {% if young %}data-speak="{{ said }}"{% endif %}>
+        <strong>{{ words.week }}</strong> {{ words.today }}{% if young %}<span class="daily__ear" aria-hidden="true"> 🔊</span>{% endif %}
+      </p>
+    </section>
+
+    <section class="album-collection" aria-labelledby="album-collection-title">
+      <h2 class="album__heading" id="album-collection-title">{{ _('album.collection') }}</h2>
+      {% if album.earned %}
+        <ul class="album-grid">
+          {% for item in album.earned %}
+            {% set name = _(item.sticker.key) %}
+            <li class="sticker{{ ' is-new' if item.day == album.today else '' }}"
+                {% if young %}data-speak="{{ name }}"{% endif %}>
+              <span class="sticker__emoji" aria-hidden="true">{{ item.sticker.emoji }}</span>
+              <span class="sticker__name">{{ name }}</span>
+              <span class="sticker__day">
+                {% if item.day == album.today %}{{ _('album.day.today') }}{% else %}{{ item.day.strftime('%d.%m.%Y') }}{% endif %}
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="album-empty" {% if young %}data-speak="{{ _('album.empty.title') }} {{ _('album.empty.body', minutes=album.goal_minutes) }}"{% endif %}>
+          {% if characters.zio %}
+            <div class="album-empty__zio" aria-hidden="true">{{ characters.zio|expression('happy')|safe }}</div>
+          {% endif %}
+          <div>
+            <p class="album-empty__title">{{ _('album.empty.title') }}</p>
+            <p class="album-empty__body">{{ _('album.empty.body', minutes=album.goal_minutes) }}</p>
+          </div>
+        </div>
+      {% endif %}
+    </section>
+
+    {% if earners %}
+      <section class="album-earners" aria-labelledby="album-earners-title">
+        <h2 class="album__heading" id="album-earners-title">{{ _('album.earners') }}</h2>
+        <ul class="album-earners__list">
+          {% for tile in earners %}
+            <li>
+              <a class="album-earner" href="/launch/{{ tile.slug }}"
+                 {% if young %}data-speak="{{ tile.name }}"{% endif %}>
+                <span class="album-earner__icon" aria-hidden="true">{{ tile.icon|icon }}</span>
+                <span>{{ tile.name }}</span>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+  </main>
+  {% include "_cheer.html" %}
+</div>
+{% endblock %}

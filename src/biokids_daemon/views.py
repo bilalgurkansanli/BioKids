@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from biokids_core import repo
+from biokids_core import album, repo
 from biokids_core.policy import evaluate, general_allowance_seconds
-from biokids_core.types import ActivityContext
+from biokids_core.types import ActivityContext, Category
 from biokids_daemon.access_requests import AccessRequestsMixin
 from biokids_daemon.filtering import FilteringMixin
 
@@ -173,4 +173,10 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
             # The parent's own search words (D-202), which the launcher adds to
             # the default list it serves the browser extension.
             "search_words": repo.search_words(self.session),
+            # The sticker album (D-211): the days that earned one, and today's
+            # learning so far, from the ledger, which knows the seconds it has
+            # not written yet. Never minutes: nothing here changes the time.
+            "album": album.for_shell(
+                self.session, child_id, day, state.category_used_s.get(Category.LEARNING, 0)
+            ),
         }

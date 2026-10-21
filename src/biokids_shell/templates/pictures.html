@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ _('pictures.title') }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="/static/pictures.css?v={{ asset_version }}">
+{% endblock %}
+
+{#
+  Resimlerim (D-212): the pictures this child made, newest first, as big
+  thumbnails; a tap opens one as big as the screen. Every picture is a link,
+  so it all works without a script. The pictures are the child's: served from
+  their own folders by their own launcher, sent nowhere, and never shown on
+  the parent's panel - which the note at the bottom tells them.
+#}
+{% block body %}
+<div class="screen pictures" data-band="{{ band }}">
+  <header class="head">
+    <a class="big-btn big-btn--quiet assistant__home" href="/"
+       {% if young %}data-speak="{{ _('assistant.home') }}"{% endif %}>
+      <span aria-hidden="true">🏠</span> {{ _('assistant.home') }}
+    </a>
+    <h1 class="pictures__title" {% if young %}data-speak="{{ _('pictures.title') }}"{% endif %}>
+      <span aria-hidden="true">🏞️</span> {{ _('pictures.title') }}
+    </h1>
+  </header>
+
+  <main class="pictures__main">
+    {% if shown %}
+      <ul class="pic-grid">
+        {% for pic in shown %}
+          {% set when = pic.day.strftime('%d.%m.%Y') %}
+          <li>
+            <a class="pic" href="/pictures/view/{{ pic.folder|urlencode }}/{{ pic.name|urlencode }}"
+               aria-label="{{ _('pictures.open', date=when) }}">
+              <img class="pic__img" src="/pictures/file/{{ pic.folder|urlencode }}/{{ pic.name|urlencode }}"
+                   alt="" loading="lazy" decoding="async">
+              {% if not young %}<span class="pic__day" aria-hidden="true">{{ when }}</span>{% endif %}
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="full__inner pictures-empty" {% if young %}data-speak-on-load{% endif %}>
+        {% if characters.zio %}
+          <div class="character" aria-hidden="true">{{ characters.zio|expression('happy')|safe }}</div>
+        {% endif %}
+        <h1 class="pictures-empty__title">{{ _('pictures.empty.title') }}</h1>
+        <p class="pictures-empty__body">{{ _('pictures.empty.body') }}</p>
+        {% if paint %}
+          <a class="big-btn" href="/launch/{{ paint.slug }}"
+             {% if young %}data-speak="{{ paint.name }}"{% endif %}>
+            <span aria-hidden="true">{{ paint.icon|icon }}</span>&nbsp;{{ paint.name }}
+          </a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </main>
+
+  <footer class="pictures__foot">
+    <p class="pictures__note"><span aria-hidden="true">🔒</span> {{ _('pictures.private') }}</p>
+  </footer>
+</div>
+{% endblock %}

@@ -1663,6 +1663,297 @@ msgstr "Aç: {app}"
 msgid "daily.dismiss"
 msgstr "Yarına kadar kapat"
 
+# D-211: the sticker album
+msgid "album.title"
+msgstr "Çıkartma albümüm"
+
+msgid "album.chip"
+msgstr "Çıkartma albümüm: {count} çıkartma"
+
+msgid "album.week.title"
+msgstr "Bu hafta"
+
+msgid "album.week.none"
+msgstr "Bu hafta henüz çıkartma yok."
+
+msgid "album.week.one"
+msgstr "Bu hafta bir çıkartma kazandın!"
+
+msgid "album.week.many"
+msgstr "Bu hafta {count} çıkartma kazandın!"
+
+msgid "album.today.earned"
+msgstr "Bugünün çıkartmasını aldın: {sticker}. Yarın yenisi seni bekliyor."
+
+msgid "album.today.start"
+msgstr "Bugün öğrenme oyunlarında {minutes} dakika geçirirsen bir çıkartma kazanırsın."
+
+msgid "album.today.left"
+msgstr "{minutes} dakika daha öğrenme oyunu oynarsan bugünün çıkartmasını kazanırsın."
+
+msgid "album.today.left_one"
+msgstr "Bir dakika daha öğrenme oyunu oynarsan bugünün çıkartmasını kazanırsın."
+
+msgid "album.day.today"
+msgstr "Bugün"
+
+msgid "album.day.progress"
+msgstr "{day}: {goal} dakikanın {done} dakikası"
+
+msgid "album.day.later"
+msgstr "{day}: henüz gelmedi"
+
+msgid "album.day.none"
+msgstr "{day}: çıkartma yok"
+
+msgid "album.collection"
+msgstr "Çıkartmalarım"
+
+msgid "album.empty.title"
+msgstr "Albümün seni bekliyor!"
+
+msgid "album.empty.body"
+msgstr "Öğrenme oyunlarında {minutes} dakika geçirdiğin her gün buraya yeni bir çıkartma gelir."
+
+msgid "album.earners"
+msgstr "Çıkartma kazandıran oyunların"
+
+msgid "album.cheer"
+msgstr "Yaşasın! Bugünün çıkartmasını kazandın: {sticker}!"
+
+msgid "album.cheer.open"
+msgstr "Albümüme bak"
+
+msgid "album.cheer.close"
+msgstr "Kapat"
+
+msgid "insights.h.stickers"
+msgstr "Albümüne {count} çıkartma ekledi: öğrenme uygulamalarında en az {minutes} dakika geçen her gün için bir tane."
+
+# D-211: the stickers' names, which Zio says when one is earned
+msgid "album.sticker.fox"
+msgstr "Tilki"
+
+msgid "album.sticker.panda"
+msgstr "Panda"
+
+msgid "album.sticker.lion"
+msgstr "Aslan"
+
+msgid "album.sticker.koala"
+msgstr "Koala"
+
+msgid "album.sticker.giraffe"
+msgstr "Zürafa"
+
+msgid "album.sticker.elephant"
+msgstr "Fil"
+
+msgid "album.sticker.hedgehog"
+msgstr "Kirpi"
+
+msgid "album.sticker.owl"
+msgstr "Baykuş"
+
+msgid "album.sticker.dolphin"
+msgstr "Yunus"
+
+msgid "album.sticker.whale"
+msgstr "Balina"
+
+msgid "album.sticker.octopus"
+msgstr "Ahtapot"
+
+msgid "album.sticker.crab"
+msgstr "Yengeç"
+
+msgid "album.sticker.fish"
+msgstr "Renkli balık"
+
+msgid "album.sticker.seal"
+msgstr "Fok"
+
+msgid "album.sticker.seashell"
+msgstr "Deniz kabuğu"
+
+msgid "album.sticker.turtle"
+msgstr "Kaplumbağa"
+
+msgid "album.sticker.rocket"
+msgstr "Roket"
+
+msgid "album.sticker.planet"
+msgstr "Gezegen"
+
+msgid "album.sticker.moon"
+msgstr "Ay"
+
+msgid "album.sticker.star"
+msgstr "Parlayan yıldız"
+
+msgid "album.sticker.comet"
+msgstr "Kuyruklu yıldız"
+
+msgid "album.sticker.rainbow"
+msgstr "Gökkuşağı"
+
+msgid "album.sticker.sun"
+msgstr "Güneş"
+
+msgid "album.sticker.saucer"
+msgstr "Uçan daire"
+
+msgid "album.sticker.sunflower"
+msgstr "Ayçiçeği"
+
+msgid "album.sticker.tulip"
+msgstr "Lale"
+
+msgid "album.sticker.mushroom"
+msgstr "Mantar"
+
+msgid "album.sticker.cactus"
+msgstr "Kaktüs"
+
+msgid "album.sticker.clover"
+msgstr "Yonca"
+
+msgid "album.sticker.tree"
+msgstr "Ağaç"
+
+msgid "album.sticker.ladybird"
+msgstr "Uğur böceği"
+
+msgid "album.sticker.butterfly"
+msgstr "Kelebek"
+
+msgid "album.sticker.apple"
+msgstr "Elma"
+
+msgid "album.sticker.strawberry"
+msgstr "Çilek"
+
+msgid "album.sticker.watermelon"
+msgstr "Karpuz"
+
+msgid "album.sticker.banana"
+msgstr "Muz"
+
+msgid "album.sticker.cherries"
+msgstr "Kiraz"
+
+msgid "album.sticker.carrot"
+msgstr "Havuç"
+
+msgid "album.sticker.cupcake"
+msgstr "Kek"
+
+msgid "album.sticker.lemon"
+msgstr "Limon"
+
+msgid "album.sticker.train"
+msgstr "Tren"
+
+msgid "album.sticker.bicycle"
+msgstr "Bisiklet"
+
+msgid "album.sticker.sailboat"
+msgstr "Yelkenli"
+
+msgid "album.sticker.helicopter"
+msgstr "Helikopter"
+
+msgid "album.sticker.fire-engine"
+msgstr "İtfaiye aracı"
+
+msgid "album.sticker.tractor"
+msgstr "Traktör"
+
+msgid "album.sticker.plane"
+msgstr "Uçak"
+
+msgid "album.sticker.bus"
+msgstr "Otobüs"
+
+msgid "album.sticker.balloon"
+msgstr "Balon"
+
+msgid "album.sticker.kite"
+msgstr "Uçurtma"
+
+msgid "album.sticker.crayon"
+msgstr "Pastel boya"
+
+msgid "album.sticker.drum"
+msgstr "Davul"
+
+msgid "album.sticker.guitar"
+msgstr "Gitar"
+
+msgid "album.sticker.teddy"
+msgstr "Oyuncak ayı"
+
+msgid "album.sticker.ball"
+msgstr "Top"
+
+msgid "album.sticker.trumpet"
+msgstr "Trompet"
+
+msgid "album.sticker.unicorn"
+msgstr "Tek boynuzlu at"
+
+msgid "album.sticker.wand"
+msgstr "Sihirli değnek"
+
+msgid "album.sticker.dinosaur"
+msgstr "Dinozor"
+
+msgid "album.sticker.crown"
+msgstr "Taç"
+
+msgid "album.sticker.castle"
+msgstr "Şato"
+
+msgid "album.sticker.present"
+msgstr "Hediye"
+
+msgid "album.sticker.trophy"
+msgstr "Kupa"
+
+msgid "album.sticker.sparkles"
+msgstr "Pırıltı"
+
+# D-212: Resimlerim, the child's own pictures
+msgid "pictures.title"
+msgstr "Resimlerim"
+
+msgid "pictures.open"
+msgstr "{date} tarihli resmi aç"
+
+msgid "pictures.alt"
+msgstr "{date} tarihli resim"
+
+msgid "pictures.newer"
+msgstr "Daha yeni resim"
+
+msgid "pictures.older"
+msgstr "Daha eski resim"
+
+msgid "pictures.close"
+msgstr "Kapat"
+
+msgid "pictures.count"
+msgstr "{number} / {total}"
+
+msgid "pictures.empty.title"
+msgstr "Henüz resim yok"
+
+msgid "pictures.empty.body"
+msgstr "Boya'da bir resim yapınca burada görünecek."
+
+msgid "pictures.private"
+msgstr "Resimlerin bu bilgisayarda kalır, kimseye gönderilmez."
+
 # D-178
 msgid "assistant.knowledge.on"
 msgstr "Cevaplarını bu bilgisayardaki Vikipedi özetleriyle kontrol ediyor; internete bağlanmıyor."

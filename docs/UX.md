@@ -57,7 +57,7 @@ that palette reads as cheap to parents, and parents are half the audience.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  [avatar] Merhaba Elif     ( 🔉 ━━━●━━ 🔊 )  [Zio]   ◔ 42 dk  │
+│  [avatar] Merhaba Elif [⭐ 7] ( 🔉 ━━━●━━ 🔊 )  [Zio] ◔ 42 dk │  ← ⭐ §2.8
 ├──────────────────────────────────────────────────────────────┤
 │ (🦒) [Günün hayvanı: Zürafa] Zürafa, dünyanın…  🎁 🐾  [✕]   │  ← §2.7
 │                                                              │
@@ -207,6 +207,10 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
     bilgisayar açık kalıyor. Senin oturumunu kapatıyorum." Nobody is named. When the
     launcher cannot reach BioKids: "Bilgisayar kapanamadı. Bir büyüğüne söyle." and a
     way back. Never the home screen as if nothing had been pressed.
+11. **Çıkartma albümüm** (D-211) — the stickers the child earned by learning, this
+    week's progress, and their own tiles that earn one (§2.8).
+12. **Resimlerim** (D-212) — the pictures the child made, as a grid and one at a time
+    (§2.9). A built-in tile a parent ticks like any other.
 
 ### 2.6 The app bar
 
@@ -302,6 +306,75 @@ that changes every Monday.
 - The theme's colour is a tint of a brand token; the words stay `--ink`.
 - What it says is written and checked by people, never generated, and is in
   `biokids_core/data/daily/daily.toml` with the rules for adding to it.
+- Fifteen themes, one a week, so a theme comes back every fifteen weeks: the first
+  twelve of D-203, then **İnternette güvenlik** (what to do and whom to tell, never
+  what could go wrong), **Duygularımız** (naming a feeling and what helps) and
+  **Meslekler** (D-213).
+
+### 2.8 Çıkartma albümüm
+
+Asked for by the owner (D-211): a reward for learning that is never screen time. Each
+day with at least 15 minutes in the child's learning tiles - the category as the parent
+set it, the same minutes History shows - earns that day's sticker: a cheerful picture
+with a name, the same for the whole family that day, a different one tomorrow, and no
+sticker twice until all 64 have come.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ [🏠 Ana sayfa]  📖 Çıkartma albümüm                    [⭐ 7] │
+│ ┌ Bu hafta ────────────────────────────────────────────────┐ │
+│ │  Pzt    Sal    Çar    Per    Cum    Cmt    Paz            │ │
+│ │  (🍒)   ( )    (◔?)   ( )    ( )    ( )    ( )            │ │
+│ │  Bu hafta bir çıkartma kazandın! 6 dakika daha öğrenme    │ │
+│ │  oyunu oynarsan bugünün çıkartmasını kazanırsın. 🔊        │ │
+│ └──────────────────────────────────────────────────────────┘ │
+│ Çıkartmalarım                                                │
+│  [ 🍒 Kiraz ]  [ 🌙 Ay ]  [ 🎺 Trompet ]  …    (newest first) │
+│ Çıkartma kazandıran oyunların   (🧩 GCompris) (🔢 Sayılar)    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+- **The chip** sits beside the child's name on the home screen: ⭐ and the number,
+  which a child who cannot read still counts. It is shown once there is a sticker,
+  or a tile that can earn one; a tap opens the album.
+- **This week**, Monday to Sunday, as seven circles: a sticker where one was earned,
+  a dashed circle for a day that passed without, today as a circle filling up with
+  a ? inside, the days still to come faint. Under it one or two sentences a parent
+  can read out to a five-year-old: the week ("Bu hafta 2 çıkartma kazandın!"), then
+  today: earned, how many minutes more (rounded up), or how to start.
+- **The stickers**, newest first, big, with their names and dates; today's framed.
+  Empty: Zio and "Albümün seni bekliyor!", and what earns one.
+- **The child's own learning tiles**, at most four, so "öğrenme oyunu" means
+  something to a child who cannot read it.
+- **The day's sticker is celebrated once** - not on every load, and not again after a
+  restart or a second login: the first page or poll that finds it shows Zio, happy,
+  with the sticker and "Yaşasın! Bugünün çıkartmasını kazandın: Kiraz!", above the
+  footer, and Zio says it, for either band. Usually the child earns it in an app;
+  when the launcher comes back in front it asks, the chip takes the new number, and
+  the celebration happens then. It goes by itself after twelve seconds, or at ✕.
+- 4-7 hear a sticker's name and the week's sentences on a tap (D-175). Everything
+  but the celebration's going away reads with scripts off. A sticker is never
+  minutes, and nothing about it leaves the machine.
+
+### 2.9 Resimlerim
+
+Asked for by the owner (D-212): the child sees the pictures they made. A built-in
+tile, suggested for every age; it opens a page of the launcher, with no process and
+no opening ring.
+
+- From where the drawing programs save: Tux Paint's `~/.tuxpaint/saved/` (not its
+  thumbnails' folder), and the child's Pictures folder, `xdg-user-dir PICTURES`,
+  `~/Resimler` or `~/Pictures`. Their own top level only, newest first, at most 500.
+- **The grid**: big thumbnails (260 pixels for 4-7, 220 for 8-10; the pictures
+  themselves, scaled by the browser), the date on each for 8-10. A tap opens one.
+- **One picture** as big as the screen on a dark background, with ‹ (newer) and ›
+  (older) at the sides and a red ✕ at the top right, each 84 pixels, and "2 / 7"
+  under it. All links, so it works without a script; with one, the arrow keys,
+  Escape and a sideways swipe do the same.
+- Empty: Zio, "Henüz resim yok" and "Boya'da bir resim yapınca burada görünecek.",
+  said aloud for 4-7, with a button to Boya (or Çizim) when the child has it.
+- Under the grid, always: "Resimlerin bu bilgisayarda kalır, kimseye gönderilmez."
+  The parent's panel never shows them.
 
 ---
 
@@ -524,6 +597,9 @@ one control: **Bu hafta** (the default), **Geçen hafta**, **Son 30 gün**.
   on — the Sunday summary alone does not tell a parent of a request.
 - Late use is counted in nights: 22:00 to 00:30 is one night, the small hours
   belonging to the evening before.
+- Stickers in the child's album (§2.8, D-211) are good news from two: "Albümüne 3
+  çıkartma ekledi: öğrenme uygulamalarında en az 15 dakika geçen her gün için bir
+  tane." Low in the order, above the busiest hours.
 - "İstek cevapsız kaldı" counts only requests that expired with nobody answering.
   One still open is "bekliyor", in the present, in the requests tally; it is never
   told as unanswered while the "2 istek bekliyor" banner is on Today.

@@ -609,6 +609,24 @@ description_tr = "Tarayıcı. Hangi sitelere girebileceğini siz belirlersiniz."
 description_en = "The browser. You decide which sites open."
 
 [[app]]
+# Resimlerim (D-212): the pictures the child made in Boya, Çizim and the like,
+# from their own folders, as a page of the launcher. Nothing is sent anywhere,
+# and the panel never shows them. Suggested for every age; an existing child
+# gets it when a parent ticks it, and the apps screen marks it new (D-207).
+slug = "drawings"
+name_tr = "Resimlerim"
+name_en = "My pictures"
+exec = []
+package = ""
+kind = "builtin"
+icon = "gallery"
+default_category = "free"
+min_age = 4
+max_age = 10
+description_tr = "Çocuğunuzun Boya ve Çizim'de yaptığı resimler, büyük ve en yenisi önde. Yalnızca bu bilgisayarda, çocuğun kendi ekranında görünür; panele gelmez."
+description_en = "The pictures your child made in Paint and Draw, big and newest first. Shown only on this computer, on the child's own screen; never sent to the panel."
+
+[[app]]
 slug = "volume"
 name_tr = "Ses"
 name_en = "Sound"

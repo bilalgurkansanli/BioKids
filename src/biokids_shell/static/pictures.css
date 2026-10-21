@@ -1,0 +1,170 @@
+/* Resimlerim - the child's own pictures (D-212).
+ *
+ * A grid of big thumbnails, newest first, and one picture as big as the
+ * screen with ‹ › and ✕ a finger cannot miss: 84 pixels, more than the young
+ * band's 64 (UX.md §2.4). The thumbnails are the pictures themselves, scaled
+ * by the browser; a drawing is small, and nothing is written to make them.
+ */
+
+.pictures__main {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--sp-5) var(--sp-4);
+}
+
+.pic-grid {
+  list-style: none;
+  margin: 0;
+  padding: var(--sp-1);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--thumb, 220px), 1fr));
+  gap: var(--sp-4);
+}
+
+.screen[data-band="4-7"] .pic-grid { --thumb: 260px; }
+
+.pic {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 3;
+  border: 3px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+
+.pic:hover,
+.pic:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-2);
+}
+
+.pic:active { transform: scale(.96); }
+
+.pic__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #fff;
+}
+
+.pic__day {
+  position: absolute;
+  left: var(--sp-2);
+  bottom: var(--sp-2);
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  font-size: .95rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.pictures-empty {
+  margin: var(--sp-5) auto 0;
+  text-align: center;
+}
+
+.pictures-empty__title {
+  margin: 0;
+  font-size: 2.2rem;
+}
+
+.pictures-empty__body {
+  margin: 0;
+  font-size: calc(1.4rem * var(--font-scale));
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.pictures__foot {
+  padding: var(--sp-2) var(--sp-4) var(--sp-3);
+}
+
+.pictures__note {
+  margin: 0;
+  text-align: center;
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+}
+
+/* ---------------------------------------------------------------- viewer */
+
+.viewer {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-4) calc(84px + 2 * var(--sp-4));
+  background: color-mix(in srgb, var(--ink) 88%, var(--bio-indigo));
+  touch-action: pan-y;
+}
+
+.viewer__img {
+  max-width: 100%;
+  max-height: calc(100vh - 2 * var(--sp-5));
+  object-fit: contain;
+  border-radius: var(--r-md);
+  background: #fff;
+  box-shadow: var(--shadow-2);
+}
+
+.viewer__btn {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border: 3px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-kid);
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  box-shadow: var(--shadow-2);
+}
+
+.viewer__btn:active { transform: scale(.94); }
+
+.viewer__close {
+  top: var(--sp-4);
+  right: var(--sp-4);
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+  font-size: 2.4rem;
+}
+
+.viewer__prev,
+.viewer__next {
+  top: 50%;
+  margin-top: -42px;
+}
+
+.viewer__prev { left: var(--sp-4); }
+.viewer__next { right: var(--sp-4); }
+
+.viewer__count {
+  position: absolute;
+  left: 50%;
+  bottom: var(--sp-3);
+  margin: 0;
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transform: translateX(-50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pic { transition: none; }
+}
