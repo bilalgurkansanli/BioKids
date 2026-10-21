@@ -1660,6 +1660,297 @@ msgstr "Open {app}"
 msgid "daily.dismiss"
 msgstr "Put away until tomorrow"
 
+# D-211: the sticker album
+msgid "album.title"
+msgstr "My sticker album"
+
+msgid "album.chip"
+msgstr "My sticker album: {count}"
+
+msgid "album.week.title"
+msgstr "This week"
+
+msgid "album.week.none"
+msgstr "No stickers yet this week."
+
+msgid "album.week.one"
+msgstr "You earned a sticker this week!"
+
+msgid "album.week.many"
+msgstr "You earned {count} stickers this week!"
+
+msgid "album.today.earned"
+msgstr "You got today's sticker: {sticker}. A new one is waiting for you tomorrow."
+
+msgid "album.today.start"
+msgstr "Spend {minutes} minutes in learning games today and you earn a sticker."
+
+msgid "album.today.left"
+msgstr "Play learning games for {minutes} more minutes to earn today's sticker."
+
+msgid "album.today.left_one"
+msgstr "One more minute of learning games earns today's sticker."
+
+msgid "album.day.today"
+msgstr "Today"
+
+msgid "album.day.progress"
+msgstr "{day}: {done} of {goal} minutes"
+
+msgid "album.day.later"
+msgstr "{day}: still to come"
+
+msgid "album.day.none"
+msgstr "{day}: no sticker"
+
+msgid "album.collection"
+msgstr "My stickers"
+
+msgid "album.empty.title"
+msgstr "Your album is waiting for you!"
+
+msgid "album.empty.body"
+msgstr "Every day you spend {minutes} minutes in learning games, a new sticker comes here."
+
+msgid "album.earners"
+msgstr "Your games that earn stickers"
+
+msgid "album.cheer"
+msgstr "Hooray! You earned today's sticker: {sticker}!"
+
+msgid "album.cheer.open"
+msgstr "See my album"
+
+msgid "album.cheer.close"
+msgstr "Close"
+
+msgid "insights.h.stickers"
+msgstr "Added {count} stickers to their album, one for each day with at least {minutes} minutes in learning apps."
+
+# D-211: the stickers' names, which Zio says when one is earned
+msgid "album.sticker.fox"
+msgstr "Fox"
+
+msgid "album.sticker.panda"
+msgstr "Panda"
+
+msgid "album.sticker.lion"
+msgstr "Lion"
+
+msgid "album.sticker.koala"
+msgstr "Koala"
+
+msgid "album.sticker.giraffe"
+msgstr "Giraffe"
+
+msgid "album.sticker.elephant"
+msgstr "Elephant"
+
+msgid "album.sticker.hedgehog"
+msgstr "Hedgehog"
+
+msgid "album.sticker.owl"
+msgstr "Owl"
+
+msgid "album.sticker.dolphin"
+msgstr "Dolphin"
+
+msgid "album.sticker.whale"
+msgstr "Whale"
+
+msgid "album.sticker.octopus"
+msgstr "Octopus"
+
+msgid "album.sticker.crab"
+msgstr "Crab"
+
+msgid "album.sticker.fish"
+msgstr "Tropical fish"
+
+msgid "album.sticker.seal"
+msgstr "Seal"
+
+msgid "album.sticker.seashell"
+msgstr "Seashell"
+
+msgid "album.sticker.turtle"
+msgstr "Turtle"
+
+msgid "album.sticker.rocket"
+msgstr "Rocket"
+
+msgid "album.sticker.planet"
+msgstr "Planet"
+
+msgid "album.sticker.moon"
+msgstr "Moon"
+
+msgid "album.sticker.star"
+msgstr "Shining star"
+
+msgid "album.sticker.comet"
+msgstr "Comet"
+
+msgid "album.sticker.rainbow"
+msgstr "Rainbow"
+
+msgid "album.sticker.sun"
+msgstr "Sun"
+
+msgid "album.sticker.saucer"
+msgstr "Flying saucer"
+
+msgid "album.sticker.sunflower"
+msgstr "Sunflower"
+
+msgid "album.sticker.tulip"
+msgstr "Tulip"
+
+msgid "album.sticker.mushroom"
+msgstr "Mushroom"
+
+msgid "album.sticker.cactus"
+msgstr "Cactus"
+
+msgid "album.sticker.clover"
+msgstr "Clover"
+
+msgid "album.sticker.tree"
+msgstr "Tree"
+
+msgid "album.sticker.ladybird"
+msgstr "Ladybird"
+
+msgid "album.sticker.butterfly"
+msgstr "Butterfly"
+
+msgid "album.sticker.apple"
+msgstr "Apple"
+
+msgid "album.sticker.strawberry"
+msgstr "Strawberry"
+
+msgid "album.sticker.watermelon"
+msgstr "Watermelon"
+
+msgid "album.sticker.banana"
+msgstr "Banana"
+
+msgid "album.sticker.cherries"
+msgstr "Cherries"
+
+msgid "album.sticker.carrot"
+msgstr "Carrot"
+
+msgid "album.sticker.cupcake"
+msgstr "Cupcake"
+
+msgid "album.sticker.lemon"
+msgstr "Lemon"
+
+msgid "album.sticker.train"
+msgstr "Train"
+
+msgid "album.sticker.bicycle"
+msgstr "Bicycle"
+
+msgid "album.sticker.sailboat"
+msgstr "Sailing boat"
+
+msgid "album.sticker.helicopter"
+msgstr "Helicopter"
+
+msgid "album.sticker.fire-engine"
+msgstr "Fire engine"
+
+msgid "album.sticker.tractor"
+msgstr "Tractor"
+
+msgid "album.sticker.plane"
+msgstr "Aeroplane"
+
+msgid "album.sticker.bus"
+msgstr "Bus"
+
+msgid "album.sticker.balloon"
+msgstr "Balloon"
+
+msgid "album.sticker.kite"
+msgstr "Kite"
+
+msgid "album.sticker.crayon"
+msgstr "Crayon"
+
+msgid "album.sticker.drum"
+msgstr "Drum"
+
+msgid "album.sticker.guitar"
+msgstr "Guitar"
+
+msgid "album.sticker.teddy"
+msgstr "Teddy bear"
+
+msgid "album.sticker.ball"
+msgstr "Ball"
+
+msgid "album.sticker.trumpet"
+msgstr "Trumpet"
+
+msgid "album.sticker.unicorn"
+msgstr "Unicorn"
+
+msgid "album.sticker.wand"
+msgstr "Magic wand"
+
+msgid "album.sticker.dinosaur"
+msgstr "Dinosaur"
+
+msgid "album.sticker.crown"
+msgstr "Crown"
+
+msgid "album.sticker.castle"
+msgstr "Castle"
+
+msgid "album.sticker.present"
+msgstr "Present"
+
+msgid "album.sticker.trophy"
+msgstr "Trophy"
+
+msgid "album.sticker.sparkles"
+msgstr "Sparkles"
+
+# D-212: Resimlerim, the child's own pictures
+msgid "pictures.title"
+msgstr "My pictures"
+
+msgid "pictures.open"
+msgstr "Open the picture from {date}"
+
+msgid "pictures.alt"
+msgstr "Picture from {date}"
+
+msgid "pictures.newer"
+msgstr "Newer picture"
+
+msgid "pictures.older"
+msgstr "Older picture"
+
+msgid "pictures.close"
+msgstr "Close"
+
+msgid "pictures.count"
+msgstr "{number} / {total}"
+
+msgid "pictures.empty.title"
+msgstr "No pictures yet"
+
+msgid "pictures.empty.body"
+msgstr "When you make a picture in Paint, it will show up here."
+
+msgid "pictures.private"
+msgstr "Your pictures stay on this computer and are not sent to anyone."
+
 # D-178
 msgid "assistant.knowledge.on"
 msgstr "It checks its answers against Wikipedia summaries kept on this computer; it does not go online."

@@ -117,6 +117,29 @@ label_tr = "Kuşlar haftası"
 label_en = "Bird week"
 accent = "indigo"
 
+# D-213: three more, so the rotation is fifteen weeks long. Online safety is
+# said the way the rest of the file is: what to do, never what could happen.
+[[theme]]
+slug = "internet"
+emoji = "🛡️"
+label_tr = "İnternette güvenlik haftası"
+label_en = "Online safety week"
+accent = "teal"
+
+[[theme]]
+slug = "feelings"
+emoji = "💛"
+label_tr = "Duygularımız haftası"
+label_en = "Feelings week"
+accent = "coral"
+
+[[theme]]
+slug = "jobs"
+emoji = "🛠️"
+label_tr = "Meslekler haftası"
+label_en = "Jobs week"
+accent = "amber"
+
 # ------------------------------------------------------------------- space
 
 [[item]]
@@ -1969,3 +1992,465 @@ emoji = "🪺"
 app = "tuxpaint"
 text_tr = "Boya'da yuvasında yumurtaları olan bir kuş çiz."
 text_en = "Draw a bird with eggs in its nest in Paint."
+
+# ---------------------------------------------------------------- internet
+# D-213. What a child can do, and that a grown-up is always the right person
+# to tell; never a story about what might go wrong.
+
+[[item]]
+id = "internet-network"
+theme = "internet"
+kind = "fact"
+emoji = "🌐"
+text_tr = "İnternet, dünyadaki bilgisayarları birbirine bağlayan kocaman bir ağdır."
+text_en = "The internet is a giant network that links computers all over the world."
+more_tr = "Bu ağ sayesinde bir mesaj, başka bir ülkeye bir saniyeden kısa sürede ulaşabilir."
+more_en = "Thanks to it, a message can reach another country in less than a second."
+
+[[item]]
+id = "internet-message"
+theme = "internet"
+kind = "fact"
+emoji = "💬"
+text_tr = "Tanımadığın biri sana mesaj atarsa, bunu bir büyüğüne söylemek en doğrusudur."
+text_en = "If someone you do not know sends you a message, the best thing is to tell a grown-up."
+more_tr = "Büyükler, böyle bir mesajla ne yapılacağını bilir; cevap vermek gerekmez."
+more_en = "Grown-ups know what to do with a message like that, and you do not have to answer it."
+
+[[item]]
+id = "internet-private"
+theme = "internet"
+kind = "fact"
+emoji = "🏠"
+text_tr = "İnternette adını, adresini ve okulunu söylemeden de oynayabilirsin."
+text_en = "You can play online without telling anyone your name, your address or your school."
+more_tr = "Bunlar sana özel bilgilerdir; onları yalnızca ailenin uygun bulduğu yerlere yazarsın."
+more_en = "They are private, so you only type them where your family says it is fine."
+
+[[item]]
+id = "internet-tell"
+theme = "internet"
+kind = "fact"
+emoji = "🙋"
+text_tr = "Ekranda seni şaşırtan ya da üzen bir şey görürsen, bir büyüğüne söylemek her zaman iyi bir seçimdir."
+text_en = "If something on the screen surprises or upsets you, telling a grown-up is always a good choice."
+more_tr = "Birlikte bakınca ne yapılacağına karar vermek kolaylaşır."
+more_en = "Looking at it together makes it easier to decide what to do."
+
+[[item]]
+id = "internet-true"
+theme = "internet"
+kind = "fact"
+emoji = "🔍"
+text_tr = "İnternette yazan her şey doğru olmayabilir."
+text_en = "Not everything written on the internet is true."
+more_tr = "Bir şeyden emin değilsen bir büyüğüne sorabilir ya da bir kitaptan bakabilirsin."
+more_en = "If you are not sure about something, you can ask a grown-up or look it up in a book."
+
+[[item]]
+id = "internet-kind"
+theme = "internet"
+kind = "fact"
+emoji = "🤝"
+text_tr = "İnternette de yüz yüzeyken olduğu gibi kibar olmak gerekir."
+text_en = "Being kind matters online, just as it does face to face."
+more_tr = "Bir mesajı göndermeden önce 'Bunu yüzüne söyler miydim?' diye düşünebilirsin."
+more_en = "Before you send a message, you can ask yourself: would I say this to their face?"
+
+[[item]]
+id = "internet-adverts"
+theme = "internet"
+kind = "fact"
+emoji = "📺"
+text_tr = "Bazı oyunlarda ve videolarda reklam vardır; reklamlar bir şey satmak için yapılır."
+text_en = "Some games and videos show adverts, and adverts are made to sell you something."
+more_tr = "Bir reklama dokunmadan önce bir büyüğüne sorman iyi olur."
+more_en = "It is a good idea to ask a grown-up before you tap on one."
+
+[[item]]
+id = "internet-word-password"
+theme = "internet"
+kind = "word"
+emoji = "🔑"
+title_tr = "Şifre"
+title_en = "Password"
+text_tr = "Bir hesabı yalnızca sahibinin açabilmesini sağlayan gizli kelimeye şifre denir."
+text_en = "A secret word that lets only its owner open an account is called a password."
+more_tr = "Şifreni yalnızca ailen bilir; en iyi arkadaşına bile söylemezsin."
+more_en = "Only your family knows yours; you keep it even from your best friend."
+
+[[item]]
+id = "internet-word-privacy"
+theme = "internet"
+kind = "word"
+emoji = "🔒"
+title_tr = "Gizlilik"
+title_en = "Privacy"
+text_tr = "Kendinle ilgili bilgileri herkesle paylaşmama hakkına gizlilik denir."
+text_en = "Your right to keep things about yourself to yourself is called privacy."
+more_tr = "Adresin, telefon numaran ve fotoğrafların bu bilgilere örnektir."
+more_en = "Your address, your phone number and your photos are examples."
+
+[[item]]
+id = "internet-riddle-password"
+theme = "internet"
+kind = "riddle"
+text_tr = "Kapıyı yalnızca sana açarım, kimseye söylenmem, hep gizli kalırım. Ben neyim?"
+text_en = "I open the door only for you, I am told to nobody, and I always stay a secret. What am I?"
+answer_tr = "Şifre"
+answer_en = "A password"
+
+[[item]]
+id = "internet-riddle-mouse"
+theme = "internet"
+kind = "riddle"
+text_tr = "Masada dururum, kuyruğum bir kablodur, elinle beni gezdirirsin. Ben neyim?"
+text_en = "I sit on the desk, my tail is a cable, and your hand moves me around. What am I?"
+answer_tr = "Fare"
+answer_en = "A mouse"
+
+[[item]]
+id = "internet-riddle-keyboard"
+theme = "internet"
+kind = "riddle"
+text_tr = "Üstümde bütün harfler var ama tek bir kelime okuyamam. Ben neyim?"
+text_en = "I have every letter on me, but I cannot read a single word. What am I?"
+answer_tr = "Klavye"
+answer_en = "A keyboard"
+
+[[item]]
+id = "internet-rules"
+theme = "internet"
+kind = "challenge"
+emoji = "📋"
+text_tr = "Bugün bir büyüğünle evdeki internet kurallarını konuş."
+text_en = "Today, talk with a grown-up about the internet rules in your home."
+more_tr = "Hangi oyunlar, ne kadar süre ve bir şey olursa kime söyleyeceğin gibi."
+more_en = "Which games, for how long, and who you tell if something happens."
+
+[[item]]
+id = "internet-stretch"
+theme = "internet"
+kind = "challenge"
+emoji = "🤸"
+text_tr = "Bir oyunu bitirince kalk, beş kez gerin, sonra pencereden uzaklara bak."
+text_en = "When you finish a game, get up, stretch five times and look far out of the window."
+more_tr = "Gözlerin ve vücudun bu küçük moladan hoşlanır."
+more_en = "Your eyes and your body enjoy a little break like that."
+
+[[item]]
+id = "internet-hero"
+theme = "internet"
+kind = "challenge"
+emoji = "🦸"
+app = "tuxpaint"
+text_tr = "Boya'da internette seni koruyan bir süper kahraman çiz."
+text_en = "Open Paint and draw a superhero who keeps you safe online."
+
+# ---------------------------------------------------------------- feelings
+# D-213. Naming a feeling, and what helps with it. Every feeling is allowed;
+# none of them is a problem to be fixed.
+
+[[item]]
+id = "feelings-normal"
+theme = "feelings"
+kind = "fact"
+emoji = "🌦️"
+text_tr = "Herkes bazen üzülür, kızar ya da korkar; bunlar çok normal duygulardır."
+text_en = "Everyone feels sad, cross or scared sometimes; these are very normal feelings."
+more_tr = "Duygular hava gibidir: Gelir, bir süre kalır ve sonra geçer."
+more_en = "Feelings are like the weather: they come, stay for a while and then pass."
+
+[[item]]
+id = "feelings-breathe"
+theme = "feelings"
+kind = "fact"
+emoji = "🌬️"
+text_tr = "Yavaş ve derin nefes almak, sinirlendiğinde sakinleşmene yardım eder."
+text_en = "Taking slow, deep breaths helps you calm down when you are angry."
+more_tr = "Burnundan nefes alıp ağzından yavaşça üflemeyi dört kez dene."
+more_en = "Try it four times: breathe in through your nose and blow out slowly through your mouth."
+
+[[item]]
+id = "feelings-faces"
+theme = "feelings"
+kind = "fact"
+emoji = "😊"
+text_tr = "Yüzün, içindeki duyguyu çoğu zaman başkalarına gösterir."
+text_en = "Your face often shows other people how you feel inside."
+more_tr = "Bu yüzden arkadaşının yüzüne bakmak, onun nasıl hissettiğini anlamana yardım eder."
+more_en = "That is why looking at a friend's face helps you understand how they feel."
+
+[[item]]
+id = "feelings-say"
+theme = "feelings"
+kind = "fact"
+emoji = "🗣️"
+text_tr = "Ne hissettiğini söylemek, büyük bir duyguyu biraz küçültebilir."
+text_en = "Saying how you feel can make a big feeling a little smaller."
+more_tr = "'Şu an kızgınım' ya da 'Biraz üzgünüm' demek iyi bir başlangıçtır."
+more_en = "'I am cross right now' or 'I feel a bit sad' is a good start."
+
+[[item]]
+id = "feelings-hug"
+theme = "feelings"
+kind = "fact"
+emoji = "🤗"
+text_tr = "Sevdiğin birine sarılmak çoğu insana iyi gelir."
+text_en = "A hug with someone you love makes most people feel better."
+more_tr = "Ama önce sormak güzeldir; herkes her zaman sarılmak istemeyebilir."
+more_en = "But it is kind to ask first: not everyone wants a hug every time."
+
+[[item]]
+id = "feelings-sleep"
+theme = "feelings"
+kind = "fact"
+emoji = "😴"
+text_tr = "İyi uyuduğunda duygularınla baş etmek daha kolay olur."
+text_en = "When you have slept well, your feelings are easier to handle."
+more_tr = "Yorgunken küçük şeyler bile insanı çabucak kızdırabilir."
+more_en = "When you are tired, even small things can make you cross quickly."
+
+[[item]]
+id = "feelings-helping"
+theme = "feelings"
+kind = "fact"
+emoji = "💛"
+text_tr = "Birine yardım etmek, yardım edenin de içini ısıtır."
+text_en = "Helping someone warms the heart of the helper too."
+more_tr = "Bir oyuncağını paylaşmak ya da bir arkadaşını dinlemek de yardım etmektir."
+more_en = "Sharing a toy or listening to a friend counts as helping too."
+
+[[item]]
+id = "feelings-word-empathy"
+theme = "feelings"
+kind = "word"
+emoji = "🤝"
+title_tr = "Empati"
+title_en = "Empathy"
+text_tr = "Başka birinin ne hissettiğini anlamaya çalışmaya empati denir."
+text_en = "Trying to understand how someone else feels is called empathy."
+more_tr = "Empati kuran biri, 'Onun yerinde olsam ne hissederdim?' diye düşünür."
+more_en = "Someone showing empathy wonders: how would I feel in their place?"
+
+[[item]]
+id = "feelings-word-curiosity"
+theme = "feelings"
+kind = "word"
+emoji = "🧐"
+title_tr = "Merak"
+title_en = "Curiosity"
+text_tr = "Yeni bir şeyi öğrenmeyi çok istemeye merak denir."
+text_en = "Really wanting to find out something new is called curiosity."
+more_tr = "Meraklı biri çok soru sorar; soru sormak da öğrenmenin ilk adımıdır."
+more_en = "Curious people ask lots of questions, and asking is the first step of learning."
+
+[[item]]
+id = "feelings-riddle-smile"
+theme = "feelings"
+kind = "riddle"
+text_tr = "Dudaklarında belirir, yüzünü aydınlatırım; mutlu olunca kendiliğimden gelirim. Ben neyim?"
+text_en = "I appear on your lips and light up your face; I come by myself when you are happy. What am I?"
+answer_tr = "Gülümseme"
+answer_en = "A smile"
+
+[[item]]
+id = "feelings-riddle-laugh"
+theme = "feelings"
+kind = "riddle"
+text_tr = "Komik bir şey görünce karnından yükselirim, bazen gözlerini de yaşartırım. Ben neyim?"
+text_en = "When you see something funny I bubble up from your tummy, and sometimes I make your eyes water. What am I?"
+answer_tr = "Kahkaha"
+answer_en = "A laugh"
+
+[[item]]
+id = "feelings-mirror"
+theme = "feelings"
+kind = "challenge"
+emoji = "🪞"
+text_tr = "Aynaya bak; önce mutlu, sonra şaşkın, sonra da kızgın bir yüz yap."
+text_en = "Look in a mirror and make a happy face, then a surprised one, then a cross one."
+more_tr = "Hangisini yapmak en komiğiydi?"
+more_en = "Which one was the funniest to make?"
+
+[[item]]
+id = "feelings-thanks"
+theme = "feelings"
+kind = "challenge"
+emoji = "💌"
+text_tr = "Bugün birine 'Teşekkür ederim' de ve nedenini de söyle."
+text_en = "Today, say 'thank you' to someone and tell them why."
+more_tr = "Teşekkür etmek hem seni hem de karşındakini mutlu eder."
+more_en = "Saying thank you makes both of you feel good."
+
+[[item]]
+id = "feelings-draw"
+theme = "feelings"
+kind = "challenge"
+emoji = "🎨"
+app = "tuxpaint"
+text_tr = "Boya'da bugün nasıl hissettiğini gösteren bir resim yap."
+text_en = "Open Paint and make a picture of how you feel today."
+
+[[item]]
+id = "feelings-three-faces"
+theme = "feelings"
+kind = "challenge"
+emoji = "🖍️"
+app = "kolourpaint"
+text_tr = "Çizim'de mutlu, üzgün ve şaşkın üç yüz çiz."
+text_en = "Open Draw and draw three faces: a happy one, a sad one and a surprised one."
+
+# -------------------------------------------------------------------- jobs
+# D-213. What people do all day, and a thing or two about it a child can tell
+# at dinner.
+
+[[item]]
+id = "jobs-vet"
+theme = "jobs"
+kind = "fact"
+emoji = "🩺"
+text_tr = "Veteriner, hayvanların doktorudur."
+text_en = "A vet is a doctor for animals."
+more_tr = "Kedilere, köpeklere ve hatta çiftlikteki ineklere bakar."
+more_en = "Vets look after cats, dogs and even the cows on a farm."
+
+[[item]]
+id = "jobs-astronaut"
+theme = "jobs"
+kind = "fact"
+emoji = "🚀"
+text_tr = "Astronotlar uzaya gitmeden önce yıllarca eğitim alır."
+text_en = "Astronauts train for years before they go to space."
+more_tr = "Uzayda süzülmeye alışmak için kocaman havuzlarda çalışırlar."
+more_en = "They practise in huge swimming pools to get used to floating."
+
+[[item]]
+id = "jobs-farmer"
+theme = "jobs"
+kind = "fact"
+emoji = "🚜"
+text_tr = "Çiftçiler, yediğimiz sebzelerin ve meyvelerin çoğunu yetiştirir."
+text_en = "Farmers grow most of the fruit and vegetables we eat."
+more_tr = "Bir domatesin tohumdan sofraya gelmesi birkaç ay sürer."
+more_en = "It takes a few months for a tomato to grow from a seed to your plate."
+
+[[item]]
+id = "jobs-baker"
+theme = "jobs"
+kind = "fact"
+emoji = "🥖"
+text_tr = "Fırıncılar, sabah taze ekmek olsun diye çoğu zaman gece çalışmaya başlar."
+text_en = "Bakers often start work in the night so that there is fresh bread in the morning."
+more_tr = "Ekmek hamuru, içindeki maya sayesinde kabarır."
+more_en = "Bread dough rises thanks to the yeast inside it."
+
+[[item]]
+id = "jobs-librarian"
+theme = "jobs"
+kind = "fact"
+emoji = "📚"
+text_tr = "Kütüphaneciler kitapları, herkesin kolayca bulabileceği bir düzene göre dizer."
+text_en = "Librarians arrange books in an order that helps everyone find them easily."
+more_tr = "Her kitabın sırtındaki küçük etiket, rafta nerede durduğunu gösterir."
+more_en = "The little label on each book's spine shows where it lives on the shelf."
+
+[[item]]
+id = "jobs-pilots"
+theme = "jobs"
+kind = "fact"
+emoji = "✈️"
+text_tr = "Bir yolcu uçağında genellikle iki pilot bulunur."
+text_en = "A passenger plane usually has two pilots."
+more_tr = "Biri uçağı uçururken öteki göstergeleri kontrol eder; sırayla da uçurabilirler."
+more_en = "While one flies the plane, the other checks the instruments, and they can take turns."
+
+[[item]]
+id = "jobs-firefighters"
+theme = "jobs"
+kind = "fact"
+emoji = "🚒"
+text_tr = "İtfaiyeciler yalnızca yangın söndürmez; okullara gidip güvenliği de anlatır."
+text_en = "Firefighters do not only put out fires; they also visit schools to teach about safety."
+more_tr = "İtfaiye aracının uzun merdiveni, yüksek binaların üst katlarına ulaşabilir."
+more_en = "A fire engine's long ladder can reach the top floors of tall buildings."
+
+[[item]]
+id = "jobs-word-architect"
+theme = "jobs"
+kind = "word"
+emoji = "📐"
+title_tr = "Mimar"
+title_en = "Architect"
+text_tr = "Binaların planını çizen kişiye mimar denir."
+text_en = "A person who draws the plans for buildings is called an architect."
+more_tr = "Bir ev, yapılmadan önce mimarın kâğıdında ya da bilgisayarında doğar."
+more_en = "A house is born on an architect's paper or computer before it is built."
+
+[[item]]
+id = "jobs-word-chef"
+theme = "jobs"
+kind = "word"
+emoji = "🍳"
+title_tr = "Aşçı"
+title_en = "Cook"
+text_tr = "Lokantalarda yemek yapan kişiye aşçı denir."
+text_en = "A person who makes the meals in a restaurant is called a cook."
+more_tr = "Bir lokantanın baş aşçısına da şef denir."
+more_en = "The head cook of a restaurant is called the chef."
+
+[[item]]
+id = "jobs-riddle-postman"
+theme = "jobs"
+kind = "riddle"
+text_tr = "Kapı kapı dolaşırım, mektupları sahiplerine ulaştırırım. Ben kimim?"
+text_en = "I go from door to door and bring letters to the people they are for. Who am I?"
+answer_tr = "Postacı"
+answer_en = "The postman"
+
+[[item]]
+id = "jobs-riddle-dentist"
+theme = "jobs"
+kind = "riddle"
+text_tr = "Ağzını açarsın, dişlerine bakarım; parlak ve sağlam kalsınlar isterim. Ben kimim?"
+text_en = "You open your mouth and I look at your teeth; I want them shiny and strong. Who am I?"
+answer_tr = "Diş hekimi"
+answer_en = "A dentist"
+
+[[item]]
+id = "jobs-riddle-teacher"
+theme = "jobs"
+kind = "riddle"
+text_tr = "Tahtaya yazarım, sorularını yanıtlarım; okumayı ve saymayı birlikte öğreniriz. Ben kimim?"
+text_en = "I write on the board and answer your questions, and we learn to read and count together. Who am I?"
+answer_tr = "Öğretmen"
+answer_en = "A teacher"
+
+[[item]]
+id = "jobs-dream"
+theme = "jobs"
+kind = "challenge"
+emoji = "💭"
+text_tr = "Büyüyünce hangi işi yapmak istediğini bir büyüğüne anlat."
+text_en = "Tell a grown-up which job you would like to do when you grow up."
+more_tr = "Sonra ona, çocukken ne olmak istediğini sor."
+more_en = "Then ask what they wanted to be when they were little."
+
+[[item]]
+id = "jobs-shop"
+theme = "jobs"
+kind = "challenge"
+emoji = "🛒"
+text_tr = "Oyuncaklarınla bir dükkân kur ve bir büyüğünle alışveriş oyunu oyna."
+text_en = "Set up a shop with your toys and play shopkeeper with a grown-up."
+more_tr = "Fiyatları sen belirle, parayı birlikte say."
+more_en = "You choose the prices, and you count the money together."
+
+[[item]]
+id = "jobs-draw"
+theme = "jobs"
+kind = "challenge"
+emoji = "👷"
+app = "tuxpaint"
+text_tr = "Boya'da büyüyünce yapmak istediğin işi çiz."
+text_en = "Open Paint and draw the job you would like to do one day."

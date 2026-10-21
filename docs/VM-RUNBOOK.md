@@ -1388,6 +1388,73 @@ does not (`sudo apt install kdiamond tuxpaint-stamps-default` then).
 5. **Boya**: the stamp tool (the rubber stamp) has animals, food, vehicles and
    plants, not only Tux.
 
+### 8.15 The sticker album (D-211)
+
+Elif, 4–7, with GCompris (learning) and Elmaslar (games) on her screen, a daily time of
+an hour or more, earned time off under **Süre kuralları → Gelişmiş** so the minutes
+stay put, and the VM's clock on today. `rm -f ~elif/.config/biokids/album-cheered`
+first if an earlier run left one.
+
+**Pass, in order:**
+
+1. The home screen has ⭐ 0 beside her name. Tap it: **Çıkartma albümüm**, seven
+   circles from Monday, today's with a ? in it; "Bu hafta henüz çıkartma yok.
+   Bugün öğrenme oyunlarında 15 dakika geçirirsen bir çıkartma kazanırsın."; Zio and
+   "Albümün seni bekliyor!"; **GCompris** under "Çıkartma kazandıran oyunların", and
+   not Elmaslar. A tap on the sentence is Zio reading it.
+2. Play Elmaslar for five minutes, then GCompris for ten. Back on the album: "5
+   dakika daha…" (give or take one), today's circle two thirds full - Elmaslar added
+   nothing.
+3. Back in GCompris for six minutes more, then 🏠. **Pass:** the moment the launcher
+   is in front, the chip says ⭐ 1 with a little bump, Zio is in a box above the footer
+   with the day's sticker and "Yaşasın! Bugünün çıkartmasını kazandın: …!", and says
+   it. The box goes after about twelve seconds. The ring's minutes are what they were.
+4. Reload the home screen, open the album, log out and in again. **Pass:** no second
+   celebration and no second sentence from Zio; the album shows the sticker framed,
+   "Bugün", and "Bu hafta bir çıkartma kazandın! Bugünün çıkartmasını aldın: …".
+   `cat ~elif/.config/biokids/album-cheered` is today's date and nothing else.
+5. As the parent, **Analiz** for Elif after a second day with a sticker: "Albümüne 2
+   çıkartma ekledi: öğrenme uygulamalarında en az 15 dakika geçen her gün için bir
+   tane." (Set the VM's clock a day on, as in §7.4, and repeat step 3.)
+
+### 8.16 Resimlerim (D-212)
+
+On the machine of §8.15, after the upgrade that brings it: **Çocuklar** says
+"Resimlerim" is new for Elif (§8.12); tick it and save. A new child gets it ticked.
+
+**Pass, in order:**
+
+1. The home screen has **Resimlerim** (🏞️). Tap it: no opening ring, at once the
+   page with Zio, "Henüz resim yok", "Boya'da bir resim yapınca burada görünecek."
+   said aloud, and a **Boya** button, which opens Boya.
+2. In Boya draw two pictures and save each (Kaydet), and in Çizim save one in
+   **Resimler**. Close them; open **Resimlerim**. **Pass:** three big pictures, the
+   newest first, and none of `~/.tuxpaint/saved/.thumbs/`. Tap one: as big as the
+   screen, ‹ › and a red ✕; → ← and Escape do the same, and so does a swipe on a
+   touchscreen. "1 / 3" at the bottom.
+3. From ssh, as elif: `ln -s /etc/passwd ~/Resimler/a.png; printf '<html>' >
+   ~/Resimler/b.png; printf '<svg/>' > ~/Resimler/c.svg`. **Pass:** none of the three
+   is in the grid, and `curl -s -o /dev/null -w '%{http_code}\n'
+   http://127.0.0.1:<Elif's port>/pictures/file/resimler/a.png` (likewise `b.png` and
+   `c.svg`) says 404 each time. `rm` them afterwards.
+4. A website may not take one: as elif, with one of the Boya pictures' names,
+   `curl -s -o /dev/null -D - -H 'Sec-Fetch-Site: cross-site' http://127.0.0.1:<port>/pictures/file/tuxpaint/<name>.png`
+   says 403, and without the header 200 with `cross-origin-resource-policy:
+   same-origin` and `x-content-type-options: nosniff`.
+5. As the parent: nothing on the panel shows or lists the pictures, and
+   `sudo bkq "select count(*) from usage_event where payload_json like '%png%'"` is 0.
+
+### 8.17 Fifteen weeks of surprises (D-213)
+
+```bash
+python3 -c "import datetime as d; from biokids_core import daily as y; c=y.load_corpus(); print([y.theme_for(d.date.today()+d.timedelta(weeks=n), c).slug for n in range(15)])"
+```
+
+**Pass:** fifteen different themes, `internet`, `feelings` and `jobs` among them. Move
+the VM's clock to a Monday of each of the three (§7.4) and look at Elif's card for a
+few days: Turkish that reads naturally, one sentence for 4–7 and a little more for
+8–10, a task that opens **Boya** only for a child who has it.
+
 ---
 
 ## 9. After the run

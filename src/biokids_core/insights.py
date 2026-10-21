@@ -53,7 +53,7 @@ from typing import Final
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from biokids_core import mail
+from biokids_core import album, mail
 from biokids_core.config import Config
 from biokids_core.db.models import (
     AccessRequest,
@@ -125,6 +125,9 @@ SHARE_MIN_SECONDS: Final = 30 * 60
 """Shares of the time are said only once there is half an hour to share."""
 
 EARNED_MIN_SECONDS: Final = 10 * 60
+STICKERS_MIN: Final = 2
+"""Stickers in the child's album (D-211) are worth a sentence from two: one is
+a day, and "1 çıkartma" would need a sentence of its own in English."""
 TIME_REQUESTS_MIN: Final = 3
 UNANSWERED_MIN: Final = 2
 RAN_OUT_MIN_DAYS: Final = 2
@@ -518,6 +521,8 @@ class Insights:
     late_nights: int
     """Evenings in the period with use between 21:00 and 06:00, the small hours
     counted with the evening before."""
+    stickers: int = 0
+    """Days shown that earned a sticker in the child's album (D-211)."""
 
     @property
     def includes_today(self) -> bool:
@@ -601,7 +606,17 @@ def summarize(facts: Facts, period: Period, span: Span, today: dt.date) -> Insig
         hours_total_s=sum(hours),
         peak=peak,
         late_nights=late_nights,
+        stickers=album.stickers_in(_learning_by_day(facts), shown),
     )
+
+
+def _learning_by_day(facts: Facts) -> dict[dt.date, int]:
+    """Seconds in learning apps per day: what the album gives stickers for."""
+    found: dict[dt.date, int] = {}
+    for (day, category, _slug), seconds in facts.apps.items():
+        if category == Category.LEARNING:
+            found[day] = found.get(day, 0) + max(0, seconds)
+    return found
 
 
 def _compare(
@@ -981,6 +996,7 @@ def highlights(ins: Insights, ctx: Context, limit: int = MAX_HIGHLIGHTS) -> list
      40 weekends and weekdays differ a lot
      35 asked for more time three times or more
      30 screen time about the same as before
+     25 stickers in the child's album, two or more (D-211)
      20 the busiest hour or two
      15 the time never ran out
     """
@@ -1093,6 +1109,17 @@ def highlights(ins: Insights, ctx: Context, limit: int = MAX_HIGHLIGHTS) -> list
                     {"weekend": Duration(weekend), "weekday": Duration(weekday)},
                 )
             )
+
+    if ins.stickers >= STICKERS_MIN:
+        found.append(
+            Highlight(
+                "insights.h.stickers",
+                25,
+                "🌟",
+                Tone.GOOD,
+                {"count": ins.stickers, "minutes": album.GOAL_SECONDS // 60},
+            )
+        )
 
     asked_time = next((line.asked for line in ins.requests if line.kind == "time"), 0)
     if asked_time >= TIME_REQUESTS_MIN:

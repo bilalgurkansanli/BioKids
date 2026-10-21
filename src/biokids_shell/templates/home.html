@@ -9,6 +9,17 @@
       <span>{{ _('shell.greeting', name=state.display_name) }}</span>
     </div>
 
+    {# The sticker album (D-211): a star and the number, which a child who
+       cannot read counts anyway. A link, so it opens without a script. #}
+    {% if album %}
+      <a class="album-chip" id="album-chip" href="/album"
+         aria-label="{{ _('album.chip', count=album.count) }}"
+         {% if young %}data-speak="{{ _('album.title') }}"{% endif %}>
+        <span aria-hidden="true">⭐</span>
+        <span class="album-chip__count" id="album-chip-count" aria-hidden="true">{{ album.count }}</span>
+      </a>
+    {% endif %}
+
     {# 8-10 get a clock; 4-7 do not, because a number they cannot read is noise. #}
     {% if not young %}
       <span class="clock" id="clock" aria-hidden="true"></span>
@@ -86,7 +97,15 @@
       <p class="full__inner">{{ _('shell.no_apps') }}</p>
     {% endif %}
     {% for tile in tiles %}
-      {% if tile.slug not in ('volume', 'brightness', 'shutdown') %}
+      {% if tile.slug in page_tiles|default({}) %}
+        {# A page of the launcher's own (D-212): a plain link, no process to
+           open, so no ring on the tile either. #}
+        <a class="tile tile--{{ tile.category }} tile--page" href="{{ page_tiles[tile.slug] }}"
+           {% if young %}data-speak="{{ tile.name }}"{% endif %}>
+          <span class="tile__icon" aria-hidden="true">{{ tile.icon|icon }}</span>
+          <span class="tile__label">{{ tile.name }}</span>
+        </a>
+      {% elif tile.slug not in ('volume', 'brightness', 'shutdown') %}
         <a class="tile tile--{{ tile.category }}" href="/launch/{{ tile.slug }}"
            data-slug="{{ tile.slug }}"
            {% if young %}data-speak="{{ tile.name }}"{% endif %}>
@@ -134,5 +153,6 @@
       <span aria-hidden="true">⏻</span> {{ _('shell.shutdown') }}
     </a>
   </footer>
+  {% if album %}{% include "_cheer.html" %}{% endif %}
 </div>
 {% endblock %}

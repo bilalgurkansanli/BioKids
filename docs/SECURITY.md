@@ -28,6 +28,7 @@ parental-control tool that implies more protection than it provides is worse tha
 | Using a DoH-capable site or app | `DnsOverHttpsMode: off`; DoH hosts in the blocklist; the children's DoT and HTTPS to known DoH resolvers rejected |
 | Asking the assistant something harmful | word list, classifier and a checked answer; a fixed refusal, and the parent is told (D-165) |
 | A website opening the microphone or camera | `AudioCaptureAllowedUrls` names the launcher only; `VideoCaptureAllowed: false` (D-166) |
+| A website putting the child's drawings on its own page, or the launcher made to serve some other file | Resimlerim's pictures are served only to the launcher's own pages: a cross-site or same-site fetch is refused and the answer carries `Cross-Origin-Resource-Policy: same-origin`, `nosniff` and a sandboxing CSP. Only a plain file name in one of the child's picture folders, never a link, a hidden file or a subfolder; owned by the child, checked on the open file; PNG, JPEG, GIF, WebP or BMP by name and first bytes, never SVG (D-212) |
 | Installing another browser | no sudo, no polkit, no Flatpak |
 | Killing the daemon | no permission; crash triggers lockdown |
 | Unplugging the network to escape the filter | fails closed: no DNS means no browsing |
@@ -188,7 +189,12 @@ from `[retention]` in `/etc/biokids/config.toml`:
 | the children's requests | `requests_days` | 90 days |
 
 The insights screen and the Sunday mail's highlights (D-206) are computed from these
-when they are read and store nothing of their own; the mail names no site.
+when they are read and store nothing of their own; the mail names no site. So is the
+child's sticker album (D-211), from `usage_tick`: a sticker leaves the album with the
+minutes it was earned with. The launcher keeps one date in the child's home, the day
+it last celebrated a sticker (`~/.config/biokids/album-cheered`). The child's pictures
+(D-212) are read where their drawing programs saved them and are copied nowhere; the
+parent's panel does not see them.
 Panel sessions are deleted a day after their idle timeout, and only the 20 newest boot
 epochs are kept. Removing a child deletes everything recorded for them except the audit
 log (D-191); purging `biokids-core` deletes the database, if the parent says yes.

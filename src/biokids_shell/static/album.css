@@ -1,0 +1,373 @@
+/* Çıkartma albümüm - the sticker album (D-211).
+ *
+ * The chip in the header, the day's celebration, and the album page. Brand
+ * tokens only (UX.md §1), the words in --ink, every target at least 64 pixels
+ * for 4-7 and 44 for 8-10 (UX.md §2.4), and nothing that moves for a child who
+ * asked the system for less motion.
+ */
+
+/* ------------------------------------------------------------------ chip */
+
+/* A star and a number, beside the child's name: a sticker counted, not a
+ * score. A pill, as tall as a young target, amber like the day's card. */
+.album-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: var(--target-older);
+  min-height: var(--target-older);
+  padding: 0 var(--sp-3);
+  border: 2px solid color-mix(in srgb, var(--bio-amber) 60%, var(--line));
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--bio-amber) 16%, var(--surface));
+  color: var(--ink);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.screen[data-band="4-7"] .album-chip {
+  min-width: var(--target-young);
+  min-height: var(--target-young);
+  font-size: 1.8rem;
+}
+
+a.album-chip:active { transform: scale(.94); }
+
+.album-chip.is-bumped { animation: album-bump .9s ease-in-out 2; }
+
+@keyframes album-bump {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+/* --------------------------------------------------------------- the cheer */
+
+/* Zio and today's sticker, once a day. Above the footer and clear of the
+ * header, so the ring and the tiles' first row stay in sight; gone by itself
+ * after a few seconds (album.js), or at ✕. */
+.cheer {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--target-young) + var(--sp-5));
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: min(44rem, calc(100vw - 2 * var(--sp-4)));
+  padding: var(--sp-3) var(--sp-4);
+  border: 4px solid var(--bio-amber);
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(circle at 18% 50%, color-mix(in srgb, var(--bio-amber) 28%, transparent) 0,
+      transparent 12rem),
+    var(--surface);
+  box-shadow: var(--shadow-2);
+  transform: translate(-50%, 0);
+  animation: cheer-in .6s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.cheer[hidden] { display: none; }
+
+.cheer.is-leaving {
+  opacity: 0;
+  transform: translate(-50%, 24px);
+  transition: opacity .25s ease, transform .25s ease;
+}
+
+.cheer__zio {
+  flex: none;
+  width: 104px;
+  height: 104px;
+}
+
+.cheer__zio svg { width: 100%; height: 100%; }
+
+.cheer__bubble {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+}
+
+.cheer__sticker {
+  font-size: 4rem;
+  line-height: 1;
+  animation: cheer-wiggle 1.2s ease-in-out .5s 2;
+}
+
+.cheer__line {
+  margin: 0;
+  font-size: calc(1.45rem * var(--font-scale));
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.cheer__go {
+  grid-column: 1 / -1;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--target-young);
+  padding: 0 var(--sp-4);
+  border-radius: var(--r-pill);
+  background: var(--bio-indigo);
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cheer__close {
+  flex: none;
+  align-self: flex-start;
+  display: grid;
+  place-items: center;
+  width: var(--target-young);
+  height: var(--target-young);
+  border: 2px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1.6rem;
+  text-decoration: none;
+}
+
+@keyframes cheer-in {
+  from { opacity: 0; transform: translate(-50%, 32px) scale(.96); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+@keyframes cheer-wiggle {
+  0%, 100% { transform: rotate(0) scale(1); }
+  25% { transform: rotate(-10deg) scale(1.1); }
+  75% { transform: rotate(10deg) scale(1.1); }
+}
+
+/* -------------------------------------------------------------- the page */
+
+.album__title,
+.pictures__title {
+  flex: 1;
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.album-chip--still { cursor: default; }
+
+/* The page scrolls inside itself, under a header that stays put. */
+.album__main {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--sp-5) var(--sp-5);
+  display: grid;
+  gap: var(--sp-4);
+  align-content: start;
+}
+
+.album__heading {
+  margin: 0 0 var(--sp-3);
+  font-size: 1.3rem;
+  color: var(--ink-soft);
+}
+
+/* This week: seven circles, Monday to Sunday. */
+.album-week {
+  padding: var(--sp-3) var(--sp-4);
+  border: 2px solid color-mix(in srgb, var(--bio-amber) 45%, var(--line));
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--bio-amber) 8%, var(--surface));
+}
+
+.album-week__days {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  gap: var(--sp-2);
+}
+
+.album-day {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-1);
+}
+
+.album-day__name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.album-day.is-today .album-day__name { color: var(--ink); }
+
+.album-day__spot {
+  --spot: 76px;
+  width: var(--spot);
+  height: var(--spot);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 3px solid var(--line);
+  background: var(--surface);
+  font-size: calc(var(--spot) * .55);
+  line-height: 1;
+}
+
+.screen[data-band="4-7"] .album-day__spot { --spot: 88px; }
+
+.album-day--earned .album-day__spot {
+  border-color: var(--bio-amber);
+  background: color-mix(in srgb, var(--bio-amber) 18%, var(--surface));
+}
+
+.album-day--none .album-day__spot { border-style: dashed; }
+
+.album-day--later .album-day__spot { opacity: .45; border-style: dotted; }
+
+/* Today, still to earn: a circle filling up as the minutes come, the same
+ * idea as the time ring, and a question mark for the surprise inside. */
+.album-day--today .album-day__spot {
+  border: 0;
+  background:
+    radial-gradient(circle closest-side, var(--surface) 78%, transparent 79%),
+    conic-gradient(var(--bio-teal) var(--progress, 0%), var(--line) 0);
+}
+
+.album-day__surprise {
+  font-family: var(--font-kid);
+  font-size: calc(var(--spot) * .45);
+  font-weight: 700;
+  color: var(--bio-teal);
+}
+
+.album-week__words {
+  margin: var(--sp-3) 0 0;
+  font-size: calc(1.35rem * var(--font-scale));
+  line-height: 1.4;
+}
+
+.screen[data-band="8-10"] .album-week__words { font-size: calc(1.15rem * var(--font-scale)); }
+
+/* The collection: big stickers, newest first. */
+.album-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--sticker, 150px), 1fr));
+  gap: var(--sp-3);
+}
+
+.screen[data-band="4-7"] .album-grid { --sticker: 180px; }
+
+.sticker {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--sp-1);
+  min-height: var(--sticker, 150px);
+  padding: var(--sp-3) var(--sp-2);
+  border: 2px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  text-align: center;
+}
+
+.sticker__emoji {
+  font-size: calc(var(--sticker, 150px) * .42);
+  line-height: 1.05;
+}
+
+.sticker__name {
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.sticker__day {
+  font-size: .95rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.sticker.is-new {
+  border: 4px solid var(--bio-amber);
+  background: color-mix(in srgb, var(--bio-amber) 12%, var(--surface));
+}
+
+.sticker.is-new .sticker__emoji { animation: cheer-wiggle 1.2s ease-in-out .3s 2; }
+
+/* No sticker yet: Zio, and what earns one, never a blank page. */
+.album-empty {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+  border: 2px dashed color-mix(in srgb, var(--bio-amber) 60%, var(--line));
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.album-empty__zio { flex: none; width: 140px; height: 140px; }
+.album-empty__zio svg { width: 100%; height: 100%; }
+
+.album-empty__title {
+  margin: 0 0 var(--sp-2);
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.album-empty__body {
+  margin: 0;
+  font-size: calc(1.3rem * var(--font-scale));
+  line-height: 1.4;
+  color: var(--ink-soft);
+}
+
+/* The child's own tiles that earn a sticker. */
+.album-earners__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+
+.album-earner {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--target-young);
+  padding: 0 var(--sp-4) 0 var(--sp-3);
+  border: 2px solid color-mix(in srgb, var(--bio-teal) 45%, var(--line));
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.album-earner:active { transform: scale(.96); }
+
+.album-earner__icon { font-size: 2rem; line-height: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cheer,
+  .cheer__sticker,
+  .sticker.is-new .sticker__emoji,
+  .album-chip.is-bumped { animation: none; }
+  .cheer.is-leaving { transition: none; }
+}

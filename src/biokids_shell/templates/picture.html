@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ _('pictures.title') }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="/static/pictures.css?v={{ asset_version }}">
+{% endblock %}
+
+{#
+  One of the child's pictures, as big as the screen (D-212): big ‹ and › to
+  the newer and the older one, in the grid's order, and ✕ back to the grid.
+  All three are links, at least 84 pixels, so a four-year-old's finger and a
+  keyboard's Tab both find them without a script; pictures.js adds the arrow
+  keys, Escape and a swipe.
+#}
+{% block body %}
+{% set when = picture.day.strftime('%d.%m.%Y') %}
+<div class="viewer" id="viewer" data-band="{{ band }}">
+  <img class="viewer__img" src="/pictures/file/{{ picture.folder|urlencode }}/{{ picture.name|urlencode }}"
+       alt="{{ _('pictures.alt', date=when) }}">
+
+  <a class="viewer__btn viewer__close" id="viewer-close" href="/pictures"
+     aria-label="{{ _('pictures.close') }}" title="{{ _('pictures.close') }}"
+     {% if young %}data-speak="{{ _('pictures.close') }}"{% endif %}>✕</a>
+
+  {% if newer %}
+    <a class="viewer__btn viewer__prev" id="viewer-newer"
+       href="/pictures/view/{{ newer.folder|urlencode }}/{{ newer.name|urlencode }}"
+       aria-label="{{ _('pictures.newer') }}" title="{{ _('pictures.newer') }}">‹</a>
+  {% endif %}
+  {% if older %}
+    <a class="viewer__btn viewer__next" id="viewer-older"
+       href="/pictures/view/{{ older.folder|urlencode }}/{{ older.name|urlencode }}"
+       aria-label="{{ _('pictures.older') }}" title="{{ _('pictures.older') }}">›</a>
+  {% endif %}
+
+  <p class="viewer__count" aria-live="polite">{{ _('pictures.count', number=number, total=total) }}</p>
+</div>
+<script src="/static/pictures.js?v={{ asset_version }}" defer></script>
+{% endblock %}

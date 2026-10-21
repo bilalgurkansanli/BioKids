@@ -29,6 +29,7 @@ import math
 import re
 import shlex
 import socket
+import time
 from collections.abc import AsyncIterator, Coroutine
 from pathlib import Path
 from typing import Annotated, Any
@@ -45,7 +46,7 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from jinja2 import ChainableUndefined, Environment, FileSystemLoader, select_autoescape
 
-from biokids_core import daily, search_filter
+from biokids_core import album, daily, search_filter
 from biokids_core.browser_policy import packed_extension
 from biokids_core.catalog import program_installed
 from biokids_core.config import Config, get_config
@@ -53,7 +54,7 @@ from biokids_core.errors import IpcError
 from biokids_core.i18n import Translator, normalise_locale, translator
 from biokids_core.ipc import AsyncDaemonClient
 from biokids_core.types import AgeBand, Reason
-from biokids_shell import device
+from biokids_shell import device, pictures
 from biokids_shell.client import ShellClient
 from biokids_shell.launcher import AppLauncher, LaunchRequest
 from biokids_shell.relay import NOTICE_SECONDS, voice_socket_path
@@ -112,6 +113,7 @@ TILE_ICONS: dict[str, str] = {
     "speaker": "🔊",
     "sun": "☀️",
     "power": "⏻",
+    "gallery": "🏞️",
     "app": "🟦",
 }
 """Emoji rather than an icon set: they render at any size, need no asset
@@ -131,10 +133,17 @@ AVATARS: dict[str, str] = {
 the first thing they see on their own screen, so it has to be the one they chose
 rather than a default square."""
 
-BUILTIN_TILES = {"volume", "brightness", "shutdown"}
+BUILTIN_TILES = {"volume", "brightness", "shutdown", "drawings"}
+"""Drawn by the launcher and handled in the browser; they start no process."""
+PAGE_TILES: dict[str, str] = {"drawings": "/pictures"}
+"""Built-in tiles that are a page of the launcher's own: Resimlerim (D-212)."""
 DEFAULT_VOLUME = 70
 """Where the volume slider starts when the sound's own level cannot be read."""
-"""Drawn by the launcher and handled in the browser; they start no process."""
+CHEER_FILE = Path(".config") / "biokids" / "album-cheered"
+"""Under the home, beside the kiosk's and the browser's profiles: the date the
+album last celebrated a new sticker (D-211), and nothing else."""
+PAGE_TILE_TTL_S = 10.0
+"""How long a yes to "does this child have Resimlerim" is trusted (`may_open`)."""
 HEALTHZ_DAEMON_S = 0.5
 """How long /healthz waits to say whether the daemon answers. The extension only
 needs to know this is the launcher, and it gives up on a slow answer."""
@@ -174,6 +183,55 @@ class ShellState:
         """Work an answer does not wait for (D-208). Held, because the event
         loop keeps only a weak reference to a task and could collect one
         mid-flight."""
+        self.home = Path.home()
+        """The child's home: their pictures (D-212) and the album's one note
+        (D-211). The launcher runs as the child, so it is theirs."""
+        self.cheered: str | None = None
+        """The day today's sticker was last celebrated, once read from disk."""
+        self.page_ok: dict[str, float] = {}
+        """Page tiles a recent state said this child has, until when (monotonic)."""
+
+    @property
+    def cheer_file(self) -> Path:
+        return self.home / CHEER_FILE
+
+    def take_cheer(self, found: album.Album | None) -> bool:
+        """True the first time today's sticker is shown as new, and never again
+        that day (D-211): not on every load, and not again after a restart of
+        the launcher or a second login, which is why the day is kept in a file
+        of the child's own. A file that cannot be written costs a second
+        celebration, never the page."""
+        if found is None or not found.earned_today:
+            return False
+        day = found.today.isoformat()
+        if self.cheered is None:
+            try:
+                self.cheered = self.cheer_file.read_text(encoding="utf-8").strip()
+            except OSError:
+                self.cheered = ""
+        if self.cheered == day:
+            return False
+        self.cheered = day
+        try:
+            self.cheer_file.parent.mkdir(parents=True, exist_ok=True)
+            self.cheer_file.write_text(day + "\n", encoding="utf-8")
+        except OSError as exc:
+            log.info("could not remember today's sticker celebration: %s", exc)
+        return True
+
+    async def may_open(self, slug: str) -> bool:
+        """Whether this child has the page tile `slug`, asked of the daemon at
+        most every PAGE_TILE_TTL_S: a grid of pictures is a request per picture,
+        and the answer does not change between them."""
+        now = time.monotonic()
+        if self.page_ok.get(slug, 0.0) > now:
+            return True
+        data = await self.client.state()
+        if _find_tile(data, slug) is None:
+            self.page_ok.pop(slug, None)
+            return False
+        self.page_ok[slug] = now + PAGE_TILE_TTL_S
+        return True
 
     def in_background(self, work: Coroutine[Any, Any, Any], name: str) -> asyncio.Task[Any]:
         """Run `work` after the answer has gone; a failure is logged, never raised."""
@@ -354,6 +412,7 @@ def register_routes(app: FastAPI) -> None:
         if screen is not None:
             return await render(shell, request, screen, data)
         volume = await device.get_volume()
+        found = album.from_state(data)
         return await render(
             shell,
             request,
@@ -362,6 +421,11 @@ def register_routes(app: FastAPI) -> None:
             volume=DEFAULT_VOLUME if volume is None else volume,
             # Bugünün sürprizi (D-203): today's card, for this child's tiles.
             daily=daily.for_launcher(data, dt.date.today(), tile_can_start),
+            # The sticker album's chip (D-211), for a child who has a sticker
+            # or a tile that can earn one; and the day's celebration, once.
+            album=found if found and (found.count or _learning_tiles(data)) else None,
+            cheer=_cheer(shell, data, found),
+            page_tiles=PAGE_TILES,
         )
 
     @app.get("/first-run", response_class=HTMLResponse)
@@ -403,6 +467,8 @@ def register_routes(app: FastAPI) -> None:
             return await render(
                 shell, request, "blocked.html", data, reason=Reason.APP_NOT_ALLOWED
             )
+        if slug in PAGE_TILES:
+            return RedirectResponse(PAGE_TILES[slug], status_code=303)
         return await render(shell, request, "launching.html", data, tile=tile)
 
     @app.post("/launch/{slug}")
@@ -432,12 +498,15 @@ def register_routes(app: FastAPI) -> None:
 
         if slug in BUILTIN_TILES:
             # Volume and brightness are the launcher's own controls; shutdown has
-            # its own confirmation screen. None of them starts a process.
+            # its own confirmation screen, and Resimlerim is a page (D-212).
+            # None of them starts a process.
+            page = "/shutdown" if slug == "shutdown" else PAGE_TILES.get(slug)
             if as_page:
-                return RedirectResponse(
-                    "/shutdown" if slug == "shutdown" else "/", status_code=303
-                )
-            return JSONResponse({"ok": True, "builtin": slug})
+                return RedirectResponse(page or "/", status_code=303)
+            answer: dict[str, object] = {"ok": True, "builtin": slug}
+            if page:
+                answer["page"] = page
+            return JSONResponse(answer)
 
         allowed, reason = permission
         if not allowed:
@@ -610,6 +679,131 @@ def register_routes(app: FastAPI) -> None:
         del audio
         return JSONResponse(
             {"text": text or "", "ok": text is not None}, headers={"Cache-Control": "no-store"}
+        )
+
+    # -------------------------------------------------------------- album
+
+    @app.get("/album", response_class=HTMLResponse)
+    async def album_page(request: Request, shell: Shell) -> Response:
+        """Çıkartma albümüm (D-211): the stickers, the week, and how to get more.
+
+        Drawn whole by the server, so it reads with scripts off. A child whose
+        day has ended gets the screen that says so, from the home route.
+        """
+        data = await shell.client.state()
+        if data is None:
+            return await render(shell, request, "offline.html", None)
+        found = album.from_state(data)
+        if found is None or _screen_for(data) is not None:
+            return RedirectResponse("/", status_code=303)
+        tr = translator(normalise_locale(str(data.get("locale", "tr"))))
+        return await render(
+            shell,
+            request,
+            "album.html",
+            data,
+            album=found,
+            words=_album_words(tr, found),
+            earners=_learning_tiles(data),
+            cheer=_cheer(shell, data, found),
+            on_album=True,
+        )
+
+    @app.post("/album/cheer")
+    async def album_cheer(request: Request, shell: Shell) -> Response:
+        """Asked by the home page whenever the launcher comes back in front.
+
+        The child is usually in a learning app when the quarter of an hour
+        fills up, and the launcher's page was drawn long before: this is how
+        the chip learns the new number and the day's celebration happens when
+        the child comes back, once (`ShellState.take_cheer`). Only from the
+        launcher's own page.
+        """
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        data = await shell.client.state()
+        found = album.from_state(data)
+        if data is None or found is None:
+            return JSONResponse({"count": None, "cheer": None})
+        tr = translator(normalise_locale(str(data.get("locale", "tr"))))
+        return JSONResponse(
+            {
+                "count": found.count,
+                "label": tr("album.chip", count=found.count),
+                "cheer": _cheer(shell, data, found),
+            },
+            headers={"Cache-Control": "no-store"},
+        )
+
+    # ----------------------------------------------------------- pictures
+
+    @app.get("/pictures", response_class=HTMLResponse)
+    async def pictures_page(request: Request, shell: Shell) -> Response:
+        """Resimlerim (D-212): the child's own pictures, newest first."""
+        data = await shell.client.state()
+        if data is None:
+            return await render(shell, request, "offline.html", None)
+        if _find_tile(data, "drawings") is None or _screen_for(data) is not None:
+            return RedirectResponse("/", status_code=303)
+        shown = await asyncio.to_thread(pictures.pictures, shell.home)
+        return await render(
+            shell, request, "pictures.html", data, shown=shown, paint=_paint_tile(data)
+        )
+
+    @app.get("/pictures/view/{folder}/{name}", response_class=HTMLResponse)
+    async def picture_page(request: Request, shell: Shell, folder: str, name: str) -> Response:
+        """One picture, as big as the screen, with ‹ › and ✕. Links, so the
+        child can page through without a script; picture.js adds the arrow
+        keys and a swipe."""
+        data = await shell.client.state()
+        if data is None:
+            return await render(shell, request, "offline.html", None)
+        if _find_tile(data, "drawings") is None or _screen_for(data) is not None:
+            return RedirectResponse("/", status_code=303)
+        shown = await asyncio.to_thread(pictures.pictures, shell.home)
+        place = pictures.neighbours(shown, folder, name)
+        if place is None:
+            return RedirectResponse("/pictures", status_code=303)
+        index, newer, older = place
+        return await render(
+            shell,
+            request,
+            "picture.html",
+            data,
+            picture=shown[index],
+            number=index + 1,
+            total=len(shown),
+            newer=newer,
+            older=older,
+        )
+
+    @app.get("/pictures/file/{folder}/{name}")
+    async def picture_file(request: Request, shell: Shell, folder: str, name: str) -> Response:
+        """The picture itself, for the launcher's own pages and nobody else's.
+
+        A website open in the child's browser could otherwise put the child's
+        drawings on its own page, so a request another site makes is refused,
+        and the answer tells the browser not to hand it to one
+        (Cross-Origin-Resource-Policy). Only a picture of the child's own, in
+        one of their picture folders (biokids_shell.pictures).
+        """
+        if request.headers.get("sec-fetch-site", "same-origin") not in {"same-origin", "none"}:
+            return PlainTextResponse("", status_code=403)
+        if not await shell.may_open("drawings"):
+            return PlainTextResponse("", status_code=404)
+        found = await asyncio.to_thread(pictures.find, shell.home, folder, name)
+        content = await asyncio.to_thread(pictures.read, found) if found else None
+        if found is None or content is None:
+            return PlainTextResponse("", status_code=404)
+        return Response(
+            content,
+            media_type=found.media_type,
+            headers={
+                "Cache-Control": "no-store",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "X-Content-Type-Options": "nosniff",
+                "Content-Security-Policy": "default-src 'none'; sandbox",
+            },
         )
 
     # ------------------------------------------------------------- events
@@ -933,6 +1127,80 @@ def _find_tile(data: dict[str, Any] | None, slug: str) -> dict[str, Any] | None:
         if isinstance(tile, dict) and tile.get("slug") == slug:
             return dict(tile)
     return None
+
+
+EARNERS_SHOWN = 4
+"""The album lists this many of the child's tiles that earn a sticker."""
+
+
+def _learning_tiles(data: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """The child's own tiles that earn a sticker (D-211): those in the learning
+    category, as the parent set it, and able to start on this machine. The
+    album names them, so a child who cannot read "öğrenme" still knows where
+    a sticker comes from."""
+    return [
+        dict(tile)
+        for tile in (data or {}).get("tiles", [])
+        if isinstance(tile, dict)
+        and tile.get("category") == "learning"
+        and tile.get("slug") not in BUILTIN_TILES
+        and tile_can_start(tile)
+    ][:EARNERS_SHOWN]
+
+
+def _paint_tile(data: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Boya, or failing that Çizim, when the child has it: the empty Resimlerim
+    page offers it (D-212)."""
+    for slug in ("tuxpaint", "kolourpaint"):
+        tile = _find_tile(data, slug)
+        if tile is not None and tile_can_start(tile):
+            return tile
+    return None
+
+
+def _cheer(
+    shell: ShellState, data: dict[str, Any] | None, found: album.Album | None
+) -> dict[str, str] | None:
+    """Today's sticker, as the celebration shows it - the first time only.
+
+    Zio says the sentence as it is decided (D-175's voice, the same call the
+    page's read-aloud makes), after the answer has gone: once a day, for
+    either age band, whichever page or poll comes first.
+    """
+    if found is None or not shell.take_cheer(found):
+        return None
+    locale = normalise_locale(str((data or {}).get("locale", "tr")))
+    tr = translator(locale)
+    sticker = found.today_sticker
+    name = tr(sticker.key)
+    text = tr("album.cheer", sticker=name)
+    shell.in_background(shell.say(text, locale), "album-cheer")
+    return {"sticker": sticker.emoji, "name": name, "text": text}
+
+
+def _album_words(tr: Translator, found: album.Album) -> dict[str, str]:
+    """The week in a sentence or two a parent can read out to a five-year-old.
+
+    The week first - how many stickers since Monday - then today: earned, or
+    how many minutes more, or how to start. The minutes are whole and rounded
+    up, as on the ring: half a minute left is "1 more".
+    """
+    count = found.week_count
+    if count == 0:
+        week = tr("album.week.none")
+    elif count == 1:
+        week = tr("album.week.one")
+    else:
+        week = tr("album.week.many", count=count)
+    if found.earned_today:
+        today = tr("album.today.earned", sticker=tr(found.today_sticker.key))
+    elif found.today_seconds <= 0:
+        today = tr("album.today.start", minutes=found.goal_minutes)
+    elif found.minutes_left == 1:
+        today = tr("album.today.left_one")
+    else:
+        today = tr("album.today.left", minutes=found.minutes_left)
+    return {"week": week, "today": today}
 
 
 FORM_TYPES = frozenset({"application/x-www-form-urlencoded", "multipart/form-data"})

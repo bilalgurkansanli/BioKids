@@ -114,6 +114,36 @@ def test_every_theme_fills_a_week_for_both_bands(corpus: daily.Corpus) -> None:
             assert len(own) >= 7, (theme.slug, band)
 
 
+def test_the_three_newer_themes_are_as_full_as_the_first_twelve(corpus: daily.Corpus) -> None:
+    """D-213: online safety, feelings and jobs, after the first twelve, each
+    with the mix of the others - a dozen and more cards, every kind but the
+    animal, and a task that opens one of the child's tiles."""
+    order = [t.slug for t in corpus.themes]
+    assert order[-3:] == ["internet", "feelings", "jobs"]
+    assert len(order) == 15
+    sizes = [len([i for i in corpus.items if i.theme == t]) for t in order]
+    for slug in order[-3:]:
+        cards = [i for i in corpus.items if i.theme == slug]
+        assert min(sizes[:12]) <= len(cards) <= max(sizes[:12]), slug
+        assert {i.kind for i in cards} == {"fact", "riddle", "word", "challenge"}, slug
+        assert sum(i.kind == "riddle" for i in cards) >= 2, slug
+        assert any(i.app for i in cards), f"{slug}: no task opens a tile"
+
+
+def test_online_safety_is_said_without_frightening_anyone(corpus: daily.Corpus) -> None:
+    """What to do and who to tell, never what could happen (D-213)."""
+    scary = re.compile(
+        r"tehlik|korkunç|kötü|kaçır|zarar|yabancı|dikkat et|asla|"
+        r"danger|scary|bad |kidnap|harm|stranger|never ",
+        re.IGNORECASE,
+    )
+    for item in corpus.items:
+        if item.theme != "internet":
+            continue
+        for text in (item.text_tr, item.more_tr, item.text_en, item.more_en):
+            assert not scary.search(text), f"{item.id}: {text}"
+
+
 def test_a_riddle_has_an_answer_and_does_not_give_it_away(corpus: daily.Corpus) -> None:
     for item in corpus.items:
         if item.kind != "riddle":
