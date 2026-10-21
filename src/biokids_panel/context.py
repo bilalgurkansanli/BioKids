@@ -21,6 +21,7 @@ from jinja2 import ChainableUndefined, Environment, FileSystemLoader, select_aut
 from sqlalchemy.orm import Session
 
 from biokids_core import repo
+from biokids_core.appearance import Appearance
 from biokids_core.config import Config, get_config
 from biokids_core.db.session import Database
 from biokids_core.i18n import (
@@ -175,6 +176,13 @@ def base_context(
         "_": tr,
         "locale": tr.locale,
         "auth": state,
+        # The signed-in parent's text size and contrast (D-217), as attributes
+        # on <html>. Before signing in nobody is known, so the defaults.
+        "appearance": (
+            Appearance.of(state.parent.text_size, state.parent.high_contrast)
+            if state.authenticated and state.parent is not None
+            else Appearance()
+        ),
         "csrf": csrf_token(state),
         "path": request.url.path,
         "pending_requests": pending,
@@ -220,6 +228,10 @@ def flash_for(request: Request, tr: Translator) -> dict[str, str] | None:
         return {"tone": "ok", "text": tr("mail.panel.sent")}
     if saved == "removed":
         return {"tone": "ok", "text": tr("child.removed")}
+    if saved == "parent_added":
+        return {"tone": "ok", "text": tr("parents.added")}
+    if saved == "parent_removed":
+        return {"tone": "ok", "text": tr("parents.removed")}
     if saved == "download":
         # Started, not finished: it takes minutes, and the status card says when.
         return {"tone": "ok", "text": tr("assistant.panel.download.started")}

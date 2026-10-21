@@ -70,8 +70,58 @@ def get_or_create_family(session: Session) -> Family:
 
 
 def get_parent(session: Session) -> Parent | None:
-    """v1 has exactly one parent account; the schema allows more for later."""
-    return session.scalars(select(Parent).order_by(Parent.id)).first()
+    """The first parent who can still sign in: the one the wizard made, unless
+    they were removed (D-218).
+
+    Also where what the family shares is kept - the passphrase and the mail
+    settings - so this is the row `mail` and the passphrase gate read. With one
+    parent it is that parent, exactly as before there could be two.
+    """
+    return session.scalars(
+        select(Parent).where(Parent.removed_at.is_(None)).order_by(Parent.id)
+    ).first()
+
+
+def list_parents(session: Session) -> list[Parent]:
+    """Everyone who can sign in, in the order they were added."""
+    return list(
+        session.scalars(select(Parent).where(Parent.removed_at.is_(None)).order_by(Parent.id))
+    )
+
+
+def get_active_parent(session: Session, parent_id: int) -> Parent | None:
+    parent = session.get(Parent, parent_id)
+    return parent if parent is not None and parent.removed_at is None else None
+
+
+def find_parent_by_name(session: Session, name: str) -> Parent | None:
+    """The parent who can sign in with this name, compared the way people type
+    it: case, and spaces around and between the words, do not count."""
+    wanted = name_key(name)
+    if not wanted:
+        return None
+    for parent in list_parents(session):
+        if name_key(parent.display_name) == wanted:
+            return parent
+    return None
+
+
+def name_key(name: str) -> str:
+    """`"  anne "` and `"Anne"` are the same person to whoever is typing."""
+    return " ".join(name.split()).casefold()
+
+
+def parent_names(session: Session) -> dict[int, str]:
+    """id -> name for every parent who ever existed, removed ones included,
+    for the audit log: what a parent did stays theirs after they are gone."""
+    return {parent.id: parent.display_name for parent in session.scalars(select(Parent))}
+
+
+def family_passphrase_hash(session: Session) -> str:
+    """The family's passphrase (D-48): one for the household, whoever is signed
+    in (D-218). Empty when none was ever set."""
+    holder = get_parent(session)
+    return holder.passphrase_hash if holder is not None else ""
 
 
 def setup_complete(session: Session) -> bool:

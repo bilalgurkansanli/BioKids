@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}{{ _('parents.title') }} · {{ _('panel.title') }}{% endblock %}
+
+{#
+  Ayarlar → Ebeveynler (D-218). Everyone who may sign in, your own name, and
+  adding or removing a parent - both behind the family's passphrase. A new
+  parent's recovery code is shown here once, as in the wizard: generated for
+  this page, posted back, and only its hash kept.
+#}
+{% macro gate(id) %}
+  <div class="field">
+    <label for="{{ id }}">
+      {% if no_passphrase %}{{ _('login.pin') }}{% else %}{{ _('auth.passphrase.title') }}{% endif %}
+    </label>
+    <input id="{{ id }}" name="passphrase" type="password" autocomplete="current-password"
+           {% if not passphrase_fresh %}required{% endif %}>
+    <span class="help">
+      {% if no_passphrase %}{{ _('auth.passphrase.missing') }}{% else %}{{ _('auth.passphrase.help') }}{% endif %}
+    </span>
+  </div>
+{% endmacro %}
+
+{% block content %}
+  <h1>{{ _('parents.title') }}</h1>
+  <p class="muted">{{ _('parents.intro') }}</p>
+
+  <section class="card">
+    {% for p in parents %}
+      <div class="parent-row">
+        <span>
+          <strong>{{ p.name }}</strong>
+          {% if p.you %}<span class="muted">({{ _('parents.you') }})</span>{% endif %}
+        </span>
+        {% if parents|length > 1 %}
+          <details>
+            <summary class="btn btn--quiet">{{ _('parents.remove', name=p.name) }}</summary>
+            <form method="post" action="/settings/parents/{{ p.id }}/remove">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}">
+              <div class="notice notice--danger">
+                <p class="small">{{ _('parents.remove.body', name=p.name) }}</p>
+                {% if p.you %}<p class="small">{{ _('parents.remove.yourself') }}</p>{% endif %}
+              </div>
+              {{ gate('pp-remove-' ~ p.id) }}
+              <button class="btn btn--danger" type="submit">{{ _('parents.remove.confirm', name=p.name) }}</button>
+            </form>
+          </details>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  {% if me %}
+    <form class="card" method="post" action="/settings/parents/name">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <div class="field">
+        <label for="my-name">{{ _('wizard.parent.name') }}</label>
+        <input id="my-name" name="name" type="text" maxlength="64" required autocomplete="name"
+               value="{{ me.display_name }}">
+        <span class="help">{{ _('parents.name.help') }}</span>
+      </div>
+      <button class="btn" type="submit">{{ _('common.save') }}</button>
+    </form>
+  {% endif %}
+
+  {% if can_add %}
+    <details class="card" id="add" {% if adding %}open{% endif %}>
+      <summary><strong>{{ _('parents.add') }}</strong></summary>
+      <form method="post" action="/settings/parents/add">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <p class="muted small">{{ _('parents.add.help') }}</p>
+
+        <div class="field">
+          <label for="new-name">{{ _('parents.add.name') }}</label>
+          <input id="new-name" name="name" type="text" maxlength="64" required
+                 autocomplete="off" value="{{ name }}">
+          <span class="help">{{ _('parents.name.help') }}</span>
+        </div>
+        <div class="field">
+          <label for="new-pin">{{ _('wizard.parent.pin') }}</label>
+          <input class="pin-input" id="new-pin" name="pin" type="password" inputmode="numeric"
+                 pattern="[0-9]{6}" maxlength="6" required autocomplete="new-password">
+          <span class="help">{{ _('parents.add.pin.help') }}</span>
+        </div>
+        <div class="field">
+          <label for="new-pin2">{{ _('wizard.parent.pin_again') }}</label>
+          <input class="pin-input" id="new-pin2" name="pin_again" type="password" inputmode="numeric"
+                 pattern="[0-9]{6}" maxlength="6" required autocomplete="new-password">
+        </div>
+
+        <h2>{{ _('parents.recovery.title') }}</h2>
+        <p class="help">{{ _('parents.recovery.help') }}</p>
+        <p class="recovery-code">{{ recovery }}</p>
+        <input type="hidden" name="recovery" value="{{ recovery }}">
+        <div class="checkline">
+          <input type="checkbox" id="written" name="written_down" required>
+          <label for="written">{{ _('parents.recovery.confirm') }}</label>
+        </div>
+
+        {{ gate('pp-add') }}
+        <button class="btn btn--primary" type="submit">{{ _('parents.add.confirm') }}</button>
+      </form>
+    </details>
+  {% else %}
+    <p class="muted">{{ _('parents.full', max=max_parents) }}</p>
+  {% endif %}
+
+  <p class="muted small">{{ _('parents.shared') }}</p>
+  <p><a class="btn btn--quiet" href="/settings">{{ _('nav.settings') }}</a></p>
+{% endblock %}

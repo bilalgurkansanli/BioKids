@@ -25,6 +25,7 @@ def requests_view(view: View) -> Response:
     session, tr = view.session, view.tr
     children = {child.id: child for child in repo.list_children(session)}
     apps = {app.slug: app for app in repo.list_apps(session)}
+    parent_names = repo.parent_names(session)
     pending, decided = repo.access_requests(session)
 
     def describe(row: Any) -> dict[str, Any]:
@@ -39,6 +40,7 @@ def requests_view(view: View) -> Response:
             "status": row.status,
             "minutes": row.minutes,
             "created_at": row.created_at,
+            "by": parent_names.get(row.decided_by or 0, ""),
         }
 
     return view.render(
@@ -46,6 +48,7 @@ def requests_view(view: View) -> Response:
         pending=[describe(row) for row in pending],
         decided=[describe(row) for row in decided],
         grant_choices=REQUEST_GRANT_CHOICES,
+        several_parents=len(repo.list_parents(session)) > 1,
     )
 
 

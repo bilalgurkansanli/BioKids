@@ -411,10 +411,12 @@ Core tables. Migrations with Alembic from the first commit.
 ```
 family(id, created_at, locale, timezone, setup_completed_at)
 parent(id, display_name, pin_hash, passphrase_hash, recovery_hash, email,
-       smtp_json_encrypted, pin_failures, pin_locked_until, pin_lockout_level)
+       smtp_json_encrypted, pin_failures, pin_locked_until, pin_lockout_level,
+       text_size, high_contrast, removed_at)       -- one row per parent (D-218)
 panel_session(id, token_hash, parent_id, created_at, last_seen_at, passphrase_ok_until)
 child(id, unix_user, display_name, birth_year, age_band, avatar, locale,
-      shell_mode, supervision_indicator, enabled, first_run_done)
+      shell_mode, supervision_indicator, enabled, first_run_done,
+      text_size, high_contrast, reading_font)     -- the child's screen (D-217)
 policy(child_id, weekday_quota_min, weekend_quota_min, windows_json, schedule_json,
        end_action, break_*, earn_*, filter_mode, assistant_enabled, assistant_voice,
        voice_enabled, voice_events_json)
@@ -424,7 +426,7 @@ day_override(id, child_id, start_day, end_day, extra_minutes, quota_minutes, no_
 app(slug, name_tr, name_en, exec_cmd, icon, default_category, min_age, max_age, kind, url)
 child_app(child_id, app_slug, enabled, category_override, position)
 filter_rule(id, child_id, kind /* allow|block */, pattern, source)
-access_request(id, child_id, kind, url, minutes, created_at, status, decided_at)
+access_request(id, child_id, kind, url, minutes, created_at, status, decided_at, decided_by)
 boot_epoch(id, boot_id, first_seen_wall, last_seen_wall, last_boot_offset)
 ledger_day(child_id, day, general_s, earned_s, granted_s, penalty_remaining_s, ...)
 usage_tick(child_id, day, category, app_slug, seconds)
@@ -437,6 +439,13 @@ setting(key, value)
 ```
 
 Every table that names a child deletes its rows with the child (`ON DELETE CASCADE`).
+
+A family may have several parents (D-218). Each row has its own PIN, lockout and
+recovery code; what the family shares - `passphrase_hash` and the mail settings - is
+on the first row with no `removed_at` (`repo.get_parent`), and moves to the next one
+when that parent is removed. A removed parent's row stays, secrets cleared, so
+`audit_log.actor` (`parent:<id>`) always has a name and an id is never reused.
+`access_request.decided_by` is the id of the parent who answered.
 
 ### Retention
 

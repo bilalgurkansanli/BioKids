@@ -40,10 +40,12 @@ def audit_view(
         since=since,
         until=until,
     )
+    children = repo.list_children(view.session)
     return view.render(
         "audit.html",
         entries=entries,
-        children=repo.list_children(view.session),
+        who=_names(repo.parent_names(view.session), {c.id: c.display_name for c in children}),
+        children=children,
         actions=repo.audit_actions(view.session),
         filter_child=child,
         filter_action=action or "",
@@ -51,6 +53,18 @@ def audit_view(
         page=max(1, page),
         has_more=len(entries) == per_page,
     )
+
+
+def _names(parents: dict[int, str], children: dict[int, str]) -> dict[str, str]:
+    """`parent:2` -> "Baba", `child:1` -> "Elif": the names the rows are about.
+
+    Which parent did something is the point of the log once there are two
+    (D-218). A removed parent keeps their row, so their name is still here; a
+    removed child does not, and their rows keep the bare reference.
+    """
+    names = {f"parent:{pid}": name for pid, name in parents.items() if name}
+    names.update({f"child:{cid}": name for cid, name in children.items()})
+    return names
 
 
 def _utc_bounds_of_local_day(day: dt.date) -> tuple[dt.datetime, dt.datetime]:

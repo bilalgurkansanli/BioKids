@@ -56,7 +56,10 @@
               <td>
                 {{ _('audit.action.' ~ entry.action) }}
                 <div class="muted small">
-                  {% if entry.actor.startswith('parent') %}
+                  {# Which parent, by name, once there can be two (D-218). #}
+                  {% if entry.actor in who %}
+                    {{ who[entry.actor] }}
+                  {% elif entry.actor.startswith('parent') %}
                     {{ _('audit.actor.parent') }}
                   {% elif entry.actor == 'daemon' %}
                     {{ _('audit.actor.daemon') }}
@@ -67,7 +70,7 @@
                   {% endif %}
                 </div>
               </td>
-              <td class="muted small">{{ entry.target }}</td>
+              <td class="muted small">{{ who.get(entry.target, entry.target) }}</td>
             </tr>
           {% endfor %}
         </tbody>

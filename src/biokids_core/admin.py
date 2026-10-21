@@ -39,6 +39,7 @@ from pathlib import Path
 from biokids_core import repo, security
 from biokids_core.catalog import load_catalog, sync_catalog
 from biokids_core.config import Config, set_config
+from biokids_core.db.models import Parent
 from biokids_core.db.session import Database
 from biokids_core.errors import ConfigError
 from biokids_core.i18n import translator
@@ -188,6 +189,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--stdin",
         action="store_true",
         help="read the new PIN from standard input instead of prompting",
+    )
+    # A name is not a secret - the panel's sign-in page shows them all - so it
+    # may be an argument. Needed with two or more parents (D-218) when the PIN
+    # comes from standard input; asked for otherwise.
+    reset.add_argument(
+        "--parent",
+        metavar="NAME",
+        help="whose PIN, when the family has more than one parent",
     )
 
     unprovision = sub.add_parser(
@@ -556,19 +565,63 @@ def read_new_pin(from_stdin: bool) -> str:
     return first
 
 
-def cmd_reset_pin(args: argparse.Namespace, config: Config) -> int:
-    try:
-        pin = security.validate_pin(read_new_pin(args.stdin))
-    except ValueError as exc:
-        print(translator("en")(str(exc)))
-        return 2
+def choose_parent(
+    parents: Sequence[Parent], named: str | None, *, interactive: bool
+) -> Parent | str:
+    """Whose PIN to reset: the parent, or a sentence saying why there is none.
 
+    With one parent, that one, as before there could be two - unless a name was
+    given that is not theirs. With two or more (D-218), the one `--parent` names;
+    without it, asked by name on the terminal, which is only possible when the
+    PIN is not coming from standard input too. Names are not secret: the panel's
+    sign-in page shows them to anyone.
+    """
+    listed = ", ".join(parent.display_name or f"#{parent.id}" for parent in parents)
+    if named is None and len(parents) == 1:
+        return parents[0]
+    if named is None and not interactive:
+        return f"there are {len(parents)} parents ({listed}); say whose PIN with --parent NAME"
+    if named is None:
+        print(f"Parents: {listed}")
+        named = input("Whose PIN? ")
+    wanted = repo.name_key(named)
+    for parent in parents:
+        if repo.name_key(parent.display_name) == wanted or wanted == f"#{parent.id}":
+            return parent
+    return f"no parent is called {named.strip()!r}; the parents are: {listed}"
+
+
+def cmd_reset_pin(args: argparse.Namespace, config: Config) -> int:
+    """Set one parent's PIN and clear their lockout.
+
+    Asked in two transactions with the questions between them, never one held
+    open while a person types: the daemon writes every thirty seconds, and a
+    read snapshot older than its last write cannot become a write in SQLite's
+    WAL mode.
+    """
     database = Database(config)
     try:
         with database.session() as session:
-            parent = repo.get_parent(session)
+            parents = repo.list_parents(session)
+        if not parents:
+            print("no parent account exists yet; run the setup wizard first")
+            return 1
+        chosen = choose_parent(
+            parents, getattr(args, "parent", None), interactive=not args.stdin
+        )
+        if isinstance(chosen, str):
+            print(chosen)
+            return 2
+        try:
+            pin = security.validate_pin(read_new_pin(args.stdin))
+        except ValueError as exc:
+            print(translator("en")(str(exc)))
+            return 2
+
+        with database.session() as session:
+            parent = repo.get_active_parent(session, chosen.id)
             if parent is None:
-                print("no parent account exists yet; run the setup wizard first")
+                print("that parent was removed in the meantime; nothing was changed")
                 return 1
             parent.pin_hash = security.hash_secret(pin)
             parent.pin_failures = 0
@@ -578,13 +631,16 @@ def cmd_reset_pin(args: argparse.Namespace, config: Config) -> int:
                 session,
                 actor="cli",
                 action="pin_changed",
+                target=f"parent:{parent.id}",
                 detail={"via": "biokids-admin reset-pin"},
                 severity="warning",
             )
     finally:
         database.dispose()
 
-    print("the PIN has been changed, and the change is in the audit log")
+    name = chosen.display_name
+    whose = f"{name}'s PIN" if name and len(parents) > 1 else "the PIN"
+    print(f"{whose} has been changed, and the change is in the audit log")
     return 0
 
 

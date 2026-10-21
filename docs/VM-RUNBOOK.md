@@ -1525,6 +1525,78 @@ the end action **Ekranı kilitle**, so the first pass does not end with the VM o
 7. A range ending yesterday, typed by hand into the form's dates, is refused with
    "Bu günler geçmişte kaldı."
 
+### 8.20 Text size, contrast and the reading font (D-217)
+
+On the machine of §8.14, upgraded to the build with D-217, at 1280 × 800.
+`dpkg -l fonts-opendyslexic` must show it installed: it is a new Recommends of
+biokids-desktop (`sudo apt install fonts-opendyslexic` after an `apt-get upgrade`).
+`fc-list : family file | grep -i dyslexic` lists files in
+`/usr/share/fonts/opentype/opendyslexic/` with the family `OpenDyslexic` - the name
+`tokens.css` asks for. If the family is spelled otherwise, step 4 fails: note it.
+
+**Pass, in order:**
+
+1. **The panel, for yourself.** **Ayarlar → Görünüm**: **Çok büyük** and **Yüksek
+   kontrast**, **Kaydet**. Every panel page is larger, black on white, with dark
+   lines. Open the panel on the phone and sign in: the same. The page never scrolls
+   sideways at the phone's width; the bottom bar still shows all six entries, and the
+   top bar's **Yardım** and **Çıkış** sit under the name. Put it back to **Normal**.
+2. **A child, the young band.** **Çocuklar → Elif → Düzenle → Ekran**: **Çok büyük**,
+   **Kaydet**. Within a few seconds Elif's launcher redraws (the daemon's reload sends
+   it home): the greeting, the ring's number, the day's card and the tile names are
+   half as big again; the tiles are a little larger, four a row instead of five, and
+   the grid scrolls under the card. No tile name runs outside its tile - look at
+   *Kaplumbağa* and *Eşleştirme* - and nothing is cut off at the right.
+3. **Yüksek kontrast** for the same child: white background, black words, a dark
+   border round every tile, the ring's empty part light and the minutes left dark.
+   With a quota a few minutes from its end, the warning banner's words are white on
+   the dark amber, and readable.
+4. **Okuma kolaylığı yazı tipi**: the tile names and the greeting change to
+   OpenDyslexic's heavy-bottomed letters. `sudo apt remove fonts-opendyslexic`, then
+   reload the child's screen (Kapat and log in again): the usual font is back, not a
+   serif; the panel's **Ekran** now says the font is not installed. Reinstall it.
+5. **The browser.** Tap **İnternet**: the start page has the same size, contrast and
+   font. Put everything back to **Normal** and check the launcher looks as before.
+
+### 8.21 A second parent (D-218)
+
+Take a snapshot first. On the machine of §8.20, signed in as the parent from the
+wizard (Anne).
+
+**Pass, in order:**
+
+1. **Ayarlar → Ebeveynler**: Anne is listed "(siz)". **Ebeveyn ekle**: name *Baba*,
+   a PIN twice, write down the recovery code, tick the box, and leave the passphrase
+   empty: refused, with the passphrase asked for. Type it: "Ebeveyn eklendi". The
+   audit log has *Ebeveyn eklendi* by Anne, and with mail set up under **Ayarlar**
+   (D-177) a mail says "Baba: Ebeveyn eklendi" within a minute.
+2. **Sign out.** The sign-in page asks **Kim giriş yapıyor?** with two big buttons.
+   **Baba**, his PIN: signed in, and **Kayıtlar** shows *Panele giriş yapıldı* under
+   Baba.
+3. **The lockout is Anne's alone.** Sign out, **Anne**, five wrong PINs: locked for 15
+   minutes. **Başka biri misiniz?** → **Baba**, his PIN: signed in.
+   `sudo biokids-admin reset-pin --parent Anne` clears Anne's lockout and sets her a
+   new PIN; plain `sudo biokids-admin reset-pin` asks *Whose PIN?* first.
+4. **The family's passphrase.** As Baba, turn a child's protection off: the
+   passphrase Anne set opens it, Baba's PIN does not. **Ayarlar → Parola** with the
+   current passphrase left empty is refused.
+5. **Requests.** Log Elif in, ask for more time, answer as Baba from the phone: the
+   answered list says "· Baba".
+6. **Removing.** As Anne, **Ebeveynler → Baba → Kaldır** with the passphrase: Baba's
+   phone is signed out at its next tap, his PIN no longer works, and the sign-in page
+   is the plain PIN box again. Kayıtlar still names Baba on his rows. Anne, now the
+   only parent, has no **Kaldır** at all.
+7. **The recovery code.** Add Baba again, sign out, **PIN'imi unuttum** with *his*
+   code: the page goes to Baba's PIN box, his PIN changed, Anne's did not.
+
+```bash
+sudo bkq "select id, display_name, removed_at is not null, length(pin_hash) > 0 from parent"
+sudo bkq "select actor, action, target from audit_log where action like 'parent_%' order by id"
+```
+
+The first parent's row holds the passphrase hash; a removed one has an empty PIN hash
+and its name.
+
 ---
 
 ## 9. After the run

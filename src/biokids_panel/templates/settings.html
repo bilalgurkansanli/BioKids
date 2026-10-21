@@ -19,6 +19,31 @@
     <button class="btn" type="submit">{{ _('common.save') }}</button>
   </form>
 
+  {# -------------------------------------------------------- appearance #}
+  {# D-217. The signed-in parent's own: stored with their account, so it is
+     the same on the phone, and the other parent's panel is not changed. #}
+  <form class="card" method="post" action="/settings/appearance" id="appearance">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <h2>{{ _('appearance.title') }}</h2>
+    <p class="muted">{{ _('appearance.help') }}</p>
+    <fieldset>
+      <legend>{{ _('appearance.text_size') }}</legend>
+      {% for size in text_sizes %}
+        <div class="checkline">
+          <input type="radio" id="ts-{{ size }}" name="text_size" value="{{ size }}"
+                 {% if appearance.text_size == size %}checked{% endif %}>
+          <label for="ts-{{ size }}">{{ _('appearance.text_size.' ~ size) }}</label>
+        </div>
+      {% endfor %}
+    </fieldset>
+    <div class="checkline">
+      <input type="checkbox" id="hc" name="high_contrast" {% if appearance.high_contrast %}checked{% endif %}>
+      <label for="hc">{{ _('appearance.contrast') }}
+        <span class="help">{{ _('appearance.contrast.help') }}</span></label>
+    </div>
+    <button class="btn" type="submit">{{ _('common.save') }}</button>
+  </form>
+
   {# -------------------------------------------------------------- mail #}
   {#
     The parent's own mail server (D-177). The password is never put back into
@@ -112,10 +137,19 @@
     {% include "partials/phone_button.html" %}
   </section>
 
+  {# ----------------------------------------------------------- parents #}
+  {# D-218: who may sign in, on a page of its own behind the passphrase. #}
+  <section class="card" id="parents">
+    <h2>{{ _('parents.title') }}</h2>
+    <p class="muted">{{ parents|map(attribute='name')|join(', ') }}</p>
+    <p class="muted small">{{ _('parents.teaser') }}</p>
+    <a class="btn" href="/settings/parents">{{ _('parents.open') }}</a>
+  </section>
+
   {# --------------------------------------------------------------- PIN #}
   <form class="card" method="post" action="/settings/pin">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
-    <h2>{{ _('login.pin') }}</h2>
+    <h2>{{ _('settings.pin.yours') }}</h2>
     <div class="field">
       <label for="cur">{{ _('login.pin') }}</label>
       <input id="cur" name="current_pin" type="password" inputmode="numeric"
@@ -135,6 +169,9 @@
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
     <h2>{{ _('wizard.passphrase.field') }}</h2>
     <p class="muted small">{{ _('wizard.passphrase.help') }}</p>
+    {% if several_parents %}
+      <p class="muted small">{{ _('settings.passphrase.shared') }}</p>
+    {% endif %}
 
     <div class="field">
       <label for="pp-pin">{{ _('login.pin') }}</label>

@@ -133,6 +133,9 @@ class AccessRequestsMixin(OperationsMixin):
 
         row.status = "approved" if approve else "denied"
         row.decided_at = utcnow()
+        # Any parent may answer (D-218); which one did is kept with the answer.
+        if actor.startswith("parent:") and actor[7:].isdigit():
+            row.decided_by = int(actor[7:])
         row.minutes = minutes if approve and row.kind == "time" else 0
         host = web_tile_pattern(row.url) if row.url else ""
         if approve and row.kind == "site" and host:

@@ -47,6 +47,7 @@ from fastapi.staticfiles import StaticFiles
 from jinja2 import ChainableUndefined, Environment, FileSystemLoader, select_autoescape
 
 from biokids_core import album, daily, search_filter
+from biokids_core.appearance import Appearance
 from biokids_core.browser_policy import packed_extension
 from biokids_core.catalog import program_installed
 from biokids_core.config import Config, get_config
@@ -431,6 +432,9 @@ def register_routes(app: FastAPI) -> None:
             "state": data,
             "tiles": [tile for tile in data.get("tiles", []) if tile_can_start(tile)],
             "characters": shell.characters,
+            # What a parent chose for this child's screen (D-217), on <html>.
+            # Checked again here: only known values may reach an attribute.
+            "appearance": Appearance.from_state(data.get("appearance")),
             "strings": _browser_strings(tr),
             "lines": _spoken_lines(tr),
             "notice_ms": int(NOTICE_SECONDS * 1000),

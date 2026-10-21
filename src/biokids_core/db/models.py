@@ -70,6 +70,16 @@ class Family(Base):
 
 
 class Parent(Base):
+    """One person who may sign in to the panel (D-218).
+
+    Each has their own PIN, lockout and recovery code. What the family shares -
+    the passphrase and the mail settings - is kept on the first parent still in
+    use (`repo.get_parent`), and moves to the next one if that parent is
+    removed. A removed parent keeps their row and name, with every secret
+    cleared, so the audit log can still say who did what and an id is never
+    given to somebody else.
+    """
+
     __tablename__ = "parent"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -87,7 +97,18 @@ class Parent(Base):
     pin_lockout_level: Mapped[int] = mapped_column(Integer, default=0)
     """Number of lockouts served. The next one lasts twice as long (D-48)."""
 
+    text_size: Mapped[str] = mapped_column(String(8), default="normal", server_default="normal")
+    high_contrast: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    """How the panel is drawn for this parent (D-217), on whichever device."""
+
+    removed_at: Mapped[dt.datetime | None] = mapped_column(DateTime, default=None)
+    """Set when another parent removed this one (D-218); they can no longer sign in."""
+
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+    @property
+    def active(self) -> bool:
+        return self.removed_at is None
 
 
 class PanelSession(Base):
@@ -125,6 +146,12 @@ class Child(Base):
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     first_run_done: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+
+    # The child's screen (D-217): text size, contrast and the reading font,
+    # chosen by a parent and drawn by the launcher.
+    text_size: Mapped[str] = mapped_column(String(8), default="normal", server_default="normal")
+    high_contrast: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    reading_font: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     policy: Mapped[Policy | None] = relationship(
         back_populates="child", uselist=False, cascade="all, delete-orphan"

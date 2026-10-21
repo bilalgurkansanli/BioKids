@@ -233,8 +233,12 @@ Depends: biokids (= ${binary:Version}),
 # Separate programs the launcher starts, under the GPL and LGPL, so their
 # licences do not reach BioKids' own code (D-30). Each is an app in the
 # catalogue, except tuxpaint-stamps-default: Tux Paint's ("Boya") stamps -
-# animals, food, vehicles, plants - where tuxpaint alone has six of Tux (D-210).
+# animals, food, vehicles, plants - where tuxpaint alone has six of Tux (D-210),
+# and fonts-opendyslexic: the reading font a parent can choose for a child
+# (D-217), found by the browser among the machine's fonts; without it the
+# launcher keeps its usual font.
 Recommends: blinken,
+            fonts-opendyslexic,
             frozen-bubble,
             gcompris-qt,
             gnome-chess,
