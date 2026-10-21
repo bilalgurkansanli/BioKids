@@ -61,11 +61,7 @@ representative at an online or offline event.
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement at
 
-> **`<CODE OF CONDUCT CONTACT — NOT YET SET>`**
->
-> Maintainer: replace this placeholder with a real, monitored address before the
-> repository is made public. A code of conduct with no working contact address
-> tells someone their report was received when it was not.
+> **<bilalsanli129@gmail.com>**
 
 All complaints will be reviewed and investigated promptly and fairly.
 

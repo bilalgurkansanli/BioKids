@@ -19,11 +19,7 @@ Two channels, either is fine:
 - **GitHub private vulnerability report** —
   <https://github.com/bilalgurkansanli/BioKids/security/advisories/new>.
   Preferred: the report, the fix and the advisory stay in one place.
-- **Email** — `<SECURITY CONTACT — NOT YET SET>`
-
-> **Maintainer:** this address must exist and be monitored before the repository is made
-> public. A disclosure policy with a dead contact is worse than no policy, because it
-> tells a reporter their report arrived somewhere when it did not.
+- **Email** — <bilalsanli129@gmail.com>
 
 Useful to include, as far as you have it:
 
