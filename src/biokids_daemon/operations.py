@@ -10,17 +10,29 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import datetime as dt
 from collections.abc import Awaitable, Iterable, Iterator
 from typing import Any
 
+from sqlalchemy import func, select
+
 from biokids_core import repo
+from biokids_core.db.models import AiAlert, utcnow
 from biokids_core.ipc import EventKind
 from biokids_core.policy import bedtime_in, evaluate
+from biokids_core.repo import SEARCH_ALERT_APP
+from biokids_core.search_filter import MAX_SEARCH_WORDS
 from biokids_core.types import ActivityContext, Category, Decision, ShutdownOutcome
 from biokids_daemon.base import ChildRuntime, log
 from biokids_daemon.end_sequence import EndSequenceMixin
 
 VISIT_REPEAT_SECONDS = 600
+SEARCH_REPEAT_SECONDS = 600
+"""The same refused search again within this long is the same search: a child
+pressing Enter three times is one thing for the parent to read, not three."""
+SEARCH_ALERTS_PER_DAY = 20
+"""At most this many refused searches a day per child reach the panel. A child
+who found the wall and keeps testing it has been noticed after the first few."""
 """The same host again within ten minutes is the same visit."""
 
 POWER_GRACE_SECONDS = 6.0
@@ -492,6 +504,61 @@ class OperationsMixin(EndSequenceMixin):
             self.session, kind="visit", child_id=child_id, ts_boot=now, payload={"host": host}
         )
         self.session.commit()
+
+    def record_refused_search(self, child_id: int, words: str, host: str) -> None:
+        """A search the browser refused, for the parent to read (D-222).
+
+        Kept as an alert beside the assistant's (D-165): Today says that one
+        happened, Analiz shows the words, and the parent's mail says only that
+        one happened - the words stay on the machine. The child's block page
+        told them a grown-up will see it. The audit row names the site, never
+        the words: the audit log is kept for good, the alert only as long as
+        the rest of the child's activity (D-189).
+        """
+        runtime = self._require(child_id)
+        words = " ".join(words.split())[:MAX_SEARCH_WORDS]
+        if not words:
+            return
+        now = self.clock.read().boot
+        key = words.casefold()
+        last = runtime.searches_seen.get(key)
+        if last is not None and now - last < SEARCH_REPEAT_SECONDS:
+            return
+        runtime.searches_seen[key] = now
+        session = self.session
+        today = session.scalar(
+            select(func.count())
+            .select_from(AiAlert)
+            .where(
+                AiAlert.child_id == child_id,
+                AiAlert.app == SEARCH_ALERT_APP,
+                AiAlert.ts >= utcnow() - dt.timedelta(days=1),
+            )
+        )
+        if int(today or 0) >= SEARCH_ALERTS_PER_DAY:
+            return
+        session.add(
+            AiAlert(
+                child_id=child_id,
+                score=100,
+                category=SEARCH_ALERT_APP,
+                reason_key="search.refused",
+                confidence=1.0,
+                band="notify",
+                app=SEARCH_ALERT_APP,
+                text=words,
+            )
+        )
+        repo.audit(
+            session,
+            actor=f"child:{runtime.unix_user}",
+            action="search_refused",
+            target=f"child:{child_id}",
+            detail={"host": host},
+            severity="warning",
+        )
+        session.commit()
+        log.info("a search was refused for child %s on %s", child_id, host or "?")
 
     def request_launch(self, child_id: int, app_slug: str) -> Decision:
         """May this child start this application, right now?"""

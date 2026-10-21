@@ -95,6 +95,8 @@ class ShellOp(StrEnum):
     REPORT_ACTIVITY = "report_activity"
     REPORT_VISIT = "report_visit"
     """A site the child opened, by host name only, from the extension (D-187)."""
+    REPORT_SEARCH = "report_search"
+    """The words of a search the browser refused, for the parent (D-222)."""
     FIRST_RUN_DONE = "first_run_done"
     REQUEST_SHUTDOWN = "request_shutdown"
     """The child pressed the shutdown tile (D-100). The daemon decides, and says

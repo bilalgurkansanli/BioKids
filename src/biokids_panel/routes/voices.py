@@ -22,6 +22,10 @@ def _natural(view: PanelView) -> dict[str, Any]:
     return {
         "state": state,
         "speaks": natural_voice.natural_speaks(config),
+        # A failed download the daemon will start again by itself (D-223).
+        "retrying": state in {natural_voice.FAILED, natural_voice.ABSENT}
+        and repo.get_setting(view.session, natural_voice.WANTED_SETTING, "")
+        == natural_voice.WANTED,
         "size_mb": round(natural_voice.DOWNLOAD_BYTES / 1_000_000),
         "progress": natural_voice.progress(config) if state == natural_voice.RUNNING else 0,
     }
@@ -74,6 +78,8 @@ def natural_download(view: View, csrf_token: Annotated[str, Form()] = "") -> Res
     if blocked := view.guard_form(csrf_token, "/voices?error=csrf"):
         return blocked
     repo.audit(view.session, actor=view.actor, action="voice_download")
+    # Asked for, so tried again until it is there (D-223).
+    repo.set_setting(view.session, natural_voice.WANTED_SETTING, natural_voice.WANTED)
     view.session.commit()
     if not _call_daemon(view.ctx, Op.VOICE_SETUP):
         return see_other("/voices?error=voices.natural.not_started")

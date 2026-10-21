@@ -15,7 +15,7 @@ from __future__ import annotations
 import datetime as dt
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Form, Query, Response
 from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 from biokids_core import insights, repo
 from biokids_core.db.models import App, Child
 from biokids_core.i18n import Translator
-from biokids_panel.common import View
+from biokids_panel.common import View, see_other
 
 router = APIRouter()
 
@@ -35,6 +35,9 @@ DAY_LINKS_UP_TO = 14
 six pixels wide each: not something to tap, and not offered as one."""
 
 HOUR_LABELS = (0, 6, 12, 18)
+
+SEARCHES_SHOWN = 30
+"""Refused searches listed for a period, newest first; the rest are counted."""
 
 
 @router.get("/insights", response_class=HTMLResponse)
@@ -75,7 +78,35 @@ def insights_view(
         app_rows=_app_rows(session, found, tr.locale),
         request_rows=_request_rows(found, tr),
         kept_days=view.ctx.config.retention.activity_days,
+        **_searches(session, chosen, found),
     )
+
+
+@router.post("/insights/searches/{child_id}/seen")
+def searches_seen(
+    view: View,
+    child_id: int,
+    period: Annotated[str, Form()] = "",
+    csrf_token: Annotated[str, Form()] = "",
+) -> Response:
+    """The parent has read a child's refused searches: Today stops saying so."""
+    back = f"/insights?child={child_id}&period={insights.Period.parse(period).value}"
+    if blocked := view.guard_form(csrf_token, f"{back}&error=csrf"):
+        return blocked
+    repo.dismiss_search_alerts(view.session, child_id)
+    view.session.commit()
+    return see_other(f"{back}#searches")
+
+
+def _searches(session: Session, child: Child, found: insights.Insights) -> dict[str, Any]:
+    """The searches the browser refused in the period, with their words (D-222)."""
+    since, until = insights.utc_bounds(found.span)
+    rows = repo.search_alerts(session, child.id, since, until)
+    return {
+        "search_rows": rows[:SEARCHES_SHOWN],
+        "searches_more": max(0, len(rows) - SEARCHES_SHOWN),
+        "searches_unseen": sum(1 for row in rows if not row.dismissed),
+    }
 
 
 def _delta(found: insights.Insights, tr: Translator) -> dict[str, str] | None:

@@ -213,7 +213,7 @@ msgid "shell.blocked.search.title"
 msgstr "We can't search for that"
 
 msgid "shell.blocked.search.body"
-msgstr "You can ask a grown-up about it if you like."
+msgstr "A grown-up will see this search too. If you are curious about something, you can ask them."
 
 msgid "shell.break.title"
 msgstr "A little break"
@@ -2837,3 +2837,372 @@ msgstr "If you like, games can have a daily limit of their own; the rest of the 
 
 msgid "insights.s.web"
 msgstr "You can see which sites were opened further down."
+
+# --- refused searches, for the parent (D-222) ---
+msgid "audit.action.search_refused"
+msgstr "A search was refused"
+
+msgid "mail.search_alert"
+msgstr "{name} tried to search for something unsuitable; the search was not made. You can see what it was in the panel, under Insights."
+
+msgid "search.panel.banner"
+msgstr "{name} tried to search for something unsuitable ({count} time(s)). Tap to see what."
+
+msgid "insights.h.refused"
+msgstr "Tried to search for something unsuitable {count} time(s); the searches were not made."
+
+msgid "insights.s.refused"
+msgstr "You can see what was typed in Insights. It is worth keeping an eye on: a calm talk, without scolding, works best."
+
+msgid "insights.searches"
+msgstr "Refused searches"
+
+msgid "insights.searches.help"
+msgstr "{name} tried to search for these. The searches were not made and no results were shown. {name} was told on the block screen that a grown-up would see this."
+
+msgid "insights.searches.new"
+msgstr "new"
+
+msgid "insights.searches.more"
+msgstr "and {count} more"
+
+msgid "insights.searches.advice"
+msgstr "It is worth keeping an eye on this. Curiosity is natural at this age and often starts with a word heard from a friend. Talk at a calm moment, without scolding: ask what they were curious about and give an answer that suits their age. Then next time they will ask you."
+
+msgid "insights.searches.seen"
+msgstr "Mark as seen"
+
+# --- the natural voice by default (D-223) ---
+msgid "wizard.extras.natural"
+msgstr "Zio and Sio speak with a natural, human-like voice (about {size} MB is downloaded)"
+
+msgid "wizard.extras.natural.help"
+msgstr "Instead of the robot voice. The voice is Turkish, free for a family's personal use, and downloaded once, from its makers, to this computer. Without a network, it comes down by itself once there is one."
+
+msgid "wizard.done.natural"
+msgstr "Zio and Sio's natural voice is downloading now; in a few minutes it takes the robot voice's place."
+
+msgid "voices.natural.retrying"
+msgstr "The natural voice has not arrived yet. BioKids tries again by itself every half hour while there is a network; you can also try now with the button below."
+
+# --- step-by-step guides (D-224) ---
+msgid "help.faq"
+msgstr "Frequently asked"
+
+msgid "guide.list.title"
+msgstr "Step-by-step guides"
+
+msgid "guide.list.help"
+msgstr "Guides that explain every step. Tap a topic."
+
+msgid "guide.all"
+msgstr "All guides"
+
+msgid "guide.steps"
+msgstr "Step by step"
+
+msgid "guide.trouble"
+msgstr "Something not working?"
+
+msgid "guide.email.title"
+msgstr "Setting up email notifications"
+
+msgid "guide.email.intro"
+msgstr "BioKids can email you when something important happens, and every Sunday evening. It needs the sending details of an email account. Gmail is the easiest: the steps below take about five minutes, and you do them once."
+
+msgid "guide.email.step.1"
+msgstr "Turn on 2-Step Verification for your Gmail account. On your phone or a computer, go to myaccount.google.com, choose \"2-Step Verification\" under Security and follow the steps. If it is already on, skip this step."
+
+msgid "guide.email.step.2"
+msgstr "Create an app password. Go to myaccount.google.com/apppasswords, type \"BioKids\" as the name and press Create. Google shows a 16-letter password. Keep that window open: it is shown only once."
+
+msgid "guide.email.step.3"
+msgstr "In the BioKids panel, open Settings → Email notifications. In \"Send to\", type the address the notifications should reach. Separate several addresses with commas; it does not have to be a Gmail address."
+
+msgid "guide.email.step.4"
+msgstr "Under \"Mail server\", enter: server smtp.gmail.com, port 587, security STARTTLS, user name your whole Gmail address (for example first.last@gmail.com), and as the password the 16-letter app password from step 2. Your usual Gmail password does not work here."
+
+msgid "guide.email.step.5"
+msgstr "Press \"Save and send a test\". Within a few seconds it says the test message was sent. Look in your inbox, and in the Spam folder if it is not there."
+
+msgid "guide.email.step.6"
+msgstr "Choose which emails you want: word at once when something needs you (the filter is down, your child asks for something, or tries to search for something unsuitable) and the weekly summary on Sunday evening. What your child types is never put in an email."
+
+msgid "guide.email.tip.1.q"
+msgstr "It says the user name or password was not accepted."
+
+msgid "guide.email.tip.1.a"
+msgstr "Gmail does not accept your usual password; it needs the 16-letter app password from step 2. If the app password page does not open, 2-Step Verification is not on yet (step 1). Make sure the user name is your whole Gmail address."
+
+msgid "guide.email.tip.2.q"
+msgstr "It says the mail server could not be reached."
+
+msgid "guide.email.tip.2.a"
+msgstr "Make sure the computer is online and check the server name. The port and the security must go together: 587 with STARTTLS, 465 with SSL/TLS."
+
+msgid "guide.email.tip.3.q"
+msgstr "The test message did not arrive."
+
+msgid "guide.email.tip.3.a"
+msgstr "Look in the Spam folder and check the address in \"Send to\". The first message is sometimes a few minutes late."
+
+msgid "guide.email.open"
+msgstr "Open the email settings"
+
+msgid "guide.email.link"
+msgstr "How do I set it up? Step-by-step guide"
+
+msgid "guide.email.providers"
+msgstr "Other email accounts"
+
+msgid "guide.email.providers.help"
+msgstr "These services also want an app password made in your account's security settings, not your usual password (Yandex: Yandex ID → Security → App passwords; iCloud: account.apple.com → Sign-In and Security → App-Specific Passwords). The user name is your whole email address."
+
+msgid "guide.email.providers.service"
+msgstr "Service"
+
+msgid "guide.email.outlook"
+msgstr "Outlook and Hotmail: Microsoft has turned off sending this way for personal accounts. Send from a Gmail account; the notifications can still go to your Outlook address."
+
+msgid "mail.failed.auth"
+msgstr "The email could not be sent: the user name or password was not accepted. Gmail does not take your usual password; it needs a 16-letter app password. The email guide explains it step by step."
+
+msgid "mail.failed.connect"
+msgstr "The email could not be sent: the mail server could not be reached. Check the network, the server name and the port (587 with STARTTLS, 465 with SSL/TLS)."
+
+msgid "guide.phone.title"
+msgstr "Opening the panel on your phone"
+
+msgid "guide.phone.intro"
+msgstr "You can open the panel on your phone, away from home too. It uses the free Tailscale app, which makes an encrypted connection between your phone and this computer that only you can use. Nothing changes on your router; it takes about five minutes."
+
+msgid "guide.phone.step.1"
+msgstr "On this computer, open Settings → Access from your phone in the panel and press \"Turn on phone access\". BioKids installs Tailscale on this computer itself."
+
+msgid "guide.phone.step.2"
+msgstr "On the Tailscale page that opens, sign in with your Google, Apple or Microsoft account; if you have none, one is free. If Tailscale asks for an approval, press the button the panel shows and approve."
+
+msgid "guide.phone.step.3"
+msgstr "Install the Tailscale app on your phone from the App Store or Google Play and sign in with the same account. When the phone asks to add a VPN connection, allow it."
+
+msgid "guide.phone.step.4"
+msgstr "Scan the QR code the panel shows with your phone's camera, and enter your PIN."
+
+msgid "guide.phone.step.5"
+msgstr "If you like, choose \"Add to Home screen\" in the browser's menu: BioKids then sits on your phone like an app."
+
+msgid "guide.phone.tip.1.q"
+msgstr "The phone cannot open the panel."
+
+msgid "guide.phone.tip.1.a"
+msgstr "Open the Tailscale app on the phone and check that it says Connected. The computer must be on and online too; while it sleeps, the panel cannot open."
+
+msgid "guide.phone.tip.2.q"
+msgstr "The other parent wants to use their phone too."
+
+msgid "guide.phone.tip.2.a"
+msgstr "First add them under Settings → Parents; they get their own PIN. Then they install Tailscale on their phone and sign in with the same Tailscale account."
+
+msgid "guide.phone.tip.3.q"
+msgstr "Is this safe?"
+
+msgid "guide.phone.tip.3.a"
+msgstr "Yes. The panel is not opened to the internet: only devices on your Tailscale account can reach it, and it still asks for your PIN. You can turn access off on the same page at any time."
+
+msgid "guide.phone.open"
+msgstr "Open the phone access page"
+
+msgid "guide.child.title"
+msgstr "Adding a child and their first login"
+
+msgid "guide.child.intro"
+msgstr "Each child has their own account on this computer, with no password: your child logs in by choosing their own picture on the login screen."
+
+msgid "guide.child.step.1"
+msgstr "In the panel, go to Children and press \"Add a child\"."
+
+msgid "guide.child.step.2"
+msgstr "Enter your child's name and year of birth and choose a picture. The user name on the computer is suggested for you; there is no need to change it."
+
+msgid "guide.child.step.3"
+msgstr "Save. BioKids makes an account without a password for your child on this computer, and sets up apps and time rules for their age."
+
+msgid "guide.child.step.4"
+msgstr "Restart the computer once. On the login screen your child appears with their picture and name, and you with your name and a house."
+
+msgid "guide.child.step.5"
+msgstr "Your child chooses their picture and presses log in; no password is asked. Your own account opens with your usual password."
+
+msgid "guide.child.tip.1.q"
+msgstr "My child is not on the login screen."
+
+msgid "guide.child.tip.1.a"
+msgstr "Restart the computer once. If they are still not there, check that they are listed under Children."
+
+msgid "guide.child.tip.2.q"
+msgstr "I want to change their name or picture."
+
+msgid "guide.child.tip.2.a"
+msgstr "Children → Edit. The login screen shows the new name and picture the next time it starts."
+
+msgid "guide.child.tip.3.q"
+msgstr "I want to remove a child."
+
+msgid "guide.child.tip.3.a"
+msgstr "Press the remove button at the bottom of Children → Edit; your passphrase is asked. Your child's drawings and files are not deleted; they only leave the login screen."
+
+msgid "guide.child.open"
+msgstr "Go to Children"
+
+msgid "guide.time.title"
+msgstr "Time limits and hours"
+
+msgid "guide.time.intro"
+msgstr "You decide each child's daily time, the hours they may use the computer, and what happens when the time is up. Zio and Sio say so out loud before it runs out."
+
+msgid "guide.time.step.1"
+msgstr "In the panel, go to Children and open your child's \"Time rules\"."
+
+msgid "guide.time.step.2"
+msgstr "Enter the daily time for weekdays and for the weekend, in minutes: how long the computer may be used that day in total."
+
+msgid "guide.time.step.3"
+msgstr "If you like, choose the hours, for example 15:00–19:00. With no hours chosen, any time of day is fine; you can choose two ranges, such as before and after school."
+
+msgid "guide.time.step.4"
+msgstr "If you like, set limits by kind of app (for example at most 30 minutes of games a day), turn on \"Earned time\" (time in learning apps adds to game time) or add a forced break."
+
+msgid "guide.time.step.5"
+msgstr "Choose what happens \"When time runs out\": lock the screen, log out, or shut the computer down. Then press Save."
+
+msgid "guide.time.step.6"
+msgstr "On a day like a holiday or a birthday, \"Is today a special day?\" on Today gives that day +1 h, +2 h or no limit. For several days, such as a school holiday: Time rules → Special days."
+
+msgid "guide.time.tip.1.q"
+msgstr "I want to give my child a little more time now."
+
+msgid "guide.time.tip.1.a"
+msgstr "Press \"+10 min\" on your child's card on Today. If the screen was locked, it unlocks by itself."
+
+msgid "guide.time.tip.2.q"
+msgstr "Why are the warnings different in the evening?"
+
+msgid "guide.time.tip.2.a"
+msgstr "After 19:00 the day's last ten minutes are bedtime: Zio and Sio talk about going to bed, and the last screen says good night."
+
+msgid "guide.time.tip.3.q"
+msgstr "Can I switch BioKids off for a while?"
+
+msgid "guide.time.tip.3.a"
+msgstr "Untick \"Let BioKids manage this child\" on the Time rules page; your passphrase is asked. Tick it again and protection is back."
+
+msgid "guide.time.open"
+msgstr "Go to Children"
+
+msgid "guide.internet.title"
+msgstr "The internet, sites and searches"
+
+msgid "guide.internet.intro"
+msgstr "Adult, gambling and harmful sites are always closed, and unsuitable searches are not made. The rest you set for your child."
+
+msgid "guide.internet.step.1"
+msgstr "In the panel, go to Children and open your child's \"Internet\" page."
+
+msgid "guide.internet.step.2"
+msgstr "Answer \"How should the internet be?\". \"Open internet, harmful sites closed\" suits most children. For very young ones, choose \"Only the sites I choose\" and tick the sites you allow under \"Apps and sites\"."
+
+msgid "guide.internet.step.3"
+msgstr "Under \"Words that cannot be searched\", add any words you want closed besides the built-in list, one per line. The list is for all your children."
+
+msgid "guide.internet.step.4"
+msgstr "When your child presses \"Ask a grown-up\" on a closed page, the request appears under Requests; \"Allow\" opens that site."
+
+msgid "guide.internet.step.5"
+msgstr "If your child tries to search for something unsuitable, the search is not made, Today tells you, and Insights shows what it was. Your child hears on the block screen that a grown-up will see it."
+
+msgid "guide.internet.tip.1.q"
+msgstr "The school's site does not open."
+
+msgid "guide.internet.tip.1.a"
+msgstr "Have your child press \"Ask a grown-up\", then press \"Allow\" under Requests. Or choose \"Open internet\" on the Internet page."
+
+msgid "guide.internet.tip.2.q"
+msgstr "Can I see which sites they visit?"
+
+msgid "guide.internet.tip.2.a"
+msgstr "Yes, under History and Insights. Only the sites' names are kept; never what is on the pages, what was typed, or screenshots."
+
+msgid "guide.internet.tip.3.q"
+msgstr "My child searched for something unsuitable. What should I do?"
+
+msgid "guide.internet.tip.3.a"
+msgstr "Talk at a calm moment, without scolding: ask what they were curious about and give an answer that suits their age. Curiosity is natural at this age; the aim is that next time they ask you."
+
+msgid "guide.internet.open"
+msgstr "Go to Children"
+
+msgid "guide.voice.title"
+msgstr "Zio and Sio's voice"
+
+msgid "guide.voice.intro"
+msgstr "Zio and Sio talk to your child before the time runs out and during the day. Instead of the robot voice they can use a natural one, or you can record the warnings in your own voice."
+
+msgid "guide.voice.step.1"
+msgstr "In the panel, go to Settings and press \"Set up the voices\"."
+
+msgid "guide.voice.step.2"
+msgstr "If the natural voice box was ticked during setup, the voice comes down by itself. If not, press \"Download the natural voice\": about 90 MB, a few minutes."
+
+msgid "guide.voice.step.3"
+msgstr "To use your own voice, press \"● Record\" beside a sentence, say it, and press Stop. Recordings stay on this computer."
+
+msgid "guide.voice.step.4"
+msgstr "From the next warning on, your child hears the new voice."
+
+msgid "guide.voice.tip.1.q"
+msgstr "There is no sound at all."
+
+msgid "guide.voice.tip.1.a"
+msgstr "Check that the computer's sound is on: the volume control on your child's screen, or the speaker cable. If your own recording came out silent, check the microphone and record again."
+
+msgid "guide.voice.tip.2.q"
+msgstr "The natural voice did not download."
+
+msgid "guide.voice.tip.2.a"
+msgstr "Make sure the computer is online. BioKids tries again by itself every half hour; you can also try at once with the button on the Voices page."
+
+msgid "guide.voice.open"
+msgstr "Set up the voices"
+
+msgid "guide.forgot.title"
+msgstr "I forgot my PIN or passphrase"
+
+msgid "guide.forgot.intro"
+msgstr "There are two ways: the recovery code you wrote on paper during setup, or a command on this computer. Only you can do either; your child cannot."
+
+msgid "guide.forgot.step.1"
+msgstr "If you forgot your PIN, press \"I forgot my PIN\" on the sign-in page and enter your recovery code: the eight words you wrote down during setup or when you were added. You choose a new PIN there."
+
+msgid "guide.forgot.step.2"
+msgstr "If the code is lost too, log in to your own account on this computer (the one with the house) and open the Terminal from the Applications menu."
+
+msgid "guide.forgot.step.3"
+msgstr "Type this command and press Enter. First your computer password is asked; nothing shows while you type, which is normal. Then type the new 6-digit PIN twice (it asks \"New PIN\")."
+
+msgid "guide.forgot.step.4"
+msgstr "You can now sign in to the panel with the new PIN; any lock left by wrong tries is gone."
+
+msgid "guide.forgot.step.5"
+msgstr "If you forgot the family passphrase, the one asked when switching protection off, type this command the same way and enter the new passphrase twice (at least 10 characters):"
+
+msgid "guide.forgot.tip.1.q"
+msgstr "sudo refuses, or says the user is not in the sudoers file."
+
+msgid "guide.forgot.tip.1.a"
+msgstr "This account may not run the computer as an administrator. Log in with the account made when Debian was installed and try again."
+
+msgid "guide.forgot.tip.2.q"
+msgstr "Could my child change the PIN this way?"
+
+msgid "guide.forgot.tip.2.a"
+msgstr "No. The command asks for the computer's administrator password, and children's accounts cannot be administrators."

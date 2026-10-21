@@ -422,13 +422,14 @@ def _visit_bodies(source: str) -> list[str]:
 def test_the_visit_report_carries_the_host_and_nothing_else() -> None:
     """SECURITY.md section 7: the address of a site, never its path or contents.
 
-    A static check, and deliberately a blunt one: the file builds exactly one
-    request body, it is `{ host }`, and `host` only ever comes from a URL's
-    hostname. Anything that wants to send more has to change this test first.
+    A static check, and deliberately a blunt one: the file builds exactly two
+    request bodies, `{ host }` for a visit and `{ url }` for a refused search
+    (D-222), and `host` only ever comes from a URL's hostname. Anything that
+    wants to send more has to change this test first.
     """
     source = BACKGROUND_JS.read_text(encoding="utf-8")
 
-    assert _visit_bodies(source) == ["JSON.stringify({ host })"]
+    assert _visit_bodies(source) == ["JSON.stringify({ host })", "JSON.stringify({ url })"]
     assert source.count("VISIT_PATH") == 2, "one definition and one request"
     for leak in (".pathname", ".search", ".hash", ".href", ".title", "document."):
         assert leak not in source, f"background.js touches {leak}"
@@ -493,6 +494,21 @@ def test_a_refused_search_carries_no_words_to_the_launcher() -> None:
     error = r'^const SEARCH_BLOCKED_ERROR = "net::ERR_BLOCKED_BY_CLIENT";$'
     assert re.search(error, source, re.M)
     assert re.search(r'^const SEARCH_BLOCKED_REASON = "search\.blocked";$', source, re.M)
+
+
+def test_only_a_refused_address_goes_to_the_launcher_whole() -> None:
+    """D-222: the address of a search the rules refused, and no other, to the
+    child's own launcher, which keeps only its words for the parent."""
+    source = BACKGROUND_JS.read_text(encoding="utf-8")
+    assert re.search(r'^const SEARCH_REFUSED_PATH = "/search-refused";$', source, re.M)
+    assert source.count("SEARCH_REFUSED_PATH") == 2, "one definition and one request"
+    reports = re.findall(r"reportRefusedSearch\(([^)]*)\)", source)
+    assert reports == ["details.url", "url", "details.url"], reports
+    # Each report follows the search block page, and nothing else does.
+    shown = 'showBlockedPage(details.tabId, "", SEARCH_BLOCKED_REASON);'
+    report = "enqueue(() => reportRefusedSearch(details.url));"
+    assert source.count(f"{shown}\n    {report}") == 2
+    assert source.count(report) == 2
 
 
 def test_the_search_rules_contract_matches_the_launcher() -> None:

@@ -26,6 +26,7 @@
       <li class="guide__step">
         <h3 class="guide__title">{{ _('wizard.done.next.child.title') }}</h3>
         <p class="small">{{ _('wizard.done.next.child') }}</p>
+        {% if natural_voice %}<p class="small muted">{{ _('wizard.done.natural') }}</p>{% endif %}
       </li>
       <li class="guide__step">
         <h3 class="guide__title">{{ _('wizard.done.next.panel.title') }}</h3>

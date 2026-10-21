@@ -86,6 +86,41 @@
         {% endif %}
       </section>
 
+      {# ----------------------------------- refused searches (D-222) #}
+      {# The words the child searched for, kept because the parent should know
+         and the child was told a grown-up would see them. Never in the mail. #}
+      {% if search_rows %}
+        <section class="card" id="searches" aria-labelledby="h-searches">
+          <h2 id="h-searches"><span aria-hidden="true">🔍</span> {{ _('insights.searches') }}</h2>
+          <p class="help">{{ _('insights.searches.help', name=child.display_name) }}</p>
+          <ul class="pick-list">
+            {% for alert in search_rows %}
+              <li class="pick-row">
+                <span class="pick-row__text">
+                  <strong>“{{ alert.text }}”</strong>
+                  <span class="help">
+                    {{ alert.ts|when }}{% if not alert.dismissed %} · {{ _('insights.searches.new') }}{% endif %}
+                  </span>
+                </span>
+              </li>
+            {% endfor %}
+          </ul>
+          {% if searches_more %}
+            <p class="muted small">{{ _('insights.searches.more', count=searches_more) }}</p>
+          {% endif %}
+          <div class="notice notice--warn">
+            <p>{{ _('insights.searches.advice') }}</p>
+          </div>
+          {% if searches_unseen %}
+            <form method="post" action="/insights/searches/{{ child.id }}/seen">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}">
+              <input type="hidden" name="period" value="{{ period.value }}">
+              <button class="btn" type="submit">{{ _('insights.searches.seen') }}</button>
+            </form>
+          {% endif %}
+        </section>
+      {% endif %}
+
       {# ---------------------------------------------------- screen time #}
       <section class="card" aria-labelledby="h-screen">
         <h2 id="h-screen">{{ _('insights.screen') }}</h2>

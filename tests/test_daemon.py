@@ -23,6 +23,7 @@ import pytest
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
+from biokids_core import repo
 from biokids_core.clock import FakeClock
 from biokids_core.config import Config
 from biokids_core.db import AuditLog, Child, Database, Policy
@@ -2522,3 +2523,72 @@ async def test_the_restart_a_fresh_install_needs_is_a_clean_one(
     await settled(supervisor)
     assert runner.ran("systemctl", "reboot")
     assert not powered_off(runner)
+
+
+# ---------------------------------------------- the natural voice by default (D-223)
+
+
+async def test_a_wanted_voice_is_fetched_again_until_it_is_here(
+    supervisor: Supervisor, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from biokids_core import natural_voice
+    from biokids_daemon import server
+
+    started: list[tuple[str, ...]] = []
+
+    async def systemctl(*args: str) -> bool:
+        started.append(args)
+        return True
+
+    here = {"installed": False, "state": natural_voice.FAILED}
+    monkeypatch.setattr(server, "run_systemctl", systemctl)
+    monkeypatch.setattr(natural_voice, "installed", lambda _config: here["installed"])
+    monkeypatch.setattr(natural_voice, "state", lambda _config, runner=None: here["state"])
+    await supervisor.start()
+
+    first = natural_voice.FIRST_TRY_AFTER_SECONDS
+    every = natural_voice.RETRY_SECONDS
+    await supervisor.fetch_voice(0.0)
+    await supervisor.fetch_voice(first + 1)
+    assert started == [], "nobody asked for it"
+
+    repo.set_setting(session, natural_voice.WANTED_SETTING, natural_voice.WANTED)
+    session.commit()
+    await supervisor.fetch_voice(first + 2)
+    assert started == [], "not again before the half hour"
+    await supervisor.fetch_voice(first + every + 2)
+    assert started == [("start", "--no-block", natural_voice.SETUP_UNIT)]
+
+    here["state"] = natural_voice.RUNNING
+    await supervisor.fetch_voice(first + 2 * every + 3)
+    assert len(started) == 1, "a download under way is left to finish"
+
+    here["installed"] = True
+    await supervisor.fetch_voice(first + 3 * every + 4)
+    assert len(started) == 1, "and one that is here is not fetched again"
+
+
+async def test_the_first_try_waits_for_the_boot_to_settle(
+    supervisor: Supervisor, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from biokids_core import natural_voice
+    from biokids_daemon import server
+
+    started: list[tuple[str, ...]] = []
+
+    async def systemctl(*args: str) -> bool:
+        started.append(args)
+        return True
+
+    monkeypatch.setattr(server, "run_systemctl", systemctl)
+    monkeypatch.setattr(natural_voice, "installed", lambda _config: False)
+    monkeypatch.setattr(natural_voice, "state", lambda _config, runner=None: "absent")
+    repo.set_setting(session, natural_voice.WANTED_SETTING, natural_voice.WANTED)
+    session.commit()
+    await supervisor.start()
+
+    await supervisor.fetch_voice(1000.0)
+    await supervisor.fetch_voice(1000.0 + natural_voice.FIRST_TRY_AFTER_SECONDS - 1)
+    assert started == []
+    await supervisor.fetch_voice(1000.0 + natural_voice.FIRST_TRY_AFTER_SECONDS)
+    assert len(started) == 1

@@ -106,7 +106,7 @@ def settings_mail(
         port=max(1, min(port, 65535)),
         security=security if security in mail.SECURITY_MODES else "starttls",
         username=username.strip(),
-        password=password or (current.password if current else ""),
+        password=mail.tidy_password(host, password) or (current.password if current else ""),
         sender=sender.strip(),
         recipients=mail.parse_recipients(recipients),
         alerts=alerts == "on",
@@ -122,7 +122,9 @@ def settings_mail(
             mail.send(settings, view.tr("mail.test.subject"), view.tr("mail.test.body"))
         except mail.MailError as exc:
             log.warning("the test mail failed: %s", exc)
-            return see_other("/settings?error=mail.failed#mail")
+            # Which kind, in words a parent can act on, with the guide beside it.
+            failed = "mail.failed" if exc.kind == "other" else f"mail.failed.{exc.kind}"
+            return see_other(f"/settings?error={failed}#mail")
         return see_other("/settings?saved=mail_sent#mail")
     return see_other("/settings?saved=1#mail")
 

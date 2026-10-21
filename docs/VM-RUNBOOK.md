@@ -1599,6 +1599,34 @@ sudo bkq "select actor, action, target from audit_log where action like 'parent_
 The first parent's row holds the passphrase hash; a removed one has an empty PIN hash
 and its name.
 
+### 8.22 A refused search reaches the parent (D-222)
+
+As Elif, in the browser, search Google for a word on the list (`porno`).
+
+**Pass:** the block page says "Bu aramayı bir büyüğün de görecek" and Zio reads it;
+within seconds **Bugün** has the banner "Elif uygun olmayan bir şey aramaya çalıştı
+(1 kez)", and **Analiz → Engellenen aramalar** shows "“porno”" with its time. "Gördüm"
+clears the banner. With mail set up, the alert mail says one happened and has no word in
+it. `sudo journalctl -u biokids-daemon -b | grep 'search was refused'` names the site.
+
+### 8.23 The natural voice from the wizard (D-223)
+
+On a fresh install, finish the wizard with "Zio ve Sio doğal … konuşsun" ticked.
+
+**Pass:** the closing screen says the voice is downloading; **Ayarlar → Sesleri ayarla**
+shows the progress and then "Doğal ses bu bilgisayarda kurulu". With the network cable
+out, /voices says it will be tried again; with it back in, the voice arrives within half
+an hour (`systemctl status biokids-voice-setup` shows the later run).
+
+### 8.24 The guides (D-224)
+
+Signed out, open `/help` and each guide. Signed in, **Ayarlar → E-posta bildirimleri →
+Nasıl kurulur?**, and send a test with a wrong password.
+
+**Pass:** every guide has numbered steps, the forgotten-PIN guide shows both commands,
+and the wrong password gives "kullanıcı adı ya da şifre kabul edilmedi" with the
+guide's link on the mail card.
+
 ---
 
 ## 9. After the run

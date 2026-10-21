@@ -71,6 +71,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
+from urllib.parse import parse_qs, unquote, urlsplit
 
 DEFAULT_LIST: Final = Path(__file__).resolve().parent / "data" / "search_words.toml"
 """The curated list, with what it covers and leaves out written at its top."""
@@ -585,3 +586,61 @@ def address_blocked(url: str, patterns: Sequence[str]) -> bool:
     the small syntax used here.
     """
     return any(pattern.search(url) for pattern in _compiled(tuple(patterns)))
+
+
+# ------------------------------------------------- telling the parent (D-222)
+
+SEARCH_PARAMS: Final = ("q", "query", "search", "search_query", "text", "term", "pattern")
+"""The search boxes of `FAMILIES`, in the order their value is read."""
+
+TITLE_MARKERS: Final = ("/wiki/", "/content/")
+
+MAX_SEARCH_WORDS: Final = 100
+"""The most of a refused search the parent is shown. A search is a few words;
+anything longer is an address the child did not type."""
+
+
+def _tidy(text: str) -> str:
+    return " ".join(text.replace("_", " ").split())[:MAX_SEARCH_WORDS]
+
+
+def searched_words(url: str) -> str:
+    """What the child typed, as far as a refused address says: the search box's
+    value, or else a wiki title, or else the last part of the path.
+
+    Decoded, with spaces put back; never the rest of the address.
+    """
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return ""
+    values = parse_qs(parts.query)
+    for name in SEARCH_PARAMS:
+        for value in values.get(name, ()):
+            if words := _tidy(value):
+                return words
+    path = unquote(parts.path)
+    for marker in TITLE_MARKERS:
+        if marker in path:
+            # kiwix-serve 3: /content/<book>/A/<title>, the title last.
+            title = path.split(marker, 1)[1].rsplit("/", 1)[-1]
+            if words := _tidy(title):
+                return words
+    return _tidy(path.rstrip("/").rsplit("/", 1)[-1])
+
+
+def refused_search(url: str, parent: Iterable[str] = ()) -> str | None:
+    """The words of a search the list refuses, or None when it would not.
+
+    The launcher's check on what the extension reports (D-222): only an
+    address the same expressions refuse becomes something the parent reads,
+    whatever was sent.
+    """
+    if len(url) > MAX_REPORTED_URL or not url.startswith(("http://", "https://")):
+        return None
+    if not address_blocked(url, _patterns_for(effective_terms(parent))):
+        return None
+    return searched_words(url)
+
+
+MAX_REPORTED_URL: Final = 4096

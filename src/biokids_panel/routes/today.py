@@ -51,6 +51,12 @@ def today(view: View) -> Response:
             for child_id, count in sorted(repo.unseen_assistant_alerts(view.session).items())
             if (child := repo.get_child(view.session, child_id)) is not None
         ],
+        # And searches the browser refused (D-222): the words are in Analiz.
+        search_alerts=[
+            {"child": child, "count": count}
+            for child_id, count in sorted(repo.unseen_search_alerts(view.session).items())
+            if (child := repo.get_child(view.session, child_id)) is not None
+        ],
         restart_needed=restart_needed(view),
         week=week_cards(view),
     )

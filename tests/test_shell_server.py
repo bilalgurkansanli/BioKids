@@ -378,3 +378,66 @@ async def test_stopping_twice_is_not_an_error(running: dict[str, Any]) -> None:
     server: ShellServer = running["server"]
     await asyncio.wait_for(server.stop(), timeout=5)
     await asyncio.wait_for(server.stop(), timeout=5)
+
+
+# ------------------------------------------- a refused search, for the parent (D-222)
+
+
+async def _report(
+    server: ShellServer, user: str, words: str, host: str = "www.google.com"
+) -> None:
+    response, _ = await server._dispatch(
+        caller_for(server, user),
+        Request(op=str(ShellOp.REPORT_SEARCH), args={"words": words, "host": host}).encode(),
+    )
+    assert response.ok
+
+
+async def test_a_refused_search_is_kept_for_the_parent_with_its_words(
+    running: dict[str, Any], db: Database
+) -> None:
+    from biokids_core.db import AiAlert
+
+    server: ShellServer = running["server"]
+    await _report(server, "elif", "  porno   izle ")
+
+    with db.session() as session:
+        [alert] = session.query(AiAlert).all()
+        audit = session.query(AuditLog).filter(AuditLog.action == "search_refused").one()
+        assert alert.child_id == server.supervisor.by_user["elif"]
+        assert (alert.app, alert.text, alert.dismissed) == ("search", "porno izle", False)
+        # The audit log is kept for good: it names the site, never the words.
+        assert "porno" not in audit.detail_json
+        assert audit.detail == {"host": "www.google.com"}
+        assert audit.actor == "child:elif"
+
+
+async def test_the_same_search_again_soon_is_one_search(
+    running: dict[str, Any], db: Database, clock: FakeClock
+) -> None:
+    from biokids_core.db import AiAlert
+
+    server: ShellServer = running["server"]
+    await _report(server, "elif", "porno")
+    await _report(server, "elif", "PORNO")
+    await _report(server, "kerem", "porno")
+    clock.advance(11 * 60)
+    await _report(server, "elif", "porno")
+
+    with db.session() as session:
+        assert session.query(AiAlert).count() == 3
+
+
+async def test_a_child_testing_the_wall_fills_no_more_than_a_days_worth(
+    running: dict[str, Any], db: Database
+) -> None:
+    from biokids_core.db import AiAlert
+    from biokids_daemon.operations import SEARCH_ALERTS_PER_DAY
+
+    server: ShellServer = running["server"]
+    for n in range(SEARCH_ALERTS_PER_DAY + 5):
+        await _report(server, "elif", f"porno {n}")
+    await _report(server, "elif", "")
+
+    with db.session() as session:
+        assert session.query(AiAlert).count() == SEARCH_ALERTS_PER_DAY

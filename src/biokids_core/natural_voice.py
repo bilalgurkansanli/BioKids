@@ -134,6 +134,17 @@ BioKids' to delete."""
 
 SETUP_UNIT: Final = "biokids-voice-setup.service"
 
+WANTED_SETTING: Final = "natural_voice"
+"""The `setting` row that says the family asked for the natural voice (D-223):
+`wanted` from the wizard's box, which is ticked for a Turkish family, or from
+the button on /voices. While it says so and the voice is not on the machine,
+the daemon starts the download again every `RETRY_SECONDS` - a machine set up
+without a network gets it the first half hour it has one."""
+WANTED: Final = "wanted"
+RETRY_SECONDS: Final = 30 * 60
+FIRST_TRY_AFTER_SECONDS: Final = 120
+"""After the daemon starts: not during a boot, when the network may not be up."""
+
 USER_AGENT: Final = "biokids-voice-setup"
 CHUNK: Final = 1 << 20
 TIMEOUT_S: Final = 60

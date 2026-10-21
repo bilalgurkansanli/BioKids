@@ -31,8 +31,28 @@ SECURITY_MODES: Final = ("starttls", "ssl", "none")
 SEND_TIMEOUT: Final = 20.0
 
 
+GOOGLE_HOSTS: Final = ("smtp.gmail.com", "smtp.googlemail.com")
+
+
 class MailError(Exception):
-    """Sending failed. The message is for the log and the panel, never a password."""
+    """Sending failed. The message is for the log and the panel, never a password.
+
+    `kind` is what the panel can tell a parent (D-224): `auth` when the server
+    refused the user name or password, `connect` when it could not be reached or
+    spoke another kind of security, `other` for the rest.
+    """
+
+    def __init__(self, message: str, kind: str = "other") -> None:
+        super().__init__(message)
+        self.kind = kind
+
+
+def tidy_password(host: str, password: str) -> str:
+    """Google shows an app password in four groups of four, and a parent copies
+    the spaces with it. An app password has none, so they are taken out."""
+    if host.strip().lower() in GOOGLE_HOSTS:
+        return "".join(password.split())
+    return password
 
 
 @dataclass(frozen=True, slots=True)
@@ -140,7 +160,22 @@ def send(
                 _deliver(client, settings, message)
     except (OSError, smtplib.SMTPException) as exc:
         # str(exc) from smtplib can quote the server's reply, never our password.
-        raise MailError(f"{type(exc).__name__}: {exc}"[:300]) from exc
+        raise MailError(f"{type(exc).__name__}: {exc}"[:300], failure_kind(exc)) from exc
+
+
+def failure_kind(exc: BaseException) -> str:
+    """`auth`, `connect` or `other`: see `MailError`."""
+    if isinstance(exc, smtplib.SMTPAuthenticationError):
+        return "auth"
+    if isinstance(exc, smtplib.SMTPConnectError | smtplib.SMTPServerDisconnected):
+        return "connect"
+    # Every SMTPException is an OSError too, so the server's other answers first.
+    if isinstance(exc, smtplib.SMTPException):
+        return "other"
+    # An ssl.SSLError is an OSError: STARTTLS on port 465, or SSL on 587.
+    if isinstance(exc, OSError):
+        return "connect"
+    return "other"
 
 
 def _deliver(client: smtplib.SMTP, settings: MailSettings, message: EmailMessage) -> None:

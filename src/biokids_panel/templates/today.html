@@ -33,6 +33,12 @@
       {{ _('assistant.panel.banner', name=item.child.display_name, count=item.count) }}
     </a>
   {% endfor %}
+  {% for item in search_alerts %}
+    <a class="notice notice--warn notice--link" href="/insights?child={{ item.child.id }}#searches">
+      <span aria-hidden="true">🔍</span>
+      {{ _('search.panel.banner', name=item.child.display_name, count=item.count) }}
+    </a>
+  {% endfor %}
   <div id="cards">
     {% include "partials/child_cards.html" %}
   </div>

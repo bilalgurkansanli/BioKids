@@ -495,3 +495,40 @@ def test_the_estimate_refuses_syntax_it_does_not_read() -> None:
         sf.re2_cost("(a)")
     with pytest.raises(ValueError):
         sf.re2_cost("(?:a")
+
+
+# ------------------------------------------------ telling the parent (D-222)
+
+
+@pytest.mark.parametrize(
+    ("url", "words"),
+    [
+        ("https://www.google.com/search?q=porno+izle&oq=porno", "porno izle"),
+        ("https://www.youtube.com/results?search_query=se%C3%A7ki%20videosu", "seçki videosu"),
+        ("https://tr.wikipedia.org/w/index.php?search=Sik_i%C5%9F&title=x", "Sik iş"),
+        ("https://tr.wikipedia.org/wiki/Pornografi", "Pornografi"),
+        ("http://127.0.0.1:7877/content/wikipedia_tr/A/Porno_film", "Porno film"),
+        ("https://example.com/videos/porn-movies/", "porn-movies"),
+        ("https://yandex.com.tr/search/?text=  bir   iki ", "bir iki"),
+    ],
+)
+def test_the_words_searched_for_and_nothing_else(url: str, words: str) -> None:
+    assert sf.searched_words(url) == words
+
+
+def test_a_long_search_is_cut_for_the_parent() -> None:
+    words = sf.searched_words("https://www.google.com/search?q=" + "a+" * 200)
+    assert len(words) <= sf.MAX_SEARCH_WORDS
+
+
+def test_only_what_the_list_refuses_is_a_refused_search() -> None:
+    assert sf.refused_search("https://www.google.com/search?q=porno") == "porno"
+    assert sf.refused_search("https://www.google.com/search?q=uzay") is None
+    assert sf.refused_search("ftp://x/search?q=porno") is None
+    assert sf.refused_search("https://x.com/?q=" + "porno+" * 1000) is None
+
+
+def test_the_parents_own_words_are_refused_searches_too() -> None:
+    url = "https://www.google.com/search?q=mahalle+kavgas%C4%B1"
+    assert sf.refused_search(url) is None
+    assert sf.refused_search(url, ["kavga"]) == "mahalle kavgası"

@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import functools
 import hashlib
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Final
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -60,10 +63,64 @@ HELP_COMMANDS = {
 }
 
 
+@dataclass(frozen=True, slots=True)
+class Guide:
+    """One step-by-step guide (D-224). Its words are catalogue entries:
+    `guide.<slug>.title`, `.intro`, `.step.<n>`, `.tip.<n>.q` and `.a`, `.open`."""
+
+    slug: str
+    icon: str
+    steps: int
+    tips: int
+    page: str = ""
+    """Where in the panel it is done, for a button once signed in."""
+    commands: Mapping[int, str] = field(default_factory=dict)
+    """A command to type, under the step it belongs to. Never translated."""
+
+
+GUIDES: Final = (
+    Guide("email", "✉️", 6, 3, "/settings#mail"),
+    Guide("phone", "📱", 5, 3, "/settings/phone"),
+    Guide("child", "🧒", 5, 3, "/children"),
+    Guide("time", "⏰", 6, 3, "/children"),
+    Guide("internet", "🌐", 5, 3, "/children"),
+    Guide("voice", "🗣️", 4, 2, "/voices"),
+    Guide(
+        "forgot",
+        "🔑",
+        5,
+        2,
+        commands={3: "sudo biokids-admin reset-pin", 5: "sudo biokids-admin reset-passphrase"},
+    ),
+)
+"""The guides, in the order a family meets what they explain. The FAQ (D-195)
+answers in a sentence; a guide is for the parent who needs every step, which
+for mail means another site's settings as well as ours."""
+
+MAIL_PROVIDERS: Final = (
+    ("Gmail", "smtp.gmail.com", 587, "starttls"),
+    ("Yandex", "smtp.yandex.com", 465, "ssl"),
+    ("iCloud", "smtp.mail.me.com", 587, "starttls"),
+)
+"""Mail services whose own settings still let a program send with a user name
+and an app password. Not Outlook.com or Hotmail: Microsoft turned that off for
+personal accounts, and the guide says so (D-224)."""
+
+
 @router.get("/help", response_class=HTMLResponse)
 def help_page(view: View) -> Response:
     """Open without signing in: "I forgot my PIN" is one of the questions."""
-    return view.render("help.html", topics=HELP_TOPICS, commands=HELP_COMMANDS)
+    return view.render("help.html", topics=HELP_TOPICS, commands=HELP_COMMANDS, guides=GUIDES)
+
+
+@router.get("/guides/{slug}", response_class=HTMLResponse)
+def guide_page(view: View, slug: str) -> Response:
+    """One guide, step by step (D-224). Open without signing in, like /help:
+    the one about a forgotten PIN is read by someone who cannot sign in."""
+    guide = next((g for g in GUIDES if g.slug == slug), None)
+    if guide is None:
+        return view.not_found()
+    return view.render("guide.html", guide=guide, providers=MAIL_PROVIDERS)
 
 
 @router.get("/offline", response_class=HTMLResponse)

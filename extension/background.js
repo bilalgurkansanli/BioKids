@@ -11,8 +11,10 @@
 //   3. A search for a word on BioKids' list is never sent (D-202). The launcher
 //      serves the list as regular expressions; Chromium matches them against
 //      each request (declarativeNetRequest) and refuses it, and the tab shows
-//      the launcher's "we can't search that" page. Nothing about the search is
-//      reported to anyone: not the word, not that it happened.
+//      the launcher's "we can't search that" page, which tells the child that
+//      a grown-up will see it. The refused address goes to the child's own
+//      launcher, which checks it against the same list and keeps only the
+//      words searched for, for the parent (D-222).
 //
 // No content scripts, no access to any page, no remote code, and no network
 // peer other than the child's own launcher on 127.0.0.1.
@@ -46,6 +48,7 @@ const HEALTHZ_VALUE = "launcher";
 const LAUNCHER_HOST = "127.0.0.1";
 const BLOCKED_PATH = "/blocked";
 const VISIT_PATH = "/visit";
+const SEARCH_REFUSED_PATH = "/search-refused";
 
 // ---------------------------------------------------------------- behaviour
 
@@ -253,6 +256,7 @@ chrome.webNavigation.onErrorOccurred.addListener((details) => {
     // A search rule refused the page, or a frame in it (the offline
     // Wikipedia shows its articles in one): the whole tab says why.
     showBlockedPage(details.tabId, "", SEARCH_BLOCKED_REASON);
+    enqueue(() => reportRefusedSearch(details.url));
     return;
   }
   if (details.frameId !== 0 || !BLOCK_ERRORS.has(details.error)) {
@@ -309,6 +313,28 @@ async function reportVisit(host) {
   }
   kept[host] = now;
   await chrome.storage.session.set({ [STORAGE_VISITS]: kept });
+}
+
+// A refused search, for the parent (D-222): the address goes to the child's
+// own launcher and nowhere else, which keeps the words searched for if its own
+// copy of the list refuses the address too. Only pages and frames: not the
+// suggestions a search box fetches while the child is still typing.
+async function reportRefusedSearch(url) {
+  if (!/^https?:\/\//.test(url)) {
+    return;
+  }
+  const origin = await findLauncher();
+  if (!origin || url.startsWith(`${origin}/`)) {
+    return;
+  }
+  await fetch(origin + SEARCH_REFUSED_PATH, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+    cache: "no-store",
+    credentials: "omit",
+    redirect: "error",
+  });
 }
 
 // Reports run one after another, so two tabs opening the same site at once
@@ -567,5 +593,6 @@ chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
   }
   if (list.some((pattern) => pattern.test(details.url))) {
     showBlockedPage(details.tabId, "", SEARCH_BLOCKED_REASON);
+    enqueue(() => reportRefusedSearch(details.url));
   }
 }, WEB_ONLY);

@@ -535,8 +535,9 @@ Nine steps, each skippable with a sane default, under five minutes total.
    approval, when it asks), install Tailscale on the phone (App Store and Google
    Play as QR codes; done when a phone joins the tailnet), open the panel on the
    phone (its address, a QR code, and "Ana ekrana ekle")
-9. Extras: Zio and Sio's voices, on by default. The assistant is shown, disabled; it
-   is switched on per child under **Çocuklar → Asistan** (D-165).
+9. Extras: Zio and Sio's voices, on by default, and their natural voice (about
+   90 MB, downloaded from its authors), ticked for a Turkish family (D-223). The
+   assistant is switched on per child under **Çocuklar → Asistan** (D-165).
 
 Email is not a step: it is set up under **Ayarlar**, where it can be tested (D-182).
 The wizard ends on a closing screen with the child's picture and what is left, as
@@ -555,7 +556,12 @@ parent chose themselves is kept.
 
 **Yardım / Help** (`/help`) is in the top bar and on the sign-in page: the questions
 parents ask first, each answered in the words the screens use. It is open before
-signing in, because "PIN'imi unuttum" is one of them.
+signing in, because "PIN'imi unuttum" is one of them. It starts with **Adım adım
+rehberler** (D-224): mail, phone access, adding a child, time, the internet, the
+voices, a forgotten PIN or passphrase - each at `/guides/<slug>`, every step numbered,
+with the commands to type and a "Sorun mu var?" section. The mail card links to its
+guide, and a failed test mail says whether the password was refused or the server not
+reached.
 
 ### 3.5 PWA
 
@@ -602,7 +608,10 @@ still applies. The child sees a used-up kind as the second form of the Blocked s
 ### 3.9 Insights
 
 **Analiz** (`/insights`, D-206) answers the questions a parent asks over a week: is it
-more than before, where does the time go, is there anything I should do? One child at a
+more than before, where does the time go, is there anything I should do? Searches the
+browser refused (D-222) come first after the highlights, as **Engellenen aramalar**:
+each one's words and time, a few sentences on talking about it calmly, and "Gördüm",
+which clears the banner Today shows for them. One child at a
 time (a button per child, as in History), and the period as three links that read as
 one control: **Bu hafta** (the default), **Geçen hafta**, **Son 30 gün**.
 

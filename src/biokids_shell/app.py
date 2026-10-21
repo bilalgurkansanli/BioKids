@@ -947,6 +947,30 @@ def register_routes(app: FastAPI) -> None:
         await shell.client.report_visit(host)
         return Response(status_code=204)
 
+    @app.post("/search-refused")
+    async def search_refused(request: Request, shell: Shell) -> Response:
+        """A search the extension refused, for the parent to read (D-222).
+
+        Only the extension may post here: the launcher's own pages have no
+        reason to. Its address is checked against the same expressions the
+        extension installed, so nothing else becomes something the parent
+        reads; of the address, only the words searched for and the site's name
+        go on to the daemon. The block page the child is looking at says that
+        a grown-up will see it.
+        """
+        if request.headers.get("origin") != _extension_origin(request):
+            return PlainTextResponse("", status_code=403)
+        body = await _json_body(request)
+        url = str(body.get("url", "")) if body else ""
+        words = search_filter.refused_search(url, shell.search_words or ())
+        if not words:
+            return Response(status_code=204)
+        host = (urlsplit(url).hostname or "").lower()
+        await shell.client.report_refused_search(
+            words, host if _HOSTNAME.fullmatch(host) else ""
+        )
+        return Response(status_code=204)
+
     @app.get("/search-rules")
     async def search_rules(request: Request, shell: Shell) -> Response:
         """The patterns the extension installs to stop forbidden searches (D-202).

@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import datetime as dt
+import smtplib
+import socket
+import ssl
 from typing import Any
 
 import pytest
@@ -202,3 +205,49 @@ async def test_highlights_that_cannot_be_worked_out_do_not_stop_the_mail(
     weekly = [body for subject, body in outbox.sent if "özet" in subject]
     assert len(weekly) == 1
     assert "Pazartesi: 120 dk" in weekly[0] and "Öne çıkanlar" not in weekly[0]
+
+
+async def test_a_refused_search_is_mailed_without_its_words(
+    session: Session, config: Config, family: Child, outbox: Outbox
+) -> None:
+    """D-222: the mail says one happened and where to read it; the words stay here."""
+    notifier = Notifier(config)
+    await notifier.run(session, MONDAY, 0.0)
+    session.add(
+        AiAlert(child_id=family.id, score=100, app="search", category="search", text="porno")
+    )
+    session.commit()
+
+    assert await notifier.run(session, MONDAY, 60.0)
+    [(_subject, body)] = outbox.sent
+    assert "Ahmet uygun olmayan bir şey aramaya çalıştı" in body
+    assert "Analiz" in body
+    assert "porno" not in body
+
+
+# ---------------------------------------------------- telling which kind (D-224)
+
+
+@pytest.mark.parametrize(
+    ("exc", "kind"),
+    [
+        (
+            smtplib.SMTPAuthenticationError(535, b"5.7.8 Username and Password not accepted"),
+            "auth",
+        ),
+        (ConnectionRefusedError(111, "refused"), "connect"),
+        (socket.gaierror(-2, "Name or service not known"), "connect"),
+        (ssl.SSLError("wrong version number"), "connect"),
+        (TimeoutError(), "connect"),
+        (smtplib.SMTPServerDisconnected("closed"), "connect"),
+        (smtplib.SMTPRecipientsRefused({}), "other"),
+    ],
+)
+def test_a_failure_says_which_kind(exc: BaseException, kind: str) -> None:
+    assert mail.failure_kind(exc) == kind
+
+
+def test_the_spaces_google_shows_in_an_app_password_are_taken_out() -> None:
+    assert mail.tidy_password("smtp.gmail.com", "abcd efgh ijkl mnop") == "abcdefghijklmnop"
+    assert mail.tidy_password(" SMTP.Gmail.com ", "abcd efgh") == "abcdefgh"
+    assert mail.tidy_password("smtp.example.com", "a b") == "a b", "another server's is its own"

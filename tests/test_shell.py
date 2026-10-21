@@ -100,6 +100,7 @@ class FakeShellDaemon:
         self.asked: list[str] = []
         self.asked_kinds: list[str] = []
         self.visits: list[str] = []
+        self.searches: list[tuple[str, str]] = []
         self.shutdown_answer: ShutdownOutcome | None = ShutdownOutcome.POWEROFF
 
     async def available(self) -> bool:
@@ -126,6 +127,9 @@ class FakeShellDaemon:
 
     async def report_visit(self, host: str) -> None:
         self.visits.append(host)
+
+    async def report_refused_search(self, words: str, host: str) -> None:
+        self.searches.append((words, host))
 
     async def ask_a_parent(self, url: str, kind: str = "site") -> tuple[bool, str]:
         self.asked.append(url)
@@ -1673,6 +1677,66 @@ def test_another_extension_or_a_site_cannot_report_visits(
     assert daemon.visits == []
 
 
+# ------------------------------------------- a refused search, for the parent (D-222)
+
+
+def test_a_refused_search_reaches_the_daemon_as_its_words(
+    client: TestClient, daemon: FakeShellDaemon, config: Config
+) -> None:
+    ext_id = write_extension_id(config)
+    response = client.post(
+        "/search-refused",
+        json={"url": "https://www.google.com/search?q=porno+videolar%C4%B1&sca_esv=abc"},
+        headers={"origin": f"chrome-extension://{ext_id}", "sec-fetch-site": "none"},
+    )
+    assert response.status_code == 204
+    assert daemon.searches == [("porno videoları", "www.google.com")]
+
+
+def test_an_address_the_list_does_not_refuse_is_not_reported(
+    client: TestClient, daemon: FakeShellDaemon, config: Config
+) -> None:
+    """Whatever is sent, only what the same expressions refuse becomes something
+    the parent reads."""
+    ext_id = write_extension_id(config)
+    for url in (
+        "https://www.google.com/search?q=dinozorlar",
+        "file:///etc/passwd",
+        "javascript:alert(1)",
+        "",
+    ):
+        response = client.post(
+            "/search-refused",
+            json={"url": url},
+            headers={"origin": f"chrome-extension://{ext_id}"},
+        )
+        assert response.status_code == 204
+    assert daemon.searches == []
+
+
+def test_only_the_extension_reports_a_refused_search(
+    client: TestClient, daemon: FakeShellDaemon, config: Config
+) -> None:
+    """Not another extension, not a website, and not the launcher's own page:
+    nothing of the launcher's has a refused search to report."""
+    write_extension_id(config)
+    url = "https://www.google.com/search?q=porno"
+    for headers in (
+        {"origin": f"chrome-extension://{'c' * 32}", "sec-fetch-site": "cross-site"},
+        {"origin": "https://example.com", "sec-fetch-site": "cross-site"},
+        {"origin": "http://testserver", "sec-fetch-site": "same-origin"},
+    ):
+        response = client.post("/search-refused", json={"url": url}, headers=headers)
+        assert response.status_code == 403
+    assert daemon.searches == []
+
+
+def test_the_block_page_tells_the_child_a_grown_up_will_see_it(client: TestClient) -> None:
+    """Principle 2: the child knows (D-222)."""
+    page = _visible_text(client.get("/blocked?reason=search.blocked").text)
+    assert "büyüğün de görecek" in page
+
+
 # ------------------------------------------------- forbidden searches (D-202)
 
 
@@ -1738,7 +1802,7 @@ def test_a_refused_search_gets_its_own_page_without_the_word(client: TestClient)
     text = _visible_text(page)
 
     assert "Bunu arayamayız" in text
-    assert "büyüğüne sorabilirsin" in text
+    assert "ona sorabilirsin" in text
     assert "porno" not in page, "the word is never repeated, not even in the form"
     assert 'name="kind" value="search"' in page
     assert 'name="url" value=""' in page

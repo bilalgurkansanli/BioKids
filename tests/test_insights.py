@@ -852,3 +852,38 @@ def test_the_week_in_words_from_the_database(
     if today.weekday():
         assert any("%100 arttı" in s.text for s in said), said
     assert len(said) <= 3
+
+
+# ------------------------------------------------------- refused searches (D-222)
+
+
+def test_refused_searches_come_right_after_the_assistant() -> None:
+    found = week(
+        general={MONDAY: 3600},
+        requests=[("search", "pending")],
+        assistant_alerts=1,
+        refused_searches=3,
+    )
+    chosen = highlights(found, CTX)
+    assert keys(chosen)[:2] == ["insights.h.assistant", "insights.h.refused"]
+    assert "insights.h.search" not in keys(chosen), "the refused searches already say it"
+    refused = chosen[1]
+    assert refused.params == {"count": 3}
+    assert refused.link == "/insights?child=1#searches"
+
+
+def test_a_refused_search_alone_is_something_to_show() -> None:
+    found = week(refused_searches=1)
+    assert found.has_data
+    assert keys(highlights(found, CTX)) == ["insights.h.refused"]
+
+
+def test_refused_searches_are_counted_for_the_days_shown(
+    session: Session, child: Child
+) -> None:
+    for ts in (utc(MONDAY, 10, 0), utc(MONDAY - dt.timedelta(days=1), 10, 0)):
+        session.add(AiAlert(child_id=child.id, ts=ts, score=100, app="search", text="porno"))
+    session.commit()
+    facts = insights.load_facts(session, child.id, Span(MONDAY, SUNDAY), THURSDAY, tz=ISTANBUL)
+    assert facts.refused_searches == 1
+    assert facts.assistant_alerts == 0

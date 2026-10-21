@@ -195,15 +195,16 @@ entry in `DECISIONS.md` and a note in the README.**
 | `log.tailscale.com` | Tailscale's own client logs | **turned off**: the runbook starts `tailscaled` with `--no-logs-no-support` (D-157) |
 | Hugging Face | one-time download of the assistant's models | yes: only with the AI package, only when the parent presses the button (D-165) |
 | `download.kiwix.org` and the mirror it redirects to | one-time download of the encyclopedia the assistant checks itself against, pinned by SHA-256 | yes: the same button, the same package (D-178) |
-| `github.com` and `release-assets.githubusercontent.com`, where it redirects | one-time download of the Piper program, release 2023.11.14-2, pinned by SHA-256 | yes: only when the parent presses "Doğal sesi indir" (D-196) |
-| `huggingface.co` and its CDN (`*.cdn.hf.co`), where it redirects | one-time download of Piper's Turkish voice, pinned to a commit and by SHA-256 | yes: the same button (D-196) |
+| `github.com` and `release-assets.githubusercontent.com`, where it redirects | one-time download of the Piper program, release 2023.11.14-2, pinned by SHA-256 | yes: when the parent leaves the wizard's natural-voice box ticked (ticked for a Turkish family) or presses "Doğal sesi indir"; tried again every 30 minutes until it is there (D-196, D-223) |
+| `huggingface.co` and its CDN (`*.cdn.hf.co`), where it redirects | one-time download of Piper's Turkish voice, pinned to a commit and by SHA-256 | yes: the same box or button (D-196, D-223) |
 
 Zero telemetry. No crash reporting. No version ping. No analytics.
 
 The browser extension (D-187) adds no row. It connects only to the child's own launcher
 on `127.0.0.1`, its update manifest is a `file://` path on the machine, and the host
 names it reports go into the family's database and nowhere else. Its search rules
-(D-202) come from the same launcher, and a search they refuse is never sent at all. The offline Wikipedia
+(D-202) come from the same launcher, and a search they refuse is never sent at all; its
+address goes to that launcher, which keeps the words for the parent (D-222). The offline Wikipedia
 (D-190) adds none either: `biokids-wiki` serves the files the assistant's download
 already fetched, on loopback, under `IPAddressDeny=any`.
 
@@ -221,13 +222,14 @@ from `[retention]` in `/etc/biokids/config.toml`:
 
 | Records | Key | Default |
 |---|---|---|
-| usage events, which include the sites visited, the assistant's alerts, and the hours of the day the computer was used (`usage_hour`, D-206) | `activity_days` | 30 days |
+| usage events, which include the sites visited, the assistant's alerts, the searches the browser refused (D-222), and the hours of the day the computer was used (`usage_hour`, D-206) | `activity_days` | 30 days |
 | minutes per day and per app (`usage_tick`, `ledger_day`) | `usage_days` | 400 days |
 | the audit log | `audit_days` | 365 days |
 | the children's requests | `requests_days` | 90 days |
 
 The insights screen and the Sunday mail's highlights (D-206) are computed from these
-when they are read and store nothing of their own; the mail names no site. So is the
+when they are read and store nothing of their own; the mail names no site and no
+searched word. So is the
 child's sticker album (D-211), from `usage_tick`: a sticker leaves the album with the
 minutes it was earned with. The launcher keeps one date in the child's home, the day
 it last celebrated a sticker (`~/.config/biokids/album-cheered`). The child's pictures
@@ -362,7 +364,8 @@ What it can see is the address of each top-level navigation in a tab's main fram
 through `webNavigation`. What it sends is the host name, `{"host": "…"}`, to the
 child's own launcher at `POST /visit`, at most once per host per ten minutes; the
 launcher accepts a host name and nothing else, and passes it to the daemon over
-`shell.sock`. A navigation closed by the policy or the DNS filter is sent to the
+`shell.sock`. The one whole address it sends is one its own search rules refused
+(below, D-222). A navigation closed by the policy or the DNS filter is sent to the
 launcher's `/blocked` page. It has no content scripts and no `tabs` permission, so it
 cannot read a page, a title or a form, and it never reports an address on the machine.
 
@@ -393,10 +396,18 @@ search engine never sees it.
   digits, held-down letters; a dotted "i" never as a dotless "ı".
 - **The page.** A refused page or frame fails with `ERR_BLOCKED_BY_CLIENT`; the
   extension sends the tab to `/blocked?reason=search.blocked`, which says "Bunu
-  arayamayız. İstersen bir büyüğüne sorabilirsin." and offers "Büyüğüme sor". The word
-  is in neither: the launcher is told why, never what, and the request it files names
-  nothing. A page that searches without loading one (YouTube's in-page search, which
-  posts the words and then changes the address) is checked when its address changes.
+  arayamayız. Bu aramayı bir büyüğün de görecek." and offers "Büyüğüme sor". The page's
+  address carries the reason, never the words, and the request it files names nothing.
+  A page that searches without loading one (YouTube's in-page search, which posts the
+  words and then changes the address) is checked when its address changes.
+- **Telling the parent** (D-222). The extension then sends the refused address, and
+  nothing else, to the child's own launcher (`POST /search-refused`), which takes it
+  only from the extension's origin, checks it against the same expressions, and passes
+  the daemon only the words searched for (at most 100 characters) and the site's name.
+  The daemon keeps them as an `ai_alert` (`app = "search"`), pruned after
+  `activity_days`, at most 20 a day per child; the audit row names the site, never the
+  words. Today says one happened, Analiz shows the words, and the mail says only that
+  one happened. A search the list does not refuse is never sent anywhere.
 - **Fail safe.** The whole set is swapped in one `updateDynamicRules` call; dynamic
   rules outlive a browser restart, so a launcher that does not answer leaves the last
   set in force, and a set built without the parent's words never replaces one built
@@ -471,9 +482,9 @@ We do not build, and will not accept contributions for:
 - a record of the pages a child reads: the extension reports a site's host name,
   never its path, query, title or contents, and the child is told on their first
   run (D-187)
-- a record of what a child searches: a refused search is not reported or kept, not
-  even the fact that it happened, unless the child presses "Büyüğüme sor" - and that
-  request names nothing (D-202)
+- a record of what a child searches. The one exception (D-222): a search the list
+  refused is kept, its words for the parent to read in Analiz, and the block page tells
+  the child a grown-up will see it. Every other search is neither reported nor kept
 - location tracking
 - reading the contents of private messages
 

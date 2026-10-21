@@ -773,6 +773,15 @@ def cmd_voice_setup(args: argparse.Namespace, config: Config) -> int:
         return 0
     if args.action == "remove":
         natural_voice.remove(config)
+        # Or the daemon would fetch it again within the half hour (D-223).
+        database = Database(config)
+        try:
+            with database.session() as session:
+                repo.set_setting(session, natural_voice.WANTED_SETTING, "")
+        except Exception as exc:  # pragma: no cover - no database is nothing to forget
+            log.warning("could not forget that the natural voice was wanted: %s", exc)
+        finally:
+            database.dispose()
         log.info("the natural voice was removed; Zio and Sio speak with espeak-ng again")
         return 0
     try:

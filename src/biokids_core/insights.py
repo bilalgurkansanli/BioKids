@@ -8,8 +8,9 @@ this module works out:
 
 * the numbers: screen time in total and per day, the change against the period
   before, the days the day's time ran out, the kinds of app and the apps, the
-  minutes earned and granted, the requests, the assistant's alerts, the sites
-  the browser reported and the hours of the day;
+  minutes earned and granted, the requests, the assistant's alerts, the
+  searches the browser refused, the sites the browser reported and the hours
+  of the day;
 * at most five **highlights**, each one sentence a parent understands at a
   glance, the most important first, some with a gentle suggestion and the
   panel setting that acts on it.
@@ -69,7 +70,7 @@ from biokids_core.db.models import (
     utcnow,
 )
 from biokids_core.i18n import Translator, duration_text
-from biokids_core.repo import REQUEST_EXPIRY
+from biokids_core.repo import REQUEST_EXPIRY, SEARCH_ALERT_APP
 from biokids_core.types import Category, Reason
 
 MONTH_DAYS: Final = 30
@@ -234,6 +235,8 @@ class Facts:
     """(kind, status) of each request the child filed. One still `pending` after
     `REQUEST_EXPIRY` is `expired` here, as the daemon will mark it."""
     assistant_alerts: int = 0
+    refused_searches: int = 0
+    """Searches the browser refused and the parent was told of (D-222)."""
     tracked_from: dt.date | None = None
     """The first day BioKids knew this child. Earlier days are not zeros."""
 
@@ -356,15 +359,18 @@ def load_facts(
             )
         )
     ]
-    alerts = session.scalar(
-        select(func.count())
-        .select_from(AiAlert)
-        .where(
-            AiAlert.child_id == child_id,
-            AiAlert.app == "assistant",
-            AiAlert.ts >= since,
-            AiAlert.ts < until,
+    alerts, searches = (
+        session.scalar(
+            select(func.count())
+            .select_from(AiAlert)
+            .where(
+                AiAlert.child_id == child_id,
+                AiAlert.app == app,
+                AiAlert.ts >= since,
+                AiAlert.ts < until,
+            )
         )
+        for app in ("assistant", SEARCH_ALERT_APP)
     )
     return Facts(
         general=general,
@@ -376,6 +382,7 @@ def load_facts(
         visits=visits,
         requests=requests,
         assistant_alerts=int(alerts or 0),
+        refused_searches=int(searches or 0),
         tracked_from=tracked_from,
     )
 
@@ -511,6 +518,7 @@ class Insights:
     granted_s: int
     requests: tuple[RequestLine, ...]
     assistant_alerts: int
+    refused_searches: int
     sites: tuple[SiteLine, ...]
     more_sites: int
     hours: tuple[int, ...]
@@ -535,6 +543,7 @@ class Insights:
             self.total_s >= USED_SECONDS
             or bool(self.requests)
             or self.assistant_alerts > 0
+            or self.refused_searches > 0
             or bool(self.sites)
         )
 
@@ -600,6 +609,7 @@ def summarize(facts: Facts, period: Period, span: Span, today: dt.date) -> Insig
         granted_s=sum(max(0, facts.granted.get(day, 0)) for day in shown),
         requests=_requests(facts.requests),
         assistant_alerts=facts.assistant_alerts,
+        refused_searches=facts.refused_searches,
         sites=sites,
         more_sites=more_sites,
         hours=hours,
@@ -985,7 +995,9 @@ def highlights(ins: Insights, ctx: Context, limit: int = MAX_HIGHLIGHTS) -> list
     The weights, so the order is written down somewhere:
 
     100 the assistant was asked something the family should know about
-     90 a search the browser refused, and the child asked about it
+     95 searches the browser refused (D-222)
+     90 a search the browser refused, and the child asked about it - said
+        only without the one above, which already covers it
      80 screen time changed against the period before
      70 the day's time ran out on several days
      65 used between 21:00 and 06:00, counted in nights
@@ -1020,8 +1032,22 @@ def highlights(ins: Insights, ctx: Context, limit: int = MAX_HIGHLIGHTS) -> list
             )
         )
 
+    if ins.refused_searches:
+        found.append(
+            Highlight(
+                "insights.h.refused",
+                95,
+                "🔍",
+                Tone.ATTENTION,
+                {"count": ins.refused_searches},
+                suggestion="insights.s.refused",
+                link=f"/insights?child={child}#searches",
+                link_label="insights.searches",
+            )
+        )
+
     searches = next((line.asked for line in ins.requests if line.kind == "search"), 0)
-    if searches:
+    if searches and not ins.refused_searches:
         found.append(
             Highlight(
                 "insights.h.search",

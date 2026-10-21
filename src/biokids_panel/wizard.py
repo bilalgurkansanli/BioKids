@@ -24,7 +24,7 @@ from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
-from biokids_core import repo, security
+from biokids_core import natural_voice, repo, security
 from biokids_core.catalog import ALWAYS_ON_TILES, enable_for_child, load_catalog, sync_catalog
 from biokids_core.clock import read_boot_id
 from biokids_core.config import Config
@@ -386,11 +386,20 @@ def register_wizard(app: FastAPI) -> None:
         ctx: Ctx,
         session: Db,
         voices: Annotated[str, Form()] = "on",
+        natural: Annotated[str, Form()] = "",
     ) -> Response:
         child = _pending_child(session)
         if child is not None:
             policy = repo.get_or_create_policy(session, child.id)
             policy.voice_enabled = voices == "on"
+        # The natural voice (D-223): the box is ticked for a Turkish family,
+        # and the download starts now and is tried again until it is done.
+        fetch_voice = voices == "on" and natural == "on"
+        if fetch_voice:
+            repo.set_setting(session, natural_voice.WANTED_SETTING, natural_voice.WANTED)
+            repo.audit(
+                session, actor="system", action="voice_download", detail={"via": "wizard"}
+            )
 
         # D-49 makes every step skippable, and a secret is the one thing that
         # cannot have a sane default. Skipping step 3 used to leave both
@@ -412,6 +421,10 @@ def register_wizard(app: FastAPI) -> None:
         )
         session.commit()
         _call_daemon(ctx, Op.RELOAD)
+        if fetch_voice:
+            # Best effort: without the daemon now, the daemon itself starts it
+            # once it runs again.
+            _call_daemon(ctx, Op.VOICE_SETUP)
         return see_other("/wizard/10")
 
 
@@ -571,6 +584,14 @@ def _render_step(
         "child": _pending_child(session),
         "this_year": dt.date.today().year,
     }
+
+    if step == 9:
+        values["natural_mb"] = round(natural_voice.DOWNLOAD_BYTES / 1_000_000)
+
+    if step == 10:
+        values["natural_voice"] = (
+            repo.get_setting(session, natural_voice.WANTED_SETTING, "") == natural_voice.WANTED
+        )
 
     if step == 3 and "recovery" not in extra:
         # Generated fresh each time the step is rendered and never stored in

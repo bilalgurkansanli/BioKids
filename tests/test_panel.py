@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 from biokids_core import repo, security
 from biokids_core.catalog import load_catalog
 from biokids_core.config import Config
-from biokids_core.db import AuditLog, Database, Parent, Policy
+from biokids_core.db import AiAlert, AuditLog, Database, Parent, Policy
 from biokids_core.db.models import utcnow
 from biokids_core.errors import IpcError
 from biokids_core.ipc import Response
@@ -3021,3 +3021,243 @@ def test_the_help_page_is_open_before_signing_in(
     assert "PIN'imi unuttum." in html.unescape(page.text)
     assert "sudo biokids-admin reset-pin" in page.text
     assert 'href="/help"' in client.get("/login").text
+
+
+# ------------------------------------------------------- refused searches (D-222)
+
+
+def _refused(db: Database, *words: str) -> None:
+    with db.session() as session:
+        for text in words:
+            session.add(
+                AiAlert(child_id=1, score=100, app="search", category="search", text=text)
+            )
+        session.commit()
+
+
+def test_today_says_a_search_was_refused_and_where_to_read_it(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    _refused(db, "porno", "seks")
+    login(client)
+    page = html.unescape(client.get("/today").text)
+    assert "uygun olmayan bir şey aramaya çalıştı (2 kez)" in page
+    assert 'href="/insights?child=1#searches"' in page
+    assert "porno" not in page, "the words are in Analiz, not on the first screen"
+
+
+def test_insights_show_the_words_and_seen_clears_today(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    _refused(db, "porno izle")
+    login(client)
+    page = html.unescape(client.get("/insights?child=1").text)
+    assert 'id="searches"' in page
+    assert "“porno izle”" in page
+    assert "Dikkatli olmanızda fayda var" in page
+
+    response = client.post(
+        "/insights/searches/1/seen",
+        data={"period": "week", "csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/insights?child=1&period=week#searches"
+    today = html.unescape(client.get("/today").text)
+    assert "aramaya çalıştı (1 kez)" not in today, "but the banner is gone"
+    page = html.unescape(client.get("/insights?child=1").text)
+    assert "“porno izle”" in page, "seen, and still in the week's list"
+    assert "/insights/searches/1/seen" not in page
+
+
+def test_marking_searches_seen_needs_the_csrf_token(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    _refused(db, "porno")
+    login(client)
+    response = client.post("/insights/searches/1/seen", data={}, follow_redirects=False)
+    assert response.status_code == 303
+    assert "error=csrf" in response.headers["location"]
+    assert "aramaya çalıştı (1 kez)" in html.unescape(client.get("/today").text)
+
+
+# ---------------------------------------------- the natural voice by default (D-223)
+
+
+def _through_step_3(client: TestClient, lang: str = "tr") -> None:
+    client.post("/wizard/1", data={"lang": lang})
+    client.post("/wizard/2", data={"name": "Anne", "pin": PIN, "pin_again": PIN})
+    page = client.get("/wizard/3").text
+    marker = 'name="recovery" value="'
+    start = page.index(marker) + len(marker)
+    recovery = page[start : page.index('"', start)]
+    client.post(
+        "/wizard/3", data={"passphrase": PASSPHRASE, "recovery": recovery, "written_down": "on"}
+    )
+
+
+def test_the_natural_voice_is_ticked_for_a_turkish_family(
+    client: TestClient, db: Database
+) -> None:
+    _through_step_3(client)
+    page = html.unescape(client.get("/wizard/9").text)
+    assert re.search(r'id="natural" name="natural"\s+checked', page)
+    assert "yaklaşık 90 MB" in page
+    assert "kendi yapımcılarından" in page, "where it comes from, before it comes"
+
+
+def test_an_english_family_is_not_sent_a_turkish_voice_unasked(
+    client: TestClient, db: Database
+) -> None:
+    _through_step_3(client, "en")
+    page = client.get("/wizard/9").text
+    assert re.search(r'id="natural" name="natural"\s+>', page)
+
+
+def test_the_wizard_starts_the_download_and_remembers_it_was_wanted(
+    client: TestClient, db: Database, daemon: FakeDaemon
+) -> None:
+    from biokids_core import natural_voice
+
+    _through_step_3(client)
+    done = client.post(
+        "/wizard/9", data={"voices": "on", "natural": "on"}, follow_redirects=False
+    )
+    assert done.headers["location"] == "/wizard/10"
+    assert daemon.ran("voice_setup")
+    assert "doğal sesi şimdi iniyor" in html.unescape(client.get("/wizard/10").text)
+    with db.session() as session:
+        wanted = repo.get_setting(session, natural_voice.WANTED_SETTING)
+        assert wanted == natural_voice.WANTED
+        assert session.query(AuditLog).filter_by(action="voice_download").count() == 1
+
+
+def test_an_unticked_box_downloads_nothing(
+    client: TestClient, db: Database, daemon: FakeDaemon
+) -> None:
+    from biokids_core import natural_voice
+
+    _through_step_3(client)
+    client.post("/wizard/9", data={"voices": "on"}, follow_redirects=False)
+    assert not daemon.ran("voice_setup")
+    assert "doğal sesi şimdi iniyor" not in html.unescape(client.get("/wizard/10").text)
+    with db.session() as session:
+        assert repo.get_setting(session, natural_voice.WANTED_SETTING, "") == ""
+
+
+def test_a_voice_asked_for_and_not_here_says_it_will_be_tried_again(
+    client: TestClient, family_ready: None, db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from biokids_core import natural_voice
+
+    _natural_state(monkeypatch, "failed")
+    login(client)
+    assert "kendiliğinden yeniden dener" not in html.unescape(client.get("/voices").text)
+    with db.session() as session:
+        repo.set_setting(session, natural_voice.WANTED_SETTING, natural_voice.WANTED)
+        session.commit()
+    page = html.unescape(client.get("/voices").text)
+    assert "kendiliğinden yeniden dener" in page
+    assert "İndirme tamamlanamadı" not in page, "not a failure the parent has to act on"
+    assert 'action="/voice-natural"' in page, "and the button is still there"
+
+
+# --------------------------------------------------------- the guides (D-224)
+
+
+def test_every_guide_is_written_in_both_languages() -> None:
+    from biokids_core.i18n import translator
+    from biokids_panel.routes.misc import GUIDES
+
+    for lang in ("tr", "en"):
+        tr = translator(lang)
+        for guide in GUIDES:
+            keys = [f"guide.{guide.slug}.title", f"guide.{guide.slug}.intro"]
+            keys += [f"guide.{guide.slug}.step.{n}" for n in range(1, guide.steps + 1)]
+            for n in range(1, guide.tips + 1):
+                keys += [f"guide.{guide.slug}.tip.{n}.q", f"guide.{guide.slug}.tip.{n}.a"]
+            if guide.page:
+                keys.append(f"guide.{guide.slug}.open")
+            for key in keys:
+                assert tr(key) != key, f"{lang}: {key}"
+            assert set(guide.commands) <= set(range(1, guide.steps + 1))
+
+
+def test_the_help_page_leads_to_every_guide(client: TestClient, family_ready: None) -> None:
+    from biokids_panel.routes.misc import GUIDES
+
+    page = html.unescape(client.get("/help").text)
+    assert "Adım adım rehberler" in page
+    for guide in GUIDES:
+        assert f'href="/guides/{guide.slug}"' in page
+
+
+def test_the_mail_guide_is_open_before_signing_in_and_says_every_step(
+    client: TestClient, family_ready: None
+) -> None:
+    response = client.get("/guides/email")
+    assert response.status_code == 200
+    page = html.unescape(response.text)
+    assert "myaccount.google.com/apppasswords" in page
+    assert "smtp.gmail.com" in page and "smtp.yandex.com" in page
+    assert "Outlook ve Hotmail" in page, "the one that no longer works is named"
+    assert page.count('class="guide__step"') == 6
+    assert 'href="/settings#mail"' not in page, "the button is for a signed-in parent"
+    login(client)
+    assert 'href="/settings#mail"' in client.get("/guides/email").text
+
+
+def test_the_forgotten_pin_guide_shows_the_commands(
+    client: TestClient, family_ready: None
+) -> None:
+    page = client.get("/guides/forgot").text
+    assert "<code>sudo biokids-admin reset-pin</code>" in page
+    assert "<code>sudo biokids-admin reset-passphrase</code>" in page
+
+
+def test_an_unknown_guide_is_not_found(client: TestClient, family_ready: None) -> None:
+    assert client.get("/guides/nothing").status_code == 404
+
+
+def test_the_mail_settings_lead_to_the_guide(client: TestClient, family_ready: None) -> None:
+    login(client)
+    assert 'href="/guides/email"' in client.get("/settings").text
+
+
+@pytest.mark.parametrize(
+    ("kind", "error"),
+    [
+        ("auth", "mail.failed.auth"),
+        ("connect", "mail.failed.connect"),
+        ("other", "mail.failed"),
+    ],
+)
+def test_a_failed_test_mail_says_which_kind(
+    client: TestClient,
+    family_ready: None,
+    monkeypatch: pytest.MonkeyPatch,
+    kind: str,
+    error: str,
+) -> None:
+    from biokids_core import mail
+
+    def refuse(*_a: object, **_k: object) -> None:
+        raise mail.MailError("SMTPAuthenticationError: 535", kind)
+
+    monkeypatch.setattr(mail, "send", refuse)
+    login(client)
+    response = client.post(
+        "/settings/mail",
+        data={
+            "csrf_token": csrf_of(client),
+            "action": "test",
+            "host": "smtp.gmail.com",
+            "username": "anne@gmail.com",
+            "password": "abcd efgh ijkl mnop",
+            "recipients": "anne@example.com",
+        },
+        follow_redirects=False,
+    )
+    assert response.headers["location"] == f"/settings?error={error}#mail"
+    page = html.unescape(client.get(response.headers["location"]).text)
+    assert "E-posta gönderilemedi" in page

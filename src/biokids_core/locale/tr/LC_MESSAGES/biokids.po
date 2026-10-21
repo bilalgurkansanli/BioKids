@@ -213,7 +213,7 @@ msgid "shell.blocked.search.title"
 msgstr "Bunu arayamayız"
 
 msgid "shell.blocked.search.body"
-msgstr "İstersen bir büyüğüne sorabilirsin."
+msgstr "Bu aramayı bir büyüğün de görecek. Merak ettiğin bir şey varsa ona sorabilirsin."
 
 msgid "shell.break.title"
 msgstr "Biraz mola"
@@ -2837,3 +2837,372 @@ msgstr "İsterseniz oyunlara ayrıca günlük bir sınır koyabilirsiniz; günü
 
 msgid "insights.s.web"
 msgstr "Hangi sitelerin açıldığını aşağıda görebilirsiniz."
+
+# --- refused searches, for the parent (D-222) ---
+msgid "audit.action.search_refused"
+msgstr "Bir arama engellendi"
+
+msgid "mail.search_alert"
+msgstr "{name} uygun olmayan bir şey aramaya çalıştı; arama yapılmadı. Ne aradığını panelde, Analiz'de görebilirsiniz."
+
+msgid "search.panel.banner"
+msgstr "{name} uygun olmayan bir şey aramaya çalıştı ({count} kez). Ne aradığını görmek için dokunun."
+
+msgid "insights.h.refused"
+msgstr "Uygun olmayan bir şeyi {count} kez aramaya çalıştı; aramalar yapılmadı."
+
+msgid "insights.s.refused"
+msgstr "Ne yazdığını Analiz'de görebilirsiniz. Dikkatli olmanızda fayda var: kızmadan, sakin bir anda konuşmak en iyisidir."
+
+msgid "insights.searches"
+msgstr "Engellenen aramalar"
+
+msgid "insights.searches.help"
+msgstr "{name} bunları aramaya çalıştı. Aramalar yapılmadı ve hiçbir sonuç gösterilmedi. {name}, engel ekranında bunu bir büyüğünün göreceğini duydu."
+
+msgid "insights.searches.new"
+msgstr "yeni"
+
+msgid "insights.searches.more"
+msgstr "ve {count} arama daha"
+
+msgid "insights.searches.advice"
+msgstr "Dikkatli olmanızda fayda var. Bu yaşta merak doğaldır ve çoğu zaman bir arkadaştan duyulan bir kelimeyle başlar. Sakin bir anda, kızmadan konuşun: neyi merak ettiğini sorun ve yaşına uygun bir cevap verin. Böylece bir dahaki sefere size sorar."
+
+msgid "insights.searches.seen"
+msgstr "Gördüm"
+
+# --- the natural voice by default (D-223) ---
+msgid "wizard.extras.natural"
+msgstr "Zio ve Sio doğal, insan gibi bir sesle konuşsun (yaklaşık {size} MB indirilir)"
+
+msgid "wizard.extras.natural.help"
+msgstr "Robot sesi yerine. Türkçe ses, ailelerin kişisel kullanımı için ücretsizdir ve kendi yapımcılarından bu bilgisayara bir kez indirilir. İnternet yoksa, bağlanınca kendiliğinden iner."
+
+msgid "wizard.done.natural"
+msgstr "Zio ve Sio'nun doğal sesi şimdi iniyor; birkaç dakika içinde robot sesinin yerini alır."
+
+msgid "voices.natural.retrying"
+msgstr "Doğal ses henüz inmedi. BioKids, internet olduğunda yarım saatte bir kendiliğinden yeniden dener; isterseniz aşağıdaki düğmeyle şimdi de deneyebilirsiniz."
+
+# --- step-by-step guides (D-224) ---
+msgid "help.faq"
+msgstr "Sık sorulanlar"
+
+msgid "guide.list.title"
+msgstr "Adım adım rehberler"
+
+msgid "guide.list.help"
+msgstr "Her adımı tek tek anlatan rehberler. Bir konuya dokunun."
+
+msgid "guide.all"
+msgstr "Tüm rehberler"
+
+msgid "guide.steps"
+msgstr "Adım adım"
+
+msgid "guide.trouble"
+msgstr "Sorun mu var?"
+
+msgid "guide.email.title"
+msgstr "E-posta bildirimlerini kurmak"
+
+msgid "guide.email.intro"
+msgstr "BioKids önemli bir şey olduğunda ve her pazar akşamı size e-posta gönderebilir. Bunun için bir e-posta hesabının gönderme bilgileri gerekir. En kolayı Gmail'dir: aşağıdaki adımlar yaklaşık beş dakika sürer ve yalnızca bir kez yapılır."
+
+msgid "guide.email.step.1"
+msgstr "Gmail hesabınızda iki adımlı doğrulamayı açın. Telefonunuzdan ya da bir bilgisayardan myaccount.google.com adresine gidin, Güvenlik bölümünde \"İki Adımlı Doğrulama\"yı seçin ve adımları izleyin. Zaten açıksa bu adımı geçin."
+
+msgid "guide.email.step.2"
+msgstr "Bir uygulama şifresi oluşturun. myaccount.google.com/apppasswords adresine gidin, ad olarak \"BioKids\" yazın ve Oluştur'a basın. Google 16 harfli bir şifre gösterir. Bu pencereyi açık tutun: şifre bir daha gösterilmez."
+
+msgid "guide.email.step.3"
+msgstr "BioKids panelinde Ayarlar → E-posta bildirimleri'ni açın. \"Hangi adrese gelsin?\" kutusuna bildirimlerin gelmesini istediğiniz adresi yazın. Birden çok adresi virgülle ayırın; bu adresin Gmail olması gerekmez."
+
+msgid "guide.email.step.4"
+msgstr "\"Posta sunucusu\" bölümüne şunları yazın: Sunucu smtp.gmail.com, Port 587, Güvenlik STARTTLS, Kullanıcı adı Gmail adresinizin tamamı (örneğin ad.soyad@gmail.com), Şifre ise 2. adımdaki 16 harfli uygulama şifresi. Normal Gmail şifreniz burada çalışmaz."
+
+msgid "guide.email.step.5"
+msgstr "\"Kaydet ve deneme gönder\"e basın. Birkaç saniye içinde \"Deneme e-postası gönderildi\" yazısı çıkar. Gelen kutunuza bakın; göremezseniz Spam (Gereksiz) klasörüne de bakın."
+
+msgid "guide.email.step.6"
+msgstr "Hangi e-postaları istediğinizi seçin: önemli olaylarda hemen haber (filtre çalışmazsa, çocuğunuz bir şey isterse ya da uygun olmayan bir şey aramaya çalışırsa) ve pazar akşamı haftalık özet. Çocuğunuzun yazdıkları hiçbir zaman e-postaya konmaz."
+
+msgid "guide.email.tip.1.q"
+msgstr "\"Kullanıcı adı ya da şifre kabul edilmedi\" yazıyor."
+
+msgid "guide.email.tip.1.a"
+msgstr "Gmail normal şifrenizi kabul etmez; 2. adımdaki 16 harfli uygulama şifresi gerekir. Uygulama şifresi sayfası açılmıyorsa iki adımlı doğrulama henüz açık değildir (1. adım). Kullanıcı adına Gmail adresinizin tamamını yazdığınızdan emin olun."
+
+msgid "guide.email.tip.2.q"
+msgstr "\"Posta sunucusuna bağlanılamadı\" yazıyor."
+
+msgid "guide.email.tip.2.a"
+msgstr "Bilgisayarın internete bağlı olduğundan emin olun ve sunucu adını kontrol edin. Port ile güvenlik birbirine uymalı: 587 ile STARTTLS, 465 ile SSL/TLS."
+
+msgid "guide.email.tip.3.q"
+msgstr "Deneme e-postası gelmedi."
+
+msgid "guide.email.tip.3.a"
+msgstr "Spam (Gereksiz) klasörüne bakın ve \"Hangi adrese gelsin?\" kutusundaki adresi kontrol edin. İlk e-posta bazen birkaç dakika gecikir."
+
+msgid "guide.email.open"
+msgstr "E-posta ayarlarını aç"
+
+msgid "guide.email.link"
+msgstr "Nasıl kurulur? Adım adım rehber"
+
+msgid "guide.email.providers"
+msgstr "Gmail dışındaki e-posta hesapları"
+
+msgid "guide.email.providers.help"
+msgstr "Bu hizmetler de normal şifrenizi değil, hesabınızın güvenlik ayarlarında oluşturduğunuz bir uygulama şifresini ister (Yandex: Yandex ID → Güvenlik → Uygulama şifreleri; iCloud: account.apple.com → Oturum açma ve güvenlik → Uygulamaya özel parolalar). Kullanıcı adı, e-posta adresinizin tamamıdır."
+
+msgid "guide.email.providers.service"
+msgstr "Hizmet"
+
+msgid "guide.email.outlook"
+msgstr "Outlook ve Hotmail: Microsoft, kişisel hesaplarda bu yolla e-posta göndermeyi kapattı. Gönderen olarak bir Gmail hesabı kullanın; bildirimler yine Outlook adresinize gelebilir."
+
+msgid "mail.failed.auth"
+msgstr "E-posta gönderilemedi: kullanıcı adı ya da şifre kabul edilmedi. Gmail normal şifrenizi kabul etmez, 16 harfli bir uygulama şifresi gerekir. E-posta rehberinde adım adım anlatılıyor."
+
+msgid "mail.failed.connect"
+msgstr "E-posta gönderilemedi: posta sunucusuna bağlanılamadı. İnternet bağlantısını, sunucu adını ve portu kontrol edin (587 ile STARTTLS, 465 ile SSL/TLS)."
+
+msgid "guide.phone.title"
+msgstr "Paneli telefondan açmak"
+
+msgid "guide.phone.intro"
+msgstr "Paneli evin dışından, telefonunuzdan da açabilirsiniz. Bunun için ücretsiz Tailscale uygulaması kullanılır: telefonunuzla bu bilgisayar arasında yalnızca sizin kullanabildiğiniz şifreli bir bağlantı kurar. Modeminizde hiçbir ayar gerekmez; yaklaşık beş dakika sürer."
+
+msgid "guide.phone.step.1"
+msgstr "Bu bilgisayarda panelde Ayarlar → Telefondan erişim'i açın ve \"Telefondan erişimi aç\"a basın. BioKids, Tailscale'i bu bilgisayara kendisi kurar."
+
+msgid "guide.phone.step.2"
+msgstr "Açılan Tailscale sayfasında Google, Apple ya da Microsoft hesabınızla giriş yapın; hesabınız yoksa ücretsiz açılır. Tailscale bir onay isterse panelde çıkan düğmeye basıp onaylayın."
+
+msgid "guide.phone.step.3"
+msgstr "Telefonunuza App Store'dan ya da Google Play'den Tailscale uygulamasını kurun ve aynı hesapla giriş yapın. Telefon \"VPN bağlantısı ekle\" iznini sorduğunda izin verin."
+
+msgid "guide.phone.step.4"
+msgstr "Panelde çıkan karekodu telefonunuzun kamerasıyla okutun ve PIN'inizi girin."
+
+msgid "guide.phone.step.5"
+msgstr "İsterseniz tarayıcının menüsünden \"Ana ekrana ekle\"yi seçin: BioKids telefonunuzda bir uygulama gibi durur."
+
+msgid "guide.phone.tip.1.q"
+msgstr "Telefon paneli açamıyor."
+
+msgid "guide.phone.tip.1.a"
+msgstr "Telefonda Tailscale uygulamasını açın ve bağlı (Connected) olduğuna bakın. Bilgisayar da açık ve internete bağlı olmalı; uyku modundaysa panel açılmaz."
+
+msgid "guide.phone.tip.2.q"
+msgstr "Diğer ebeveyn de telefonundan girmek istiyor."
+
+msgid "guide.phone.tip.2.a"
+msgstr "Önce Ayarlar → Ebeveynler'den onu ekleyin; kendi PIN'i olur. Sonra kendi telefonuna Tailscale'i kurup aynı Tailscale hesabıyla giriş yapması yeterlidir."
+
+msgid "guide.phone.tip.3.q"
+msgstr "Bu güvenli mi?"
+
+msgid "guide.phone.tip.3.a"
+msgstr "Evet. Panel internete açılmaz: yalnızca sizin Tailscale hesabınıza bağlı cihazlar ona ulaşabilir ve girişte yine PIN'iniz sorulur. Erişimi aynı sayfadan istediğiniz an kapatabilirsiniz."
+
+msgid "guide.phone.open"
+msgstr "Telefondan erişim sayfasını aç"
+
+msgid "guide.child.title"
+msgstr "Çocuk eklemek ve ilk giriş"
+
+msgid "guide.child.intro"
+msgstr "Her çocuğun bu bilgisayarda kendi hesabı olur. Parolası yoktur: çocuğunuz giriş ekranında kendi resmine dokunarak girer."
+
+msgid "guide.child.step.1"
+msgstr "Panelde Çocuklar'a gidin ve \"Çocuk ekle\"ye basın."
+
+msgid "guide.child.step.2"
+msgstr "Çocuğunuzun adını, doğum yılını ve bir simge seçin. Bilgisayardaki kullanıcı adı kendiliğinden önerilir; değiştirmeniz gerekmez."
+
+msgid "guide.child.step.3"
+msgstr "Kaydedin. BioKids bu bilgisayarda çocuğunuz için parolasız bir hesap açar, uygulamaları ve süre kurallarını yaşına göre hazırlar."
+
+msgid "guide.child.step.4"
+msgstr "Bilgisayarı bir kez yeniden başlatın. Giriş ekranında çocuğunuz kendi resmi ve adıyla, siz de kendi adınız ve ev resmiyle görünürsünüz."
+
+msgid "guide.child.step.5"
+msgstr "Çocuğunuz kendi resmini seçip \"Oturum aç\"a basar; parola sorulmaz. Sizin hesabınız ise her zamanki parolanızla açılır."
+
+msgid "guide.child.tip.1.q"
+msgstr "Çocuğum giriş ekranında görünmüyor."
+
+msgid "guide.child.tip.1.a"
+msgstr "Bilgisayarı bir kez yeniden başlatın. Yine görünmüyorsa Çocuklar ekranında ekli olduğuna bakın."
+
+msgid "guide.child.tip.2.q"
+msgstr "Adını ya da resmini değiştirmek istiyorum."
+
+msgid "guide.child.tip.2.a"
+msgstr "Çocuklar → Düzenle. Giriş ekranı yeni adı ve resmi bir sonraki açılışta gösterir."
+
+msgid "guide.child.tip.3.q"
+msgstr "Bir çocuğu kaldırmak istiyorum."
+
+msgid "guide.child.tip.3.a"
+msgstr "Çocuklar → Düzenle sayfasının altındaki kaldırma düğmesine basın; parolanız sorulur. Çocuğunuzun çizimleri ve dosyaları silinmez, yalnızca giriş ekranından kalkar."
+
+msgid "guide.child.open"
+msgstr "Çocuklar'a git"
+
+msgid "guide.time.title"
+msgstr "Süreler ve saatler"
+
+msgid "guide.time.intro"
+msgstr "Her çocuğun günlük süresini, hangi saatlerde kullanabileceğini ve süre bitince ne olacağını siz belirlersiniz. Süre bitmeden önce Zio ve Sio sesli olarak haber verir."
+
+msgid "guide.time.step.1"
+msgstr "Panelde Çocuklar'a gidin ve çocuğunuzun \"Süre kuralları\" sayfasını açın."
+
+msgid "guide.time.step.2"
+msgstr "Hafta içi ve hafta sonu günlük süreyi dakika olarak yazın: o gün bilgisayarın toplam ne kadar kullanılabileceği."
+
+msgid "guide.time.step.3"
+msgstr "İsterseniz kullanım saatlerini seçin, örneğin 15:00–19:00. Saat seçmezseniz gün boyu serbesttir; okul öncesi ve sonrası için iki aralık seçebilirsiniz."
+
+msgid "guide.time.step.4"
+msgstr "İsterseniz türlere göre sınır koyun (örneğin oyunlara günde en fazla 30 dakika), \"Kazanılan süre\"yi açın (eğitim uygulamalarında geçen süre oyun süresine eklenir) ya da zorunlu mola ekleyin."
+
+msgid "guide.time.step.5"
+msgstr "\"Süre bitince\" ne olacağını seçin: ekranı kilitle, oturumu kapat ya da bilgisayarı kapat. Sonra Kaydet'e basın."
+
+msgid "guide.time.step.6"
+msgstr "Bayram ya da doğum günü gibi bir günde, Bugün ekranındaki \"Bugün özel bir gün mü?\" ile o güne +1 sa, +2 sa ya da sınırsız verebilirsiniz. Tatil gibi birkaç gün için: Süre kuralları → Özel günler."
+
+msgid "guide.time.tip.1.q"
+msgstr "Çocuğuma şimdi biraz daha süre vermek istiyorum."
+
+msgid "guide.time.tip.1.a"
+msgstr "Bugün ekranında çocuğunuzun kartındaki \"+10 dk\"ya basın. Ekran kilitlendiyse kilit kendiliğinden açılır."
+
+msgid "guide.time.tip.2.q"
+msgstr "Akşamları uyarılar neden farklı?"
+
+msgid "guide.time.tip.2.a"
+msgstr "Saat 19:00'dan sonra günün son on dakikası iyi geceler zamanıdır: Zio ve Sio yatma saatine göre konuşur ve son ekran iyi geceler der."
+
+msgid "guide.time.tip.3.q"
+msgstr "BioKids'i bir süreliğine kapatabilir miyim?"
+
+msgid "guide.time.tip.3.a"
+msgstr "Süre kuralları sayfasındaki \"BioKids bu çocuğu yönetsin\" kutusunu kaldırın; parolanız sorulur. Kutuyu yeniden işaretleyince koruma geri gelir."
+
+msgid "guide.time.open"
+msgstr "Çocuklar'a git"
+
+msgid "guide.internet.title"
+msgstr "İnternet, siteler ve aramalar"
+
+msgid "guide.internet.intro"
+msgstr "Yetişkin içerikli, kumar ve zararlı siteler her zaman kapalıdır ve uygun olmayan aramalar yapılmaz. Gerisini çocuğunuza göre siz ayarlarsınız."
+
+msgid "guide.internet.step.1"
+msgstr "Panelde Çocuklar'a gidin ve çocuğunuzun \"İnternet\" sayfasını açın."
+
+msgid "guide.internet.step.2"
+msgstr "\"İnternet nasıl olsun?\" sorusunu yanıtlayın. \"Açık internet, zararlı siteler kapalı\" çoğu çocuk için uygundur. Çok küçük çocuklar için \"Sadece seçtiğim siteler\"i seçin ve izin verdiğiniz siteleri \"Uygulamalar ve siteler\"de işaretleyin."
+
+msgid "guide.internet.step.3"
+msgstr "\"Aranamayacak kelimeler\" bölümüne, hazır listeye ek olarak kapatmak istediğiniz kelimeleri her satıra bir tane yazın. Liste bütün çocuklarınız için geçerlidir."
+
+msgid "guide.internet.step.4"
+msgstr "Çocuğunuz kapalı bir sayfada \"Büyüğüme sor\"a basarsa istek İstekler'e düşer; \"İzin ver\" o siteyi açar."
+
+msgid "guide.internet.step.5"
+msgstr "Çocuğunuz uygun olmayan bir şey aramaya çalışırsa arama yapılmaz, Bugün ekranında haber verilir ve ne aradığını Analiz'de görürsünüz. Çocuğunuz da engel ekranında bunu bir büyüğünün göreceğini duyar."
+
+msgid "guide.internet.tip.1.q"
+msgstr "Okulun sitesi açılmıyor."
+
+msgid "guide.internet.tip.1.a"
+msgstr "Çocuğunuz \"Büyüğüme sor\"a bassın, siz de İstekler'de \"İzin ver\"e basın. Ya da İnternet sayfasında \"Açık internet\"i seçin."
+
+msgid "guide.internet.tip.2.q"
+msgstr "Hangi sitelere girdiğini görebilir miyim?"
+
+msgid "guide.internet.tip.2.a"
+msgstr "Evet, Geçmiş ve Analiz ekranlarında. Yalnızca sitelerin adları tutulur; sayfaların içeriği, yazılanlar ya da ekran görüntüleri tutulmaz."
+
+msgid "guide.internet.tip.3.q"
+msgstr "Çocuğum uygun olmayan bir şey aradı. Ne yapmalıyım?"
+
+msgid "guide.internet.tip.3.a"
+msgstr "Kızmadan, sakin bir anda konuşun: neyi merak ettiğini sorun ve yaşına uygun bir cevap verin. Bu yaşta merak doğaldır; amaç, bir dahaki sefere size sormasıdır."
+
+msgid "guide.internet.open"
+msgstr "Çocuklar'a git"
+
+msgid "guide.voice.title"
+msgstr "Zio ve Sio'nun sesi"
+
+msgid "guide.voice.intro"
+msgstr "Zio ve Sio, süre bitmeden önce ve gün içinde çocuğunuzla konuşur. Robot sesi yerine doğal bir ses kullanabilir, hatta uyarıları kendi sesinizle kaydedebilirsiniz."
+
+msgid "guide.voice.step.1"
+msgstr "Panelde Ayarlar'a gidin ve \"Sesleri ayarla\"ya basın."
+
+msgid "guide.voice.step.2"
+msgstr "Kurulumda doğal ses kutusu işaretliyse ses kendiliğinden iner. Değilse \"Doğal sesi indir\"e basın: yaklaşık 90 MB'tır ve birkaç dakika sürer."
+
+msgid "guide.voice.step.3"
+msgstr "Kendi sesinizi kullanmak için bir cümlenin yanındaki \"● Kaydet\"e basın, cümleyi söyleyin ve Durdur'a basın. Kayıtlar yalnızca bu bilgisayarda kalır."
+
+msgid "guide.voice.step.4"
+msgstr "Bir sonraki uyarıdan itibaren çocuğunuz yeni sesi duyar."
+
+msgid "guide.voice.tip.1.q"
+msgstr "Hiç ses çıkmıyor."
+
+msgid "guide.voice.tip.1.a"
+msgstr "Bilgisayarın sesinin açık olduğuna bakın: çocuğun ekranındaki ses düğmesiyle ya da hoparlör kablosuyla. Kendi kaydınız sessiz çıktıysa mikrofonu kontrol edip yeniden kaydedin."
+
+msgid "guide.voice.tip.2.q"
+msgstr "Doğal ses inmedi."
+
+msgid "guide.voice.tip.2.a"
+msgstr "Bilgisayarın internete bağlı olduğundan emin olun. BioKids yarım saatte bir kendiliğinden yeniden dener; Sesler sayfasındaki düğmeyle hemen de deneyebilirsiniz."
+
+msgid "guide.voice.open"
+msgstr "Sesleri ayarla"
+
+msgid "guide.forgot.title"
+msgstr "PIN'i ya da parolayı unuttum"
+
+msgid "guide.forgot.intro"
+msgstr "İki yol var: kurulumda kâğıda yazdığınız kurtarma kodu, ya da bu bilgisayarda bir komut. İkisini de yalnızca siz yapabilirsiniz; çocuğunuz yapamaz."
+
+msgid "guide.forgot.step.1"
+msgstr "PIN'i unuttuysanız giriş sayfasında \"PIN'imi unuttum\"a basın ve kurtarma kodunuzu girin: kurulumda ya da sizi eklerken kâğıda yazdığınız sekiz kelime. Yeni PIN'inizi orada belirlersiniz."
+
+msgid "guide.forgot.step.2"
+msgstr "Kurtarma kodu da yoksa bu bilgisayarda kendi hesabınızla (ev resmi olan) oturum açın ve Uygulamalar menüsünden Uçbirim'i (Terminal) açın."
+
+msgid "guide.forgot.step.3"
+msgstr "Şu komutu yazıp Enter'a basın. Önce bilgisayar parolanız sorulur; yazarken ekranda bir şey görünmez, bu normaldir. Sonra yeni 6 haneli PIN'i iki kez yazın (İngilizce \"New PIN\" diye sorar)."
+
+msgid "guide.forgot.step.4"
+msgstr "Artık panele yeni PIN'inizle girebilirsiniz; yanlış denemelerden kalan kilit de kalkmıştır."
+
+msgid "guide.forgot.step.5"
+msgstr "Korumayı kapatırken sorulan aile parolasını unuttuysanız aynı şekilde şu komutu yazın ve yeni parolayı iki kez girin (en az 10 karakter):"
+
+msgid "guide.forgot.tip.1.q"
+msgstr "\"sudo\" izin vermiyor ya da \"sudoers dosyasında değil\" diyor."
+
+msgid "guide.forgot.tip.1.a"
+msgstr "Bu hesabın bilgisayarı yönetme yetkisi yok. Debian'ı kurarken oluşturulan hesapla oturum açıp yeniden deneyin."
+
+msgid "guide.forgot.tip.2.q"
+msgstr "Çocuğum bu yolla PIN'i değiştirebilir mi?"
+
+msgid "guide.forgot.tip.2.a"
+msgstr "Hayır. Komut bilgisayarın yönetici parolasını ister ve çocuk hesaplarının yönetici yetkisi yoktur."

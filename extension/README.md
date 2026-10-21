@@ -48,6 +48,14 @@ A refused page or frame fails with `net::ERR_BLOCKED_BY_CLIENT`, and the tab goe
 searches without loading a new one (YouTube's in-page search) is checked against the
 same expressions when its address changes (`webNavigation.onHistoryStateUpdated`).
 
+**Telling the parent** (D-222). The address of a refused page or frame - never a
+suggestion fetched while typing - goes to the child's own launcher with
+`POST <launcher>/search-refused` and the body `{"url": "<the address>"}`. The launcher
+checks it against its own copy of the same expressions, keeps only the words searched
+for (the search box's value, an article's title) and the site's name, and the daemon
+files them as an alert the parent reads in Analiz. The block page tells the child a
+grown-up will see it.
+
 The rules are fetched on install, when the browser starts, every five minutes
 (`chrome.alarms`) and as soon as the launcher answers again after it did not. The whole
 set is swapped in one `updateDynamicRules` call, and dynamic rules survive a browser
@@ -67,12 +75,12 @@ contract are constants at the top of `background.js`.
 
 ## What it never does
 
-- It reports a **host name**, nothing more: never the path, the query, the
-  title, the page's contents, a keystroke, a form field or a screenshot.
-  `docs/SECURITY.md` §7 is the boundary, and `tests/test_extension.py` fails if
-  the request body becomes anything other than `{ host }`.
-- It never reports a search: not the words, not that one was refused. The block
-  page is told why, and the request "Büyüğüme sor" files names nothing.
+- For a visit it reports a **host name**, nothing more: never the path, the
+  query, the title, the page's contents, a keystroke, a form field or a
+  screenshot. The one address it sends whole is one its own rules refused,
+  to the child's own launcher (D-222). `docs/SECURITY.md` §7 is the boundary,
+  and `tests/test_extension.py` fails if a request body becomes anything other
+  than `{ host }` or `{ url }`.
 - No content scripts, so it cannot read or change any page.
 - No `tabs` permission: it can send a tab to the block page, but cannot read
   the address or title of any tab.

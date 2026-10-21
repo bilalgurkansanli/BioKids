@@ -78,6 +78,8 @@ class ChildRuntime:
     earned_pending_s: int = 0
     """Earned seconds not yet announced; the celebration is in whole minutes."""
     visits_seen: dict[str, float] = field(default_factory=dict)
+    searches_seen: dict[str, float] = field(default_factory=dict)
+    """Refused searches already told to the parent, by their words (D-222)."""
     """Host -> BOOTTIME of its last recorded visit, so a site that is open all
     afternoon is one line in the history, not one per page (D-187)."""
     earned_announced_at: float = 0.0
@@ -115,6 +117,7 @@ class SupervisorBase:
     _notified_at: float | None = None
     _pruned_at: float | None = None
     _assistant_checked_at: float | None = None
+    _voice_checked_at: float | None = None
     assistant_ready: dict[str, bool] = field(default_factory=dict)
     """What the assistant service last said it can do: `chat` (a model is
     downloaded) and `voice` (speech recognition too). Empty when it is not

@@ -117,8 +117,12 @@ class Notifier:
         names = _child_names(session)
         parents = repo.parent_names(session)
         lines = [_describe(row, names, tr, parents) for row in rows]
+        # Never the words: a refused search or question stays on the machine,
+        # and the mail says where to read it (D-165, D-222).
         lines += [
-            tr(
+            tr("mail.search_alert", name=names.get(alert.child_id, "?"))
+            if alert.app == repo.SEARCH_ALERT_APP
+            else tr(
                 "mail.assistant_alert",
                 name=names.get(alert.child_id, "?"),
                 category=tr(f"assistant.category.{alert.category}"),

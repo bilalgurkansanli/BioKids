@@ -19,7 +19,7 @@ Nothing yet.
 
 The first release of the packages, numbered by the rounds it took: 1.0 was the release
 candidate built as 0.1.0-2, and five rounds of the owner's tests followed (D-219).
-Decisions D-171 to D-221; read them in `docs/DECISIONS.md`. An upgrade from 0.1.0-1 or
+Decisions D-171 to D-224; read them in `docs/DECISIONS.md`. An upgrade from 0.1.0-1 or
 0.1.0-2 runs whichever of the migrations `3e8b51c0d2a7` (request kinds),
 `9a4f2c7e1b36` (day schedules), `c41d8e0f5a92` (the cuts), `077ca4545f23` (screen time
 per hour), `5d2f8a61c3e4` (special days) and `b7e41d2c9a63` (parents and appearance)
@@ -50,6 +50,15 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
   passphrase.
 - **The parent on the login screen** (D-221) by the name given to the wizard, with a
   house, instead of their user name and a grey silhouette.
+- **A refused search reaches the parent** (D-222): Today says it happened, Analiz shows
+  the words and how to talk about it, the alert mail says only that it happened. The
+  block page tells the child a grown-up will see it. Extension 1.3.0.
+- **The natural voice by default** (D-223): ticked in the wizard for a Turkish family,
+  downloaded at once and tried again every half hour until it is there.
+- **Step-by-step guides** (D-224) under Yardım, open before signing in: mail (Gmail's
+  app password, Yandex, iCloud, and why not Outlook), phone access, children, time, the
+  internet, the voices, a forgotten PIN or passphrase. A failed test mail says which
+  kind of failure.
 - **Two more tiles, and rows that look full** (D-210): **Elmaslar** (KDiamond), a
   diamond-matching game that needs no reading, and **Müzik Atölyesi** (Chrome Music Lab),
   music experiments with no ads and no account, both ticked for a new child of 4 to 10.

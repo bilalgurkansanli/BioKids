@@ -8,6 +8,24 @@
 #}
 {% block content %}
   <h1>{{ _('help.title') }}</h1>
+
+  {# D-224: every step, for what takes more than a sentence. #}
+  <section class="card">
+    <h2>{{ _('guide.list.title') }}</h2>
+    <p class="help">{{ _('guide.list.help') }}</p>
+    <ul class="guide-list">
+      {% for guide in guides %}
+        <li>
+          <a class="guide-list__item" href="/guides/{{ guide.slug }}">
+            <span class="guide-list__icon" aria-hidden="true">{{ guide.icon }}</span>
+            <span>{{ _('guide.' ~ guide.slug ~ '.title') }}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <h2>{{ _('help.faq') }}</h2>
   <p class="muted">{{ _('help.intro') }}</p>
 
   {% for topic in topics %}

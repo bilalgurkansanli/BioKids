@@ -63,6 +63,12 @@ class ShellClient:
         except (IpcError, OSError):
             return
 
+    async def report_refused_search(self, words: str, host: str) -> None:
+        try:
+            await self._client.call(ShellOp.REPORT_SEARCH, words=words, host=host)
+        except (IpcError, OSError):
+            return
+
     async def report_activity(self, app_slug: str, app_name: str, category: str) -> None:
         try:
             await self._client.call(

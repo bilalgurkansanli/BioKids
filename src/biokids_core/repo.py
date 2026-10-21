@@ -47,6 +47,10 @@ from biokids_core.types import (
 DEFAULT_WARN_MINUTES: tuple[int, ...] = (10, 5, 1)
 
 REQUEST_EXPIRY = dt.timedelta(hours=12)
+
+SEARCH_ALERT_APP = "search"
+"""`ai_alert.app` of a search the browser refused (D-222); the assistant's are
+"assistant" (D-165)."""
 """A request nobody answered is gone by the next morning: "more time" asked for
 yesterday is not a question about today. Here rather than in the daemon, which
 marks such requests expired, because the panel's lists and the insights screen
@@ -511,6 +515,51 @@ def unseen_assistant_alerts(session: Session) -> dict[int, int]:
     ).all():
         counts[alert.child_id] = counts.get(alert.child_id, 0) + 1
     return counts
+
+
+def unseen_search_alerts(session: Session) -> dict[int, int]:
+    """child id -> refused searches the parent has not yet marked as seen (D-222)."""
+    counts: dict[int, int] = {}
+    for child_id in session.scalars(
+        select(AiAlert.child_id).where(
+            AiAlert.app == SEARCH_ALERT_APP, AiAlert.dismissed.is_(False)
+        )
+    ).all():
+        counts[child_id] = counts.get(child_id, 0) + 1
+    return counts
+
+
+def search_alerts(
+    session: Session, child_id: int, since: dt.datetime, until: dt.datetime
+) -> list[AiAlert]:
+    """A child's refused searches between two UTC times, newest first (D-222)."""
+    return list(
+        session.scalars(
+            select(AiAlert)
+            .where(
+                AiAlert.child_id == child_id,
+                AiAlert.app == SEARCH_ALERT_APP,
+                AiAlert.ts >= since,
+                AiAlert.ts < until,
+            )
+            .order_by(AiAlert.ts.desc())
+        ).all()
+    )
+
+
+def dismiss_search_alerts(session: Session, child_id: int) -> int:
+    """Mark a child's refused searches as seen; how many were not yet."""
+    seen = 0
+    for alert in session.scalars(
+        select(AiAlert).where(
+            AiAlert.child_id == child_id,
+            AiAlert.app == SEARCH_ALERT_APP,
+            AiAlert.dismissed.is_(False),
+        )
+    ).all():
+        alert.dismissed = True
+        seen += 1
+    return seen
 
 
 def dismiss_alert(session: Session, alert_id: int) -> bool:

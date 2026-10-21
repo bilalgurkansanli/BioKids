@@ -251,6 +251,7 @@ class ShellServer:
             ShellOp.LAUNCH: self._launch,
             ShellOp.REPORT_ACTIVITY: self._report_activity,
             ShellOp.REPORT_VISIT: self._report_visit,
+            ShellOp.REPORT_SEARCH: self._report_search,
             ShellOp.FIRST_RUN_DONE: self._first_run_done,
             ShellOp.REQUEST_SHUTDOWN: self._request_shutdown,
             ShellOp.ASK_A_PARENT: self._ask_a_parent,
@@ -285,6 +286,12 @@ class ShellServer:
         host = str(request.args.get("host", "")).strip().lower()[:253]
         if host:
             self.supervisor.record_visit(caller.child_id, host)
+        return Response(id=request.id, ok=True)
+
+    async def _report_search(self, caller: ShellCaller, request: Request) -> Response:
+        words = str(request.args.get("words", ""))
+        host = str(request.args.get("host", "")).strip().lower()[:253]
+        self.supervisor.record_refused_search(caller.child_id, words, host)
         return Response(id=request.id, ok=True)
 
     async def _report_activity(self, caller: ShellCaller, request: Request) -> Response:

@@ -11,6 +11,17 @@
       </label>
     </div>
 
+    {# D-223: ticked for a Turkish family. The voice is a family's to fetch, not
+       BioKids' to ship (D-137), so the box says where it comes from. #}
+    <div class="checkline">
+      <input type="checkbox" id="natural" name="natural"
+             {% if not family or family.locale == 'tr' %}checked{% endif %}>
+      <label for="natural">
+        {{ _('wizard.extras.natural', size=natural_mb) }}
+        <span class="help">{{ _('wizard.extras.natural.help') }}</span>
+      </label>
+    </div>
+
     {# The screen watcher this step once showed as "coming soon" was cut from
        v1 (D-180); the assistant is set up per child in the panel (D-165). #}
     <div class="notice">

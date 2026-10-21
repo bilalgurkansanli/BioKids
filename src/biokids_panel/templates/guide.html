@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% set key = 'guide.' ~ guide.slug %}
+{% block title %}{{ _(key ~ '.title') }} · {{ _('panel.title') }}{% endblock %}
+
+{#
+  D-224. One guide, every step, for the parent who needs them all: the FAQ on
+  /help answers in a sentence. Open without signing in, like /help. Plain HTML;
+  the steps are numbered by the stylesheet (.guide), so the catalogue holds
+  sentences, not numbers.
+#}
+{% block content %}
+  <p><a href="/help">← {{ _('guide.all') }}</a></p>
+  <h1><span aria-hidden="true">{{ guide.icon }}</span> {{ _(key ~ '.title') }}</h1>
+  <p class="muted">{{ _(key ~ '.intro') }}</p>
+
+  <section class="card">
+    <h2>{{ _('guide.steps') }}</h2>
+    <ol class="guide">
+      {% for n in range(1, guide.steps + 1) %}
+        <li class="guide__step">
+          <p>{{ _(key ~ '.step.' ~ n) }}</p>
+          {% if n in guide.commands %}
+            <p><code>{{ guide.commands[n] }}</code></p>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+    {% if guide.page and auth.authenticated %}
+      <a class="btn btn--primary" href="{{ guide.page }}">{{ _(key ~ '.open') }}</a>
+    {% endif %}
+  </section>
+
+  {% if guide.slug == 'email' %}
+    {# Other mail services: their own servers, never translated. #}
+    <section class="card">
+      <h2>{{ _('guide.email.providers') }}</h2>
+      <p class="help">{{ _('guide.email.providers.help') }}</p>
+      <div class="table-wrap">
+        <table class="sites-table">
+          <thead>
+            <tr>
+              <th scope="col">{{ _('guide.email.providers.service') }}</th>
+              <th scope="col">{{ _('mail.panel.host') }}</th>
+              <th scope="col" class="num">{{ _('mail.panel.port') }}</th>
+              <th scope="col">{{ _('mail.panel.security') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for name, host, port, security in providers %}
+              <tr>
+                <td>{{ name }}</td>
+                <td><code>{{ host }}</code></td>
+                <td class="num">{{ port }}</td>
+                <td>{{ _('mail.panel.security.' ~ security) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="notice notice--warn">
+        <p>{{ _('guide.email.outlook') }}</p>
+      </div>
+    </section>
+  {% endif %}
+
+  {% if guide.tips %}
+    <section class="card">
+      <h2>{{ _('guide.trouble') }}</h2>
+      {% for n in range(1, guide.tips + 1) %}
+        <details class="help guide-tip">
+          <summary><strong>{{ _(key ~ '.tip.' ~ n ~ '.q') }}</strong></summary>
+          <p>{{ _(key ~ '.tip.' ~ n ~ '.a') }}</p>
+        </details>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  <p>
+    {% if auth.authenticated %}
+      <a class="btn btn--quiet" href="/today">{{ _('nav.today') }}</a>
+    {% else %}
+      <a class="btn btn--quiet" href="/login">{{ _('common.back') }}</a>
+    {% endif %}
+  </p>
+{% endblock %}

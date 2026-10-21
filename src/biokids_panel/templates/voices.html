@@ -33,7 +33,10 @@
         <p class="help">{{ _('voices.natural.zio') }}</p>
       {% endif %}
     {% else %}
-      {% if natural.state == 'failed' %}
+      {% if natural.retrying %}
+        {# Asked for and not here yet: the daemon tries again by itself (D-223). #}
+        <div class="notice notice--warn" role="status">{{ _('voices.natural.retrying') }}</div>
+      {% elif natural.state == 'failed' %}
         <div class="notice notice--danger" role="alert">{{ _('voices.natural.failed') }}</div>
       {% endif %}
       <p>{{ _('voices.natural.offer') }}</p>

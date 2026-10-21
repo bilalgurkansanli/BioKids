@@ -23,6 +23,7 @@ is monkeypatched in the module that defines it, because that is where it is read
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import datetime as dt
 import logging
@@ -534,6 +535,45 @@ class Supervisor(
             if status.get("running")
             else {}
         )
+
+    async def fetch_voice(self, now_boot: float) -> None:
+        """Start the natural voice's download again until it is there (D-223).
+
+        Only where the family asked for it (the wizard's box, or the button on
+        /voices) and it is not on the machine yet: a family that set up the
+        computer with no network gets the voice the first half hour it has one.
+        Never raises, and audits nothing: an hourly line in the audit log for a
+        machine that is offline would bury what matters there.
+        """
+        from biokids_core import natural_voice
+
+        checked = self._voice_checked_at
+        if checked is None:
+            self._voice_checked_at = (
+                now_boot - natural_voice.RETRY_SECONDS + natural_voice.FIRST_TRY_AFTER_SECONDS
+            )
+            return
+        if now_boot - checked < natural_voice.RETRY_SECONDS:
+            return
+        self._voice_checked_at = now_boot
+        try:
+            wanted = repo.get_setting(self.session, natural_voice.WANTED_SETTING, "")
+            if wanted != natural_voice.WANTED or natural_voice.installed(self.config):
+                return
+            state = await asyncio.to_thread(natural_voice.state, self.config)
+            if state in {natural_voice.RUNNING, natural_voice.INSTALLED}:
+                return
+            from biokids_daemon.server import run_systemctl
+
+            started = await run_systemctl("start", "--no-block", natural_voice.SETUP_UNIT)
+            log.info(
+                "the natural voice is not here yet; the download %s",
+                "started" if started else "could not be started",
+            )
+        except Exception:
+            log.exception("could not start the natural voice's download")
+            with contextlib.suppress(Exception):
+                self.session.rollback()
 
     async def notify_parent(self, now_boot: float) -> None:
         """Mail what the parent should know, once a minute (D-177). Never raises:
