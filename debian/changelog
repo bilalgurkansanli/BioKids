@@ -107,6 +107,8 @@ biokids (1.5.0-1) trixie; urgency=medium
   * Text size, high contrast and a reading font; biokids-desktop recommends
     fonts-opendyslexic (D-217). A second parent with their own PIN;
     biokids-admin reset-pin --parent; migration b7e41d2c9a63 (D-218).
+  * biokids-admin reset-passphrase sets a forgotten family passphrase
+    again (D-220).
 
  -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Wed, 21 Oct 2026 12:00:00 +0300
 

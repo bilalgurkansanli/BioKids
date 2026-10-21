@@ -30,7 +30,6 @@ from biokids_panel.common import View, _call_daemon, see_other
 router = APIRouter()
 
 TODAY_CHOICES: dict[str, tuple[int, bool]] = {
-    "30": (30, False),
     "60": (60, False),
     "120": (120, False),
     "nolimit": (0, True),

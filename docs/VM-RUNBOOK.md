@@ -835,7 +835,7 @@ espeak-ng speaks with its own female and male variants. Either is a pass.
 6. At zero: the lock screen with a 120-second countdown, then the machine powers
    off.
 
-A run whose twenty minutes end at half past six in the evening or later ends at
+A run whose twenty minutes end at seven in the evening or later ends at
 night (D-214): the warnings are the night's ("Akşam oldu Elif. 10 dakika sonra
 yatma vakti."), the end screen is "İyi geceler, Elif." and the screen dims a
 little. The minutes, the lock, the countdown and the poweroff are the same, so
@@ -1464,7 +1464,7 @@ few days: Turkish that reads naturally, one sentence for 4–7 and a little more
 ### 8.18 Good night (D-214)
 
 The end of an evening. Take a snapshot: the second pass ends with the VM off. Set
-Elif's weekday hours to end in a quarter of an hour, after 18:30 - say the clock
+Elif's weekday hours to end in a quarter of an hour, after 19:00 - say the clock
 reads 19:40, then **16:00–19:55** - with a quota she will not reach, and the end
 action **Bilgisayarı kapat**. Turn the screen's brightness up first (the ☀️
 slider), and note the level:

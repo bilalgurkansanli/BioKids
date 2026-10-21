@@ -299,7 +299,7 @@ matching the owner's spec). Open applications receive a normal termination signa
 sequence so files can be saved.
 
 **At night it is bedtime** (D-214). When the day ends in the evening - its last
-window closes, or its time runs out, at 18:30 or later (or before 05:00) - the
+window closes, or its time runs out, at 19:00 or later (or before 05:00) - the
 last ten minutes and the end screen are bedtime rather than a cold lock.
 `policy.bedtime_in(policy, state, now)` answers, purely, "how many seconds until a
 night ending at most ten minutes away", or None: it counts only what ends a day
@@ -333,8 +333,8 @@ cancels what is left rather than switching off later, during an upgrade.
 
 ### 3.6 Special days
 
-A parent can make a day different (D-215): from Today with one tap - +30 minutes, +1
-or +2 hours, or no daily limit with the allowed hours still in force - for today
+A parent can make a day different (D-215): from Today with one tap - +1 or +2
+hours, or no daily limit with the allowed hours still in force - for today
 only; or from the time screen for a range of dates ("Tatil: 20–31 Ocak") that follows
 the weekend's quota and hours, or a quota of its own. Rows of `day_override` (§5),
 read into `ChildPolicy.special_days`, and used where the engine picks a day's quota

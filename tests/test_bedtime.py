@@ -71,8 +71,8 @@ def at(hour: int, minute: int = 0, second: int = 0) -> dt.datetime:
 @pytest.mark.parametrize(
     ("moment", "evening"),
     [
-        (dt.time(18, 29, 59), False),
-        (dt.time(18, 30), True),
+        (dt.time(18, 59, 59), False),
+        (dt.time(19, 0), True),
         (dt.time(23, 59), True),
         (dt.time(0, 30), True),
         (dt.time(4, 59), True),
@@ -80,7 +80,7 @@ def at(hour: int, minute: int = 0, second: int = 0) -> dt.datetime:
         (dt.time(12, 0), False),
     ],
 )
-def test_the_evening_starts_at_half_past_six_and_lasts_the_night(
+def test_the_evening_starts_at_seven_and_lasts_the_night(
     moment: dt.time, evening: bool
 ) -> None:
     assert is_evening(dt.datetime.combine(MONDAY, moment)) is evening
@@ -166,11 +166,11 @@ def test_a_quota_running_out_late_is_bedtime_and_early_is_not() -> None:
 
 
 def test_what_counts_is_when_the_day_ends_not_when_the_warning_is() -> None:
-    """At 18:25 with eight minutes left the day ends at 18:33: in the evening."""
+    """At 18:55 with eight minutes left the day ends at 19:03: in the evening."""
     policy = make_policy(weekday_quota_min=60)
     state = make_state(general_used_s=52 * 60)
-    assert bedtime_in(policy, state, at(18, 25)) == 8 * 60
-    assert bedtime_in(policy, state, at(18, 20)) is None, "ends at 18:28"
+    assert bedtime_in(policy, state, at(18, 55)) == 8 * 60
+    assert bedtime_in(policy, state, at(18, 50)) is None, "ends at 18:58"
 
 
 def test_a_day_that_ends_after_midnight_ends_at_night() -> None:

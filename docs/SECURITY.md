@@ -171,6 +171,9 @@ A family may have up to four parents who sign in, each under their own name.
 - A wrong passphrase on Ayarlar → Parola counts towards the gate's five-in-fifteen-
   minutes limit like any other: before D-218 that form was a place to guess it with no
   limit at all, for anyone with a PIN.
+- **A forgotten passphrase** is set again with `sudo biokids-admin reset-passphrase`
+  (D-220): root on the machine is the proof, as for `reset-pin`. Guesses counted against
+  the old passphrase stop counting from the change.
 
 ---
 

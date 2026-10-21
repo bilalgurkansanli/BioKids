@@ -184,7 +184,7 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
    dismiss button.
 5. **Time up** — friendly, a countdown, a note that unsaved work should be saved.
    **Good night** (D-214) is its evening form, when the day's time runs out or its
-   last allowed hours close at 18:30 or later: the night's dark blue, Zio sleepy,
+   last allowed hours close at 19:00 or later: the night's dark blue, Zio sleepy,
    "İyi geceler, Elif." and "Yarın görüşürüz.", with the same end-action sentence and
    the same countdown, in blue rather than red. Zio says it (the daemon's
    good-night line), for every age, as the time-up line always was.
@@ -484,8 +484,8 @@ Pending access requests appear as a banner above the cards, because they are
 time-sensitive — a child is standing at the computer waiting.
 
 **Special days** (D-215, §3.10). Under the buttons, closed, **🎉 Bugün özel bir gün
-mü?** opens four choices for today only - **+30 dk**, **+1 sa**, **+2 sa**, **Süre
-sınırı yok** - a line saying tomorrow is an ordinary day again and a second choice
+mü?** opens three choices for today only - **+1 sa**, **+2 sa**, **Süre sınırı
+yok** (the card's own **+30 dk** is above) - a line saying tomorrow is an ordinary day again and a second choice
 replaces the first, and a link to the time screen for several days. A day that is
 special shows on the card as "🎉 Bugün özel gün: +1 sa" (or "Tatil (20.01 – 31.01):
 hafta sonu kuralları") with **Kaldır**, which asks first. Read from the database, so

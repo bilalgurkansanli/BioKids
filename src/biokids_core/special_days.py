@@ -11,8 +11,8 @@ Three rules hold whatever the panel sends:
 * **Never the past.** A day that is over has been enforced, and the history
   screen shows what it was given. A range is saved from today on, and a
   range cancelled half-way keeps its past days, cut to yesterday.
-* **One tap is one choice.** "+60 today" after "+30 today" is an hour more, not
-  an hour and a half: the day's tap is replaced, never stacked. A range that
+* **One tap is one choice.** "+2 sa today" after "+1 sa today" is two hours more,
+  not three: the day's tap is replaced, never stacked. A range that
   covers today - Bayram, set on the time screen - is left alone, and the tap
   adds to it.
 * **Sanity bounds.** A typed year does not turn the whole year into a weekend.
@@ -33,8 +33,10 @@ from sqlalchemy.orm import Session
 from biokids_core.db.models import DayOverride
 from biokids_core.types import SpecialDay
 
-TODAY_EXTRA_MINUTES: Final = (30, 60, 120)
-"""The taps on Today. Anything else is refused rather than rounded."""
+TODAY_EXTRA_MINUTES: Final = (60, 120)
+"""The taps on Today. Anything else is refused rather than rounded. Not thirty:
+Today's card has its own "+30 dk" grant, and two of them side by side were one
+too many (the owner, D-215)."""
 
 MAX_RANGE_DAYS: Final = 100
 """A summer holiday fits; a mistyped year does not."""

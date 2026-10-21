@@ -701,3 +701,56 @@ def test_reset_pin_takes_the_name_but_never_the_pin_as_an_argument() -> None:
     assert args.parent == "Baba"
     with pytest.raises(SystemExit):
         parser.parse_args(["reset-pin", "--parent", "Baba", "551234"])
+
+
+# ---------------------------------------------------------- reset-passphrase
+
+
+def _reset_passphrase(config: Config, passphrase: str) -> int:
+    with mock.patch.object(sys, "stdin", io.StringIO(f"{passphrase}\n")):
+        return admin.cmd_reset_passphrase(argparse.Namespace(stdin=True), config)
+
+
+def test_reset_passphrase_sets_the_familys(
+    config: Config, db: Database, two_parents: None
+) -> None:
+    """A forgotten passphrase had no way back (D-220)."""
+    assert _reset_passphrase(config, "yeni aile parolası") == 0
+    with db.session() as session:
+        assert security.verify_secret(
+            repo.family_passphrase_hash(session), "yeni aile parolası"
+        )
+        assert not security.verify_secret(repo.family_passphrase_hash(session), PASSPHRASE)
+    (row,) = audit(db, "passphrase_changed")
+    assert row.actor == "cli"
+
+
+def test_reset_passphrase_refuses_a_short_one(
+    config: Config, db: Database, one_parent: None
+) -> None:
+    assert _reset_passphrase(config, "kısa") == 2
+    with db.session() as session:
+        assert security.verify_secret(repo.family_passphrase_hash(session), PASSPHRASE)
+    assert not audit(db, "passphrase_changed")
+
+
+def test_reset_passphrase_asks_twice_on_a_terminal(
+    config: Config, db: Database, one_parent: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    answers = iter(["ilk yazılan parola", "başka bir parola"])
+    monkeypatch.setattr(admin.getpass, "getpass", lambda _prompt: next(answers))
+    assert admin.cmd_reset_passphrase(argparse.Namespace(stdin=False), config) == 2
+    assert not audit(db, "passphrase_changed")
+
+
+def test_guesses_at_the_old_passphrase_do_not_lock_the_new_one(
+    config: Config, db: Database, one_parent: None
+) -> None:
+    with db.session() as session:
+        for _ in range(auth.PASSPHRASE_ATTEMPTS):
+            repo.audit(session, actor="parent:1", action="passphrase_failed")
+    with db.session() as session:
+        assert auth.passphrase_locked(session)
+    assert _reset_passphrase(config, "yeni aile parolası") == 0
+    with db.session() as session:
+        assert not auth.passphrase_locked(session), "the new passphrase works at once"

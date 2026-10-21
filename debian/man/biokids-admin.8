@@ -57,6 +57,16 @@ only.
 It is one of the two ways back in after a forgotten PIN; the other is the
 parent's own recovery code, shown by the setup wizard or when they were added.
 .TP
+.BR reset\-passphrase " [" \-\-stdin ]
+Set a new family passphrase, the one that guards switching protection off.
+It is asked for twice and never echoed, and must be at least ten characters.
+With
+.BR \-\-stdin ,
+one line is read from standard input instead, for scripts.
+Wrong guesses at the old passphrase stop counting, so the new one works at
+once.
+It is the only way back after a forgotten passphrase.
+.TP
 .BI provision\-child " user"
 Make sure the child account
 .I user

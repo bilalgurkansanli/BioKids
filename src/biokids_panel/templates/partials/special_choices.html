@@ -4,8 +4,7 @@
   ordinary day again. Needs `special_child` and `special_next`.
 #}
 <div class="actions special-choices">
-  {% for value, label in (('30', _('special.choice.plus', duration=1800|duration(_))),
-                          ('60', _('special.choice.plus', duration=3600|duration(_))),
+  {% for value, label in (('60', _('special.choice.plus', duration=3600|duration(_))),
                           ('120', _('special.choice.plus', duration=7200|duration(_))),
                           ('nolimit', _('special.choice.no_limit'))) %}
     <form method="post" action="/children/{{ special_child }}/special/today">

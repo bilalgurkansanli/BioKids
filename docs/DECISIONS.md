@@ -1570,7 +1570,7 @@ is fifteen weeks; the week of an upgrade may change theme once.
 
 **D-214 [owner] Good night: an evening's ending is bedtime.** (2026-10-21)
 When the day ends at night - its last allowed window closes, or its time runs out, at
-18:30 or later (or before 05:00) - the last ten minutes and the end screen are in a calm
+19:00 or later (or before 05:00) - the last ten minutes and the end screen are in a calm
 night tone; when and how the day ends do not change (a test compares every command the
 daemon runs at 16:00 and at 19:50). `policy.bedtime_in` decides it, counting only what
 ends a day: never a gap between windows (D-143), a limit per kind of app or a break.
@@ -1583,8 +1583,8 @@ ends a day: never a gap between windows (D-143), a limit per kind of app or a br
   launcher stops, or at the next session (kept in `~/.local/state/biokids/`).
 
 **D-215 [owner] Special days: today, and holidays.** (2026-10-21)
-On **Bugün**, "🎉 Bugün özel bir gün mü?" gives today only +30 dk, +1 sa, +2 sa or **Süre
-sınırı yok** (no daily quota; the allowed hours still apply). **Süre kuralları → Özel
+On **Bugün**, "🎉 Bugün özel bir gün mü?" gives today only +1 sa, +2 sa or **Süre sınırı
+yok** (no daily quota; the allowed hours still apply). **Süre kuralları → Özel
 günler** lists them and adds a range ("Tatil", up to 100 days) that follows the weekend's
 rules or a quota of its own. Each is shown, audited and removable.
 - Table `day_override` (migration `5d2f8a61c3e4`), read where the day's quota and
@@ -1643,3 +1643,14 @@ candidate built as 0.1.0-2 (D-185); five rounds of the owner's tests followed (D
 D-218), so the first published packages are 1.5.0, Debian revision 1.5.0-1, tag
 `v1.5.0`. The ISO comes after, under its own number. Debian orders 1.5.0-1 after
 0.1.0-2, so an upgrade is an ordinary upgrade.
+
+**D-220 [owner] A forgotten family passphrase can be set again.** (2026-10-21)
+The passphrase guards switching protection off (D-48), and a family that forgot it had no
+way back - more likely with two parents (D-218), when the one who knew it removes
+themselves. `sudo biokids-admin reset-passphrase` asks for a new one twice (never on the
+command line; `--stdin` for scripts), at least ten characters, and sets it on the row
+that holds the family's; it is audited as `passphrase_changed` by `cli`. Root on the
+machine is the proof, as for `reset-pin`. The gate's five-in-fifteen-minutes count now
+starts at the last change, so guesses at the old passphrase do not lock out the new one.
+Also, by the owner: the evening of D-214 starts at 19:00, and D-215's taps are +1 sa,
++2 sa and no limit - Today's own "+30 dk" was one too many beside them.

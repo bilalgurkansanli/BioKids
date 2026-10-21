@@ -17,6 +17,10 @@ biokids-shell was installed.
 their PIN (D-50). The other is the eight-word recovery code in the panel. There
 is no email reset and no back door; a parental-control product with a vendor
 override is not a parental-control product.
+
+`reset-passphrase` is the way back when the family's passphrase is forgotten
+(D-220). Like `reset-pin` it needs root on the machine, which a child does not
+have and the parent does.
 """
 
 from __future__ import annotations
@@ -76,6 +80,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "lockdown": cmd_lockdown,
         "status": cmd_status,
         "reset-pin": cmd_reset_pin,
+        "reset-passphrase": cmd_reset_passphrase,
         "sync-catalog": cmd_sync_catalog,
         "provision-child": cmd_provision_child,
         "unprovision-child": cmd_unprovision_child,
@@ -197,6 +202,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--parent",
         metavar="NAME",
         help="whose PIN, when the family has more than one parent",
+    )
+
+    passphrase = sub.add_parser("reset-passphrase", help="set a new family passphrase (D-220)")
+    # From the terminal, for the same reason as the PIN: never in argv.
+    passphrase.add_argument(
+        "--stdin",
+        action="store_true",
+        help="read the new passphrase from standard input instead of prompting",
     )
 
     unprovision = sub.add_parser(
@@ -641,6 +654,59 @@ def cmd_reset_pin(args: argparse.Namespace, config: Config) -> int:
     name = chosen.display_name
     whose = f"{name}'s PIN" if name and len(parents) > 1 else "the PIN"
     print(f"{whose} has been changed, and the change is in the audit log")
+    return 0
+
+
+# ---------------------------------------------------------- reset-passphrase
+
+
+def read_new_passphrase(from_stdin: bool) -> str:
+    """Ask for the passphrase twice, or read one line when a script is driving."""
+    if from_stdin:
+        return sys.stdin.readline().strip()
+    first = getpass.getpass("New passphrase: ")
+    second = getpass.getpass("Repeat it: ")
+    if first != second:
+        raise ValueError("auth.passphrase.mismatch")
+    return first
+
+
+def cmd_reset_passphrase(args: argparse.Namespace, config: Config) -> int:
+    """Set the family's passphrase (D-220).
+
+    It guards switching protection off, and until now a family that forgot it
+    had no way back: more likely with two parents (D-218), when one who knew it
+    removes themselves. Root on the machine is the proof, as for `reset-pin`.
+    The guesses counted against the old passphrase stop counting (the gate
+    counts from the last change), so the new one works at once.
+    """
+    try:
+        chosen = security.validate_passphrase(read_new_passphrase(args.stdin))
+    except ValueError as exc:
+        key = str(exc)
+        message = translator("en")(key)
+        print("the two did not match" if message == key else message)
+        return 2
+
+    database = Database(config)
+    try:
+        with database.session() as session:
+            holder = repo.get_parent(session)
+            if holder is None:
+                print("no parent account exists yet; run the setup wizard first")
+                return 1
+            holder.passphrase_hash = security.hash_secret(chosen)
+            repo.audit(
+                session,
+                actor="cli",
+                action="passphrase_changed",
+                detail={"via": "biokids-admin reset-passphrase"},
+                severity="warning",
+            )
+    finally:
+        database.dispose()
+
+    print("the family's passphrase has been changed, and the change is in the audit log")
     return 0
 
 

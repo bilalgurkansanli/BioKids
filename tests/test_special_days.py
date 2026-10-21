@@ -241,8 +241,8 @@ def test_a_tap_replaces_the_earlier_tap_and_leaves_a_holiday(
     holiday = special_days.add_range(
         session, child.id, MONDAY, start=MONDAY, end=TUESDAY, weekend_rules=True
     )
-    first, _ = special_days.set_today(session, child.id, MONDAY, extra_minutes=30)
-    second, replaced = special_days.set_today(session, child.id, MONDAY, extra_minutes=60)
+    first, _ = special_days.set_today(session, child.id, MONDAY, extra_minutes=60)
+    second, replaced = special_days.set_today(session, child.id, MONDAY, extra_minutes=120)
     session.commit()
 
     rows = special_days.current(session, child.id, MONDAY)
@@ -251,7 +251,7 @@ def test_a_tap_replaces_the_earlier_tap_and_leaves_a_holiday(
         {
             "start": "2026-09-21",
             "end": "2026-09-21",
-            "extra_minutes": 30,
+            "extra_minutes": 60,
             "quota_minutes": None,
             "no_limit": False,
             "weekend_rules": False,
@@ -385,7 +385,7 @@ def test_they_are_kept_with_the_minutes_and_then_go(
 
 
 def test_they_go_with_the_child(session: Session, child: Child) -> None:
-    special_days.set_today(session, child.id, MONDAY, extra_minutes=30)
+    special_days.set_today(session, child.id, MONDAY, extra_minutes=60)
     session.commit()
     session.delete(child)
     session.commit()
@@ -541,7 +541,7 @@ def test_a_tap_the_daemon_never_heard_is_not_reported_as_done(
     daemon.up = False
     response = panel.post(
         "/children/1/special/today",
-        data={"choice": "30", "next": "/today", "csrf_token": csrf},
+        data={"choice": "60", "next": "/today", "csrf_token": csrf},
         follow_redirects=False,
     )
     assert response.headers["location"] == "/today?error=daemon"
@@ -729,7 +729,7 @@ async def test_a_special_day_on_an_open_screen_unlocks_nothing(
     await run_for(supervisor, clock, 60)
     runner.calls.clear()
 
-    special_days.set_today(session, 1, clock.read().wall.date(), extra_minutes=30)
+    special_days.set_today(session, 1, clock.read().wall.date(), extra_minutes=60)
     session.commit()
     await supervisor.day_changed(1)
     assert not runner.ran("loginctl", "unlock-session")
@@ -793,3 +793,9 @@ async def test_a_no_limit_day_draws_its_ring_against_the_window(
     assert state["remaining_seconds"] <= state["quota_seconds"]
     today_card = supervisor.status()["children"][0]
     assert today_card["ring_seconds"] == 4 * 3600
+
+
+def test_thirty_minutes_is_not_a_special_day(session: Session, child: Child) -> None:
+    """Today's card has its own "+30 dk"; the special-day taps start at an hour."""
+    with pytest.raises(ValueError):
+        special_days.set_today(session, child.id, MONDAY, extra_minutes=30)

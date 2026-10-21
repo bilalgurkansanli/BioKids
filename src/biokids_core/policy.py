@@ -61,10 +61,9 @@ __all__ = [
 _UNLIMITED = 10**9
 """Stands in for "no constraint" when taking a minimum. Larger than any real day."""
 
-EVENING_STARTS: Final = dt.time(18, 30)
-"""From when an ending is a night ending (D-214): "after about seven". Half past
-six rather than seven, so that a window closing at half past six - the computer
-off before dinner and bed, for a four-year-old - is bedtime too."""
+EVENING_STARTS: Final = dt.time(19, 0)
+"""From when an ending is a night ending (D-214): seven o'clock, the owner's choice
+over the half past six first proposed."""
 
 NIGHT_ENDS: Final = dt.time(5, 0)
 """A day that ends after midnight ends at night as well: a window to 00:30, or a

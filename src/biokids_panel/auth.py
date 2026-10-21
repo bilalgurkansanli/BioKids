@@ -310,6 +310,14 @@ def passphrase_locked(session: Session, *, now: dt.datetime | None = None) -> bo
     """
     now = now or utcnow()
     since = now - dt.timedelta(minutes=PASSPHRASE_WINDOW_MINUTES)
+    # Guesses at a passphrase that has since been changed are not guesses at
+    # this one: after `biokids-admin reset-passphrase` (D-220) the new one works
+    # at once, not fifteen minutes later.
+    changed = session.scalar(
+        select(func.max(AuditLog.ts)).where(AuditLog.action == "passphrase_changed")
+    )
+    if changed is not None and changed > since:
+        since = changed
     failures = session.scalar(
         select(func.count())
         .select_from(AuditLog)

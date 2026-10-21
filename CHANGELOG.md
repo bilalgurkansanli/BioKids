@@ -19,7 +19,7 @@ Nothing yet.
 
 The first release of the packages, numbered by the rounds it took: 1.0 was the release
 candidate built as 0.1.0-2, and five rounds of the owner's tests followed (D-219).
-Decisions D-171 to D-219; read them in `docs/DECISIONS.md`. An upgrade from 0.1.0-1 or
+Decisions D-171 to D-220; read them in `docs/DECISIONS.md`. An upgrade from 0.1.0-1 or
 0.1.0-2 runs whichever of the migrations `3e8b51c0d2a7` (request kinds),
 `9a4f2c7e1b36` (day schedules), `c41d8e0f5a92` (the cuts), `077ca4545f23` (screen time
 per hour), `5d2f8a61c3e4` (special days) and `b7e41d2c9a63` (parents and appearance)
@@ -36,7 +36,7 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
   read by their own launcher and sent nowhere.
 - **Three more themes for Bugünün sürprizi** (D-213): İnternette güvenlik, Duygularımız
   and Meslekler.
-- **Good night** (D-214): an evening's last ten minutes and end screen are bedtime, and
+- **Good night** (D-214): from 19:00, an evening's last ten minutes and end screen are bedtime, and
   the screen dims gently; the lock, countdown and end action are unchanged.
 - **Special days** (D-215): one tap on Today gives today more time or no daily limit; a
   holiday can follow the weekend's rules. Migration `5d2f8a61c3e4`.
@@ -46,6 +46,8 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
   each child's launcher; biokids-desktop recommends fonts-opendyslexic.
 - **A second parent** (D-218) with their own name, PIN and recovery code; sign-in asks
   who is signing in. Migration `b7e41d2c9a63`.
+- **`biokids-admin reset-passphrase`** (D-220): the way back after a forgotten family
+  passphrase.
 - **Two more tiles, and rows that look full** (D-210): **Elmaslar** (KDiamond), a
   diamond-matching game that needs no reading, and **Müzik Atölyesi** (Chrome Music Lab),
   music experiments with no ads and no account, both ticked for a new child of 4 to 10.
