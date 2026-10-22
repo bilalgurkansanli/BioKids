@@ -19,7 +19,7 @@ from biokids_core.errors import IpcError
 from biokids_core.i18n import Translator
 from biokids_core.ipc import AsyncDaemonClient, Op
 from biokids_panel.common import View, _call_daemon, _daemon_status, see_other
-from biokids_panel.context import PanelContext
+from biokids_panel.context import PanelContext, at_the_machine
 from biokids_panel.routes import special_days
 
 log = logging.getLogger(__name__)
@@ -117,6 +117,22 @@ def reboot(
         return see_other("/today")
     ok = _call_daemon(view.ctx, Op.REBOOT_NOW, actor=view.actor)
     return see_other("/today?rebooting=1" if ok else "/today?error=daemon")
+
+
+@router.post("/system/switch-user")
+def switch_user(view: View, csrf_token: Annotated[str, Form()] = "") -> Response:
+    """ "Oturumu değiştir" (D-227): the login screen, over this parent's session.
+
+    Only on the computer itself; from a phone the button is not shown, and a
+    request from one is refused, since the screen it would change is not the
+    one the parent is looking at.
+    """
+    if blocked := view.guard_form(csrf_token, "/today?error=csrf"):
+        return blocked
+    if not at_the_machine(view.request):
+        return see_other("/today")
+    ok = _call_daemon(view.ctx, Op.SWITCH_TO_GREETER, actor=view.actor)
+    return see_other("/today" if ok else "/today?error=daemon")
 
 
 @router.get("/today/cards", response_class=HTMLResponse)

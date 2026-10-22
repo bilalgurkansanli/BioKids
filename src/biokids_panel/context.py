@@ -189,6 +189,7 @@ def base_context(
         "avatars": AVATARS,
         "version": _version(),
         "flash": flash_for(request, tr),
+        "at_the_machine": at_the_machine(request),
     }
 
 
@@ -197,6 +198,24 @@ def base_context(
 #: `validate_pin` reaches the screen - and anything unrecognised falls back to a
 #: generic failure rather than being dropped, because dropping it is the bug
 #: this table exists to fix.
+FORWARDED_HEADERS = ("x-forwarded-for", "forwarded", "tailscale-user-login")
+"""What `tailscale serve` adds to a request it brings from the parent's phone."""
+
+
+def at_the_machine(request: Request) -> bool:
+    """Whether the panel was opened on this computer's own screen, not from a phone.
+
+    "Oturumu değiştir" (D-227) shows the login screen of the computer itself,
+    which from a phone would be a screen nobody is looking at. A browser on the
+    machine asks 127.0.0.1 directly; Tailscale's proxy says whom it carries the
+    request for. Only for a button: nothing that matters for security rests on it.
+    """
+    if any(name in request.headers for name in FORWARDED_HEADERS):
+        return False
+    host = request.headers.get("host", "").rsplit(":", 1)[0].strip("[]").lower()
+    return host in {"127.0.0.1", "localhost", "::1"}
+
+
 ERROR_KEYS: dict[str, str] = {
     "csrf": "error.stale_form",
     "daemon": "error.daemon_unreachable",

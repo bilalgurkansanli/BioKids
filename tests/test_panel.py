@@ -2097,15 +2097,19 @@ def test_the_parent_panel_is_in_the_applications_menu(config: Config) -> None:
     assert desktop["Icon"] == "biokids"
 
 
-def test_the_wizard_opens_by_itself_only_for_a_parent_and_only_until_setup_is_done() -> None:
+def test_the_wizard_then_the_panel_open_by_themselves_only_for_a_parent() -> None:
     from pathlib import Path
 
     script = (
         Path(__file__).resolve().parent.parent / "debian" / "parent" / "biokids-open-setup"
     ).read_text(encoding="utf-8")
     assert '*" biokids-child "*) exit 0' in script, "never in a child's session"
-    assert '"/wizard" in location' in script, "only while / still leads to the wizard"
-    assert script.rstrip().endswith('exec xdg-open "http://127.0.0.1:7878/wizard/1"')
+    assert "http://127.0.0.1:7878/at-login" in script, "the panel says what to open"
+    assert script.rstrip().endswith('exec xdg-open "http://127.0.0.1:7878$path"')
+    postinst = (
+        Path(__file__).resolve().parent.parent / "debian" / "biokids-panel.postinst"
+    ).read_text(encoding="utf-8")
+    assert "biokids-open-setup --setup-only" in postinst, "an upgrade opens no panel"
 
 
 # ------------------------------------------------------- D-173 requests
@@ -3319,3 +3323,102 @@ def test_no_english_card_for_a_child_who_has_neither_the_tile_nor_a_word(
 ) -> None:
     login(client)
     assert 'id="english"' not in client.get("/insights?child=1").text
+
+
+# ------------------------------------------------- D-227 at login, switch user
+
+AT_THE_MACHINE = {"host": "127.0.0.1:7878"}
+FROM_THE_PHONE = {"host": "127.0.0.1:7878", "x-forwarded-for": "100.64.0.7"}
+
+
+def test_a_parents_login_opens_the_wizard_until_setup_is_done(client: TestClient) -> None:
+    answer = client.get("/at-login", headers=AT_THE_MACHINE).json()
+    assert answer == {"open": "/wizard/1"}
+
+
+def test_then_every_parent_login_opens_the_panel(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """The owner chose the parent account at the greeter and landed on a bare
+    Debian desktop; the panel is where a parent's account should open (D-227)."""
+    assert client.get("/at-login", headers=AT_THE_MACHINE).json() == {"open": "/"}
+    with db.session() as session:
+        repo.set_setting(session, "panel_at_login", "off")
+        session.commit()
+    assert client.get("/at-login", headers=AT_THE_MACHINE).json() == {"open": ""}
+
+
+def test_only_a_browser_on_the_machine_is_told_what_to_open(
+    client: TestClient, family_ready: None
+) -> None:
+    assert client.get("/at-login", headers=FROM_THE_PHONE).json() == {"open": ""}
+    assert client.get("/at-login").json() == {"open": ""}, "not 127.0.0.1"
+
+
+def test_the_panel_at_login_can_be_turned_off_in_settings(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    page = client.get("/settings").text
+    assert 'action="/settings/at-login"' in page
+    assert re.search(r'name="panel_at_login" value="on" checked', page)
+
+    response = client.post(
+        "/settings/at-login", data={"csrf_token": csrf_of(client)}, follow_redirects=False
+    )
+    assert response.headers["location"] == "/settings?saved=1#at-login"
+    with db.session() as session:
+        assert repo.get_setting(session, "panel_at_login") == "off"
+        assert session.query(AuditLog).filter_by(action="panel_at_login").count() == 1
+    page = client.get("/settings").text
+    assert not re.search(r'name="panel_at_login" value="on" checked', page)
+
+    client.post(
+        "/settings/at-login", data={"csrf_token": csrf_of(client), "panel_at_login": "on"}
+    )
+    with db.session() as session:
+        assert repo.get_setting(session, "panel_at_login") == "on"
+
+
+def test_switch_user_is_offered_on_the_machine_and_not_on_the_phone(
+    client: TestClient, family_ready: None
+) -> None:
+    login(client)
+    offered = 'action="/system/switch-user"'
+    assert offered in client.get("/today", headers=AT_THE_MACHINE).text
+    assert offered not in client.get("/today", headers=FROM_THE_PHONE).text
+    assert offered not in client.get("/today").text
+
+
+def test_switch_user_shows_the_login_screen_over_the_parents_session(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    login(client)
+    token = csrf_of(client)
+    response = client.post(
+        "/system/switch-user",
+        data={"csrf_token": token},
+        headers=FROM_THE_PHONE,
+        follow_redirects=False,
+    )
+    assert response.headers["location"] == "/today"
+    assert not daemon.ran("switch_to_greeter"), "a screen nobody at the phone can see"
+
+    response = client.post(
+        "/system/switch-user",
+        data={"csrf_token": token},
+        headers=AT_THE_MACHINE,
+        follow_redirects=False,
+    )
+    assert response.headers["location"] == "/today"
+    assert daemon.ran("switch_to_greeter")
+
+
+def test_the_login_script_opens_only_a_path_on_the_panel() -> None:
+    from pathlib import Path
+
+    script = (
+        Path(__file__).resolve().parent.parent / "debian" / "parent" / "biokids-open-setup"
+    ).read_text(encoding="utf-8")
+    assert 'wanted.startswith("/") and not wanted.startswith("//")' in script
+    assert 'not wanted.startswith("/wizard")' in script, "--setup-only opens the wizard only"

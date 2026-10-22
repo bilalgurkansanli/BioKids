@@ -3354,3 +3354,54 @@ msgstr "I didn't hear that. Can you say it again?"
 
 msgid "assistant.panel.english"
 msgstr "With the assistant on, \"Talk with Sio in English\" opens in the English corner too: Sio chats with {name} in simple English, using the words they have learned. It goes through the same checks, and you are told of anything unsuitable just the same."
+
+msgid "shell.switch"
+msgstr "Switch user"
+
+msgid "shell.switch.confirm_title"
+msgstr "Is someone else's turn?"
+
+msgid "shell.switch.confirm_body"
+msgstr "Your open games will close. You can come back by tapping your picture."
+
+msgid "shell.switch.confirm_yes"
+msgstr "Yes, switch"
+
+msgid "shell.switch.confirm_no"
+msgstr "No, I'll stay"
+
+msgid "shell.switch.going"
+msgstr "Here comes the login screen"
+
+msgid "shell.switch.going_body"
+msgstr "See you! The next one taps their own picture."
+
+msgid "shell.switch.failed"
+msgstr "The user did not change."
+
+msgid "switch.button"
+msgstr "Switch user"
+
+msgid "switch.help"
+msgstr "Opens the login screen; your session stays open and asks for your password when you come back."
+
+msgid "settings.at_login.title"
+msgstr "At login"
+
+msgid "settings.at_login.label"
+msgstr "Open the panel when a parent logs in"
+
+msgid "settings.at_login.help"
+msgstr "When someone logs in to a parent account on this computer, the panel opens in the browser by itself. Close the browser to get to the desktop."
+
+msgid "audit.action.switch_user"
+msgstr "Switched user"
+
+msgid "audit.action.panel_at_login"
+msgstr "Panel-at-login setting changed"
+
+msgid "shell.cover.home"
+msgstr "Home"
+
+msgid "shell.cover.back"
+msgstr "Tap to go back"

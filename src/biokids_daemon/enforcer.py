@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
 import shutil
 from collections.abc import Awaitable, Callable, Sequence
@@ -38,6 +39,13 @@ that is shutting down, used to hold the whole tick - and a held tick is a daemon
 that enforces nothing while looking alive. The watchdog (notify.py) catches
 what this misses."""
 
+DISPLAY_MANAGER = "org.freedesktop.DisplayManager"
+"""LightDM on the system bus: its name, and the interface of its manager object."""
+DISPLAY_MANAGER_PATH = "/org/freedesktop/DisplayManager"
+SEAT_INTERFACE = "org.freedesktop.DisplayManager.Seat"
+FIRST_SEAT = "/org/freedesktop/DisplayManager/Seat0"
+"""The seat to ask when LightDM does not list its seats."""
+
 LOCK_ATTEMPTS_BEFORE_LOGOUT = 3
 """Ticks a lock may fail to take before the session is ended instead.
 
@@ -56,6 +64,18 @@ class CommandResult:
     @property
     def ok(self) -> bool:
         return self.returncode == 0
+
+
+def seats_from(answer: str) -> list[str]:
+    """The seat paths in `busctl --json=short get-property ... Seats`'s answer."""
+    try:
+        data = json.loads(answer)
+    except ValueError:
+        return []
+    paths = data.get("data") if isinstance(data, dict) else None
+    if not isinstance(paths, list):
+        return []
+    return [path for path in paths if isinstance(path, str) and path.startswith("/")]
 
 
 async def run_command(argv: Sequence[str], limit: float = COMMAND_TIMEOUT) -> CommandResult:
@@ -209,6 +229,31 @@ class Enforcer:
     async def reboot(self) -> bool:
         """Clean restart, for the one a fresh install needs (D-195)."""
         result = await self._run(["systemctl", "reboot"])
+        return result.ok
+
+    async def switch_to_greeter(self) -> bool:
+        """The login screen over the session in front of the seat (D-227).
+
+        What `dm-tool switch-to-greeter` does from inside a session, which
+        finds its seat in XDG_SEAT_PATH. The daemon is in no session, so it asks
+        LightDM for its seats; the session it covers stays open behind.
+        """
+        listed = await self._run(
+            [
+                "busctl",
+                "--json=short",
+                "get-property",
+                DISPLAY_MANAGER,
+                DISPLAY_MANAGER_PATH,
+                DISPLAY_MANAGER,
+                "Seats",
+            ]
+        )
+        seats = seats_from(listed.stdout) if listed.ok else []
+        seat = seats[0] if seats else FIRST_SEAT
+        result = await self._run(
+            ["busctl", "call", DISPLAY_MANAGER, seat, SEAT_INTERFACE, "SwitchToGreeter"]
+        )
         return result.ok
 
     async def apply_end_action(

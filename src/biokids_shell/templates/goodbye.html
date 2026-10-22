@@ -11,7 +11,11 @@
      or the session not have gone after all (the daemon restarted mid-way):
      never a child left in front of "switching off" with nothing to press. #}
   <div id="goodbye" hidden data-back-after="60"></div>
-  {% if outcome == 'logout' %}
+  {% if outcome == 'switch' %}
+    {# "Oturumu değiştir" (D-227): the login screen comes next. #}
+    <h1>{{ _('shell.switch.going') }}</h1>
+    <p>{{ _('shell.switch.going_body') }}</p>
+  {% elif outcome == 'logout' %}
     {# Someone else is logged in, so the computer stays on and only this
        child's session ends (D-100). Nobody is named. #}
     <h1>{{ _('shell.shutdown.others') }}</h1>

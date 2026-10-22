@@ -1842,3 +1842,49 @@ says is answered. "Sio ile İngilizce konuş" in the English corner opens the as
   slower, as `ZIO_LIFT` does upward. The download now names it for both (`en-zio`,
   `en-sio`); a family that installed the English voice under D-225 gets Sio's name the
   next time the voice is installed.
+
+**D-227 [owner] The parent's login opens the panel; switching user on both screens; taps
+that open.** (2026-10-22)
+The owner chose the parent's account at the greeter and was put on a bare Debian desktop;
+asked for "switch user" on the child's screen and in the panel; and found that on the
+child's screen a tap sometimes opened nothing, or slowly.
+- **The panel at every parent login.** `biokids-open-setup`, autostarted in every
+  desktop session but a child's, asks the panel's `/at-login` what to open: the wizard
+  until setup is complete, then the panel - unless **Ayarlar → Girişte panel** is
+  unticked (`settings.panel_at_login`, on by default). It answers only a browser on the
+  machine (Host 127.0.0.1, no `X-Forwarded-For` from `tailscale serve`) and only with a
+  path on the panel, which the script checks again. The parent closes the browser to use
+  their desktop. Run by the postinst after an install or upgrade it has `--setup-only`,
+  so an upgrade does not pop the panel up in open sessions.
+- **Oturumu değiştir in the panel**: a button in the top bar, shown only when the panel
+  was opened on the machine itself; from a phone it would change a screen nobody is
+  looking at, and a request from one is refused. The daemon (`Op.SWITCH_TO_GREETER`)
+  asks LightDM over the system bus for its seats and calls the first one's
+  `SwitchToGreeter`, what `dm-tool switch-to-greeter` does from inside a session. The
+  parent's session stays open behind the greeter, which asks for their password when
+  they come back.
+- **Oturumu değiştir on the child's screen**: a button in the footer, a confirmation
+  that says the open games will close, then the goodbye screen (`ShellOp.SWITCH_USER`).
+  The child's session is *ended*, its apps given their grace period first as for
+  "Kapat", even when nobody else is logged in: a child cannot unlock a session of their
+  own at the greeter (D-155), so one left open behind it would keep them out until a
+  parent came. Both are audited as `switch_user`.
+- **Why taps did not open.** Measured on the owner's VM: the launcher answers a tap in
+  under 0.1 s and windows appear in 1-4 s, and the machine was 97% idle. What went wrong
+  was the screen around an app. Tux Paint is started windowed (D-163) and its window has
+  a fixed size, so it cannot be maximised (D-205): it floated in the middle with the
+  launcher's tiles around it, and a tap there brought the launcher over the app, which
+  seemed to vanish, or started another app. Three changes:
+  - A catalog `exec` may say `{window}`, which the launcher fills with the size of a
+    window that fills the screen inside the BioKids title bar (screen minus 8 x 68 px,
+    never under 640 x 480; left out when the size cannot be read). Tux Paint is
+    started with `--{window}` and fills the screen.
+  - While an app's window is in front, the launcher is covered (`#app-cover`, shown on
+    the kiosk's `blur`). Over a full-screen app it is never seen; around a window that
+    cannot fill the screen (Frozen Bubble, TuxMath) a tap on it brings that app back,
+    and its 🏠 is the way home. When the launcher comes back without a tap on it - the
+    app closed, the app bar's 🏠, a time warning - the cover goes by itself.
+  - A tap on an app tile still "Açılıyor…" did nothing for 25 seconds (D-208). After
+    six seconds it now asks again, which brings an open window to the front and never
+    starts a second copy (`_open_again`). Not for a site, which opens a window at every
+    tap.

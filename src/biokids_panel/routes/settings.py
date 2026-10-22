@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse
 from biokids_core import appearance, mail, repo, security
 from biokids_panel import auth, parents
 from biokids_panel.common import View, see_other
+from biokids_panel.routes.misc import PANEL_AT_LOGIN
 
 log = logging.getLogger(__name__)
 
@@ -34,8 +35,28 @@ def settings_view(view: View) -> Response:
         text_sizes=appearance.TEXT_SIZES,
         parents=parents.shown(everyone, view.tr),
         several_parents=len(everyone) > 1,
+        panel_at_login=repo.get_setting(session, PANEL_AT_LOGIN, "on") != "off",
         **phone.view(view.ctx, session),
     )
+
+
+@router.post("/settings/at-login")
+def settings_at_login(
+    view: View,
+    panel_at_login: Annotated[str, Form()] = "",
+    csrf_token: Annotated[str, Form()] = "",
+) -> Response:
+    """Whether the panel opens when a parent logs in to their account here (D-227)."""
+    if blocked := view.guard_form(csrf_token, "/settings?error=csrf#at-login"):
+        return blocked
+    value = "on" if panel_at_login == "on" else "off"
+    if repo.get_setting(view.session, PANEL_AT_LOGIN, "on") != value:
+        repo.set_setting(view.session, PANEL_AT_LOGIN, value)
+        repo.audit(
+            view.session, actor=view.actor, action="panel_at_login", detail={"to": value}
+        )
+        view.session.commit()
+    return see_other("/settings?saved=1#at-login")
 
 
 @router.post("/settings/appearance")

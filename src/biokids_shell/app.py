@@ -649,6 +649,25 @@ def register_routes(app: FastAPI) -> None:
             return await render(shell, request, "shutdown.html", data, failed=True)
         return await render(shell, request, "goodbye.html", data, outcome=outcome.value)
 
+    @app.get("/switch-user", response_class=HTMLResponse)
+    async def switch_user_confirm(request: Request, shell: Shell) -> Response:
+        data = await shell.client.state()
+        return await render(shell, request, "switch_user.html", data)
+
+    @app.post("/switch-user")
+    async def switch_user(request: Request, shell: Shell) -> Response:
+        """ "Oturumu değiştir" (D-227): this child's session ends, and the login
+        screen comes back for a sibling or a parent.
+
+        Like "Evet, kapat" it says goodbye rather than going back home, and when
+        the daemon could not be asked the child is told so.
+        """
+        ok = await shell.client.switch_user()
+        data = await shell.client.state()
+        if not ok:
+            return await render(shell, request, "switch_user.html", data, failed=True)
+        return await render(shell, request, "goodbye.html", data, outcome="switch")
+
     # ---------------------------------------------------------- assistant
 
     @app.get("/assistant", response_class=HTMLResponse)

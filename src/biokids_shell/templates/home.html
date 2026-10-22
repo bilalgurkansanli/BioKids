@@ -107,7 +107,7 @@
         </a>
       {% elif tile.slug not in ('volume', 'brightness', 'shutdown') %}
         <a class="tile tile--{{ tile.category }}" href="/launch/{{ tile.slug }}"
-           data-slug="{{ tile.slug }}"
+           data-slug="{{ tile.slug }}" data-kind="{{ tile.kind }}"
            {% if young %}data-speak="{{ tile.name }}"{% endif %}>
           <span class="tile__icon" aria-hidden="true">{{ tile.icon|icon }}</span>
           <span class="tile__label">{{ tile.name }}</span>
@@ -149,10 +149,24 @@
       {% endif %}
     {% endif %}
 
+    {# D-227: a sibling's turn, or a parent's, without switching off. #}
+    <a class="tile-small" href="/switch-user">
+      <span aria-hidden="true">👥</span> {{ _('shell.switch') }}
+    </a>
     <a class="tile-small" href="/shutdown">
       <span aria-hidden="true">⏻</span> {{ _('shell.shutdown') }}
     </a>
   </footer>
   {% if album %}{% include "_cheer.html" %}{% endif %}
+
+  {# D-227: over the launcher while an app is in front, so that the tiles
+     around a window that cannot fill the screen are not tapped by mistake. #}
+  <div class="app-cover" id="app-cover" hidden>
+    <button class="big-btn app-cover__home" id="app-cover-home" type="button"
+            {% if young %}data-speak="{{ _('shell.cover.home') }}"{% endif %}>
+      <span aria-hidden="true">🏠</span> {{ _('shell.cover.home') }}
+    </button>
+    <p class="app-cover__hint"><span aria-hidden="true">👆</span> {{ _('shell.cover.back') }}</p>
+  </div>
 </div>
 {% endblock %}

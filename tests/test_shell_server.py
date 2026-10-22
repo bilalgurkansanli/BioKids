@@ -511,3 +511,25 @@ async def test_a_word_said_back_is_heard_in_english(
             Request(op=str(ShellOp.HEAR_ASSISTANT), args=args).encode(),
         )
     assert heard == ["en", None, None], "English, or the child's own language"
+
+
+async def test_switch_user_ends_the_callers_session_and_nobody_elses(
+    running: dict[str, Any],
+) -> None:
+    """D-227: from the child's screen, never the machine and never a sibling."""
+    server: ShellServer = running["server"]
+    source: FakeSessionSource = running["source"]
+    runner: RecordingRunner = running["runner"]
+    source.log_in("elif")
+    source.log_in("kerem", uid=1001)
+    await server.supervisor.watcher.refresh()
+
+    response, _ = await server._dispatch(
+        caller_for(server, "elif"), Request(op=str(ShellOp.SWITCH_USER)).encode()
+    )
+    await settled(server.supervisor)
+
+    assert response.ok is True
+    assert runner.ran("loginctl", "terminate-user", "elif")
+    assert not runner.ran("loginctl", "terminate-user", "kerem")
+    assert not runner.ran("systemctl", "poweroff")

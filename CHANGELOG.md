@@ -19,7 +19,7 @@ Nothing yet.
 
 The first release of the packages, numbered by the rounds it took: 1.0 was the release
 candidate built as 0.1.0-2, and five rounds of the owner's tests followed (D-219).
-Decisions D-171 to D-226; read them in `docs/DECISIONS.md`. An upgrade from 0.1.0-1 or
+Decisions D-171 to D-227; read them in `docs/DECISIONS.md`. An upgrade from 0.1.0-1 or
 0.1.0-2 runs whichever of the migrations `3e8b51c0d2a7` (request kinds),
 `9a4f2c7e1b36` (day schedules), `c41d8e0f5a92` (the cuts), `077ca4545f23` (screen time
 per hour), `5d2f8a61c3e4` (special days) and `b7e41d2c9a63` (parents and appearance)
@@ -64,6 +64,11 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
   conversation in simple English. Sio speaks first about the words being learned,
   remembers the last few turns, says a mistake back the right way, and can be answered
   by typing, speaking or tapping a word. The same checks and alerts as every question.
+- **The panel at a parent's login, and switching user** (D-227): logging in to a parent
+  account opens the panel (Ayarlar can turn it off); "Oturumu değiştir" on the child's
+  screen and in the panel on the computer brings the login screen. Tux Paint fills the
+  screen, the launcher is covered while an app is in front, and a tile that seems stuck
+  opening can be tapped again.
 - **Step-by-step guides** (D-224) under Yardım, open before signing in: mail (Gmail's
   app password, Yandex, iCloud, and why not Outlook), phone access, children, time, the
   internet, the voices, a forgotten PIN or passphrase. A failed test mail says which

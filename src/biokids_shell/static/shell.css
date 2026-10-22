@@ -454,6 +454,28 @@ svg {
 
 .banner__icon { font-size: 1.5rem; }
 
+/* --------------------------------------------------------------- app cover */
+
+/* D-227. Over the launcher while an app's window is in front: only seen around
+ * a window that cannot fill the screen. Below the time warning, which comes in
+ * front of everything. */
+.app-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--sp-4);
+  background: rgba(16, 22, 38, .88);
+  cursor: pointer;
+}
+
+.app-cover[hidden] { display: none; }
+.app-cover__home { gap: var(--sp-2); font-size: 1.4rem; }
+.app-cover__hint { margin: 0; color: #fff; font-size: 1.3rem; font-weight: 600; }
+
 /* ------------------------------------------------------------ time warning */
 
 /* D-160. At ten, five and one minute the launcher comes in front of the child's

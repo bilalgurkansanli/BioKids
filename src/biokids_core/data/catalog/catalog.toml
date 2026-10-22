@@ -22,7 +22,9 @@
 #
 # Apps that would start full screen are started windowed instead (D-163): full
 # screen hides the title bar and its close button, and a child with no way out
-# of an app is stuck. The launcher then fills the screen with the window.
+# of an app is stuck. The launcher then fills the screen with the window; one
+# whose window cannot be maximised is given the screen's size with `{window}`
+# where it takes a size on its command line (D-227).
 #
 # An app whose package is not installed is simply not shown. The metapackage
 # `biokids-desktop` pulls in the ones marked as part of the default set.
@@ -45,7 +47,7 @@ description_en = "Numbers, letters, colours and hundreds of small activities."
 slug = "tuxpaint"
 name_tr = "Boya"
 name_en = "Paint"
-exec = ["tuxpaint", "--windowed"]
+exec = ["tuxpaint", "--windowed", "--{window}"]
 package = "tuxpaint"
 kind = "app"
 icon = "brush"

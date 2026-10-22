@@ -233,6 +233,7 @@ class DaemonServer:
             Op.LOGOUT_NOW: self._logout_now,
             Op.POWEROFF_NOW: self._poweroff_now,
             Op.REBOOT_NOW: self._reboot_now,
+            Op.SWITCH_TO_GREETER: self._switch_to_greeter,
             Op.START_TIMEOUT: self._start_timeout,
             Op.CLEAR_TIMEOUT: self._clear_timeout,
             Op.END_BREAK: self._end_break,
@@ -299,6 +300,11 @@ class DaemonServer:
         actor = str(request.args.get("actor", "parent"))
         ok = await self.supervisor.reboot_now(actor)
         return Response(id=request.id, ok=ok, data={"reboot": ok})
+
+    async def _switch_to_greeter(self, request: Request) -> Response:
+        actor = str(request.args.get("actor", "parent"))
+        ok = await self.supervisor.switch_to_greeter(actor)
+        return Response(id=request.id, ok=ok, data={"switched": ok})
 
     async def _decide_request(self, request: Request) -> Response:
         data = await self.supervisor.decide_request(

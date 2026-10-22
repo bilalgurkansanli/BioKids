@@ -44,6 +44,19 @@
     <button class="btn" type="submit">{{ _('common.save') }}</button>
   </form>
 
+  {# ---------------------------------------------------------- at login #}
+  {# D-227. The family's: whoever logs in to a parent account here. #}
+  <form class="card" method="post" action="/settings/at-login" id="at-login">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <h2>{{ _('settings.at_login.title') }}</h2>
+    <div class="checkline">
+      <input type="checkbox" id="pal" name="panel_at_login" value="on" {% if panel_at_login %}checked{% endif %}>
+      <label for="pal">{{ _('settings.at_login.label') }}
+        <span class="help">{{ _('settings.at_login.help') }}</span></label>
+    </div>
+    <button class="btn" type="submit">{{ _('common.save') }}</button>
+  </form>
+
   {# -------------------------------------------------------------- mail #}
   {#
     The parent's own mail server (D-177). The password is never put back into

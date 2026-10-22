@@ -3354,3 +3354,54 @@ msgstr "Duyamadım. Bir daha söyler misin?"
 
 msgid "assistant.panel.english"
 msgstr "Asistan açıkken, İngilizce köşesinde \"Sio ile İngilizce konuş\" da açılır: Sio, {name} ile öğrendiği kelimelerle basit İngilizce sohbet eder. Aynı denetimlerden geçer; uygunsuz bir şey yazılırsa yine size haber verilir."
+
+msgid "shell.switch"
+msgstr "Oturumu değiştir"
+
+msgid "shell.switch.confirm_title"
+msgstr "Başkası mı girecek?"
+
+msgid "shell.switch.confirm_body"
+msgstr "Açık oyunların kapanacak. Sonra yine kendi resmine dokunarak girebilirsin."
+
+msgid "shell.switch.confirm_yes"
+msgstr "Evet, değiştir"
+
+msgid "shell.switch.confirm_no"
+msgstr "Hayır, kalayım"
+
+msgid "shell.switch.going"
+msgstr "Giriş ekranı geliyor"
+
+msgid "shell.switch.going_body"
+msgstr "Görüşürüz! Sıradaki kendi resmine dokunsun."
+
+msgid "shell.switch.failed"
+msgstr "Oturum değişmedi."
+
+msgid "switch.button"
+msgstr "Oturumu değiştir"
+
+msgid "switch.help"
+msgstr "Giriş ekranını açar; sizin oturumunuz açık kalır ve döndüğünüzde parolanızı sorar."
+
+msgid "settings.at_login.title"
+msgstr "Girişte panel"
+
+msgid "settings.at_login.label"
+msgstr "Ebeveyn hesabına girince paneli aç"
+
+msgid "settings.at_login.help"
+msgstr "Bu bilgisayarda bir ebeveyn hesabıyla oturum açılınca panel tarayıcıda kendiliğinden açılır. Masaüstüne geçmek için tarayıcıyı kapatmanız yeterli."
+
+msgid "audit.action.switch_user"
+msgstr "Oturum değiştirildi"
+
+msgid "audit.action.panel_at_login"
+msgstr "Girişte panel ayarı değişti"
+
+msgid "shell.cover.home"
+msgstr "Ana sayfa"
+
+msgid "shell.cover.back"
+msgstr "Geri dönmek için dokun"

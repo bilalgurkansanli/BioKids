@@ -124,6 +124,10 @@ biokids (1.5.0-1) trixie; urgency=medium
     public-domain English voice; migration e3a9c75d1f08 (D-225).
   * English with Sio: the assistant as a conversation in simple English,
     with the same checks; Sio speaks the English voice lowered (D-226).
+  * A parent's login opens the panel; "Oturumu değiştir" on the child's
+    screen and in the panel; Tux Paint fills the screen, the launcher is
+    covered while an app is in front, and a stuck tile can be tapped
+    again (D-227).
 
  -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Wed, 21 Oct 2026 12:00:00 +0300
 

@@ -48,6 +48,9 @@ class Op(StrEnum):
     LOCK_NOW = "lock_now"
     POWEROFF_NOW = "poweroff_now"
     REBOOT_NOW = "reboot_now"
+    SWITCH_TO_GREETER = "switch_to_greeter"
+    """The login screen, over the open session at the machine (D-227): a parent at
+    the computer lets a child in without ending their own session."""
     LOGOUT_NOW = "logout_now"
     START_TIMEOUT = "start_timeout"
     CLEAR_TIMEOUT = "clear_timeout"
@@ -101,6 +104,9 @@ class ShellOp(StrEnum):
     """Where the calling child is in the English corner: their boxes (D-225)."""
     ENGLISH_ANSWER = "english_answer"
     """One answer in an English lesson; the item's box moves (D-225)."""
+    SWITCH_USER = "switch_user"
+    """"Oturumu değiştir" on the child's screen (D-227): the child's session ends,
+    their apps given their grace first, and the login screen comes back."""
     FIRST_RUN_DONE = "first_run_done"
     REQUEST_SHUTDOWN = "request_shutdown"
     """The child pressed the shutdown tile (D-100). The daemon decides, and says

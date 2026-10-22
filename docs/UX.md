@@ -69,7 +69,7 @@ that palette reads as cheap to parents, and parents are half the audience.
 │    └────────┘   └────────┘   └────────┘   └────────┘         │
 │                                                              │
 ├──────────────────────────────────────────────────────────────┤
-│  ☀ ──────●─────       Açık (🎨)               [ Kapat ]      │
+│  ☀ ──────●─────     Açık (🎨)    [👥 Oturumu değiştir] [ Kapat ]│
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -81,6 +81,11 @@ or the arrow keys (D-201). At the bottom, **Açık** lists the apps sent to the
 background with the app bar's 🏠, each a round button with the app's own icon, and a
 dot marks their tiles; a tap on either brings the same window back (D-201). Web tiles
 are not listed: each opens a window of its own (D-197).
+
+**Oturumu değiştir** (D-227), beside Kapat, asks once ("Başkası mı girecek?"), then
+ends the child's session and brings the login screen for a sibling or a parent. While
+an app is in front the launcher is covered: around a window that cannot fill the screen
+a tap brings the app back, and the cover's 🏠 goes home.
 
 The tiles sit in rows of one size, as many as the width holds (six at 1600 pixels
 for 4–7), and every row is centred: a last row that does not fill sits in the
@@ -411,7 +416,7 @@ Geçmiş / History       → fourteen days of minutes, and one day's apps, sites
 Analiz / Insights      → a week or a month in plain words, then the numbers (D-206)
 Kayıtlar / Audit log
 Ayarlar / Settings     → language, Görünüm (text size and contrast, the signed-in
-                         parent's own, D-217), email, Zio and Sio's voice: the
+                         parent's own, D-217), Girişte panel (D-227), email, Zio and Sio's voice: the
                          natural voice to download (D-196) and the parent's own
                          (D-174), phone access, Ebeveynler (D-218), your PIN, the
                          family's passphrase

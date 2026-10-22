@@ -1,0 +1,25 @@
+{% extends "_full.html" %}
+{# "Oturumu değiştir" (D-227): asked once, since the child's open games close. #}
+{% set speak_on_load = true %}
+{% set tone = 'full--warm' %}
+{% set persona = 'sio' %}
+{% set expression = 'concerned' if failed else 'neutral' %}
+{% block title %}{{ _('shell.switch.confirm_title') }}{% endblock %}
+{% block inner %}
+  {% if failed %}
+    <h1>{{ _('shell.switch.failed') }}</h1>
+    <p>{{ _('shell.shutdown.failed_body') }}</p>
+    <a class="big-btn" href="/">{{ _('shell.blocked.back') }}</a>
+  {% else %}
+  <h1>{{ _('shell.switch.confirm_title') }}</h1>
+  <p>{{ _('shell.switch.confirm_body') }}</p>
+  <div class="btn-row">
+    <form method="post" action="/switch-user">
+      <button class="big-btn" type="submit">
+        {{ _('shell.switch.confirm_yes') }}
+      </button>
+    </form>
+    <a class="big-btn big-btn--quiet" href="/">{{ _('shell.switch.confirm_no') }}</a>
+  </div>
+  {% endif %}
+{% endblock %}

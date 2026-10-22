@@ -89,6 +89,13 @@
    * this long after the yes, /running says whether a tracked app is still
    * there. */
   var STILL_THERE_MS = 2000;
+  /* An app tile still opening this long after its tap may have opened its
+   * window behind the launcher. A tap on it then asks again, which brings an
+   * open window to the front and never starts a second copy (the launcher's
+   * `_open_again`, D-208); it used to do nothing for the whole 25 seconds:
+   * "I tap and nothing opens" (D-227). Not for a site, which opens a window
+   * at every tap. */
+  var RETAP_MS = 6000;
   var opening = Object.create(null); /* slug -> what is shown for it, and its timer */
   var tileGrid = document.querySelector(".tiles");
 
@@ -125,7 +132,7 @@
     for (var i = 0; i < tiles.length; i += 1) {
       if (tiles[i].getAttribute("data-slug") === slug) marks.push(tiles[i]);
     }
-    if (marks.indexOf(link) === -1) marks.push(link);
+    if (link && marks.indexOf(link) === -1) marks.push(link);
     return marks;
   };
 
@@ -142,7 +149,12 @@
   };
 
   var showOpening = function (slug, link) {
-    var entry = { marks: openingMarks(slug, link), timer: null, superseded: false };
+    var entry = {
+      marks: openingMarks(slug, link),
+      timer: null,
+      superseded: false,
+      since: Date.now(),
+    };
     entry.marks.forEach(function (mark) {
       mark.classList.add("is-opening");
       mark.setAttribute("aria-busy", "true");
@@ -203,6 +215,8 @@
     }, STILL_THERE_MS);
   };
 
+  var lastApp = null; /* the app tile last opened or brought back (D-227) */
+
   var openApp = function (slug, link) {
     var entry = showOpening(slug, link);
     fetch("/launch/" + encodeURIComponent(slug), {
@@ -225,6 +239,7 @@
         } else if (result.builtin) {
           endOpening(slug, entry);
         } else if (result.tracked) {
+          lastApp = slug;
           checkStillThere(slug, entry);
         }
         /* Otherwise the app is starting, or was brought back: the ring stays
@@ -243,7 +258,13 @@
       var target = launchTarget(event.target);
       if (!target) return;
       event.preventDefault();
-      if (opening[target.slug]) return;
+      var busy = opening[target.slug];
+      if (busy) {
+        var kind = target.link.getAttribute("data-kind");
+        if ((kind && kind !== "app") || Date.now() - busy.since < RETAP_MS) return;
+        busy.superseded = true;
+        endOpening(target.slug, busy);
+      }
       openApp(target.slug, target.link);
     });
     window.addEventListener("blur", function (event) {
@@ -255,6 +276,50 @@
     /* A page brought back from the browser's cache is not opening anything. */
     window.addEventListener("pageshow", function (event) {
       if (event.persisted) openingDone();
+    });
+  }
+
+  /* ------------------------------------------------- an app in front (D-227) */
+
+  /* An app whose window cannot fill the screen - Frozen Bubble, TuxMath - floats
+   * over the launcher, and the tiles around it could still be tapped. A tap
+   * there brought the launcher up over the app, which seemed to vanish, or
+   * started another one: "I tap and nothing opens". So while an app's window is
+   * in front the launcher is covered. A tap on the cover brings that app back;
+   * the cover's 🏠 is the way home. When the launcher comes back without a tap
+   * on it - the app was closed, the app bar's 🏠, a time warning - the cover
+   * goes by itself. */
+  var COVER_TAP_MS = 300;
+  var cover = document.getElementById("app-cover");
+  if (cover && tileGrid) {
+    var coverHome = document.getElementById("app-cover-home");
+    var coverSlug = null;
+    var pressedAt = 0;
+    var hideCover = function () {
+      cover.hidden = true;
+      coverSlug = null;
+    };
+    document.addEventListener("pointerdown", function () {
+      pressedAt = Date.now();
+    }, true);
+    window.addEventListener("blur", function (event) {
+      if (event.target !== window || !lastApp) return;
+      coverSlug = lastApp;
+      cover.hidden = false;
+    });
+    window.addEventListener("focus", function () {
+      var focusedAt = Date.now();
+      window.setTimeout(function () {
+        /* The window manager gives the focus first and the tap follows. */
+        if (pressedAt < focusedAt - COVER_TAP_MS) hideCover();
+      }, COVER_TAP_MS);
+    });
+    cover.addEventListener("click", function (event) {
+      event.preventDefault();
+      var slug = coverSlug;
+      hideCover();
+      if (coverHome && coverHome.contains(event.target)) return;
+      if (slug && !opening[slug]) openApp(slug, null);
     });
   }
 

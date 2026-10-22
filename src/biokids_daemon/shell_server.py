@@ -262,6 +262,7 @@ class ShellServer:
             ShellOp.ENGLISH_ANSWER: self._english_answer,
             ShellOp.FIRST_RUN_DONE: self._first_run_done,
             ShellOp.REQUEST_SHUTDOWN: self._request_shutdown,
+            ShellOp.SWITCH_USER: self._switch_user,
             ShellOp.ASK_A_PARENT: self._ask_a_parent,
             ShellOp.ASK_ASSISTANT: self._ask_assistant,
             ShellOp.ASSISTANT_MORE: self._assistant_more,
@@ -346,6 +347,10 @@ class ShellServer:
             ok=True,
             data={"poweroff": outcome is ShutdownOutcome.POWEROFF, "outcome": outcome.value},
         )
+
+    async def _switch_user(self, caller: ShellCaller, request: Request) -> Response:
+        ok = await self.supervisor.child_switch_user(caller.child_id)
+        return Response(id=request.id, ok=ok)
 
     async def _ask_a_parent(self, caller: ShellCaller, request: Request) -> Response:
         url = str(request.args.get("url", ""))[:1024]

@@ -109,6 +109,14 @@ On top of that block, each root unit names the little of root it keeps (D-171):
 The panel is root by uid only: the one root process a phone can reach holds no
 capability a bug in it could use.
 
+Two things are only for the computer itself (D-227), decided by the request (Host
+127.0.0.1, no `X-Forwarded-For` from `tailscale serve`): `/at-login`, which tells the
+parent's login script what to open and is answered without signing in - a path on the
+panel, nothing else - and **Oturumu değiştir**, which has the daemon call LightDM's
+`SwitchToGreeter` over the system bus. Neither is a security boundary: the first says
+only whether setup is complete, and the second needs a signed-in parent and shows the
+login screen, which locks nothing open.
+
 `biokids-ai` always runs with `PrivateNetwork=yes`: it has no reason to speak to the
 internet and cannot. The one-time model download is a separate unit,
 `biokids-ai-setup.service`, which only the parent's button starts, which has the

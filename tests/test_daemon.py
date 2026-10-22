@@ -2592,3 +2592,70 @@ async def test_the_first_try_waits_for_the_boot_to_settle(
     assert started == []
     await supervisor.fetch_voice(1000.0 + natural_voice.FIRST_TRY_AFTER_SECONDS)
     assert len(started) == 1
+
+
+# ------------------------------------------------------------ D-227 switch user
+
+
+async def test_switch_user_on_the_childs_screen_ends_only_their_session(
+    supervisor: Supervisor, source: FakeSessionSource, runner: RecordingRunner, db: Database
+) -> None:
+    """Even alone at the machine: the login screen is for whoever is next, and
+    a child cannot get back into a session left open behind it (D-155)."""
+    await supervisor.start()
+    source.log_in("elif")
+
+    assert await supervisor.child_switch_user(1) is True
+    assert await supervisor.child_switch_user(1) is True, "a second tap is no second logout"
+    await settled(supervisor)
+
+    assert not powered_off(runner)
+    assert runner.ran("systemctl", "--user", "-M", "elif@.host")
+    assert runner.ran("loginctl", "terminate-user", "elif")
+    (row,) = audited(db, "switch_user")
+    assert row.actor == "child:elif"
+    assert row.detail == {"by": "child"}
+
+
+async def test_switch_user_from_the_panel_asks_lightdm_for_its_seat(
+    supervisor: Supervisor, runner: RecordingRunner, db: Database
+) -> None:
+    await supervisor.start()
+
+    assert await supervisor.switch_to_greeter("parent:1") is True
+
+    assert runner.ran(
+        "busctl", "--json=short", "get-property", "org.freedesktop.DisplayManager"
+    )
+    assert runner.ran(
+        "busctl",
+        "call",
+        "org.freedesktop.DisplayManager",
+        "/org/freedesktop/DisplayManager/Seat0",
+        "org.freedesktop.DisplayManager.Seat",
+        "SwitchToGreeter",
+    )
+    assert not runner.ran("loginctl", "terminate-user"), "the parent's session stays open"
+    (row,) = audited(db, "switch_user")
+    assert row.actor == "parent:1"
+    assert row.detail == {"by": "parent", "ok": True}
+
+
+SEAT1 = "/org/freedesktop/DisplayManager/Seat1"
+
+
+@pytest.mark.parametrize(
+    ("answer", "seats"),
+    [
+        ('{"type":"ao","data":["' + SEAT1 + '"]}', [SEAT1]),
+        ('{"type":"ao","data":[]}', []),
+        ('{"type":"ao","data":"nope"}', []),
+        ('{"type":"ao","data":["relative", 3]}', []),
+        ("", []),
+        ("not json", []),
+    ],
+)
+def test_lightdms_seats_are_read_from_busctl(answer: str, seats: list[str]) -> None:
+    from biokids_daemon.enforcer import seats_from
+
+    assert seats_from(answer) == seats

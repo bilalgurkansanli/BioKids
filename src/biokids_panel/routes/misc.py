@@ -12,10 +12,12 @@ from typing import Final
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 
+from biokids_core import repo
 from biokids_panel.common import Ctx, Db, View
 from biokids_panel.context import (
     SHARED_STATIC_DIR,
     STATIC_DIR,
+    at_the_machine,
     request_locale,
     request_translator,
 )
@@ -105,6 +107,28 @@ MAIL_PROVIDERS: Final = (
 """Mail services whose own settings still let a program send with a user name
 and an app password. Not Outlook.com or Hotmail: Microsoft turned that off for
 personal accounts, and the guide says so (D-224)."""
+
+
+PANEL_AT_LOGIN: Final = "panel_at_login"
+"""The family's setting: "off" when a parent asked not to have the panel opened
+each time they log in to their own account (D-227). Anything else is on."""
+
+
+@router.get("/at-login")
+def at_login(session: Db, request: Request) -> JSONResponse:
+    """What to open in a parent's browser as they log in (D-195, D-227).
+
+    Asked by /usr/lib/biokids/biokids-open-setup from the parent's own session:
+    the wizard until setup is complete, then the panel itself - the parent
+    lands where the family is managed, and closes it to use their desktop -
+    unless they turned that off under Ayarlar. Nothing is said but a path.
+    """
+    if not at_the_machine(request):
+        return JSONResponse({"open": ""})
+    if not repo.setup_complete(session):
+        return JSONResponse({"open": "/wizard/1"})
+    wanted = repo.get_setting(session, PANEL_AT_LOGIN, "on") != "off"
+    return JSONResponse({"open": "/" if wanted else ""})
 
 
 @router.get("/help", response_class=HTMLResponse)

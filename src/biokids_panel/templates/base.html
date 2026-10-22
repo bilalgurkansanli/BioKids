@@ -31,6 +31,15 @@
     </a>
     <div class="row">
       <a class="btn btn--quiet" href="/help">{{ _('help.title') }}</a>
+      {# D-227: on the computer itself, the login screen for whoever is next. #}
+      {% if at_the_machine %}
+        <form method="post" action="/system/switch-user">
+          <input type="hidden" name="csrf_token" value="{{ csrf }}">
+          <button class="btn btn--quiet" type="submit" title="{{ _('switch.help') }}">
+            <span aria-hidden="true">👥</span> {{ _('switch.button') }}
+          </button>
+        </form>
+      {% endif %}
       <form method="post" action="/logout">
         <input type="hidden" name="csrf_token" value="{{ csrf }}">
         <button class="btn btn--quiet" type="submit">{{ _('nav.logout') }}</button>

@@ -567,3 +567,33 @@ def test_the_program_is_read_from_proc(tmp_path: Path) -> None:
         pytest.skip("this machine does not let the tests make symbolic links")
     assert launcher_module.process_exe(4242, tmp_path) == str(Path("/usr/games/palapeli"))
     assert launcher_module.process_exe(4343, tmp_path) is None
+
+
+# ---------------------------------------------- D-227 a window the screen's size
+
+
+@pytest.mark.parametrize(
+    ("screen", "argv"),
+    [
+        ((1600, 900), ["tuxpaint", "--windowed", "--1592x832"]),
+        ((1024, 768), ["tuxpaint", "--windowed", "--1016x700"]),
+        ((640, 480), ["tuxpaint", "--windowed"]),
+        (None, ["tuxpaint", "--windowed"]),
+    ],
+)
+def test_tux_paint_is_given_the_screens_size(
+    screen: tuple[int, int] | None, argv: list[str]
+) -> None:
+    """It cannot be maximised, and floated mid-screen with the launcher's tiles
+    tappable around it. Too small a screen, or none known: its own size."""
+    from biokids_shell.launcher import fit_window
+
+    assert fit_window(["tuxpaint", "--windowed", "--{window}"], screen) == argv
+    assert fit_window(["gcompris-qt", "--window"], screen) == ["gcompris-qt", "--window"]
+
+
+def test_the_catalog_asks_for_it_for_tux_paint() -> None:
+    from biokids_core.catalog import load_catalog
+
+    (paint,) = [entry for entry in load_catalog().entries if entry.slug == "tuxpaint"]
+    assert paint.exec_argv == ("tuxpaint", "--windowed", "--{window}")

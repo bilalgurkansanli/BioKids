@@ -77,6 +77,19 @@ STILL_OPENING_S = 30.0
 """An app with no window yet this soon after it started is still opening it; a
 second tap waits for it rather than starting another. Later, a scope with no
 window is something left behind, and is stopped before the app starts again."""
+WINDOW_SIZE = "{window}"
+"""In a catalog `exec`: the size of a window that fills the screen inside its
+title bar and borders (D-227). For an app whose window cannot be maximised but
+which takes its size on its command line - Tux Paint's `--{window}` becomes
+`--1592x832` on a 1600x900 screen - so that it does not float in the middle of
+the screen with the launcher around it. Where the screen's size cannot be read,
+the argument is left out and the app opens at its own size."""
+FRAME_WIDTH = 2 * 4
+"""The BioKids xfwm4 theme's borders, left and right (dev/make_xfwm4_theme.py)."""
+FRAME_HEIGHT = 64 + 4
+"""Its title bar and its bottom border."""
+SMALLEST_WINDOW = (640, 480)
+"""No app is asked for less: Tux Paint's own minimum."""
 UNIT_COMMAND_TIMEOUT_S = 30.0
 UNIT_STATE_TIMEOUT_S = 5.0
 """`systemctl --user is-active` for one scope: a tap waits for it."""
@@ -91,6 +104,16 @@ is no answer, and the footer stays as it was."""
 UNIT_PREFIX = "biokids-app"
 
 CHROMIUM_PREFERENCES = Path("Default") / "Preferences"
+
+
+def fit_window(argv: Sequence[str], screen: tuple[int, int] | None) -> list[str]:
+    """`argv` with `WINDOW_SIZE` filled in for this screen, or its argument left out."""
+    size = ""
+    if screen is not None:
+        width, height = screen[0] - FRAME_WIDTH, screen[1] - FRAME_HEIGHT
+        if width >= SMALLEST_WINDOW[0] and height >= SMALLEST_WINDOW[1]:
+            size = f"{width}x{height}"
+    return [part.replace(WINDOW_SIZE, size) for part in argv if size or WINDOW_SIZE not in part]
 
 
 @dataclass(frozen=True, slots=True)
@@ -144,6 +167,10 @@ class AppLauncher:
         argv = self.build_argv(request)
         if argv is None:
             return LaunchResult(ok=False, error="app.not_allowed")
+        if any(WINDOW_SIZE in part for part in argv):
+            from biokids_shell.kiosk import screen_size
+
+            argv = fit_window(argv, await screen_size())
         if request.kind != "app":
             return await self._start(request, argv)
         # Not web tiles: every browser window is one Chromium, in the scope of

@@ -1,7 +1,8 @@
 [Desktop Entry]
 # Opens the setup wizard in the browser of whoever logs in first after BioKids
-# is installed (D-170), until setup is complete. /usr/lib/biokids/biokids-open-setup
-# does nothing in a child's session and nothing once the family exists.
+# is installed (D-170), until setup is complete, and the parent panel at every
+# parent login after that (D-227) unless the family turned it off under Ayarlar.
+# /usr/lib/biokids/biokids-open-setup does nothing in a child's session.
 Type=Application
 Name=BioKids setup
 Name[tr]=BioKids kurulumu

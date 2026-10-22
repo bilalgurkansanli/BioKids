@@ -1654,6 +1654,19 @@ lower than Zio's English; tapping a word under the box answers, and Sio replies 
 or two simple sentences ending in a question. Typing "kedi" gets the English for it.
 `porno` is refused with the catalog sentence and appears under the assistant's alerts.
 
+### 8.27 The parent's login, switching user, taps (D-227)
+
+With setup complete, choose the parent's account at the greeter and log in.
+
+**Pass:** the panel opens in the browser by itself; closing it leaves the parent's
+desktop. With **Ayarlar → Girişte panel** unticked, the next login opens nothing. The
+top bar has **Oturumu değiştir** on the computer and not on the phone; pressing it
+brings the greeter, Elif logs in by her picture, and on her screen **Oturumu değiştir →
+Evet, değiştir** says goodbye and brings the greeter back, where the parent's account
+asks for its password and opens their desktop as they left it. On Elif's screen **Boya**
+fills the screen; with Frozen Bubble open, the launcher around it is dark, a tap there
+brings the game back and the dark layer's **Ana sayfa** goes home.
+
 ## 9. After the run
 
 Only once §1–§8 have all passed:

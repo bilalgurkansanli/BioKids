@@ -118,6 +118,9 @@ class InProcessShellClient:
         response = await self._call(ShellOp.REQUEST_SHUTDOWN)
         return ShutdownOutcome(response.data["outcome"]) if response.ok else None
 
+    async def switch_user(self) -> bool:
+        return (await self._call(ShellOp.SWITCH_USER)).ok
+
     async def ask_a_parent(self, url: str, kind: str = "site") -> tuple[bool, str]:
         response = await self._call(ShellOp.ASK_A_PARENT, url=url, kind=kind)
         return response.ok, response.error or ""

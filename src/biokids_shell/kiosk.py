@@ -256,6 +256,11 @@ async def _xdotool(*args: str) -> str | None:
     return out.decode("utf-8", "replace") if process.returncode == 0 else None
 
 
+async def screen_size() -> tuple[int, int] | None:
+    """The X screen's size in pixels, or None when xdotool cannot say."""
+    return _size(await _xdotool("getdisplaygeometry"))
+
+
 def _size(text: str | None) -> tuple[int, int] | None:
     """`1920 1080`, or xdotool's `Geometry: 1920x1080` line, as a pair."""
     if not text:

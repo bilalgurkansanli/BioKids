@@ -1,15 +1,22 @@
 #!/bin/sh
-# BioKids at a parent's login (D-170, D-195).
+# BioKids at a parent's login (D-170, D-195, D-227).
 #
 # Run from /etc/xdg/autostart in every desktop session, and by biokids-panel's
-# postinst in the sessions already open when BioKids is installed. It does
-# nothing for a child (their session is the launcher). For anyone else it:
+# postinst (with --setup-only) in the sessions already open when BioKids is
+# installed or upgraded. It does nothing for a child (their session is the
+# launcher). For anyone else it:
 #
 #   * puts a "BioKids Parent Panel" shortcut on their desktop, once - deleted,
 #     it stays deleted;
-#   * opens the setup wizard in their browser, for as long as setup is not
-#     complete, which the panel says by sending "/" to the wizard.
+#   * opens in their browser what the panel's /at-login says: the setup wizard
+#     while setup is not complete, then the panel itself at every login, unless
+#     the family turned that off under Ayarlar. The parent closes the browser
+#     to reach their own desktop. --setup-only opens the wizard and nothing
+#     else, so that an upgrade does not pop the panel up in open sessions.
 set -u
+
+SETUP_ONLY=
+[ "${1:-}" = "--setup-only" ] && SETUP_ONLY=1
 
 case " $(id -nG 2>/dev/null) " in
     *" biokids-child "*) exit 0 ;;
@@ -36,32 +43,35 @@ if [ -r "$ENTRY" ] && [ ! -e "$MARKER" ]; then
     mkdir -p "$(dirname "$MARKER")" && : > "$MARKER"
 fi
 
-# ------------------------------------------------------------- setup wizard
+# ------------------------------------------------- the wizard, or the panel
 
-# The panel starts at boot; give it a moment if this login was quicker.
-python3 - <<'PY' || exit 0
+# The panel starts at boot; give it a moment if this login was quicker. It
+# answers with a path on itself, or nothing when nothing is to be opened.
+path=$(SETUP_ONLY="$SETUP_ONLY" python3 - <<'PY'
+import json
+import os
 import sys
 import time
-import urllib.error
 import urllib.request
 
-
-class NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, *args, **kwargs):
-        return None
-
-
-opener = urllib.request.build_opener(NoRedirect)
 for _ in range(30):
     try:
-        opener.open("http://127.0.0.1:7878/", timeout=3)
-        sys.exit(1)  # answered without a redirect: nothing to set up
-    except urllib.error.HTTPError as answer:
-        location = answer.headers.get("Location", "")
-        sys.exit(0 if "/wizard" in location else 1)
+        with urllib.request.urlopen("http://127.0.0.1:7878/at-login", timeout=3) as answer:
+            wanted = str(json.load(answer).get("open", ""))
+        break
+    except ValueError:
+        sys.exit(0)
     except OSError:
         time.sleep(2)
-sys.exit(1)
+else:
+    sys.exit(0)
+if os.environ.get("SETUP_ONLY") and not wanted.startswith("/wizard"):
+    sys.exit(0)
+# Only a path on the panel itself, whatever came back.
+if wanted.startswith("/") and not wanted.startswith("//"):
+    print(wanted)
 PY
+) || exit 0
 
-exec xdg-open "http://127.0.0.1:7878/wizard/1"
+[ -n "$path" ] || exit 0
+exec xdg-open "http://127.0.0.1:7878$path"

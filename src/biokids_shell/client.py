@@ -125,6 +125,21 @@ class ShellClient:
         except ValueError:
             return None
 
+    async def switch_user(self) -> bool:
+        """ "Oturumu değiştir" (D-227): True once the daemon has taken it.
+
+        As for "Evet, kapat", the daemon answers first and ends the session
+        afterwards, so the goodbye can be drawn before it goes.
+        """
+        try:
+            response = await self._client.call(ShellOp.SWITCH_USER)
+        except (IpcError, OSError) as exc:
+            log.warning("could not ask to switch user: %s", exc)
+            return False
+        if not response.ok:
+            log.warning("the daemon did not take the switch: %s", response.error)
+        return response.ok
+
     async def ask_a_parent(self, url: str, kind: str = "site") -> tuple[bool, str]:
         """(filed, reason). The reason is a catalog key when it was not filed."""
         try:

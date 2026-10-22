@@ -122,6 +122,45 @@ class OperationsMixin(EndSequenceMixin):
         self._after_answering(self._child_poweroff(runtime, _grace_deadline()), "poweroff")
         return ShutdownOutcome.POWEROFF
 
+    async def child_switch_user(self, child_id: int) -> bool:
+        """ "Oturumu değiştir" on the child's screen (D-227): this child's session
+        ends - their apps first get their grace period, as for "Kapat" - and the
+        login screen comes back for whoever is next.
+
+        Ended, not left open behind the greeter: a child cannot unlock a session
+        of their own without a password (D-155), so one left open would keep
+        them out of the computer until a parent came.
+        """
+        runtime = self._require(child_id)
+        name = f"logout:{runtime.unix_user}"
+        if not self._under_way(name):
+            repo.audit(
+                self.session,
+                actor=f"child:{runtime.unix_user}",
+                action="switch_user",
+                target=f"child:{child_id}",
+                detail={"by": "child"},
+            )
+            self.session.commit()
+            self._after_answering(
+                self._end_childs_session(runtime, _grace_deadline(LOGOUT_GRACE_SECONDS)), name
+            )
+        return True
+
+    async def switch_to_greeter(self, actor: str) -> bool:
+        """The login screen over the session at the machine (D-227), from the
+        parent's panel. Their session stays open behind it; LightDM asks for
+        their password when they come back."""
+        ok = await self.enforcer.switch_to_greeter()
+        repo.audit(
+            self.session,
+            actor=actor,
+            action="switch_user",
+            detail={"by": "parent", "ok": ok},
+        )
+        self.session.commit()
+        return ok
+
     def _audit_session_instead(self, runtime: ChildRuntime, others: tuple[str, ...]) -> None:
         log.info(
             "%s asked to shut down, but %s %s logged in; ending only %s's session",

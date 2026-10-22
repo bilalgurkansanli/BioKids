@@ -107,6 +107,8 @@ class FakeShellDaemon:
         self.hear_text: str | None = "a cat"
         self.chat_asked: list[tuple[str, dict[str, Any]]] = []
         self.shutdown_answer: ShutdownOutcome | None = ShutdownOutcome.POWEROFF
+        self.switch_answer = True
+        self.switch_calls = 0
 
     async def available(self) -> bool:
         return self.data is not None
@@ -129,6 +131,10 @@ class FakeShellDaemon:
     async def request_shutdown(self) -> ShutdownOutcome | None:
         self.shutdown_calls += 1
         return self.shutdown_answer
+
+    async def switch_user(self) -> bool:
+        self.switch_calls += 1
+        return self.switch_answer
 
     async def report_visit(self, host: str) -> None:
         self.visits.append(host)
@@ -580,7 +586,7 @@ def test_a_tap_opens_the_app_from_the_home_page(client: TestClient) -> None:
         '"blur"',
         "visibilitychange",
         "/blocked?reason=",
-        "if (opening[target.slug]) return;",
+        "Date.now() - busy.since < RETAP_MS",
     ):
         assert needed in section, needed
 
@@ -2253,3 +2259,61 @@ def test_talking_with_sio_is_heard_as_english(
     client.post("/assistant/hear?lang=en", content=wav, headers=headers)
     client.post("/assistant/hear", content=wav, headers=headers)
     assert with_english.heard == ["en", ""]
+
+
+# ---------------------------------------------------------- D-227 switch user
+
+
+def test_the_home_screen_offers_switch_user_and_has_the_cover(client: TestClient) -> None:
+    page = client.get("/").text
+    assert 'href="/switch-user"' in page
+    assert 'id="app-cover"' in page and 'id="app-cover-home"' in page
+    assert re.search(r'id="app-cover"\s+hidden', page), "covered only while an app is in front"
+    assert 'data-kind="app"' in page, "a re-tap asks again only for an app"
+
+
+def test_switch_user_asks_first_then_says_goodbye(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    page = client.get("/switch-user").text
+    assert 'action="/switch-user"' in page
+    assert "Başkası mı girecek?" in _visible_text(page)
+    assert daemon.switch_calls == 0
+
+    page = client.post("/switch-user").text
+    text = _visible_text(page)
+    assert daemon.switch_calls == 1
+    assert "Giriş ekranı geliyor" in text
+    assert "Merhaba Elif" not in text, "never the home screen"
+    assert 'data-back-after="60"' in page
+
+
+def test_a_switch_the_daemon_never_heard_is_said_so(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    daemon.switch_answer = False
+    page = client.post("/switch-user").text
+    text = _visible_text(page)
+    assert "Oturum değişmedi" in text
+    assert "Bir büyüğüne söyle" in text
+    assert 'action="/switch-user"' not in page
+
+
+@pytest.mark.parametrize(
+    ("answer", "expected"),
+    [
+        ({"ok": True}, True),
+        ({"ok": False, "error": "shell.not_allowed"}, False),
+    ],
+)
+async def test_the_client_says_whether_the_switch_was_taken(
+    tmp_path: pathlib.Path, answer: dict[str, Any], expected: bool
+) -> None:
+    from biokids_core.ipc import Response
+    from biokids_shell.client import ShellClient
+
+    client = ShellClient(tmp_path / "shell.sock")
+    client._client = _AnsweringClient(Response(**answer))  # type: ignore[assignment]
+    assert await client.switch_user() is expected
+    client._client = _AnsweringClient(IpcError("gone"))  # type: ignore[assignment]
+    assert await client.switch_user() is False
