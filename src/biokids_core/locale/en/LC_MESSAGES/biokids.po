@@ -1368,7 +1368,7 @@ msgstr "Not suitable for their age"
 msgid "assistant.category.trick"
 msgstr "Trying to get round the rules"
 
-msgid "assistant.category.family"
+msgid "assistant.category.beliefs"
 msgstr "Sent back to the family"
 
 msgid "assistant.category.unknown"

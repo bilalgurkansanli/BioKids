@@ -1368,7 +1368,7 @@ msgstr "Yaşına uygun olmayan konu"
 msgid "assistant.category.trick"
 msgstr "Kuralları aşmaya çalışma"
 
-msgid "assistant.category.family"
+msgid "assistant.category.beliefs"
 msgstr "Aileye yönlendirilen soru"
 
 msgid "assistant.category.unknown"

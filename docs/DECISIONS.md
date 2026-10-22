@@ -1825,6 +1825,17 @@ says is answered. "Sio ile İngilizce konuş" in the English corner opens the as
   them with the word list again, since they come from the child's own page.
 - **Its own count**: turns are short and quick, so they have their own limit,
   `[ai] english_turns_per_10min` (40), apart from the questions'.
+- **The classifier**, found on the VM: Gemma 4 E2B refused "my dog name is Karabaş" -
+  the answer to Sio's own question - and "I have a sister" as `family`, the category of
+  what each family answers its own way, by its name whatever its description said; and
+  told that a pet's name or an age is not personal information, it filed every such
+  message under `personal_info`, which alerts the parent. So the category is now
+  `beliefs` (religion, politics, a death; the same quiet refusal), the classifier is
+  shown seven worked examples before each message (`prompts.CLASSIFY_EXAMPLES`: an age,
+  a sister, a pet's name and a parent's job are `ok`; an address and phone number are
+  `personal_info`; "Is God real?" is `beliefs`; an insult is `rude`), and in a
+  conversation it is told it is reading a child's turn of chat with Sio. On the VM the
+  plain classifier then sorted fourteen probes right, from "I am six" to "I want to die".
 - **Sio's voice**: the English voice is a woman's (D-225), so in English it is the other
   way round from Turkish: Zio speaks it as recorded and Sio speaks it lowered by 0.84
   (`synth.SIO_DROP`, about three semitones), Piper a little faster and the WAV a little

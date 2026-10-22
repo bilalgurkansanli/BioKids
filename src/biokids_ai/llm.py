@@ -57,11 +57,14 @@ class ChatModel:
             raise ModelError("the model's answer was not text")
         return content.strip()
 
-    async def classify(self, question: str, age: int, wait_s: float | None = None) -> str:
-        """One category from `prompts.CATEGORIES`, never anything else."""
+    async def classify(
+        self, question: str, age: int, wait_s: float | None = None, practice: bool = False
+    ) -> str:
+        """One category from `prompts.CATEGORIES`, never anything else. `practice`:
+        the message is a turn of English with Sio (D-226)."""
         content = await self._complete(
             {
-                "messages": prompts.classify_messages(question, age),
+                "messages": prompts.classify_messages(question, age, practice),
                 "temperature": 0,
                 "max_tokens": 24,
                 "response_format": {

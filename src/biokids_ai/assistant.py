@@ -48,7 +48,7 @@ REFUSAL_KEYS: Final = {
     "self_harm": "assistant.refuse.self_harm",
     "personal_info": "assistant.refuse.personal_info",
     "rude": "assistant.refuse.rude",
-    "family": "assistant.refuse.family",
+    "beliefs": "assistant.refuse.family",
     "unavailable": "assistant.refuse.unavailable",
     "default": "assistant.refuse.default",
 }
@@ -131,7 +131,9 @@ Conversation = prompts.Conversation
 
 
 class Model(Protocol):
-    async def classify(self, question: str, age: int, wait_s: float | None = None) -> str: ...
+    async def classify(
+        self, question: str, age: int, wait_s: float | None = None, practice: bool = False
+    ) -> str: ...
 
     async def answer(
         self,
@@ -271,7 +273,11 @@ class Assistant:
             category = "ok"
         else:
             try:
-                category = await self.model.classify(question, age)
+                category = (
+                    await self.model.classify(question, age, practice=True)
+                    if conversation is not None
+                    else await self.model.classify(question, age)
+                )
             except ModelError as exc:
                 log.warning("the classifier could not run: %s", exc)
                 return refuse("unavailable", "error")
