@@ -54,7 +54,7 @@ from typing import Final
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from biokids_core import album, mail
+from biokids_core import album, english, mail
 from biokids_core.config import Config
 from biokids_core.db.models import (
     AccessRequest,
@@ -62,6 +62,7 @@ from biokids_core.db.models import (
     AuditLog,
     CategoryLimit,
     Child,
+    EnglishItem,
     LedgerDay,
     Policy,
     UsageEvent,
@@ -237,6 +238,8 @@ class Facts:
     assistant_alerts: int = 0
     refused_searches: int = 0
     """Searches the browser refused and the parent was told of (D-222)."""
+    english_new_words: int = 0
+    """English words met for the first time on the days shown (D-225)."""
     tracked_from: dt.date | None = None
     """The first day BioKids knew this child. Earlier days are not zeros."""
 
@@ -383,6 +386,17 @@ def load_facts(
         requests=requests,
         assistant_alerts=int(alerts or 0),
         refused_searches=int(searches or 0),
+        english_new_words=sum(
+            1
+            for item in session.scalars(
+                select(EnglishItem.item).where(
+                    EnglishItem.child_id == child_id,
+                    EnglishItem.first_day >= shown.first,
+                    EnglishItem.first_day <= shown.last,
+                )
+            )
+            if english.is_word(item)
+        ),
         tracked_from=tracked_from,
     )
 
@@ -531,6 +545,8 @@ class Insights:
     counted with the evening before."""
     stickers: int = 0
     """Days shown that earned a sticker in the child's album (D-211)."""
+    english_new_words: int = 0
+    """English words met for the first time on the days shown (D-225)."""
 
     @property
     def includes_today(self) -> bool:
@@ -544,6 +560,7 @@ class Insights:
             or bool(self.requests)
             or self.assistant_alerts > 0
             or self.refused_searches > 0
+            or self.english_new_words > 0
             or bool(self.sites)
         )
 
@@ -610,6 +627,7 @@ def summarize(facts: Facts, period: Period, span: Span, today: dt.date) -> Insig
         requests=_requests(facts.requests),
         assistant_alerts=facts.assistant_alerts,
         refused_searches=facts.refused_searches,
+        english_new_words=facts.english_new_words,
         sites=sites,
         more_sites=more_sites,
         hours=hours,
@@ -1004,6 +1022,7 @@ def highlights(ins: Insights, ctx: Context, limit: int = MAX_HIGHLIGHTS) -> list
      60 requests that expired with nobody answering (not those still waiting)
      55 about a third or more of the time in learning apps
      50 half or more in games / 45 on the web / 35 in free apps
+     47 new English words met (D-225)
      45 minutes earned by learning
      40 weekends and weekdays differ a lot
      35 asked for more time three times or more
@@ -1061,6 +1080,20 @@ def highlights(ins: Insights, ctx: Context, limit: int = MAX_HIGHLIGHTS) -> list
 
     if ins.comparison is not None:
         found.append(_change(ins, ins.comparison))
+
+    if ins.english_new_words:
+        found.append(
+            Highlight(
+                "insights.h.english",
+                47,
+                "🔤",
+                Tone.GOOD,
+                {"count": ins.english_new_words},
+                suggestion="insights.s.english",
+                link=f"/insights?child={child}#english",
+                link_label="insights.english",
+            )
+        )
 
     if ctx.managed and ins.ran_out_days >= RAN_OUT_MIN_DAYS:
         often = ins.ran_out_days >= RAN_OUT_SUGGEST_DAYS

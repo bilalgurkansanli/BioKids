@@ -19,7 +19,7 @@ from collections.abc import Sequence
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from biokids_core import search_filter, special_days
+from biokids_core import english, search_filter, special_days
 from biokids_core.db.models import (
     AccessRequest,
     AiAlert,
@@ -28,6 +28,7 @@ from biokids_core.db.models import (
     CategoryLimit,
     Child,
     ChildApp,
+    EnglishItem,
     Family,
     Parent,
     Policy,
@@ -560,6 +561,48 @@ def dismiss_search_alerts(session: Session, child_id: int) -> int:
         alert.dismissed = True
         seen += 1
     return seen
+
+
+def english_progress(session: Session, child_id: int) -> dict[str, english.ItemState]:
+    """A child's boxes in the English corner (D-225), by item."""
+    return english.states(
+        (row.item, row.box, row.due, row.first_day)
+        for row in session.scalars(select(EnglishItem).where(EnglishItem.child_id == child_id))
+    )
+
+
+def record_english_answer(
+    session: Session, child_id: int, item: str, right: bool, today: dt.date
+) -> english.ItemState | None:
+    """One answer in a lesson: the item's box moves (`english.answered`).
+
+    None for an id no lesson has: the launcher is the child's own process, and
+    only the corner's own items are kept.
+    """
+    if not english.is_item(item):
+        return None
+    row = session.get(EnglishItem, (child_id, item))
+    before = english.ItemState(row.box, row.due, row.first_day) if row is not None else None
+    after = english.answered(before, right, today)
+    assert after.due is not None and after.first_day is not None
+    if row is None:
+        row = EnglishItem(
+            child_id=child_id,
+            item=item,
+            first_day=after.first_day,
+            due=after.due,
+            last_day=today,
+        )
+        session.add(row)
+    row.box = after.box
+    row.due = after.due
+    row.last_day = today
+    if right:
+        row.right = (row.right or 0) + 1
+    else:
+        row.wrong = (row.wrong or 0) + 1
+    session.flush()
+    return after
 
 
 def dismiss_alert(session: Session, alert_id: int) -> bool:

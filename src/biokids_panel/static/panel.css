@@ -1356,6 +1356,15 @@ td.num { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .guide-list__icon { font-size: 1.4rem; }
 
 .guide-tip { padding: var(--sp-2) 0; border-top: 1px solid var(--line); }
+
+/* The words a child knows well, in Analiz's English card (D-225). */
+.english-words { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.english-words__word {
+  padding: 2px var(--sp-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+}
 .guide-tip:first-of-type { border-top: 0; }
 .guide-tip p { margin-top: var(--sp-1); }
 

@@ -1629,6 +1629,20 @@ guide's link on the mail card.
 
 ---
 
+### 8.25 The English corner (D-225)
+
+Tick **İngilizce** for Elif under **Çocuklar → Uygulamalar ve siteler**, then on her
+screen open it and do today's lesson.
+
+**Pass:** the corner shows the word of the day and the twelve units; the lesson says
+"Yeni bir kelime!" in Turkish and each word in English, a wrong picture shakes and the
+word is said again, and the last screen counts the stars. With the natural voice
+installed the English is Piper's (`ls /var/lib/biokids-voices/models/piper/en-zio.onnx`),
+otherwise espeak-ng's. **Analiz** then shows the İngilizce card with four words met, and
+`sqlite3 /var/lib/biokids/biokids.db "select item, box from english_item"` lists them.
+With the assistant's microphone on, holding "Basılı tut ve söyle" and saying "cat" gives
+"Harika söyledin!".
+
 ## 9. After the run
 
 Only once §1–§8 have all passed:

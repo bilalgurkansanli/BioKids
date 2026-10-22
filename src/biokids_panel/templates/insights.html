@@ -210,6 +210,40 @@
         </p>
       </section>
 
+      {# ------------------------------------------- the English corner (D-225) #}
+      {% if english %}
+        {% set en = english.summary %}
+        <section class="card" id="english" aria-labelledby="h-english">
+          <h2 id="h-english"><span aria-hidden="true">🔤</span> {{ _('insights.english') }}</h2>
+          <p>{{ _('insights.english.met', met=en.words_met, known=en.words_known) }}</p>
+          <p class="muted">
+            {{ _('insights.english.period', new=en.new_in_period, days=english.days) }}
+            {% if english.seconds %}· {{ english.seconds|duration(_) }}{% endif %}
+          </p>
+          <p>
+            {% if en.current %}
+              {{ _('insights.english.now', unit=en.current.title(locale), done=en.units_done, total=en.units_total) }}
+            {% else %}
+              {{ _('insights.english.all_done') }}
+            {% endif %}
+          </p>
+          {% if en.known_words %}
+            <details>
+              <summary>{{ _('insights.english.known_words', count=en.known_words|length) }}</summary>
+              <p class="english-words">
+                {% for card in en.known_words %}<span class="english-words__word">{{ card.pic }} {{ card.en }}</span>{% endfor %}
+              </p>
+            </details>
+          {% endif %}
+          <p class="muted small">{{ _('insights.english.tip') }}</p>
+          {% if not english.natural %}
+            <div class="notice notice--warn">
+              <p>{{ _('insights.english.robot') }} <a href="/voices">{{ _('voices.open') }} →</a></p>
+            </div>
+          {% endif %}
+        </section>
+      {% endif %}
+
       {# ----------------------------------------------------- kinds of app #}
       {% if ins.shares %}
         <section class="card" aria-labelledby="h-kinds">

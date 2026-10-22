@@ -605,6 +605,31 @@ class VoiceLine(Base):
     __table_args__ = (Index("ix_voice_line_event", "event", "locale"),)
 
 
+class EnglishItem(Base):
+    """Where one child is with one thing in the English corner (D-225).
+
+    A word, a line or a unit's story (`biokids_core.english` names them), in a
+    Leitner box: the box says how well it is known, `due` when it comes back.
+    A row exists once the child has met the item. Small - a hundred-odd rows a
+    child - and kept as long as the child is: it is what they have learned,
+    not a record of what they did. Removing a child removes it with them.
+    """
+
+    __tablename__ = "english_item"
+
+    child_id: Mapped[int] = mapped_column(
+        ForeignKey("child.id", ondelete="CASCADE"), primary_key=True
+    )
+    item: Mapped[str] = mapped_column(String(64), primary_key=True)
+    box: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    due: Mapped[dt.date] = mapped_column(Date)
+    first_day: Mapped[dt.date] = mapped_column(Date)
+    """The local day the child first met it, for "new words this week"."""
+    right: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    wrong: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    last_day: Mapped[dt.date] = mapped_column(Date)
+
+
 class Setting(Base):
     __tablename__ = "setting"
 

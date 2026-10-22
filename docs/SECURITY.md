@@ -196,7 +196,7 @@ entry in `DECISIONS.md` and a note in the README.**
 | Hugging Face | one-time download of the assistant's models | yes: only with the AI package, only when the parent presses the button (D-165) |
 | `download.kiwix.org` and the mirror it redirects to | one-time download of the encyclopedia the assistant checks itself against, pinned by SHA-256 | yes: the same button, the same package (D-178) |
 | `github.com` and `release-assets.githubusercontent.com`, where it redirects | one-time download of the Piper program, release 2023.11.14-2, pinned by SHA-256 | yes: when the parent leaves the wizard's natural-voice box ticked (ticked for a Turkish family) or presses "Doğal sesi indir"; tried again every 30 minutes until it is there (D-196, D-223) |
-| `huggingface.co` and its CDN (`*.cdn.hf.co`), where it redirects | one-time download of Piper's Turkish voice, pinned to a commit and by SHA-256 | yes: the same box or button (D-196, D-223) |
+| `huggingface.co` and its CDN (`*.cdn.hf.co`), where it redirects | one-time download of Piper's Turkish voice and the English corner's English voice, pinned to a commit and by SHA-256 | yes: the same box or button (D-196, D-223, D-225) |
 
 Zero telemetry. No crash reporting. No version ping. No analytics.
 
@@ -226,6 +226,7 @@ from `[retention]` in `/etc/biokids/config.toml`:
 | minutes per day and per app (`usage_tick`, `ledger_day`) | `usage_days` | 400 days |
 | the audit log | `audit_days` | 365 days |
 | the children's requests | `requests_days` | 90 days |
+| what a child has learned in the English corner (`english_item`, D-225) | - | as long as the child is |
 
 The insights screen and the Sunday mail's highlights (D-206) are computed from these
 when they are read and store nothing of their own; the mail names no site and no

@@ -99,6 +99,9 @@ class Server:
 MODEL = b"an onnx model, " * 64
 SETTINGS = b'{"audio": {"sample_rate": 22050}, "dataset": "dfki"}'
 CARD = b"# Model card for dfki (medium)\n"
+ENGLISH_MODEL = b"an english onnx model, " * 48
+ENGLISH_SETTINGS = b'{"audio": {"sample_rate": 22050}, "dataset": "ljspeech"}'
+ENGLISH_CARD = b"# Model card for ljspeech (medium)\n"
 
 
 @pytest.fixture
@@ -110,15 +113,26 @@ def server(monkeypatch: pytest.MonkeyPatch) -> Server:
         (pinned(f"{natural_voice.TURKISH_VOICE}.onnx.json", SETTINGS), SETTINGS),
         (pinned(f"{natural_voice.TURKISH_VOICE}.MODEL_CARD", CARD), CARD),
     )
+    english = (
+        (pinned(f"{natural_voice.ENGLISH_VOICE}.onnx", ENGLISH_MODEL), ENGLISH_MODEL),
+        (
+            pinned(f"{natural_voice.ENGLISH_VOICE}.onnx.json", ENGLISH_SETTINGS),
+            ENGLISH_SETTINGS,
+        ),
+        (pinned(f"{natural_voice.ENGLISH_VOICE}.MODEL_CARD", ENGLISH_CARD), ENGLISH_CARD),
+    )
     tarball = piper_tarball()
     release = pinned(natural_voice.PIPER_RELEASE.name, tarball)
-    for entry, data in files:
+    for entry, data in (*files, *english):
         served.serve(entry, data)
     served.serve(release, tarball)
     monkeypatch.setattr(natural_voice, "VOICE_FILES", tuple(entry for entry, _ in files))
+    monkeypatch.setattr(natural_voice, "ENGLISH_FILES", tuple(entry for entry, _ in english))
     monkeypatch.setattr(natural_voice, "PIPER_RELEASE", release)
     monkeypatch.setattr(
-        natural_voice, "DOWNLOAD_BYTES", release.size + sum(len(d) for _, d in files)
+        natural_voice,
+        "DOWNLOAD_BYTES",
+        release.size + sum(len(d) for _, d in (*files, *english)),
     )
     return served
 
@@ -142,15 +156,17 @@ def test_what_is_pinned_is_what_was_checked() -> None:
     release = natural_voice.PIPER_RELEASE
     assert "/releases/download/2023.11.14-2/" in release.url
     assert release.url.startswith("https://github.com/rhasspy/piper/")
-    for entry in natural_voice.VOICE_FILES:
+    for entry in (*natural_voice.VOICE_FILES, *natural_voice.ENGLISH_FILES):
         assert entry.url.startswith("https://huggingface.co/rhasspy/piper-voices/resolve/")
         assert f"/resolve/{natural_voice.VOICES_COMMIT}/" in entry.url
         assert "/main/" not in entry.url
-    for entry in (release, *natural_voice.VOICE_FILES):
+    for entry in (release, *natural_voice.VOICE_FILES, *natural_voice.ENGLISH_FILES):
         assert len(entry.sha256) == 64 and int(entry.sha256, 16) >= 0
         assert entry.size > 0
-    # The button says "about 90 MB"; this is where that number comes from.
-    assert round(natural_voice.DOWNLOAD_BYTES / 1_000_000) == 90
+    # The box and the button say "about 153 MB"; this is where that number comes from.
+    assert round(natural_voice.DOWNLOAD_BYTES / 1_000_000) == 153
+    assert round(natural_voice.ENGLISH_BYTES / 1_000_000) == 64
+    assert "/en/en_US/ljspeech/medium/" in natural_voice.ENGLISH_FILES[0].url
 
 
 # ------------------------------------------------------------- fetching
@@ -337,6 +353,8 @@ def test_progress_is_read_from_the_files_themselves(config: Config, server: Serv
 
     partial.unlink()
     natural_voice.install_voice(voices(config), opener=server)
+    assert natural_voice.progress(config) < 100, "the English voice is still to come"
+    natural_voice.install_english(voices(config), opener=server)
     assert natural_voice.progress(config) == 100
 
 
@@ -347,13 +365,14 @@ def test_remove_takes_away_what_the_download_put_there_and_nothing_else(
     recording = config.paths.recorded_voice_dir / "tr" / "warn_1.wav"
     recording.parent.mkdir(parents=True, exist_ok=True)
     recording.write_bytes(b"a parent's voice")
-    own = voices(config) / "en-zio.onnx"
+    own = voices(config) / "en-sio.onnx"
     own.write_bytes(b"a voice the family added by hand")
 
     natural_voice.remove(config)
 
     assert not config.paths.piper_dir.exists()
     assert VoiceBank(config).stock_model("sio", "tr") is None
+    assert VoiceBank(config).stock_model("zio", "en") is None, "the English voice too"
     assert recording.exists(), "the parent's recordings are not the download's"
     assert own.exists()
 
@@ -578,3 +597,31 @@ def test_the_download_lands_where_the_unit_may_write() -> None:
     root = Path("/var/lib/biokids-voices")
     assert root in defaults.piper_dir.parents
     assert root in defaults.model_dir.parents
+
+
+def test_the_english_voice_is_zios_and_heard_as_it_was_recorded(
+    config: Config, server: Server
+) -> None:
+    """D-225: one woman's voice, for Zio, the one who teaches; Sio keeps espeak-ng."""
+    natural_voice.install(config, opener=server)
+    bank = VoiceBank(config)
+    model = bank.stock_model("zio", "en")
+    assert model is not None and model.read_bytes() == ENGLISH_MODEL
+    assert bank.stock_model("sio", "en") is None
+    assert bank.lift("zio", "en", model) == 1.0, "a voice only Zio has is not raised"
+    assert natural_voice.installed(config)
+    assert natural_voice.describe(config)["english"] == natural_voice.ENGLISH_VOICE
+
+
+def test_a_family_with_the_turkish_voice_gets_only_the_english_one(
+    config: Config, server: Server
+) -> None:
+    natural_voice.install_piper(config.paths.piper_dir, opener=server)
+    natural_voice.install_voice(voices(config), opener=server)
+    assert not natural_voice.installed(config), "not until the English voice is there"
+    server.requested.clear()
+    natural_voice.install(config, opener=server)
+    assert server.requested and all(
+        natural_voice.ENGLISH_VOICE in url for url in server.requested
+    ), server.requested
+    assert natural_voice.installed(config)

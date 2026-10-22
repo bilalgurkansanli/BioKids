@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ _('english.title') }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="/static/english.css?v={{ asset_version }}">
+{% endblock %}
+
+{#
+  One lesson (D-225), step by step: meet a word, find it among pictures, say a
+  line back, read a story. english.js draws each step from the data below and
+  says every word aloud; the page itself is only the frame and the way home.
+#}
+{% block body %}
+<div class="screen english english--lesson" data-band="{{ band }}">
+  <header class="head">
+    <a class="big-btn big-btn--quiet assistant__home" href="/english"
+       {% if young %}data-speak="{{ _('english.home') }}"{% endif %}>
+      <span aria-hidden="true">🔤</span> {{ _('english.home') }}
+    </a>
+    <div class="lesson-bar" aria-hidden="true">
+      <div class="lesson-bar__fill" id="lesson-progress"></div>
+    </div>
+    <span class="lesson-stars" aria-live="polite"><span aria-hidden="true">⭐</span> <span id="lesson-stars">0</span></span>
+  </header>
+
+  <main class="lesson" id="lesson" aria-live="polite">
+    <noscript><p class="english__hint">{{ _('english.needs_script') }}</p></noscript>
+  </main>
+</div>
+<script type="application/json" id="lesson-data">{{ lesson|tojson }}</script>
+<script src="/static/english.js?v={{ asset_version }}"></script>
+{% endblock %}

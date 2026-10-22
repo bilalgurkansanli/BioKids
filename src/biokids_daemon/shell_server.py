@@ -252,6 +252,8 @@ class ShellServer:
             ShellOp.REPORT_ACTIVITY: self._report_activity,
             ShellOp.REPORT_VISIT: self._report_visit,
             ShellOp.REPORT_SEARCH: self._report_search,
+            ShellOp.ENGLISH_STATE: self._english_state,
+            ShellOp.ENGLISH_ANSWER: self._english_answer,
             ShellOp.FIRST_RUN_DONE: self._first_run_done,
             ShellOp.REQUEST_SHUTDOWN: self._request_shutdown,
             ShellOp.ASK_A_PARENT: self._ask_a_parent,
@@ -293,6 +295,22 @@ class ShellServer:
         host = str(request.args.get("host", "")).strip().lower()[:253]
         self.supervisor.record_refused_search(caller.child_id, words, host)
         return Response(id=request.id, ok=True)
+
+    async def _english_state(self, caller: ShellCaller, request: Request) -> Response:
+        return Response(
+            id=request.id, ok=True, data=self.supervisor.english_state(caller.child_id)
+        )
+
+    async def _english_answer(self, caller: ShellCaller, request: Request) -> Response:
+        item = str(request.args.get("item", ""))[:64]
+        right = request.args.get("right") is True
+        box = self.supervisor.english_answer(caller.child_id, item, right)
+        return Response(
+            id=request.id,
+            ok=box is not None,
+            data={"box": box or 0},
+            error="" if box is not None else "english.unknown_item",
+        )
 
     async def _report_activity(self, caller: ShellCaller, request: Request) -> Response:
         self.supervisor.report_activity(
@@ -353,7 +371,9 @@ class ShellServer:
 
     async def _hear_assistant(self, caller: ShellCaller, request: Request) -> Response:
         audio = str(request.args.get("audio", ""))
-        heard = await self.assistant.hear(caller.child_id, audio)
+        # English is the only other language a child is ever heard in (D-225).
+        language = "en" if request.args.get("language") == "en" else None
+        heard = await self.assistant.hear(caller.child_id, audio, language)
         return Response(
             id=request.id,
             ok=bool(heard.get("ok")),

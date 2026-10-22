@@ -78,10 +78,10 @@ class ChildRuntime:
     earned_pending_s: int = 0
     """Earned seconds not yet announced; the celebration is in whole minutes."""
     visits_seen: dict[str, float] = field(default_factory=dict)
-    searches_seen: dict[str, float] = field(default_factory=dict)
-    """Refused searches already told to the parent, by their words (D-222)."""
     """Host -> BOOTTIME of its last recorded visit, so a site that is open all
     afternoon is one line in the history, not one per page (D-187)."""
+    searches_seen: dict[str, float] = field(default_factory=dict)
+    """Refused searches already told to the parent, by their words (D-222)."""
     earned_announced_at: float = 0.0
     """When the last celebration went out, in BOOTTIME seconds. Zero means never."""
 

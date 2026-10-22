@@ -63,6 +63,24 @@ class ShellClient:
         except (IpcError, OSError):
             return
 
+    async def english_state(self) -> dict[str, Any] | None:
+        """This child's boxes in the English corner (D-225), or None."""
+        try:
+            response = await self._client.call(ShellOp.ENGLISH_STATE)
+        except (IpcError, OSError) as exc:
+            log.warning("could not read the English corner: %s", exc)
+            return None
+        return dict(response.data) if response.ok else None
+
+    async def english_answer(self, item: str, right: bool) -> int | None:
+        """Record one answer; the item's new box, or None."""
+        try:
+            response = await self._client.call(ShellOp.ENGLISH_ANSWER, item=item, right=right)
+        except (IpcError, OSError) as exc:
+            log.warning("the English answer was not recorded: %s", exc)
+            return None
+        return int(response.data.get("box", 0)) if response.ok else None
+
     async def report_refused_search(self, words: str, host: str) -> None:
         try:
             await self._client.call(ShellOp.REPORT_SEARCH, words=words, host=host)
@@ -159,11 +177,15 @@ class ShellClient:
         except (IpcError, OSError) as exc:
             log.info("the assistant could not warm up: %s", exc)
 
-    async def hear_assistant(self, audio_b64: str) -> str | None:
-        """The words in a press-and-speak recording (D-166), or None."""
+    async def hear_assistant(self, audio_b64: str, language: str = "") -> str | None:
+        """The words in a press-and-speak recording (D-166), or None. With
+        `language` "en", heard as English (D-225)."""
         client = AsyncDaemonClient(self.socket_path, timeout=ASSISTANT_TIMEOUT_S)
+        args: dict[str, str] = {"audio": audio_b64}
+        if language:
+            args["language"] = language
         try:
-            response = await client.call(ShellOp.HEAR_ASSISTANT, audio=audio_b64)
+            response = await client.call(ShellOp.HEAR_ASSISTANT, **args)
         except (IpcError, OSError) as exc:
             log.warning("could not reach the assistant's ears: %s", exc)
             return None

@@ -707,6 +707,17 @@ draws them against the quota they had.
 
 ---
 
+### 3.11 The English corner
+
+**İngilizce** (`/english` on the launcher, D-225) is a tile like Resimlerim: a page of
+the launcher with the word of the day (tap to hear), one big "Bugünün dersi" button
+(or "Biraz daha oyna" once it is done), "Sözlüğüm" and the twelve units as a path, done
+ones ticked and the current one ringed. A lesson is one screen per step - meet, find,
+say back, story - with a bar and stars at the top and "İngilizce köşesi" to leave. Every
+word is said aloud before anything is asked, a wrong tap shakes and says the word again,
+and the buttons wait while a voice speaks. The parent sees it in **Analiz**, as a card
+and a highlight; there is no setting beyond the tile itself.
+
 ## 4. Writing rules
 
 - **Turkish is the primary voice of the product.** Write Turkish first, translate to

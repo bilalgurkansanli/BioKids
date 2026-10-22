@@ -468,3 +468,15 @@ def test_only_a_parents_save_answers_the_line(session: Session, child: Child) ->
         session, actor="parent:1", action="apps_changed", target=f"child:{child.id}"
     )
     assert repo.apps_saved_at(session, child.id) == row.ts
+
+
+def test_the_english_corner_is_suggested_for_every_age_and_its_websites_are_not() -> None:
+    """D-225: the corner is BioKids' own and offline; the two English websites
+    are a family's choice."""
+    catalog = load_catalog()
+    for age in (4, 7, 10):
+        suggested = {entry.slug for entry in catalog.suggested_for_age(age)}
+        assert "english" in suggested
+        assert not suggested & {"learnenglish-kids", "storyweaver"}
+    english = next(entry for entry in catalog.entries if entry.slug == "english")
+    assert english.is_builtin and english.default_category == "learning"

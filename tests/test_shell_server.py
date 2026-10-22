@@ -441,3 +441,73 @@ async def test_a_child_testing_the_wall_fills_no_more_than_a_days_worth(
 
     with db.session() as session:
         assert session.query(AiAlert).count() == SEARCH_ALERTS_PER_DAY
+
+
+# ------------------------------------------------------ the English corner (D-225)
+
+
+async def test_an_english_answer_moves_the_callers_box_and_nobody_elses(
+    running: dict[str, Any], db: Database
+) -> None:
+    from biokids_core.db import EnglishItem
+
+    server: ShellServer = running["server"]
+    elif_caller = caller_for(server, "elif")
+    response, _ = await server._dispatch(
+        elif_caller,
+        Request(
+            op=str(ShellOp.ENGLISH_ANSWER), args={"item": "animals/cat", "right": True}
+        ).encode(),
+    )
+    assert response.ok and response.data == {"box": 1}
+    state, _ = await server._dispatch(
+        elif_caller, Request(op=str(ShellOp.ENGLISH_STATE)).encode()
+    )
+    assert list(state.data["items"]) == ["animals/cat"]
+    assert state.data["items"]["animals/cat"][0] == 1
+
+    kerem, _ = await server._dispatch(
+        caller_for(server, "kerem"), Request(op=str(ShellOp.ENGLISH_STATE)).encode()
+    )
+    assert kerem.data["items"] == {}
+    with db.session() as session:
+        [row] = session.query(EnglishItem).all()
+        assert row.child_id == server.supervisor.by_user["elif"]
+        assert row.right == 1 and row.wrong == 0
+
+
+async def test_only_the_corners_own_items_are_kept(
+    running: dict[str, Any], db: Database
+) -> None:
+    from biokids_core.db import EnglishItem
+
+    server: ShellServer = running["server"]
+    response, _ = await server._dispatch(
+        caller_for(server, "elif"),
+        Request(
+            op=str(ShellOp.ENGLISH_ANSWER), args={"item": "x" * 500, "right": True}
+        ).encode(),
+    )
+    assert not response.ok and response.error == "english.unknown_item"
+    with db.session() as session:
+        assert session.query(EnglishItem).count() == 0
+
+
+async def test_a_word_said_back_is_heard_in_english(
+    running: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    server: ShellServer = running["server"]
+    heard: list[str | None] = []
+
+    async def hear(child_id: int, audio: str, language: str | None = None) -> dict[str, Any]:
+        heard.append(language)
+        return {"ok": True, "text": "cat"}
+
+    monkeypatch.setattr(server.assistant, "hear", hear)
+    for language in ("en", "fr", None):
+        args = {"audio": "UklGRg=="} | ({"language": language} if language else {})
+        await server._dispatch(
+            caller_for(server, "elif"),
+            Request(op=str(ShellOp.HEAR_ASSISTANT), args=args).encode(),
+        )
+    assert heard == ["en", None, None], "English, or the child's own language"

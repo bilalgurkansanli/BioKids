@@ -287,8 +287,16 @@ class AssistantGate:
         )
         log.info("assistant refused a question from child %s (%s)", child_id, category)
 
-    async def hear(self, child_id: int, audio_b64: str) -> dict[str, Any]:
-        """Press-and-speak: a short recording in, its words out. Nothing kept (D-166)."""
+    async def hear(
+        self, child_id: int, audio_b64: str, language: str | None = None
+    ) -> dict[str, Any]:
+        """Press-and-speak: a short recording in, its words out. Nothing kept (D-166).
+
+        `language` "en" hears the recording as English whatever the child's own
+        language: a word said back in the English corner (D-225). The same
+        switch guards it - the parent's "speak to the assistant" - because it
+        is the same microphone.
+        """
         runtime, policy = self._policy(child_id)
         if policy is None or not (policy.assistant_enabled and policy.assistant_voice):
             return {"ok": False, "error": "assistant.voice.off"}
@@ -296,7 +304,7 @@ class AssistantGate:
             return {"ok": False, "error": "assistant.voice.too_long"}
         try:
             response = await self.client.call(
-                "transcribe", audio=audio_b64, locale=runtime.locale
+                "transcribe", audio=audio_b64, locale=language or runtime.locale
             )
         except IpcError as exc:
             log.warning("the assistant service is not answering: %s", exc)

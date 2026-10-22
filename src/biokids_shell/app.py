@@ -46,7 +46,7 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from jinja2 import ChainableUndefined, Environment, FileSystemLoader, select_autoescape
 
-from biokids_core import album, daily, search_filter
+from biokids_core import album, daily, english, search_filter
 from biokids_core.appearance import Appearance
 from biokids_core.browser_policy import packed_extension
 from biokids_core.catalog import program_installed
@@ -118,6 +118,7 @@ TILE_ICONS: dict[str, str] = {
     "sun": "☀️",
     "power": "⏻",
     "gallery": "🏞️",
+    "abc": "🔤",
     "app": "🟦",
 }
 """Emoji rather than an icon set: they render at any size, need no asset
@@ -137,10 +138,11 @@ AVATARS: dict[str, str] = {
 the first thing they see on their own screen, so it has to be the one they chose
 rather than a default square."""
 
-BUILTIN_TILES = {"volume", "brightness", "shutdown", "drawings"}
+BUILTIN_TILES = {"volume", "brightness", "shutdown", "drawings", english.SLUG}
 """Drawn by the launcher and handled in the browser; they start no process."""
-PAGE_TILES: dict[str, str] = {"drawings": "/pictures"}
-"""Built-in tiles that are a page of the launcher's own: Resimlerim (D-212)."""
+PAGE_TILES: dict[str, str] = {"drawings": "/pictures", english.SLUG: "/english"}
+"""Built-in tiles that are a page of the launcher's own: Resimlerim (D-212) and
+the English corner (D-225)."""
 DEFAULT_VOLUME = 70
 """Where the volume slider starts when the sound's own level cannot be read."""
 CHEER_FILE = Path(".config") / "biokids" / "album-cheered"
@@ -875,6 +877,169 @@ def register_routes(app: FastAPI) -> None:
             },
         )
 
+    # ------------------------------------------------- English corner (D-225)
+
+    async def english_gate(request: Request) -> tuple[dict[str, Any] | None, Response | None]:
+        """The child's state, or the page to show instead: the corner is a tile
+        like any other, closed when the parent has not given it and while a
+        full screen - the time is up, a break - is what the child should see."""
+        data = await get_state(request).client.state()
+        if data is None:
+            return None, await render(get_state(request), request, "offline.html", None)
+        if _find_tile(data, english.SLUG) is None or _screen_for(data) is not None:
+            return None, RedirectResponse("/", status_code=303)
+        return data, None
+
+    @app.get("/english", response_class=HTMLResponse)
+    async def english_page(request: Request, shell: Shell) -> Response:
+        """İngilizce köşesi: today's lesson, the word of the day, how far the child has come."""
+        data, instead = await english_gate(request)
+        if instead is not None:
+            return instead
+        progress, today = _english_progress(await shell.client.english_state())
+        units = english.load_units()
+        lesson = english.plan_lesson(units, progress, today)
+        summary = english.summarize(units, progress)
+        return await render(
+            shell,
+            request,
+            "english.html",
+            data,
+            summary=summary,
+            units=units,
+            done={unit.slug for unit in units if _unit_done(unit, progress)},
+            word=english.word_of_the_day(
+                units, progress, today, salt=sum(map(ord, str(data.get("display_name", ""))))
+            ),
+            lesson_steps=len(lesson.steps),
+        )
+
+    @app.get("/english/lesson", response_class=HTMLResponse)
+    async def english_lesson(request: Request, shell: Shell, more: int = 0) -> Response:
+        """The lesson itself, drawn by english.js from the steps planned here.
+
+        `more` is the "play a bit more" after today's lesson: words already
+        met, found again, with no box moving (`english.practice`).
+        """
+        data, instead = await english_gate(request)
+        if instead is not None or data is None:
+            return instead or RedirectResponse("/", status_code=303)
+        progress, today = _english_progress(await shell.client.english_state())
+        units = english.load_units()
+        steps = () if more else english.plan_lesson(units, progress, today).steps
+        practice = not steps
+        if practice:
+            steps = english.practice(units, progress)
+        if not steps:
+            return RedirectResponse("/english", status_code=303)
+        assistant = data.get("assistant") or {}
+        tr = translator(normalise_locale(str(data.get("locale", "tr"))))
+        return await render(
+            shell,
+            request,
+            "english_lesson.html",
+            data,
+            lesson={
+                "steps": [step.as_json() for step in steps],
+                "practice": practice,
+                "mic": bool(assistant.get("voice")),
+                "older": str(data.get("age_band", "")) != AgeBand.YOUNG.value,
+                "praise": list(english.PRAISE),
+                "goodbye": english.GOODBYE,
+                "strings": _english_strings(tr),
+            },
+        )
+
+    @app.get("/english/words", response_class=HTMLResponse)
+    async def english_words(request: Request, shell: Shell) -> Response:
+        """Sözlüğüm: every word the child has met, by unit; a tap says it."""
+        data, instead = await english_gate(request)
+        if instead is not None:
+            return instead
+        progress, _today = _english_progress(await shell.client.english_state())
+        units = english.load_units()
+        return await render(
+            shell,
+            request,
+            "english_words.html",
+            data,
+            units=units,
+            met={item for item, state in progress.items() if state.met},
+            known={
+                item for item, state in progress.items() if state.box >= english.MASTERED_BOX
+            },
+        )
+
+    @app.post("/english/answer")
+    async def english_answer(request: Request, shell: Shell) -> Response:
+        """One answer from the lesson page; the daemon moves the item's box."""
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        body = await _json_body(request) or {}
+        item = str(body.get("item", ""))[:64]
+        box = await shell.client.english_answer(item, body.get("right") is True)
+        return JSONResponse({"ok": box is not None, "box": box or 0})
+
+    @app.post("/english/say")
+    async def english_say(request: Request, shell: Shell) -> Response:
+        """One line read aloud, answered once it has been said: English by the
+        English voice, an instruction in the child's own language."""
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        body = await _json_body(request) or {}
+        text = " ".join(str(body.get("text", "")).split())[:MAX_SAY_CHARS]
+        said = False
+        if text:
+            if body.get("lang") == english.LANGUAGE:
+                locale = english.LANGUAGE
+            else:
+                data = await shell.client.state() or {}
+                locale = normalise_locale(str(data.get("locale", "tr")))
+            said = await shell.say_and_wait(text, locale)
+        return JSONResponse({"ok": said}, headers={"Cache-Control": "no-store"})
+
+    @app.post("/english/hear")
+    async def english_hear(request: Request, shell: Shell, item: str = "") -> Response:
+        """A word or line said back, heard as English and compared (D-225, D-166).
+
+        Only where the parent let the child speak to the assistant: the same
+        microphone, the same switch. The recording is dropped once heard.
+        """
+        if not _from_launcher(request, "audio/wav"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        card = english.card_for(item)
+        audio = await request.body()
+        if card is None or not audio or len(audio) > MAX_RECORDING_BYTES:
+            return JSONResponse({"error": "bad request"}, status_code=400)
+        text = await shell.client.hear_assistant(
+            base64.b64encode(audio).decode("ascii"), english.LANGUAGE
+        )
+        del audio
+        return JSONResponse(
+            {
+                "ok": text is not None,
+                "heard": text or "",
+                "match": bool(text) and english.heard_matches(text or "", card.en),
+            },
+            headers={"Cache-Control": "no-store"},
+        )
+
+    @app.post("/english/active")
+    async def english_active(request: Request, shell: Shell) -> Response:
+        """The lesson page, every so often while it is in front: the minutes are
+        the corner's, in the kind of app the parent gave it - learning, unless
+        they chose otherwise - so they earn time like any learning app (D-45)."""
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        data = await shell.client.state()
+        tile = _find_tile(data, english.SLUG)
+        if tile is None:
+            return JSONResponse({"ok": False})
+        await shell.client.report_activity(
+            english.SLUG, str(tile.get("name", english.SLUG)), str(tile.get("category", ""))
+        )
+        return JSONResponse({"ok": True})
+
     # ------------------------------------------------------------- events
 
     @app.get("/spoken")
@@ -1340,6 +1505,67 @@ def _cheer(
     text = tr("album.cheer", sticker=name)
     shell.in_background(shell.say(text, locale), "album-cheer")
     return {"sticker": sticker.emoji, "name": name, "text": text}
+
+
+def _english_progress(
+    found: dict[str, Any] | None,
+) -> tuple[dict[str, english.ItemState], dt.date]:
+    """The daemon's answer to `english_state` as boxes and a day.
+
+    Without the daemon, no progress and today's date: the child still gets a
+    lesson, from the beginning, and nothing they answer is lost but that one.
+    """
+    today = dt.date.today()
+    if not found:
+        return {}, today
+    with contextlib.suppress(ValueError, TypeError):
+        today = dt.date.fromisoformat(str(found.get("today", "")))
+    progress: dict[str, english.ItemState] = {}
+    items = found.get("items")
+    if isinstance(items, dict):
+        for item, raw in items.items():
+            try:
+                box, due, first = raw
+                progress[str(item)] = english.ItemState(
+                    int(box),
+                    dt.date.fromisoformat(due) if due else None,
+                    dt.date.fromisoformat(first) if first else None,
+                )
+            except (TypeError, ValueError):
+                continue
+    return progress, today
+
+
+def _unit_done(unit: english.Unit, progress: dict[str, english.ItemState]) -> bool:
+    return all(
+        (state := progress.get(item)) is not None and state.met for item in unit.item_ids()
+    )
+
+
+ENGLISH_STRINGS = (
+    "new_word",
+    "find",
+    "wrong",
+    "line",
+    "story",
+    "question",
+    "again",
+    "say",
+    "said",
+    "next",
+    "listening",
+    "heard_ok",
+    "heard_again",
+    "mic_failed",
+    "done",
+    "home",
+    "more",
+)
+
+
+def _english_strings(tr: Translator) -> dict[str, str]:
+    """What the lesson page says and shows in the child's own language."""
+    return {key: tr(f"english.{key}") for key in ENGLISH_STRINGS}
 
 
 def _album_words(tr: Translator, found: album.Album) -> dict[str, str]:

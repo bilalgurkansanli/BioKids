@@ -1,0 +1,293 @@
+/* The English corner (D-225).
+ *
+ * Big pictures, big words, three choices a finger cannot miss. The young band
+ * gets bigger pictures and no Turkish under the word (it cannot read it yet);
+ * the older band gets both. Everything that speaks is a button.
+ */
+
+.english__main {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--sp-5) var(--sp-5);
+  display: grid;
+  gap: var(--sp-4);
+  align-content: start;
+}
+
+.english__title {
+  margin: 0;
+  font-family: var(--font-kid);
+  font-size: 2rem;
+}
+
+.english__hint {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 1.1rem;
+}
+
+.english__done {
+  margin: 0;
+  font-family: var(--font-kid);
+  font-size: 1.6rem;
+}
+
+/* ------------------------------------------------------- the door page */
+
+.word-day {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-2);
+}
+
+.word-day__title {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.word-day__card {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-1);
+  min-width: 260px;
+  padding: var(--sp-4) var(--sp-5);
+  border: 3px solid color-mix(in srgb, var(--bio-teal) 45%, var(--line));
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.word-day__pic { font-size: 96px; line-height: 1; }
+.word-day__en { font-family: var(--font-kid); font-size: 2.4rem; font-weight: 700; }
+.word-day__tr { color: var(--ink-soft); font-size: 1.1rem; }
+.word-day__hear { font-size: 1.6rem; }
+
+.english__go {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  align-items: center;
+  justify-content: center;
+}
+
+.english__start { font-size: 1.6rem; }
+
+.english__path-title {
+  margin: 0 0 var(--sp-2);
+  text-align: center;
+  font-family: var(--font-kid);
+  font-size: 1.4rem;
+}
+
+.unit-path {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--sp-2);
+}
+
+.unit-path__unit {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-3) var(--sp-2);
+  border: 2px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  text-align: center;
+}
+
+.unit-path__icon { font-size: 40px; line-height: 1; }
+.unit-path__name { font-size: .95rem; }
+.unit-path__unit--later { opacity: .55; }
+.unit-path__unit--now {
+  border-color: var(--bio-indigo);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bio-indigo) 25%, transparent);
+}
+.unit-path__mark {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  color: var(--ok);
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+/* ----------------------------------------------------------- the lesson */
+
+.english--lesson .head { justify-content: space-between; }
+
+.lesson-bar {
+  flex: 1;
+  height: 16px;
+  border-radius: var(--r-pill);
+  background: var(--line);
+  overflow: hidden;
+}
+
+.lesson-bar__fill {
+  width: 0;
+  height: 100%;
+  background: var(--ok);
+  transition: width .3s ease;
+}
+
+.lesson-stars {
+  font-family: var(--font-kid);
+  font-size: 1.6rem;
+  font-weight: 700;
+  min-width: 80px;
+  text-align: right;
+}
+
+.lesson {
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-5) var(--sp-5);
+}
+
+.lesson-say {
+  margin: 0;
+  font-family: var(--font-kid);
+  font-size: 1.5rem;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.lesson-say--big { font-size: 2rem; color: var(--ink); }
+
+.lesson-card {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-4) var(--sp-5);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+  text-align: center;
+  max-width: 900px;
+}
+
+.lesson-card__pic { font-size: 110px; line-height: 1.1; }
+.lesson-card--big .lesson-card__pic { font-size: 160px; }
+.lesson-card__en { font-family: var(--font-kid); font-size: 2.6rem; font-weight: 700; }
+.lesson-card--big .lesson-card__en { font-size: 3.4rem; }
+.lesson-card__tr { color: var(--ink-soft); font-size: 1.3rem; }
+
+.lesson-question { display: grid; justify-items: center; gap: var(--sp-1); text-align: center; }
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sp-4);
+}
+
+.choice {
+  width: var(--choice, 200px);
+  height: var(--choice, 200px);
+  border: 4px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  font-size: calc(var(--choice, 200px) * .55);
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .12s ease, border-color .12s ease;
+}
+
+.screen[data-band="8-10"] .choice { --choice: 170px; }
+.choice:hover, .choice:focus-visible { transform: translateY(-3px); border-color: var(--bio-indigo); }
+.choice.is-right { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, var(--surface)); }
+.choice.is-wrong { border-color: var(--warn); animation: english-shake .4s ease; }
+
+@keyframes english-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+.lesson-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sp-3);
+}
+
+.lesson-actions .big-btn { min-height: 72px; padding: 0 var(--sp-5); font-size: 1.3rem; }
+.lesson-mic.is-on { background: var(--bio-coral); color: #fff; border-color: var(--bio-coral); }
+
+/* While a voice speaks, the buttons wait for it: dimmed, not hidden. */
+.lesson.is-speaking .big-btn,
+.lesson.is-speaking .choice { opacity: .7; }
+
+.lesson-finish { font-size: 140px; line-height: 1; animation: english-pop .6s ease; }
+
+@keyframes english-pop {
+  0% { transform: scale(.3); opacity: 0; }
+  70% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* ------------------------------------------------------------- my words */
+
+.word-unit__title {
+  margin: 0 0 var(--sp-2);
+  font-family: var(--font-kid);
+  font-size: 1.4rem;
+}
+
+.word-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--sp-2);
+}
+
+.word {
+  position: relative;
+  width: 100%;
+  min-height: 150px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--sp-1);
+  border: 2px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.word__pic { font-size: 56px; line-height: 1; }
+.word__en { font-family: var(--font-kid); font-size: 1.4rem; font-weight: 700; }
+.word__tr { color: var(--ink-soft); font-size: .95rem; }
+.word__star { position: absolute; top: 6px; right: 8px; }
+.word--known { border-color: color-mix(in srgb, var(--warn) 60%, var(--line)); }
+.word--later {
+  color: var(--line);
+  font-size: 48px;
+  font-weight: 700;
+  cursor: default;
+  border-style: dashed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .choice.is-wrong, .lesson-finish { animation: none; }
+}

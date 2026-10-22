@@ -590,6 +590,45 @@ suggest = false
 description_tr = "Reklamsız eğitici oyunlar. İngilizce."
 description_en = "Ad-free learning games from the US public broadcaster."
 
+[[app]]
+# English videos, songs, stories and games from the British Council for children
+# learning English (D-225). Free and without advertising; in English, so a family
+# chooses it on purpose.
+slug = "learnenglish-kids"
+name_tr = "LearnEnglish Kids"
+name_en = "LearnEnglish Kids"
+exec = []
+url = "https://learnenglishkids.britishcouncil.org"
+allow = ["learnenglishkids.britishcouncil.org"]
+package = ""
+kind = "web"
+icon = "abc"
+default_category = "learning"
+min_age = 6
+max_age = 10
+suggest = false
+description_tr = "British Council'in İngilizce öğrenen çocuklar için şarkıları, hikâyeleri ve oyunları. Ücretsiz, reklamsız; İngilizce."
+description_en = "Songs, stories and games for children learning English, from the British Council. Free, no advertising."
+
+[[app]]
+# Free picture books, many with a read-along voice, sorted into reading levels
+# (D-225). Pratham Books' StoryWeaver, openly licensed (CC BY 4.0).
+slug = "storyweaver"
+name_tr = "Hikâye Kitaplığı"
+name_en = "StoryWeaver"
+exec = []
+url = "https://storyweaver.org.in/en/"
+allow = ["storyweaver.org.in"]
+package = ""
+kind = "web"
+icon = "book"
+default_category = "learning"
+min_age = 5
+max_age = 10
+suggest = false
+description_tr = "Seviyelere ayrılmış ücretsiz resimli kitaplar; çoğu sesli okunabiliyor. İngilizce ve birçok dilde."
+description_en = "Free picture books in reading levels, many with read-along audio. English and many other languages."
+
 # --- built-in tiles --------------------------------------------------------
 # Served by the launcher itself. They have no process and consume no category
 # time; `biokids-shell` renders them directly.
@@ -625,6 +664,24 @@ min_age = 4
 max_age = 10
 description_tr = "Çocuğunuzun Boya ve Çizim'de yaptığı resimler, büyük ve en yenisi önde. Yalnızca bu bilgisayarda, çocuğun kendi ekranında görünür; panele gelmez."
 description_en = "The pictures your child made in Paint and Draw, big and newest first. Shown only on this computer, on the child's own screen; never sent to the panel."
+
+[[app]]
+# İngilizce (D-225): the English corner, a page of the launcher. A short lesson
+# a day - new words met, found among pictures and said back, sentences and a
+# story - each word coming back just before it would be forgotten. Its minutes
+# are learning minutes. Suggested for every age.
+slug = "english"
+name_tr = "İngilizce"
+name_en = "English"
+exec = []
+package = ""
+kind = "builtin"
+icon = "abc"
+default_category = "learning"
+min_age = 4
+max_age = 10
+description_tr = "Her gün birkaç dakikalık İngilizce: resimli kelimeler, dinle ve söyle, küçük hikâyeler. Kelimeler unutulmadan hemen önce yeniden gelir; ilerlemesini Analiz'de görürsünüz."
+description_en = "A few minutes of English a day: words with pictures, listen and say, little stories. Each word comes back just before it would be forgotten; you see the progress in Insights."
 
 [[app]]
 slug = "volume"

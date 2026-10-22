@@ -22,6 +22,10 @@ def _natural(view: PanelView) -> dict[str, Any]:
     return {
         "state": state,
         "speaks": natural_voice.natural_speaks(config),
+        # The English corner's voice (D-225), which a family that downloaded the
+        # Turkish one before it existed does not have yet.
+        "english": natural_voice.english_speaks(config),
+        "english_mb": round(natural_voice.ENGLISH_BYTES / 1_000_000),
         # A failed download the daemon will start again by itself (D-223).
         "retrying": state in {natural_voice.FAILED, natural_voice.ABSENT}
         and repo.get_setting(view.session, natural_voice.WANTED_SETTING, "")

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ _('english.title') }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="/static/english.css?v={{ asset_version }}">
+{% endblock %}
+
+{#
+  The English corner's door (D-225): today's lesson as the one big button, the
+  word of the day to hear, and how far the child has come, unit by unit. The
+  lesson is its own page; this one works without a script except for "hear".
+#}
+{% block body %}
+<div class="screen english" data-band="{{ band }}">
+  <header class="head">
+    <a class="big-btn big-btn--quiet assistant__home" href="/"
+       {% if young %}data-speak="{{ _('assistant.home') }}"{% endif %}>
+      <span aria-hidden="true">🏠</span> {{ _('assistant.home') }}
+    </a>
+    <h1 class="english__title" {% if young %}data-speak="{{ _('english.title') }}"{% endif %}>
+      <span aria-hidden="true">🔤</span> {{ _('english.title') }}
+    </h1>
+  </header>
+
+  <main class="english__main">
+    {% if word %}
+      <section class="word-day" aria-labelledby="word-day-title">
+        <h2 class="word-day__title" id="word-day-title">{{ _('english.word_of_day') }}</h2>
+        <button class="word-day__card" type="button" data-say-en="{{ word.en }}"
+                aria-label="{{ _('english.again') }}: {{ word.en }}">
+          <span class="word-day__pic" aria-hidden="true">{{ word.pic }}</span>
+          <span class="word-day__en">{{ word.en }}</span>
+          {% if not young %}<span class="word-day__tr">{{ word.tr }}</span>{% endif %}
+          <span class="word-day__hear" aria-hidden="true">🔊</span>
+        </button>
+      </section>
+    {% endif %}
+
+    <section class="english__go">
+      {% if lesson_steps %}
+        <a class="big-btn big-btn--ok english__start" href="/english/lesson"
+           {% if young %}data-speak="{{ _('english.start') }}"{% endif %}>
+          <span aria-hidden="true">▶</span>&nbsp;{{ _('english.start') }}
+        </a>
+        <p class="english__hint">{{ _('english.start.help') }}</p>
+      {% else %}
+        <p class="english__done" {% if young %}data-speak-on-load{% endif %}>{{ _('english.done_today') }}</p>
+        {% if summary.words_met %}
+          <a class="big-btn english__start" href="/english/lesson?more=1"
+             {% if young %}data-speak="{{ _('english.more') }}"{% endif %}>
+            <span aria-hidden="true">🎲</span>&nbsp;{{ _('english.more') }}
+          </a>
+        {% endif %}
+      {% endif %}
+      <a class="big-btn big-btn--quiet english__book" href="/english/words"
+         {% if young %}data-speak="{{ _('english.words') }}"{% endif %}>
+        <span aria-hidden="true">📒</span>&nbsp;{{ _('english.words') }}
+      </a>
+    </section>
+
+    <section class="english__path" aria-labelledby="path-title">
+      <h2 class="english__path-title" id="path-title">
+        {{ _('english.known', count=summary.words_met) }}
+      </h2>
+      <ol class="unit-path">
+        {% for unit in units %}
+          {% set state = 'done' if unit.slug in done else ('now' if summary.current and unit.slug == summary.current.slug else 'later') %}
+          <li class="unit-path__unit unit-path__unit--{{ state }}"
+              title="{{ unit.title(locale) }}">
+            <span class="unit-path__icon" aria-hidden="true">{{ unit.icon }}</span>
+            <span class="unit-path__name">{{ unit.title(locale) }}</span>
+            {% if state == 'done' %}<span class="unit-path__mark" aria-label="{{ _('english.unit_done') }}">✓</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ol>
+    </section>
+  </main>
+</div>
+<script src="/static/english.js?v={{ asset_version }}"></script>
+{% endblock %}

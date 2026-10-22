@@ -97,6 +97,10 @@ class ShellOp(StrEnum):
     """A site the child opened, by host name only, from the extension (D-187)."""
     REPORT_SEARCH = "report_search"
     """The words of a search the browser refused, for the parent (D-222)."""
+    ENGLISH_STATE = "english_state"
+    """Where the calling child is in the English corner: their boxes (D-225)."""
+    ENGLISH_ANSWER = "english_answer"
+    """One answer in an English lesson; the item's box moves (D-225)."""
     FIRST_RUN_DONE = "first_run_done"
     REQUEST_SHUTDOWN = "request_shutdown"
     """The child pressed the shutdown tile (D-100). The daemon decides, and says
@@ -109,7 +113,9 @@ class ShellOp(StrEnum):
     ASSISTANT_MORE = "assistant_more"
     """The next sentences of this child's answer in progress, by its id (D-216)."""
     HEAR_ASSISTANT = "hear_assistant"
-    """A short recording to turn into a question, if press-and-speak is on (D-166)."""
+    """A short recording to turn into a question, if press-and-speak is on (D-166).
+    With `language` "en", heard as English: a word said back in the English
+    corner (D-225)."""
     WARM_ASSISTANT = "warm_assistant"
     """The child opened the assistant: load the model now, not at the question."""
     SUBSCRIBE_EVENTS = "subscribe_events"

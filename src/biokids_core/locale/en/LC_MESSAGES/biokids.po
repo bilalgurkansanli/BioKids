@@ -1725,13 +1725,13 @@ msgid "voices.natural.now_natural"
 msgstr "Right now Zio and Sio speak with a natural voice."
 
 msgid "voices.natural.offer"
-msgstr "You can download a Turkish voice that sounds much more like a person."
+msgstr "You can download a Turkish voice that sounds much more like a person, and an English voice for the English corner."
 
 msgid "voices.natural.download"
 msgstr "Download the natural voice (about {size} MB)"
 
 msgid "voices.natural.licence"
-msgstr "This voice is free for a family's personal, non-commercial use. It does not come with BioKids: it is downloaded once, from the people who made it, when you press the button."
+msgstr "The Turkish voice is free for a family's personal, non-commercial use; the English voice is in the public domain. Neither comes with BioKids: they are downloaded once, from the people who made them, when you press the button."
 
 msgid "voices.natural.zio"
 msgstr "The Turkish natural voice is a man's. Sio speaks it as it is, Zio a little higher."
@@ -2877,7 +2877,7 @@ msgid "wizard.extras.natural"
 msgstr "Zio and Sio speak with a natural, human-like voice (about {size} MB is downloaded)"
 
 msgid "wizard.extras.natural.help"
-msgstr "Instead of the robot voice. The voice is Turkish, free for a family's personal use, and downloaded once, from its makers, to this computer. Without a network, it comes down by itself once there is one."
+msgstr "Instead of the robot voice. The Turkish voice and the English corner's voice are downloaded once, from their makers, to this computer; the Turkish one is free for a family's personal use, the English one is in the public domain. Without a network, they come down by themselves once there is one."
 
 msgid "wizard.done.natural"
 msgstr "Zio and Sio's natural voice is downloading now; in a few minutes it takes the robot voice's place."
@@ -3206,3 +3206,129 @@ msgstr "Could my child change the PIN this way?"
 
 msgid "guide.forgot.tip.2.a"
 msgstr "No. The command asks for the computer's administrator password, and children's accounts cannot be administrators."
+
+# --- the English corner, for the child (D-225) ---
+msgid "english.title"
+msgstr "English"
+
+msgid "english.home"
+msgstr "English corner"
+
+msgid "english.word_of_day"
+msgstr "Word of the day"
+
+msgid "english.start"
+msgstr "Today's lesson"
+
+msgid "english.start.help"
+msgstr "About five minutes. Listen, tap, say it!"
+
+msgid "english.done_today"
+msgstr "Today's lesson is done. Well done! 🎉"
+
+msgid "english.more"
+msgstr "Play a bit more"
+
+msgid "english.words"
+msgstr "My words"
+
+msgid "english.words.intro"
+msgstr "The words you have met. Tap one to hear it."
+
+msgid "english.words.later"
+msgstr "Not met yet"
+
+msgid "english.known_word"
+msgstr "You know this one well"
+
+msgid "english.known"
+msgstr "You have met {count} words"
+
+msgid "english.unit_done"
+msgstr "Done"
+
+msgid "english.needs_script"
+msgstr "This lesson page could not open. You could tell a grown-up."
+
+msgid "english.new_word"
+msgstr "A new word!"
+
+msgid "english.find"
+msgstr "Which one? Listen and tap."
+
+msgid "english.wrong"
+msgstr "Let's listen once more."
+
+msgid "english.line"
+msgstr "Listen, then say it too."
+
+msgid "english.story"
+msgstr "Story time!"
+
+msgid "english.question"
+msgstr "Can you guess?"
+
+msgid "english.again"
+msgstr "Listen again"
+
+msgid "english.say"
+msgstr "Hold and say it"
+
+msgid "english.said"
+msgstr "I said it"
+
+msgid "english.next"
+msgstr "Next"
+
+msgid "english.listening"
+msgstr "Listening…"
+
+msgid "english.heard_ok"
+msgstr "You said it beautifully!"
+
+msgid "english.heard_again"
+msgstr "Shall we try again? Listen first."
+
+msgid "english.mic_failed"
+msgstr "The microphone did not open."
+
+msgid "english.done"
+msgstr "Well done! You collected {count} stars today."
+
+# --- the English corner's voice (D-225) ---
+msgid "voices.natural.english_offer"
+msgstr "Download the English voice too, so the English corner's words are heard in a natural voice."
+
+msgid "voices.natural.english_download"
+msgstr "Download the English voice (about {size} MB)"
+
+# --- the English corner, for the parent (D-225) ---
+msgid "insights.english"
+msgstr "English"
+
+msgid "insights.english.met"
+msgstr "Has met {met} words and knows {known} of them well."
+
+msgid "insights.english.period"
+msgstr "This period: {new} new words; practised on {days} days"
+
+msgid "insights.english.now"
+msgstr "Now: {unit} ({done} of {total} units done)"
+
+msgid "insights.english.all_done"
+msgstr "Has finished every unit! Now going over what was learned."
+
+msgid "insights.english.known_words"
+msgstr "Words known well ({count})"
+
+msgid "insights.english.tip"
+msgstr "Tip: use the words they learn during the day too, such as \"Can I have water, please?\". The language heard at home is learned fastest."
+
+msgid "insights.english.robot"
+msgstr "The English words are read by the robot voice for now. Download the English voice for a natural one."
+
+msgid "insights.h.english"
+msgstr "Met {count} new English words."
+
+msgid "insights.s.english"
+msgstr "Use the words they learn during the day too; the language heard at home is learned fastest."

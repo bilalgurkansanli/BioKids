@@ -32,6 +32,14 @@
       {% if natural.state == 'installed' %}
         <p class="help">{{ _('voices.natural.zio') }}</p>
       {% endif %}
+      {% if not natural.english %}
+        {# D-225: the English corner's voice, for a family that has the Turkish one. #}
+        <p>{{ _('voices.natural.english_offer') }}</p>
+        <form method="post" action="/voice-natural">
+          <input type="hidden" name="csrf_token" value="{{ csrf }}">
+          <button class="btn" type="submit">{{ _('voices.natural.english_download', size=natural.english_mb) }}</button>
+        </form>
+      {% endif %}
     {% else %}
       {% if natural.retrying %}
         {# Asked for and not here yet: the daemon tries again by itself (D-223). #}

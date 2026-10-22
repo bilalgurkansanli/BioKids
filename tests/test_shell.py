@@ -101,6 +101,10 @@ class FakeShellDaemon:
         self.asked_kinds: list[str] = []
         self.visits: list[str] = []
         self.searches: list[tuple[str, str]] = []
+        self.english: dict[str, Any] | None = {"today": "2026-10-22", "items": {}}
+        self.english_answers: list[tuple[str, bool]] = []
+        self.heard: list[str] = []
+        self.hear_text: str | None = "a cat"
         self.shutdown_answer: ShutdownOutcome | None = ShutdownOutcome.POWEROFF
 
     async def available(self) -> bool:
@@ -130,6 +134,17 @@ class FakeShellDaemon:
 
     async def report_refused_search(self, words: str, host: str) -> None:
         self.searches.append((words, host))
+
+    async def english_state(self) -> dict[str, Any] | None:
+        return self.english
+
+    async def english_answer(self, item: str, right: bool) -> int | None:
+        self.english_answers.append((item, right))
+        return 1 if item.count("/") == 1 else None
+
+    async def hear_assistant(self, audio_b64: str, language: str = "") -> str | None:
+        self.heard.append(language)
+        return self.hear_text
 
     async def ask_a_parent(self, url: str, kind: str = "site") -> tuple[bool, str]:
         self.asked.append(url)
@@ -1987,3 +2002,176 @@ def test_the_launcher_says_which_apps_are_open(client: TestClient) -> None:
 
 def test_a_rebound_name_cannot_ask_which_apps_are_open(client: TestClient) -> None:
     assert client.get("/running", headers={"host": "evil.example:7879"}).status_code == 421
+
+
+# ------------------------------------------------------ the English corner (D-225)
+
+ENGLISH_TILE = {
+    "slug": "english",
+    "name": "İngilizce",
+    "icon": "abc",
+    "kind": "builtin",
+    "url": "",
+    "exec": "",
+    "category": "learning",
+}
+
+
+@pytest.fixture
+def with_english(daemon: FakeShellDaemon) -> FakeShellDaemon:
+    assert daemon.data is not None
+    daemon.data["tiles"] = [*daemon.data["tiles"], ENGLISH_TILE]
+    return daemon
+
+
+def _json_post(client: TestClient, path: str, body: dict[str, Any]) -> Any:
+    return client.post(
+        path,
+        json=body,
+        headers={"origin": LAUNCHER, "sec-fetch-site": "same-origin"},
+    )
+
+
+def test_the_english_tile_is_a_page_of_the_launcher(
+    client: TestClient, with_english: FakeShellDaemon
+) -> None:
+    answer = client.post("/launch/english", headers={"origin": LAUNCHER}).json()
+    assert answer == {"ok": True, "builtin": "english", "page": "/english"}
+    assert with_english.launched == [], "no permission asked: it starts no process"
+
+
+def test_the_corner_opens_on_todays_lesson_and_the_word_of_the_day(
+    client: TestClient, with_english: FakeShellDaemon
+) -> None:
+    page = client.get("/english").text
+    assert 'href="/english/lesson"' in page
+    assert 'data-say-en="cat"' in page, "before any lesson, the first word"
+    assert "0 kelimeyle tanıştın" in _visible_text(page)
+    assert page.count("unit-path__unit--now") == 1
+
+
+def test_without_the_tile_there_is_no_corner(client: TestClient) -> None:
+    response = client.get("/english", follow_redirects=False)
+    assert response.status_code == 303 and response.headers["location"] == "/"
+    assert client.get("/english/lesson", follow_redirects=False).status_code == 303
+
+
+def test_the_lesson_page_carries_the_steps_planned_for_today(
+    client: TestClient, with_english: FakeShellDaemon
+) -> None:
+    import json
+    import re
+
+    page = client.get("/english/lesson").text
+    raw = re.search(
+        r'<script type="application/json" id="lesson-data">(.*?)</script>', page, re.S
+    )
+    assert raw is not None
+    lesson = json.loads(raw.group(1))
+    assert [step["kind"] for step in lesson["steps"]] == ["meet"] * 4 + ["find"] * 4
+    assert lesson["practice"] is False
+    assert lesson["mic"] is False, "only where the parent let the child speak"
+    assert lesson["older"] is False
+    assert lesson["strings"]["find"] == "Hangisi? Dinle ve dokun."
+    assert "/static/english.js" in page
+
+
+def test_after_the_lesson_more_is_practice_that_moves_no_box(
+    client: TestClient, with_english: FakeShellDaemon
+) -> None:
+    import json
+    import re
+
+    with_english.english = {
+        "today": "2026-10-22",
+        "items": {"animals/cat": [2, "2026-10-25", "2026-10-20"]},
+    }
+    page = client.get("/english/lesson?more=1").text
+    raw = re.search(r'id="lesson-data">(.*?)</script>', page, re.S)
+    assert raw is not None
+    lesson = json.loads(raw.group(1))
+    assert lesson["practice"] is True
+    assert [step["item"] for step in lesson["steps"]] == ["animals/cat"]
+
+
+def test_an_answer_goes_to_the_daemon(
+    client: TestClient, with_english: FakeShellDaemon
+) -> None:
+    reply = _json_post(client, "/english/answer", {"item": "animals/cat", "right": True})
+    assert reply.json() == {"ok": True, "box": 1}
+    assert with_english.english_answers == [("animals/cat", True)]
+
+
+def test_a_website_cannot_post_an_answer(
+    client: TestClient, with_english: FakeShellDaemon
+) -> None:
+    reply = client.post(
+        "/english/answer",
+        json={"item": "animals/cat", "right": True},
+        headers={"origin": "https://example.com", "sec-fetch-site": "cross-site"},
+    )
+    assert reply.status_code == 403
+    assert with_english.english_answers == []
+
+
+def test_english_is_said_by_the_english_voice_and_the_rest_in_the_childs_language(
+    client: TestClient, with_english: FakeShellDaemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    said: list[tuple[str, str]] = []
+
+    async def say_and_wait(text: str, locale: str) -> bool:
+        said.append((text, locale))
+        return True
+
+    monkeypatch.setattr(client.app.state.shell, "say_and_wait", say_and_wait)  # type: ignore[attr-defined]
+    assert _json_post(client, "/english/say", {"text": "cat", "lang": "en"}).json() == {
+        "ok": True
+    }
+    _json_post(client, "/english/say", {"text": "Yeni bir kelime!", "lang": "ui"})
+    assert said == [("cat", "en"), ("Yeni bir kelime!", "tr")]
+
+
+def test_a_word_said_back_is_heard_as_english_and_compared(
+    client: TestClient, with_english: FakeShellDaemon
+) -> None:
+    wav = b"RIFF" + b"\0" * 64
+    headers = {"origin": LAUNCHER, "content-type": "audio/wav", "sec-fetch-site": "same-origin"}
+    reply = client.post("/english/hear?item=animals/cat", content=wav, headers=headers).json()
+    assert reply == {"ok": True, "heard": "a cat", "match": True}
+    assert with_english.heard == ["en"]
+    with_english.hear_text = "dog"
+    reply = client.post("/english/hear?item=animals/cat", content=wav, headers=headers).json()
+    assert reply["match"] is False
+    bad = client.post("/english/hear?item=animals/unicorn", content=wav, headers=headers)
+    assert bad.status_code == 400
+
+
+def test_the_lesson_minutes_are_the_corners_in_its_kind_of_app(
+    client: TestClient, with_english: FakeShellDaemon
+) -> None:
+    assert _json_post(client, "/english/active", {}).json() == {"ok": True}
+    assert with_english.activity == [("english", "İngilizce", "learning")]
+
+
+def test_my_words_shows_the_met_ones_and_keeps_the_rest_for_later(
+    client: TestClient, with_english: FakeShellDaemon
+) -> None:
+    with_english.english = {
+        "today": "2026-10-22",
+        "items": {
+            "animals/cat": [5, "2026-11-20", "2026-10-01"],
+            "animals/dog": [1, "2026-10-23", "2026-10-22"],
+        },
+    }
+    page = client.get("/english/words").text
+    assert 'data-say-en="cat"' in page and 'data-say-en="dog"' in page
+    assert 'data-say-en="bird"' not in page
+    assert page.count("word--known") == 1
+    assert page.count("word--later") == 96
+
+
+def test_without_the_daemon_a_lesson_still_starts_from_the_beginning(
+    client: TestClient, with_english: FakeShellDaemon
+) -> None:
+    with_english.english = None
+    assert 'href="/english/lesson"' in client.get("/english").text

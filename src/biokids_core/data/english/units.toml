@@ -1,0 +1,418 @@
+# The English corner's lessons (D-225).
+#
+# Written for this project and released with it under the MIT licence. Each unit
+# is a small world a child of four to ten knows - animals, colours, their family -
+# in the order a child meets them: concrete things first, then the words that
+# describe them, then what people do and feel.
+#
+# A unit has:
+#   words      what the child meets one at a time, a picture each. `en` is what
+#              the English voice says, `tr` what an older child reads under it,
+#              `pic` the picture: an emoji, drawn by the colour emoji font.
+#   lines      short sentences to listen to and say back: the chunks a child can
+#              use whole ("Can I have water, please?") long before they could
+#              build them. Only from the unit's own words and the commonest ones.
+#   story      five or six lines with a picture each, read aloud, then questions.
+#   questions  answered by tapping a picture; `answer` is one of `choices`.
+#
+# Ids are `<unit>/<word>`, `<unit>/line-<n>` and `<unit>/story`. A child's
+# progress is kept by id, so a word, a line or a unit is never renamed once
+# released; a new one is added instead.
+
+[[unit]]
+slug = "animals"
+title_tr = "Hayvanlar"
+title_en = "Animals"
+icon = "🐾"
+words = [
+  { en = "cat", tr = "kedi", pic = "🐱" },
+  { en = "dog", tr = "köpek", pic = "🐶" },
+  { en = "bird", tr = "kuş", pic = "🐦" },
+  { en = "fish", tr = "balık", pic = "🐟" },
+  { en = "rabbit", tr = "tavşan", pic = "🐰" },
+  { en = "duck", tr = "ördek", pic = "🦆" },
+  { en = "horse", tr = "at", pic = "🐴" },
+  { en = "cow", tr = "inek", pic = "🐮" },
+]
+lines = [
+  { en = "It is a cat.", tr = "Bu bir kedi.", pic = "🐱" },
+  { en = "I like dogs.", tr = "Köpekleri severim.", pic = "🐶" },
+  { en = "The bird can fly.", tr = "Kuş uçabilir.", pic = "🐦" },
+]
+story = [
+  { en = "This is Tom.", tr = "Bu Tom.", pic = "👦" },
+  { en = "Tom has a cat.", tr = "Tom'un bir kedisi var.", pic = "🐱" },
+  { en = "Tom has a dog.", tr = "Tom'un bir köpeği var.", pic = "🐶" },
+  { en = "The cat is small.", tr = "Kedi küçük.", pic = "🐈" },
+  { en = "The dog is big.", tr = "Köpek büyük.", pic = "🐕" },
+  { en = "They are friends!", tr = "Onlar arkadaş!", pic = "🤝" },
+]
+questions = [
+  { en = "Which one is big?", tr = "Hangisi büyük?", answer = "🐶", choices = ["🐶", "🐱", "🐟"] },
+  { en = "Find the cat!", tr = "Kediyi bul!", answer = "🐱", choices = ["🐦", "🐱", "🐮"] },
+]
+
+[[unit]]
+slug = "colours"
+title_tr = "Renkler"
+title_en = "Colours"
+icon = "🎨"
+words = [
+  { en = "red", tr = "kırmızı", pic = "🔴" },
+  { en = "blue", tr = "mavi", pic = "🔵" },
+  { en = "yellow", tr = "sarı", pic = "🟡" },
+  { en = "green", tr = "yeşil", pic = "🟢" },
+  { en = "orange", tr = "turuncu", pic = "🟠" },
+  { en = "purple", tr = "mor", pic = "🟣" },
+  { en = "black", tr = "siyah", pic = "⚫" },
+  { en = "white", tr = "beyaz", pic = "⚪" },
+]
+lines = [
+  { en = "The apple is red.", tr = "Elma kırmızı.", pic = "🍎" },
+  { en = "The sun is yellow.", tr = "Güneş sarı.", pic = "☀️" },
+  { en = "My favourite colour is blue.", tr = "En sevdiğim renk mavi.", pic = "💙" },
+]
+story = [
+  { en = "Look at the rainbow!", tr = "Gökkuşağına bak!", pic = "🌈" },
+  { en = "Red, orange, yellow.", tr = "Kırmızı, turuncu, sarı.", pic = "🔴🟠🟡" },
+  { en = "Green, blue, purple.", tr = "Yeşil, mavi, mor.", pic = "🟢🔵🟣" },
+  { en = "The grass is green.", tr = "Çimen yeşil.", pic = "🌱" },
+  { en = "The sky is blue.", tr = "Gökyüzü mavi.", pic = "🌤️" },
+  { en = "I love colours!", tr = "Renkleri seviyorum!", pic = "🎨" },
+]
+questions = [
+  { en = "What colour is the grass?", tr = "Çimen ne renk?", answer = "🟢", choices = ["🔴", "🟢", "🔵"] },
+  { en = "What colour is the sky?", tr = "Gökyüzü ne renk?", answer = "🔵", choices = ["🔵", "🟡", "⚫"] },
+]
+
+[[unit]]
+slug = "numbers"
+title_tr = "Sayılar"
+title_en = "Numbers"
+icon = "🔢"
+words = [
+  { en = "one", tr = "bir", pic = "1️⃣" },
+  { en = "two", tr = "iki", pic = "2️⃣" },
+  { en = "three", tr = "üç", pic = "3️⃣" },
+  { en = "four", tr = "dört", pic = "4️⃣" },
+  { en = "five", tr = "beş", pic = "5️⃣" },
+  { en = "six", tr = "altı", pic = "6️⃣" },
+  { en = "seven", tr = "yedi", pic = "7️⃣" },
+  { en = "eight", tr = "sekiz", pic = "8️⃣" },
+  { en = "nine", tr = "dokuz", pic = "9️⃣" },
+  { en = "ten", tr = "on", pic = "🔟" },
+]
+lines = [
+  { en = "I am six.", tr = "Altı yaşındayım.", pic = "🎂" },
+  { en = "I have two hands.", tr = "İki elim var.", pic = "🙌" },
+  { en = "Let's count to ten!", tr = "Ona kadar sayalım!", pic = "🔟" },
+]
+story = [
+  { en = "One duck.", tr = "Bir ördek.", pic = "🦆" },
+  { en = "Two cats.", tr = "İki kedi.", pic = "🐱🐱" },
+  { en = "Three birds.", tr = "Üç kuş.", pic = "🐦🐦🐦" },
+  { en = "Four fish.", tr = "Dört balık.", pic = "🐟🐟🐟🐟" },
+  { en = "Five stars.", tr = "Beş yıldız.", pic = "⭐⭐⭐⭐⭐" },
+  { en = "Let's count again!", tr = "Hadi yeniden sayalım!", pic = "🔢" },
+]
+questions = [
+  { en = "How many cats?", tr = "Kaç kedi?", answer = "2️⃣", choices = ["2️⃣", "3️⃣", "5️⃣"] },
+  { en = "How many stars?", tr = "Kaç yıldız?", answer = "5️⃣", choices = ["1️⃣", "4️⃣", "5️⃣"] },
+]
+
+[[unit]]
+slug = "family"
+title_tr = "Ailem"
+title_en = "My family"
+icon = "👪"
+words = [
+  { en = "mother", tr = "anne", pic = "👩" },
+  { en = "father", tr = "baba", pic = "👨" },
+  { en = "baby", tr = "bebek", pic = "👶" },
+  { en = "sister", tr = "kız kardeş", pic = "👧" },
+  { en = "brother", tr = "erkek kardeş", pic = "👦" },
+  { en = "grandmother", tr = "büyükanne", pic = "👵" },
+  { en = "grandfather", tr = "büyükbaba", pic = "👴" },
+  { en = "family", tr = "aile", pic = "👪" },
+]
+lines = [
+  { en = "This is my mother.", tr = "Bu benim annem.", pic = "👩" },
+  { en = "I love my family.", tr = "Ailemi seviyorum.", pic = "👪" },
+  { en = "My brother is little.", tr = "Kardeşim küçük.", pic = "👦" },
+]
+story = [
+  { en = "This is my family.", tr = "Bu benim ailem.", pic = "👪" },
+  { en = "My mother reads.", tr = "Annem kitap okuyor.", pic = "👩📖" },
+  { en = "My father cooks.", tr = "Babam yemek yapıyor.", pic = "👨‍🍳" },
+  { en = "My sister sings.", tr = "Kız kardeşim şarkı söylüyor.", pic = "👧🎤" },
+  { en = "The baby sleeps.", tr = "Bebek uyuyor.", pic = "👶😴" },
+  { en = "I love my family!", tr = "Ailemi seviyorum!", pic = "❤️" },
+]
+questions = [
+  { en = "Who sleeps?", tr = "Kim uyuyor?", answer = "👶", choices = ["👩", "👶", "👴"] },
+  { en = "Who cooks?", tr = "Kim yemek yapıyor?", answer = "👨‍🍳", choices = ["👨‍🍳", "👧", "👵"] },
+]
+
+[[unit]]
+slug = "food"
+title_tr = "Yiyecekler"
+title_en = "Food"
+icon = "🍽️"
+words = [
+  { en = "apple", tr = "elma", pic = "🍎" },
+  { en = "banana", tr = "muz", pic = "🍌" },
+  { en = "bread", tr = "ekmek", pic = "🍞" },
+  { en = "milk", tr = "süt", pic = "🥛" },
+  { en = "water", tr = "su", pic = "💧" },
+  { en = "egg", tr = "yumurta", pic = "🥚" },
+  { en = "cheese", tr = "peynir", pic = "🧀" },
+  { en = "cake", tr = "pasta", pic = "🍰" },
+]
+lines = [
+  { en = "I like apples.", tr = "Elmaları severim.", pic = "🍎" },
+  { en = "I am hungry.", tr = "Acıktım.", pic = "🍽️" },
+  { en = "Can I have water, please?", tr = "Biraz su alabilir miyim, lütfen?", pic = "💧" },
+]
+story = [
+  { en = "It is breakfast time.", tr = "Kahvaltı zamanı.", pic = "🌅" },
+  { en = "I have bread and cheese.", tr = "Ekmek ve peynir yiyorum.", pic = "🍞🧀" },
+  { en = "I have an egg.", tr = "Bir yumurta yiyorum.", pic = "🥚" },
+  { en = "I drink milk.", tr = "Süt içiyorum.", pic = "🥛" },
+  { en = "Yum! It is good.", tr = "Mmm! Çok güzel.", pic = "😋" },
+  { en = "Thank you, Mum!", tr = "Teşekkürler, anne!", pic = "💕" },
+]
+questions = [
+  { en = "What do I drink?", tr = "Ne içiyorum?", answer = "🥛", choices = ["🍰", "🥛", "🍌"] },
+  { en = "Find the egg!", tr = "Yumurtayı bul!", answer = "🥚", choices = ["🍞", "🧀", "🥚"] },
+]
+
+[[unit]]
+slug = "body"
+title_tr = "Vücudum"
+title_en = "My body"
+icon = "🙋"
+words = [
+  { en = "eye", tr = "göz", pic = "👁️" },
+  { en = "ear", tr = "kulak", pic = "👂" },
+  { en = "nose", tr = "burun", pic = "👃" },
+  { en = "mouth", tr = "ağız", pic = "👄" },
+  { en = "hand", tr = "el", pic = "✋" },
+  { en = "foot", tr = "ayak", pic = "🦶" },
+  { en = "leg", tr = "bacak", pic = "🦵" },
+  { en = "tooth", tr = "diş", pic = "🦷" },
+]
+lines = [
+  { en = "Touch your nose!", tr = "Burnuna dokun!", pic = "👃" },
+  { en = "Clap your hands!", tr = "Ellerini çırp!", pic = "👏" },
+  { en = "I have two eyes.", tr = "İki gözüm var.", pic = "👀" },
+]
+story = [
+  { en = "This is Robo.", tr = "Bu Robo.", pic = "🤖" },
+  { en = "Robo has two eyes.", tr = "Robo'nun iki gözü var.", pic = "👀" },
+  { en = "Robo has one nose.", tr = "Robo'nun bir burnu var.", pic = "👃" },
+  { en = "Robo has big hands.", tr = "Robo'nun büyük elleri var.", pic = "🙌" },
+  { en = "Robo can wave.", tr = "Robo el sallayabilir.", pic = "👋" },
+  { en = "Hello, Robo!", tr = "Merhaba, Robo!", pic = "🤖" },
+]
+questions = [
+  { en = "What can Robo do?", tr = "Robo ne yapabilir?", answer = "👋", choices = ["🏊", "👋", "😴"] },
+  { en = "How many eyes?", tr = "Kaç göz?", answer = "2️⃣", choices = ["1️⃣", "2️⃣", "3️⃣"] },
+]
+
+[[unit]]
+slug = "clothes"
+title_tr = "Giysiler"
+title_en = "Clothes"
+icon = "👕"
+words = [
+  { en = "hat", tr = "şapka", pic = "👒" },
+  { en = "T-shirt", tr = "tişört", pic = "👕" },
+  { en = "dress", tr = "elbise", pic = "👗" },
+  { en = "shoes", tr = "ayakkabı", pic = "👟" },
+  { en = "socks", tr = "çorap", pic = "🧦" },
+  { en = "coat", tr = "mont", pic = "🧥" },
+  { en = "gloves", tr = "eldiven", pic = "🧤" },
+  { en = "scarf", tr = "atkı", pic = "🧣" },
+]
+lines = [
+  { en = "Put on your hat.", tr = "Şapkanı tak.", pic = "👒" },
+  { en = "My shoes are red.", tr = "Ayakkabılarım kırmızı.", pic = "👟" },
+  { en = "It is cold. Wear your coat!", tr = "Hava soğuk. Montunu giy!", pic = "🧥" },
+]
+story = [
+  { en = "It is snowing.", tr = "Kar yağıyor.", pic = "❄️" },
+  { en = "Mia puts on her coat.", tr = "Mia montunu giyiyor.", pic = "🧥" },
+  { en = "She puts on her scarf.", tr = "Atkısını takıyor.", pic = "🧣" },
+  { en = "She puts on her gloves.", tr = "Eldivenlerini giyiyor.", pic = "🧤" },
+  { en = "Now Mia is warm.", tr = "Mia artık üşümüyor.", pic = "😊" },
+  { en = "Let's play in the snow!", tr = "Hadi karda oynayalım!", pic = "⛄" },
+]
+questions = [
+  { en = "What is the weather?", tr = "Hava nasıl?", answer = "❄️", choices = ["☀️", "❄️", "🌧️"] },
+  { en = "What does Mia put on her hands?", tr = "Mia ellerine ne giyiyor?", answer = "🧤", choices = ["🧦", "👒", "🧤"] },
+]
+
+[[unit]]
+slug = "home"
+title_tr = "Evim"
+title_en = "My home"
+icon = "🏠"
+words = [
+  { en = "house", tr = "ev", pic = "🏠" },
+  { en = "door", tr = "kapı", pic = "🚪" },
+  { en = "window", tr = "pencere", pic = "🪟" },
+  { en = "bed", tr = "yatak", pic = "🛏️" },
+  { en = "chair", tr = "sandalye", pic = "🪑" },
+  { en = "lamp", tr = "lamba", pic = "💡" },
+  { en = "book", tr = "kitap", pic = "📕" },
+  { en = "teddy", tr = "oyuncak ayı", pic = "🧸" },
+]
+lines = [
+  { en = "Open the door, please.", tr = "Kapıyı açar mısın, lütfen?", pic = "🚪" },
+  { en = "This is my bed.", tr = "Bu benim yatağım.", pic = "🛏️" },
+  { en = "Where is my teddy?", tr = "Oyuncak ayım nerede?", pic = "🧸" },
+]
+story = [
+  { en = "Where is Teddy?", tr = "Ayıcık nerede?", pic = "🧸" },
+  { en = "Is he on the chair? No!", tr = "Sandalyede mi? Hayır!", pic = "🪑" },
+  { en = "Is he on the bed? No!", tr = "Yatakta mı? Hayır!", pic = "🛏️" },
+  { en = "Is he by the window? No!", tr = "Pencerenin yanında mı? Hayır!", pic = "🪟" },
+  { en = "He is in my bag!", tr = "Çantamın içinde!", pic = "🎒" },
+  { en = "Hello, Teddy!", tr = "Merhaba, Ayıcık!", pic = "🧸" },
+]
+questions = [
+  { en = "Where is Teddy?", tr = "Ayıcık nerede?", answer = "🎒", choices = ["🪑", "🎒", "🛏️"] },
+  { en = "Find the window!", tr = "Pencereyi bul!", answer = "🪟", choices = ["🚪", "💡", "🪟"] },
+]
+
+[[unit]]
+slug = "nature"
+title_tr = "Doğa ve hava"
+title_en = "Nature and weather"
+icon = "🌤️"
+words = [
+  { en = "sun", tr = "güneş", pic = "☀️" },
+  { en = "rain", tr = "yağmur", pic = "🌧️" },
+  { en = "snow", tr = "kar", pic = "❄️" },
+  { en = "cloud", tr = "bulut", pic = "☁️" },
+  { en = "tree", tr = "ağaç", pic = "🌳" },
+  { en = "flower", tr = "çiçek", pic = "🌸" },
+  { en = "moon", tr = "ay", pic = "🌙" },
+  { en = "star", tr = "yıldız", pic = "⭐" },
+]
+lines = [
+  { en = "It is sunny today.", tr = "Bugün hava güneşli.", pic = "☀️" },
+  { en = "It is raining.", tr = "Yağmur yağıyor.", pic = "🌧️" },
+  { en = "Look at the moon!", tr = "Aya bak!", pic = "🌙" },
+]
+story = [
+  { en = "In the morning, the sun comes up.", tr = "Sabah güneş doğar.", pic = "🌅" },
+  { en = "The flowers open.", tr = "Çiçekler açar.", pic = "🌸" },
+  { en = "Then a cloud comes.", tr = "Sonra bir bulut gelir.", pic = "☁️" },
+  { en = "Rain falls on the tree.", tr = "Ağaca yağmur yağar.", pic = "🌧️🌳" },
+  { en = "At night, the moon comes out.", tr = "Gece ay çıkar.", pic = "🌙" },
+  { en = "Good night, stars!", tr = "İyi geceler, yıldızlar!", pic = "⭐" },
+]
+questions = [
+  { en = "What comes out at night?", tr = "Gece ne çıkar?", answer = "🌙", choices = ["☀️", "🌙", "🌸"] },
+  { en = "What falls on the tree?", tr = "Ağaca ne yağar?", answer = "🌧️", choices = ["🌧️", "❄️", "⭐"] },
+]
+
+[[unit]]
+slug = "actions"
+title_tr = "Hareketler"
+title_en = "Things I do"
+icon = "🏃"
+words = [
+  { en = "run", tr = "koşmak", pic = "🏃" },
+  { en = "swim", tr = "yüzmek", pic = "🏊" },
+  { en = "dance", tr = "dans etmek", pic = "💃" },
+  { en = "sing", tr = "şarkı söylemek", pic = "🎤" },
+  { en = "read", tr = "okumak", pic = "📖" },
+  { en = "draw", tr = "resim yapmak", pic = "🖍️" },
+  { en = "climb", tr = "tırmanmak", pic = "🧗" },
+  { en = "sleep", tr = "uyumak", pic = "😴" },
+]
+lines = [
+  { en = "I can run fast.", tr = "Hızlı koşabilirim.", pic = "🏃" },
+  { en = "Can you swim?", tr = "Yüzebilir misin?", pic = "🏊" },
+  { en = "Let's dance!", tr = "Hadi dans edelim!", pic = "💃" },
+]
+story = [
+  { en = "Ali loves to play.", tr = "Ali oynamayı çok sever.", pic = "👦" },
+  { en = "In the morning, he runs.", tr = "Sabah koşar.", pic = "🏃" },
+  { en = "After lunch, he reads.", tr = "Öğle yemeğinden sonra okur.", pic = "📖" },
+  { en = "In the evening, he draws.", tr = "Akşam resim yapar.", pic = "🖍️" },
+  { en = "At night, he sleeps.", tr = "Gece uyur.", pic = "😴" },
+  { en = "What do you love to do?", tr = "Sen ne yapmayı seversin?", pic = "💭" },
+]
+questions = [
+  { en = "What does Ali do at night?", tr = "Ali gece ne yapar?", answer = "😴", choices = ["🏃", "😴", "🏊"] },
+  { en = "What does Ali do after lunch?", tr = "Ali öğleden sonra ne yapar?", answer = "📖", choices = ["📖", "💃", "🧗"] },
+]
+
+[[unit]]
+slug = "feelings"
+title_tr = "Duygular"
+title_en = "Feelings"
+icon = "😊"
+words = [
+  { en = "happy", tr = "mutlu", pic = "😀" },
+  { en = "sad", tr = "üzgün", pic = "😢" },
+  { en = "angry", tr = "kızgın", pic = "😠" },
+  { en = "scared", tr = "korkmuş", pic = "😨" },
+  { en = "tired", tr = "yorgun", pic = "🥱" },
+  { en = "surprised", tr = "şaşkın", pic = "😮" },
+  { en = "calm", tr = "sakin", pic = "😌" },
+  { en = "excited", tr = "heyecanlı", pic = "🤩" },
+]
+lines = [
+  { en = "I am happy.", tr = "Mutluyum.", pic = "😀" },
+  { en = "Are you sad?", tr = "Üzgün müsün?", pic = "😢" },
+  { en = "It's OK to be angry.", tr = "Kızmak da normaldir.", pic = "😠" },
+]
+story = [
+  { en = "Leo lost his ball.", tr = "Leo topunu kaybetti.", pic = "⚽" },
+  { en = "Leo is sad.", tr = "Leo üzgün.", pic = "😢" },
+  { en = "His friend comes.", tr = "Arkadaşı geliyor.", pic = "👧" },
+  { en = "She finds the ball!", tr = "Topu buluyor!", pic = "⚽" },
+  { en = "Now Leo is happy.", tr = "Leo artık mutlu.", pic = "😀" },
+  { en = "Thank you, friend!", tr = "Teşekkürler, arkadaşım!", pic = "🤝" },
+]
+questions = [
+  { en = "How is Leo at the end?", tr = "Leo sonunda nasıl?", answer = "😀", choices = ["😢", "😠", "😀"] },
+  { en = "What did Leo lose?", tr = "Leo neyi kaybetti?", answer = "⚽", choices = ["⚽", "🧸", "📕"] },
+]
+
+[[unit]]
+slug = "transport"
+title_tr = "Taşıtlar"
+title_en = "Things that go"
+icon = "🚗"
+words = [
+  { en = "car", tr = "araba", pic = "🚗" },
+  { en = "bus", tr = "otobüs", pic = "🚌" },
+  { en = "train", tr = "tren", pic = "🚆" },
+  { en = "plane", tr = "uçak", pic = "✈️" },
+  { en = "bike", tr = "bisiklet", pic = "🚲" },
+  { en = "boat", tr = "tekne", pic = "⛵" },
+  { en = "ship", tr = "gemi", pic = "🚢" },
+  { en = "truck", tr = "kamyon", pic = "🚚" },
+]
+lines = [
+  { en = "The car is fast.", tr = "Araba hızlı.", pic = "🚗" },
+  { en = "Let's go by bus.", tr = "Otobüsle gidelim.", pic = "🚌" },
+  { en = "I can see a plane!", tr = "Bir uçak görüyorum!", pic = "✈️" },
+]
+story = [
+  { en = "We go on holiday.", tr = "Tatile gidiyoruz.", pic = "🧳" },
+  { en = "First, we take a bus.", tr = "Önce otobüse biniyoruz.", pic = "🚌" },
+  { en = "Then, we take a train.", tr = "Sonra trene biniyoruz.", pic = "🚆" },
+  { en = "Then, we fly on a plane.", tr = "Sonra uçakla uçuyoruz.", pic = "✈️" },
+  { en = "We see the sea!", tr = "Denizi görüyoruz!", pic = "🌊" },
+  { en = "Hello, holiday!", tr = "Merhaba, tatil!", pic = "🏖️" },
+]
+questions = [
+  { en = "How do we fly?", tr = "Neyle uçuyoruz?", answer = "✈️", choices = ["🚆", "✈️", "🚲"] },
+  { en = "What do we see?", tr = "Ne görüyoruz?", answer = "🌊", choices = ["🌊", "🌳", "❄️"] },
+]

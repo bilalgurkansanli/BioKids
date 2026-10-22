@@ -1725,13 +1725,13 @@ msgid "voices.natural.now_natural"
 msgstr "Şu an Zio ve Sio doğal sesle konuşuyor."
 
 msgid "voices.natural.offer"
-msgstr "İnsan sesine çok daha yakın, Türkçe bir ses indirebilirsiniz."
+msgstr "İnsan sesine çok daha yakın bir Türkçe ses ve İngilizce köşesi için bir İngilizce ses indirebilirsiniz."
 
 msgid "voices.natural.download"
 msgstr "Doğal sesi indir (yaklaşık {size} MB)"
 
 msgid "voices.natural.licence"
-msgstr "Bu ses, ailelerin kişisel ve ticari olmayan kullanımı için ücretsizdir. BioKids ile gelmez: düğmeye bastığınızda bir kez, kendi yapımcılarından indirilir."
+msgstr "Türkçe ses, ailelerin kişisel ve ticari olmayan kullanımı için ücretsizdir; İngilizce ses herkese açıktır. İkisi de BioKids ile gelmez: düğmeye bastığınızda bir kez, kendi yapımcılarından indirilir."
 
 msgid "voices.natural.zio"
 msgstr "Türkçe doğal ses bir erkek sesidir. Sio onu olduğu gibi, Zio biraz daha ince bir tonla konuşur."
@@ -2877,7 +2877,7 @@ msgid "wizard.extras.natural"
 msgstr "Zio ve Sio doğal, insan gibi bir sesle konuşsun (yaklaşık {size} MB indirilir)"
 
 msgid "wizard.extras.natural.help"
-msgstr "Robot sesi yerine. Türkçe ses, ailelerin kişisel kullanımı için ücretsizdir ve kendi yapımcılarından bu bilgisayara bir kez indirilir. İnternet yoksa, bağlanınca kendiliğinden iner."
+msgstr "Robot sesi yerine. Türkçe ses ve İngilizce köşesinin sesi, kendi yapımcılarından bu bilgisayara bir kez indirilir; Türkçe ses ailelerin kişisel kullanımı için ücretsizdir, İngilizce ses herkese açıktır. İnternet yoksa, bağlanınca kendiliğinden iner."
 
 msgid "wizard.done.natural"
 msgstr "Zio ve Sio'nun doğal sesi şimdi iniyor; birkaç dakika içinde robot sesinin yerini alır."
@@ -3206,3 +3206,129 @@ msgstr "Çocuğum bu yolla PIN'i değiştirebilir mi?"
 
 msgid "guide.forgot.tip.2.a"
 msgstr "Hayır. Komut bilgisayarın yönetici parolasını ister ve çocuk hesaplarının yönetici yetkisi yoktur."
+
+# --- the English corner, for the child (D-225) ---
+msgid "english.title"
+msgstr "İngilizce"
+
+msgid "english.home"
+msgstr "İngilizce köşesi"
+
+msgid "english.word_of_day"
+msgstr "Günün kelimesi"
+
+msgid "english.start"
+msgstr "Bugünün dersi"
+
+msgid "english.start.help"
+msgstr "Yaklaşık beş dakika. Dinle, dokun, söyle!"
+
+msgid "english.done_today"
+msgstr "Bugünün dersi bitti, aferin sana! 🎉"
+
+msgid "english.more"
+msgstr "Biraz daha oyna"
+
+msgid "english.words"
+msgstr "Sözlüğüm"
+
+msgid "english.words.intro"
+msgstr "Tanıştığın kelimeler. Birine dokun, dinle."
+
+msgid "english.words.later"
+msgstr "Henüz tanışmadın"
+
+msgid "english.known_word"
+msgstr "Bunu çok iyi biliyorsun"
+
+msgid "english.known"
+msgstr "{count} kelimeyle tanıştın"
+
+msgid "english.unit_done"
+msgstr "Bitti"
+
+msgid "english.needs_script"
+msgstr "Bu ders sayfası açılamadı. Bir büyüğüne söyleyebilirsin."
+
+msgid "english.new_word"
+msgstr "Yeni bir kelime!"
+
+msgid "english.find"
+msgstr "Hangisi? Dinle ve dokun."
+
+msgid "english.wrong"
+msgstr "Bir daha dinleyelim."
+
+msgid "english.line"
+msgstr "Dinle, sonra sen de söyle."
+
+msgid "english.story"
+msgstr "Hikâye zamanı!"
+
+msgid "english.question"
+msgstr "Bil bakalım!"
+
+msgid "english.again"
+msgstr "Tekrar dinle"
+
+msgid "english.say"
+msgstr "Basılı tut ve söyle"
+
+msgid "english.said"
+msgstr "Söyledim"
+
+msgid "english.next"
+msgstr "İleri"
+
+msgid "english.listening"
+msgstr "Dinliyorum…"
+
+msgid "english.heard_ok"
+msgstr "Harika söyledin!"
+
+msgid "english.heard_again"
+msgstr "Bir daha deneyelim mi? Önce dinle."
+
+msgid "english.mic_failed"
+msgstr "Mikrofon açılamadı."
+
+msgid "english.done"
+msgstr "Aferin! Bugün {count} yıldız topladın."
+
+# --- the English corner's voice (D-225) ---
+msgid "voices.natural.english_offer"
+msgstr "İngilizce köşesindeki kelimeleri doğal bir sesle duymak için İngilizce sesi de indirin."
+
+msgid "voices.natural.english_download"
+msgstr "İngilizce sesi indir (yaklaşık {size} MB)"
+
+# --- the English corner, for the parent (D-225) ---
+msgid "insights.english"
+msgstr "İngilizce"
+
+msgid "insights.english.met"
+msgstr "{met} kelimeyle tanıştı, {known} tanesini iyi biliyor."
+
+msgid "insights.english.period"
+msgstr "Bu dönemde {new} yeni kelime; {days} gün çalıştı"
+
+msgid "insights.english.now"
+msgstr "Şimdi: {unit} ({done}/{total} ünite bitti)"
+
+msgid "insights.english.all_done"
+msgstr "Bütün üniteleri bitirdi! Şimdi öğrendiklerini tekrar ediyor."
+
+msgid "insights.english.known_words"
+msgstr "İyi bildiği kelimeler ({count})"
+
+msgid "insights.english.tip"
+msgstr "İpucu: öğrendiği kelimeleri gün içinde siz de kullanın, örneğin \"Can I have water, please?\". Evde duyulan dil en hızlı öğrenilir."
+
+msgid "insights.english.robot"
+msgstr "İngilizce kelimeler şu an robot sesiyle okunuyor. Doğal ses için İngilizce sesi indirin."
+
+msgid "insights.h.english"
+msgstr "İngilizce'de {count} yeni kelimeyle tanıştı."
+
+msgid "insights.s.english"
+msgstr "Öğrendiği kelimeleri gün içinde siz de kullanın; evde duyulan dil en hızlı öğrenilir."

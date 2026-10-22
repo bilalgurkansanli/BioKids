@@ -20,8 +20,8 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from biokids_core import insights, repo
-from biokids_core.db.models import App, Child
+from biokids_core import english, insights, natural_voice, repo
+from biokids_core.db.models import App, Child, UsageTick
 from biokids_core.i18n import Translator
 from biokids_panel.common import View, see_other
 
@@ -79,6 +79,7 @@ def insights_view(
         request_rows=_request_rows(found, tr),
         kept_days=view.ctx.config.retention.activity_days,
         **_searches(session, chosen, found),
+        english=_english(view, chosen, found),
     )
 
 
@@ -96,6 +97,38 @@ def searches_seen(
     repo.dismiss_search_alerts(view.session, child_id)
     view.session.commit()
     return see_other(f"{back}#searches")
+
+
+def _english(view: View, child: Child, found: insights.Insights) -> dict[str, Any] | None:
+    """The English corner for this child and period (D-225), or None when the
+    child has neither the tile nor any progress: no card about nothing."""
+    session = view.session
+    progress = repo.english_progress(session, child.id)
+    if not progress and not repo.app_is_allowed(session, child.id, english.SLUG):
+        return None
+    last = min(found.span.last, found.today)
+    seconds_by_day: dict[dt.date, int] = {}
+    for tick in session.scalars(
+        select(UsageTick).where(
+            UsageTick.child_id == child.id,
+            UsageTick.app_slug == english.SLUG,
+            UsageTick.day >= found.span.first,
+            UsageTick.day <= last,
+        )
+    ):
+        seconds_by_day[tick.day] = seconds_by_day.get(tick.day, 0) + tick.seconds
+    return {
+        "summary": english.summarize(
+            english.load_units(), progress, since=found.span.first, until=last
+        ),
+        "seconds": sum(seconds_by_day.values()),
+        "days": sum(1 for seconds in seconds_by_day.values() if seconds >= ENGLISH_DAY_SECONDS),
+        "natural": natural_voice.english_speaks(view.ctx.config),
+    }
+
+
+ENGLISH_DAY_SECONDS = 60
+"""A day counts as a day of English from a minute in the corner."""
 
 
 def _searches(session: Session, child: Child, found: insights.Insights) -> dict[str, Any]:

@@ -1100,7 +1100,8 @@ runs `biokids-admin voice-setup` (`biokids_core.natural_voice`):
   `biokids-admin voice-setup remove` removes it alone. Turkish only: a child set to
   English still hears espeak-ng. Two rows in `docs/SECURITY.md` §4. Completes D-137.
   *Amended by D-223:* the wizard's box, ticked for a Turkish family, starts it too, and
-  it is tried again until it is there.
+  it is tried again until it is there. *Amended by D-225:* an English voice for the
+  English corner comes with it.
 
 **D-197 [owner] The app bar: home, the app's own volume, and a close that works.** (2026-10-08)
 The owner asked for a "send to background" button and the app's volume beside every
@@ -1730,3 +1731,70 @@ or password refused ("Gmail normal şifrenizi kabul etmez…"), or the server no
 (port and security must match), and the spaces Google shows inside an app password are
 taken out when the server is Gmail's (`mail.tidy_password`). Every guide's catalogue
 entries are checked in both languages by a test.
+
+**D-225 [owner] The English corner.** (2026-10-22)
+The owner saw a Chinese child speaking fluent English learned from a computer and asked
+for the same. What the research and the families who manage it agree on:
+- **A lot of English the child understands, every day.** Chinese families call it
+  磨耳朵, "grinding the ears": songs, picture books and stories heard over and over,
+  pictures making the words clear, chosen so most is understood; phonics and reading
+  only once there is a spoken vocabulary to read
+  ([sina](https://www.sina.cn/news/detail/5296623414674020.html),
+  [banyu](https://www.banyu.com/blog/english/148636/),
+  [biteabc](https://m.biteabc.com/zxwj/9944.html)).
+- **Being answered, not watching.** Young children learn little language from passive
+  video ("video deficit") and much more when what is on the screen responds to them; a
+  conversational agent that asks and listens matches a person on vocabulary and
+  comprehension in storybook studies
+  ([PNAS](https://www.pnas.org/doi/10.1073/pnas.1611621115),
+  [Xu et al.](https://pmc.ncbi.nlm.nih.gov/articles/PMC9299009/),
+  [BJET 2025](https://bera-journals.onlinelibrary.wiley.com/doi/10.1111/bjet.13615)).
+  The Chinese apps that grew out of this (Zebra English, for 2-8) are short animated
+  lessons the child answers aloud, with instant, encouraging pronunciation feedback.
+- **Words met again just before they are forgotten.** Spaced retrieval beats massed
+  practice for children's word learning
+  ([ASHA 2026](https://pubs.asha.org/doi/10.1044/2026_JSLHR-25-01039),
+  [pooled study](https://pmc.ncbi.nlm.nih.gov/articles/PMC8740735)).
+
+So BioKids gets **İngilizce**, a built-in tile (`english`, learning, suggested for 4-10)
+that opens a page of the launcher:
+- **Content** (`biokids_core/data/english/units.toml`, written for BioKids, MIT): twelve
+  units a child knows - animals, colours, numbers, family, food, body, clothes, home,
+  nature, actions, feelings, transport - 98 words with an emoji picture each, 36 short
+  lines ("Can I have water, please?") and a six-picture story with two questions per
+  unit.
+- **A lesson a day** (`biokids_core.english.plan_lesson`): due words found again first
+  (hear it, tap one of three pictures), then up to four new words of the current unit
+  (seen, heard twice, said back, then found), up to eight a day; once a unit's words are
+  met its lines are heard and said back, then its story is read aloud and asked about.
+  Every word, line and story sits in a Leitner box (1, 2, 4, 7, 14, 30 days); right the
+  first time goes up a box, wrong goes back to the first, and nothing else happens: the
+  word is said again and the child tries again. "Biraz daha oyna" afterwards finds met
+  words again without moving a box.
+- **Spoken, always**: instructions in the child's language by Zio, English by the
+  English voice, each line answered only once said (`/english/say` waits like the
+  assistant's, D-216). Praise is English too ("Well done!"), so the corner's most heard
+  phrase is one worth knowing. The young band sees no Turkish under the word.
+- **Saying it back** where the parent let the child speak to the assistant (D-166): the
+  same held button, the same 16 kHz WAV dropped once heard, now with `language: en`;
+  `english.heard_matches` is generous ("a cat", "kat"). Without the microphone the child
+  presses "Söyledim" after saying it - listening and repeating still works.
+- **Its minutes are learning minutes**: the page reports itself every 45 seconds while in
+  front, under the tile's category, so it earns time (D-45) and stickers (D-211).
+- **The voice**: Piper's `en_US-ljspeech-medium` (LJ Speech, public domain), pinned by
+  SHA-256 like the Turkish voice and downloaded with it (D-196, D-223): the box and the
+  button now say about 153 MB. Zio speaks it as `en-zio.onnx`; Sio keeps espeak-ng's man
+  in English. A family that has only the Turkish voice is offered "İngilizce sesi indir
+  (yaklaşık 64 MB)", and a wanted voice is fetched again until both are there.
+- **Progress** in a new table, `english_item` (child, item, box, due, first day, right,
+  wrong; migration `e3a9c75d1f08`), kept as long as the child is: what they have learned,
+  not a log. The launcher reads and writes it through two shell ops, `english_state` and
+  `english_answer`, which accept only the corner's own ids.
+- **For the parent**, Analiz has an İngilizce card - words met and known well, new words
+  and days this period, the unit now, the known words, a tip (use the words at home) and,
+  without the English voice, a pointer to it - and a highlight (weight 47) for new words.
+- **Two English websites** as web tiles a parent may tick, not suggested: British
+  Council's LearnEnglish Kids and Pratham Books' StoryWeaver (CC BY 4.0, levelled
+  read-along books).
+Not now: a conversation in English with the assistant, the next step the research points
+to; phonics and reading, for when a child has the spoken words to read.

@@ -42,7 +42,7 @@ import os
 import shutil
 import tarfile
 import urllib.request
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from shutil import which
@@ -118,8 +118,46 @@ PERSONAS: Final = ("sio", "zio")
 model is the same file as his. Sio first, so that his name exists before hers
 does and she is never heard speaking his voice unraised."""
 
-DOWNLOAD_BYTES: Final = PIPER_RELEASE.size + sum(f.size for f in VOICE_FILES)
-"""About 90 MB, which the panel's button says before it is pressed."""
+ENGLISH_VOICE: Final = "en_US-ljspeech-medium"
+"""The English corner's voice (D-225): one woman reading, US English, from the
+LJ Speech recordings, which are in the public domain - so, unlike the Turkish
+voice, nothing limits who may use it. Zio speaks it; she is the one who teaches."""
+
+_ENGLISH_URL: Final = f"https://huggingface.co/rhasspy/piper-voices/resolve/{VOICES_COMMIT}/en/en_US/ljspeech/medium"
+
+ENGLISH_FILES: Final = (
+    PinnedFile(
+        name=f"{ENGLISH_VOICE}.onnx",
+        url=f"{_ENGLISH_URL}/{ENGLISH_VOICE}.onnx",
+        sha256="6f52a751e2349abe7a76735eb09dc1875298c77ea2342ffd2fef79ff81b87f22",
+        size=63_531_379,
+    ),
+    PinnedFile(
+        name=f"{ENGLISH_VOICE}.onnx.json",
+        url=f"{_ENGLISH_URL}/{ENGLISH_VOICE}.onnx.json",
+        sha256="141d612cc0a95ed7efc1ca936b845c2364967f2e9217c5dbfcf69fc4d6c65860",
+        size=4_972,
+    ),
+    PinnedFile(
+        name=f"{ENGLISH_VOICE}.MODEL_CARD",
+        url=f"{_ENGLISH_URL}/MODEL_CARD",
+        sha256="fbee1529c89d36b3fe76d7e9f3f832dce17f44900a52d76a9bda735654766b4d",
+        size=517,
+    ),
+)
+
+ENGLISH_LOCALE: Final = "en"
+ENGLISH_PERSONAS: Final = ("zio",)
+"""Only Zio: a woman's voice for Sio would be a stranger, and Sio in English
+keeps espeak-ng's man. The voice service raises no voice that only one persona
+has, so hers is heard as it was recorded."""
+
+DOWNLOAD_BYTES: Final = (
+    PIPER_RELEASE.size + sum(f.size for f in VOICE_FILES) + sum(f.size for f in ENGLISH_FILES)
+)
+"""About 153 MB, which the wizard's box and the panel's button say before."""
+ENGLISH_BYTES: Final = sum(f.size for f in ENGLISH_FILES)
+"""About 64 MB: the English voice alone, for a family that has the Turkish one."""
 
 MODEL_SUBDIR: Final = "piper"
 """Under `paths.model_dir`; where `VoiceBank` looks for `<locale>-<persona>.onnx`."""
@@ -236,8 +274,32 @@ def voice_installed(directory: Path) -> bool:
     )
 
 
+def english_installed(directory: Path) -> bool:
+    """The English voice's files at their pinned sizes, under Zio's name (D-225)."""
+    if any(_size(directory / f.name) != f.size for f in ENGLISH_FILES):
+        return False
+    return all(
+        _is_file(persona_model(directory, ENGLISH_LOCALE, persona))
+        and _is_file(model_config(persona_model(directory, ENGLISH_LOCALE, persona)))
+        for persona in ENGLISH_PERSONAS
+    )
+
+
 def installed(config: Config) -> bool:
-    return voice_installed(voices_dir(config)) and piper_installed(config.paths.piper_dir)
+    directory = voices_dir(config)
+    return (
+        voice_installed(directory)
+        and english_installed(directory)
+        and piper_installed(config.paths.piper_dir)
+    )
+
+
+def english_speaks(config: Config) -> bool:
+    """Would the English corner be read by Piper now, rather than espeak-ng?"""
+    if find_piper(config.voice.piper_binary, config.paths.piper_dir) is None:
+        return False
+    directory = voices_dir(config)
+    return all(_is_file(persona_model(directory, ENGLISH_LOCALE, p)) for p in ENGLISH_PERSONAS)
 
 
 def natural_speaks(config: Config) -> bool:
@@ -277,7 +339,7 @@ def progress(config: Config) -> int:
     """
     directory = voices_dir(config)
     done = 0
-    for pinned in VOICE_FILES:
+    for pinned in (*VOICE_FILES, *ENGLISH_FILES):
         final = directory / pinned.name
         done += pinned.size if _size(final) == pinned.size else _size(_partial(final))
     piper_dir = config.paths.piper_dir
@@ -295,6 +357,7 @@ def describe(config: Config) -> dict[str, object]:
         "natural_speaks": natural_speaks(config),
         "piper": find_piper(config.voice.piper_binary, config.paths.piper_dir),
         "voice": TURKISH_VOICE if voice_installed(voices_dir(config)) else None,
+        "english": ENGLISH_VOICE if english_installed(voices_dir(config)) else None,
         "progress": progress(config),
     }
 
@@ -377,12 +440,30 @@ def _readable_by_all(root: Path) -> None:
 
 def install_voice(directory: Path, *, opener: Opener | None = None) -> None:
     """The Turkish voice, and a name for it per persona."""
+    _install_files(directory, VOICE_FILES, TURKISH_VOICE, LOCALE, PERSONAS, opener)
+
+
+def install_english(directory: Path, *, opener: Opener | None = None) -> None:
+    """The English corner's voice, under Zio's English name (D-225)."""
+    _install_files(
+        directory, ENGLISH_FILES, ENGLISH_VOICE, ENGLISH_LOCALE, ENGLISH_PERSONAS, opener
+    )
+
+
+def _install_files(
+    directory: Path,
+    files: Sequence[PinnedFile],
+    voice: str,
+    locale: str,
+    personas: Sequence[str],
+    opener: Opener | None,
+) -> None:
     directory.mkdir(parents=True, exist_ok=True)
     for made in (directory.parent, directory):
         made.chmod(0o755)
     fetched: list[tuple[PinnedFile, Path]] = []
     try:
-        for pinned in VOICE_FILES:
+        for pinned in files:
             if _size(directory / pinned.name) == pinned.size:
                 continue  # checked when it arrived, by an earlier run
             log.info("downloading %s (%d kB)", pinned.name, pinned.size // 1024)
@@ -395,9 +476,9 @@ def install_voice(directory: Path, *, opener: Opener | None = None) -> None:
         for _pinned, partial in fetched:
             partial.unlink(missing_ok=True)
 
-    model = directory / f"{TURKISH_VOICE}{MODEL_SUFFIX}"
-    for persona in PERSONAS:
-        named = persona_model(directory, LOCALE, persona)
+    model = directory / f"{voice}{MODEL_SUFFIX}"
+    for persona in personas:
+        named = persona_model(directory, locale, persona)
         # The settings first: the voice service looks for the model, and Piper
         # must find the settings beside it from the moment it does.
         _link(model_config(named), model_config(model))
@@ -468,9 +549,13 @@ def install(config: Config, *, opener: Opener | None = None) -> None:
         "personal, non-commercial use; downloaded from its authors, not shipped by BioKids",
         TURKISH_VOICE,
     )
+    log.info(
+        "%s: trained on the LJ Speech recordings, in the public domain (D-225)", ENGLISH_VOICE
+    )
     install_piper(config.paths.piper_dir, opener=opener)
     install_voice(voices_dir(config), opener=opener)
-    log.info("the natural voice is installed")
+    install_english(voices_dir(config), opener=opener)
+    log.info("the natural voices are installed")
 
 
 def remove(config: Config) -> None:
@@ -483,7 +568,12 @@ def remove(config: Config) -> None:
         for path in (named, model_config(named)):
             with contextlib.suppress(OSError):
                 path.unlink()
-    for pinned in VOICE_FILES:
+    for persona in ENGLISH_PERSONAS:
+        named = persona_model(directory, ENGLISH_LOCALE, persona)
+        for path in (named, model_config(named)):
+            with contextlib.suppress(OSError):
+                path.unlink()
+    for pinned in (*VOICE_FILES, *ENGLISH_FILES):
         for path in (directory / pinned.name, _partial(directory / pinned.name)):
             with contextlib.suppress(OSError):
                 path.unlink()

@@ -2181,12 +2181,18 @@ def test_a_recording_without_the_token_is_refused(
 
 
 def _natural_state(
-    monkeypatch: pytest.MonkeyPatch, state: str, *, speaks: bool = False
+    monkeypatch: pytest.MonkeyPatch,
+    state: str,
+    *,
+    speaks: bool = False,
+    english: bool | None = None,
 ) -> None:
     from biokids_core import natural_voice
 
     monkeypatch.setattr(natural_voice, "state", lambda _config, runner=None: state)
     monkeypatch.setattr(natural_voice, "natural_speaks", lambda _config: speaks)
+    english_too = speaks if english is None else english
+    monkeypatch.setattr(natural_voice, "english_speaks", lambda _config: english_too)
     monkeypatch.setattr(natural_voice, "progress", lambda _config: 42)
 
 
@@ -2198,7 +2204,7 @@ def test_the_voices_page_says_the_robot_speaks_and_offers_the_natural_voice(
 
     assert "robot sesiyle" in page
     assert 'action="/voice-natural"' in page
-    assert "Doğal sesi indir (yaklaşık 90 MB)" in page
+    assert "Doğal sesi indir (yaklaşık 153 MB)" in page
     assert "ticari olmayan" in page, "the licence, in one sentence, before the button"
     assert "kendi sesinizle kaydedebilirsiniz" in page, "and the parent's own voice"
 
@@ -2271,6 +2277,18 @@ def test_once_installed_the_card_says_the_natural_voice_speaks(
     assert "bu bilgisayarda kurulu" in page
     assert 'action="/voice-natural"' not in page
     assert "Hazır." in client.get("/voice-natural").text
+
+
+def test_a_family_with_only_the_turkish_voice_is_offered_the_english_one(
+    client: TestClient, family_ready: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-225: the Turkish voice came before the English corner did."""
+    _natural_state(monkeypatch, "absent", speaks=True, english=False)
+    login(client)
+    page = html.unescape(client.get("/voices").text)
+    assert "doğal sesle konuşuyor" in page
+    assert "İngilizce sesi indir (yaklaşık 64 MB)" in page
+    assert 'action="/voice-natural"' in page
 
 
 def test_a_failed_download_says_so_and_offers_the_button_again(
@@ -3102,7 +3120,7 @@ def test_the_natural_voice_is_ticked_for_a_turkish_family(
     _through_step_3(client)
     page = html.unescape(client.get("/wizard/9").text)
     assert re.search(r'id="natural" name="natural"\s+checked', page)
-    assert "yaklaşık 90 MB" in page
+    assert "yaklaşık 153 MB" in page
     assert "kendi yapımcılarından" in page, "where it comes from, before it comes"
 
 
@@ -3261,3 +3279,43 @@ def test_a_failed_test_mail_says_which_kind(
     assert response.headers["location"] == f"/settings?error={error}#mail"
     page = html.unescape(client.get(response.headers["location"]).text)
     assert "E-posta gönderilemedi" in page
+
+
+# ------------------------------------------------------ the English corner (D-225)
+
+
+def test_insights_show_the_english_corner_with_its_words(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    from biokids_core import english
+    from biokids_core.db import EnglishItem
+
+    today = dt.date.today()
+    with db.session() as session:
+        for item, box in (("animals/cat", 5), ("animals/dog", 2), ("animals/line-1", 1)):
+            state = english.answered(None, True, today)
+            session.add(
+                EnglishItem(
+                    child_id=1,
+                    item=item,
+                    box=box,
+                    due=state.due,
+                    first_day=today,
+                    last_day=today,
+                )
+            )
+        session.commit()
+    login(client)
+    page = html.unescape(client.get("/insights?child=1").text)
+    assert 'id="english"' in page
+    assert "2 kelimeyle tanıştı, 1 tanesini iyi biliyor." in page
+    assert "Bu dönemde 2 yeni kelime" in page
+    assert "🐱 cat" in page
+    assert "İngilizce'de 2 yeni kelimeyle tanıştı." in page, "and a highlight"
+
+
+def test_no_english_card_for_a_child_who_has_neither_the_tile_nor_a_word(
+    client: TestClient, family_ready: None
+) -> None:
+    login(client)
+    assert 'id="english"' not in client.get("/insights?child=1").text

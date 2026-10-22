@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ _('english.words') }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="/static/english.css?v={{ asset_version }}">
+{% endblock %}
+
+{#
+  Sözlüğüm (D-225): every word of every unit, the ones the child has met as
+  pictures they can tap to hear, the rest as a quiet question mark - a map of
+  what is still to come rather than a list of what is missing.
+#}
+{% block body %}
+<div class="screen english" data-band="{{ band }}">
+  <header class="head">
+    <a class="big-btn big-btn--quiet assistant__home" href="/english"
+       {% if young %}data-speak="{{ _('english.home') }}"{% endif %}>
+      <span aria-hidden="true">🔤</span> {{ _('english.home') }}
+    </a>
+    <h1 class="english__title" {% if young %}data-speak="{{ _('english.words') }}"{% endif %}>
+      <span aria-hidden="true">📒</span> {{ _('english.words') }}
+    </h1>
+  </header>
+
+  <main class="english__main">
+    <p class="english__hint">{{ _('english.words.intro') }}</p>
+    {% for unit in units %}
+      <section class="word-unit" aria-label="{{ unit.title(locale) }}">
+        <h2 class="word-unit__title"><span aria-hidden="true">{{ unit.icon }}</span> {{ unit.title(locale) }}</h2>
+        <ul class="word-grid">
+          {% for card in unit.words %}
+            {% set item = unit.word_id(card) %}
+            {% if item in met %}
+              <li>
+                <button class="word{% if item in known %} word--known{% endif %}" type="button"
+                        data-say-en="{{ card.en }}" aria-label="{{ card.en }}">
+                  <span class="word__pic" aria-hidden="true">{{ card.pic }}</span>
+                  <span class="word__en">{{ card.en }}</span>
+                  {% if not young %}<span class="word__tr">{{ card.tr }}</span>{% endif %}
+                  {% if item in known %}<span class="word__star" aria-label="{{ _('english.known_word') }}">⭐</span>{% endif %}
+                </button>
+              </li>
+            {% else %}
+              <li><span class="word word--later" aria-label="{{ _('english.words.later') }}">?</span></li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      </section>
+    {% endfor %}
+  </main>
+</div>
+<script src="/static/english.js?v={{ asset_version }}"></script>
+{% endblock %}

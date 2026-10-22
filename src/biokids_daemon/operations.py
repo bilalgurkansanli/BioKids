@@ -560,6 +560,34 @@ class OperationsMixin(EndSequenceMixin):
         session.commit()
         log.info("a search was refused for child %s on %s", child_id, host or "?")
 
+    def english_state(self, child_id: int) -> dict[str, Any]:
+        """The calling child's boxes in the English corner, and their day (D-225)."""
+        self._require(child_id)
+        today = self.clock.read().wall.date()
+        return {
+            "today": today.isoformat(),
+            "items": {
+                item: [
+                    state.box,
+                    state.due.isoformat() if state.due else None,
+                    state.first_day.isoformat() if state.first_day else None,
+                ]
+                for item, state in repo.english_progress(self.session, child_id).items()
+            },
+        }
+
+    def english_answer(self, child_id: int, item: str, right: bool) -> int | None:
+        """One answer in a lesson; the box it leaves the item in, or None for an
+        id that is not the corner's."""
+        self._require(child_id)
+        state = repo.record_english_answer(
+            self.session, child_id, item, right, self.clock.read().wall.date()
+        )
+        if state is None:
+            return None
+        self.session.commit()
+        return state.box
+
     def request_launch(self, child_id: int, app_slug: str) -> Decision:
         """May this child start this application, right now?"""
         runtime = self._require(child_id)
