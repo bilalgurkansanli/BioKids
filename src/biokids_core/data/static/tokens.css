@@ -46,6 +46,10 @@
 
   --font-ui: "Inter", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-kid: "Fredoka", "Baloo 2", "Comic Neue", var(--font-ui);
+  /* For a picture that is an emoji. Named first: left to fallback, a few code
+   * points (the cat, U+1F431) came from a black-and-white font installed for
+   * text, and a tile showed an outline where the others were in colour. */
+  --font-emoji: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
 
   /* The size of the text, as a factor on the root font size: everything sized
    * in rem grows with it. Set through `data-text-size` on <html> (below), by a

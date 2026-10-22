@@ -33,6 +33,16 @@
   font-size: 1.6rem;
 }
 
+/* Every picture in the corner is an emoji, drawn by the colour emoji font. */
+.word-day__pic,
+.unit-path__icon,
+.lesson-card__pic,
+.choice,
+.lesson-finish,
+.word__pic {
+  font-family: var(--font-emoji);
+}
+
 /* ------------------------------------------------------- the door page */
 
 .word-day {

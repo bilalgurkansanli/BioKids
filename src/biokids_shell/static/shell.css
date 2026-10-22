@@ -228,6 +228,7 @@ svg {
 }
 
 .tile__icon {
+  font-family: var(--font-emoji);
   font-size: calc(var(--tile-size) * .38);
   line-height: 1;
 }

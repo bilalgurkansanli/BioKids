@@ -1639,7 +1639,8 @@ screen open it and do today's lesson.
 word is said again, and the last screen counts the stars. With the natural voice
 installed the English is Piper's (`ls /var/lib/biokids-voices/models/piper/en-zio.onnx`),
 otherwise espeak-ng's. **Analiz** then shows the İngilizce card with four words met, and
-`sqlite3 /var/lib/biokids/biokids.db "select item, box from english_item"` lists them.
+`sudo python3 -c 'import sqlite3; print(sqlite3.connect("/var/lib/biokids/biokids.db").execute("select item, box from english_item").fetchall())'`
+lists them.
 With the assistant's microphone on, holding "Basılı tut ve söyle" and saying "cat" gives
 "Harika söyledin!".
 
