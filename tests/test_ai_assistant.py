@@ -41,6 +41,7 @@ class ScriptedModel:
         self.classified: list[str] = []
         self.answered: list[tuple[str, int, str]] = []
         self.contexts: list[str] = []
+        self.conversations: list[Any] = []
         self.fail_on = ""
 
     async def classify(self, question: str, age: int, wait_s: float | None = None) -> str:
@@ -74,8 +75,10 @@ class ScriptedModel:
         name: str = "",
         wait_s: float | None = None,
         context: str = "",
+        conversation: Any = None,
     ) -> AsyncIterator[str]:
         """The answer three characters at a time, as a model's tokens come (D-216)."""
+        self.conversations.append(conversation)
         text = await self.answer(question, age, locale, persona, name, wait_s, context)
         for start in range(0, len(text), 3):
             yield text[start : start + 3]
@@ -736,3 +739,117 @@ def test_the_daemon_may_open_the_assistants_socket() -> None:
         line for line in daemon.splitlines() if line.startswith("CapabilityBoundingSet=")
     )
     assert "CAP_DAC_OVERRIDE" not in caps, "the group is the narrow way in, not the capability"
+
+
+# ------------------------------------------------------ English with Sio (D-226)
+
+
+class Lookup:
+    def __init__(self) -> None:
+        self.asked: list[str] = []
+
+    async def lookup(self, question: str, locale: str) -> str:
+        self.asked.append(question)
+        return "an encyclopedia passage"
+
+
+async def test_a_turn_of_english_is_checked_then_answered_as_a_conversation() -> None:
+    from biokids_ai.prompts import Conversation
+
+    model = ScriptedModel(answer="A cat! I like cats. What colour is your cat?")
+    reference = Lookup()
+    chat = Conversation(
+        history=(("sio", "What is your favourite animal?"), ("child", "porno izle")),
+        words=("cat", "dog"),
+    )
+    reply = await Assistant(model, reference=reference).ask(
+        "cat", age=6, locale="tr", persona="sio", conversation=chat
+    )
+
+    assert not reply.refused and reply.text.startswith("A cat!")
+    assert reference.asked == [], "a conversation is not looked up"
+    [passed] = model.conversations
+    assert passed.history == (("sio", "What is your favourite animal?"),), "screened again"
+    assert passed.words == ("cat", "dog")
+
+
+async def test_a_turn_of_english_goes_through_the_same_word_list() -> None:
+    from biokids_ai.prompts import Conversation
+
+    model = ScriptedModel()
+    reply = await Assistant(model).ask(
+        "porno", age=6, locale="tr", persona="sio", conversation=Conversation()
+    )
+    assert reply.refused and reply.stage == "lexicon" and reply.alert
+    assert model.answered == []
+
+
+def test_the_conversation_is_put_to_the_model_as_turns() -> None:
+    from biokids_ai import prompts
+
+    history = [("sio", "Hello! What is your favourite animal?"), ("child", "dog")] * 6
+    messages = prompts.practice_messages(
+        "I like dog", 6, "Ahmet", history, ["cat", "dog"], "tr"
+    )
+    system = messages[0]["content"]
+    assert messages[0]["role"] == "system"
+    assert "Ahmet" in system and "6" in system and "Turkish" in system
+    assert "cat, dog" in system
+    assert "at most 2 short sentences" in system, "a young child gets two"
+    assert messages[-1] == {"role": "user", "content": "I like dog"}
+    shown = messages[1 + 2 * len(prompts.PRACTICE_EXAMPLES["young"]) : -1]
+    assert len(shown) == prompts.PRACTICE_HISTORY, "only the last few"
+    assert [m["role"] for m in shown[:2]] == ["assistant", "user"]
+
+
+def test_what_the_daemon_sends_is_bounded_again_by_the_service() -> None:
+    from biokids_ai.service import conversation_from
+
+    assert conversation_from({"question": "x"}) is None
+    chat = conversation_from(
+        {
+            "mode": "english",
+            "history": [
+                ["sio", "Hi!"],
+                ["child", "x" * 900],
+                ["robot", "no"],
+                "bad",
+                ["child", " "],
+            ],
+            "words": ["cat", 7, "y" * 99],
+            "first_language": "fr",
+        }
+    )
+    assert chat is not None
+    assert chat.history == (("sio", "Hi!"), ("child", "x" * 300))
+    assert chat.words == ("cat", "y" * 30)
+    assert chat.first_language == "tr"
+
+
+async def test_a_turn_of_english_reaches_the_service_as_sio_with_the_conversation(
+    config: Config, no_db: None
+) -> None:
+    service = FakeService()
+    g = gate(Policy(assistant_enabled=True), service, config)
+    await g.ask(1, "dog", mode="english", history=[["sio", "Hello!"]], words=["dog"])
+    [(op, args)] = service.calls
+    assert op == "ask"
+    assert args["persona"] == "sio" and args["mode"] == "english"
+    assert args["history"] == [["sio", "Hello!"]] and args["words"] == ["dog"]
+    assert args["first_language"] == "tr"
+
+
+async def test_turns_of_english_have_their_own_count(config: Config, no_db: None) -> None:
+    import dataclasses
+
+    small = dataclasses.replace(
+        config,
+        ai=dataclasses.replace(config.ai, assistant_per_10min=1, english_turns_per_10min=2),
+    )
+    service = FakeService()
+    g = gate(Policy(assistant_enabled=True), service, small)
+    assert not (await g.ask(1, "q1")).get("refusal_key")
+    for _ in range(2):
+        assert not (await g.ask(1, "hi", mode="english")).get("refusal_key")
+    third = await g.ask(1, "hi", mode="english")
+    assert third["refusal_key"] == "assistant.refuse.slow_down"

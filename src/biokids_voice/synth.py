@@ -72,6 +72,14 @@ semitones, pitch and formants together. There is no Turkish woman in Piper's
 catalogue, only the man of `tr_TR-dfki-medium`, so the mother speaks his voice
 lifted - lighter and clearly someone else, and still a person rather than a
 robot. Part of the cache key, so a change is heard at once."""
+SIO_DROP: Final = 0.84
+"""How much lower Sio speaks an English voice he shares with Zio (D-226): about
+three semitones down, the mirror of `ZIO_LIFT`. The English voice is a woman's,
+so here the father is the one who changes: Piper speaks a little faster and the
+WAV plays a little slower, pitch and formants falling together."""
+SHARED_VOICE: Final = {"tr": ("zio", ZIO_LIFT), "en": ("sio", SIO_DROP)}
+"""Per language, who speaks a voice both share differently, and by how much:
+the Turkish voice is a man's, the English one a woman's."""
 ESPEAK_CACHE_SUBDIR: Final = "espeak"
 """espeak-ng's audio is cached apart from Piper's, for the same reason the stub's
 is: the cache key names the sentence and the voice and never the engine."""
@@ -174,23 +182,26 @@ class VoiceBank:
         return candidate if _present(candidate) else None
 
     def lift(self, persona: str, locale: str, model: Path | None) -> float:
-        """`ZIO_LIFT` when Zio's model is the very file Sio speaks, else 1.
+        """How much higher (above 1) or lower this persona speaks a shared voice.
 
         The download gives both personas the one Turkish voice there is, a
-        man's (D-196). Sio speaks it as it is; Zio, the mother (D-85), speaks it
-        raised. A family who puts a voice of her own at `tr-zio.onnx` - a
-        different file - hears it as it was recorded.
+        man's (D-196): Sio speaks it as it is, and Zio, the mother (D-85),
+        raised. The English voice is a woman's (D-226): Zio speaks it as it is,
+        and Sio lowered (`SHARED_VOICE`). Only when the two names are the very
+        same file: a family who puts a voice of their own at `tr-zio.onnx` hears
+        it as it was recorded.
         """
-        if persona != "zio" or model is None:
+        changed, factor = SHARED_VOICE.get(locale, ("zio", ZIO_LIFT))
+        if persona != changed or model is None:
             return 1.0
-        his = self.stock_model("sio", locale)
-        if his is None:
+        other = self.stock_model("zio" if persona == "sio" else "sio", locale)
+        if other is None:
             return 1.0
         try:
-            shared = model.samefile(his)
+            shared = model.samefile(other)
         except OSError:
             return 1.0
-        return ZIO_LIFT if shared else 1.0
+        return factor if shared else 1.0
 
 
 _UNREADABLE: set[Path] = set()

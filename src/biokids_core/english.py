@@ -50,6 +50,9 @@ SLUG: Final = "english"
 LANGUAGE: Final = "en"
 """What the voice speaks the lessons in."""
 
+CHAT_MODE: Final = "english"
+"""The assistant's conversation mode: English with Sio (D-226)."""
+
 BOX_DAYS: Final = (0, 1, 2, 4, 7, 14, 30)
 """Days until an item comes back, by its box. Box 0 is an item never seen. The
 gaps grow faster than a grown-up's flashcards would, but start shorter: a child
@@ -535,3 +538,61 @@ def states(
 ) -> dict[str, ItemState]:
     """(item, box, due, first_day) rows, as the daemon stores them, as a progress map."""
     return {item: ItemState(box, due, first) for item, box, due, first in rows}
+
+
+# ------------------------------------------------- talking with Sio (D-226)
+
+CHAT_QUESTIONS: Final = {
+    "animals": "What is your favourite animal?",
+    "colours": "What is your favourite colour?",
+    "numbers": "How old are you?",
+    "family": "Who is in your family?",
+    "food": "What do you like to eat?",
+    "body": "Can you touch your nose?",
+    "clothes": "What are you wearing today?",
+    "home": "What is in your room?",
+    "nature": "What is the weather like today?",
+    "actions": "What do you like to do?",
+    "feelings": "How are you today?",
+    "transport": "Do you like cars or trains?",
+}
+"""Sio's first question, about the unit the child is learning: a conversation
+starts where the words are fresh."""
+
+CHAT_ALWAYS: Final = (("👍", "Yes"), ("👎", "No"), ("🤷", "I don't know"), ("👋", "Hello!"))
+"""Answers a child can tap before they can say them."""
+CHAT_WORDS: Final = 6
+
+
+def chat_opening(unit: Unit | None, name: str) -> str:
+    """What Sio says first, in English: hello, who he is, and one easy question."""
+    question = CHAT_QUESTIONS.get(unit.slug if unit else "", "How are you today?")
+    hello = f"Hello, {name.strip()}!" if name.strip() else "Hello!"
+    return f"{hello} I'm Sio. Let's talk in English! {question}"
+
+
+def chat_chips(units: Sequence[Unit], progress: Progress) -> list[tuple[str, str]]:
+    """Words to tap as an answer: the ones met most recently in the unit the
+    child is in (or the last one finished), then the answers that always fit."""
+    unit = current_unit(units, progress)
+    pool = [unit_ for unit_ in units if any(_state(progress, w).met for w in unit_.item_ids())]
+    if unit is not None and unit not in pool:
+        pool.append(unit)
+    met: list[tuple[str, str]] = []
+    for source in reversed(pool):
+        for card in source.words:
+            if _state(progress, source.word_id(card)).met:
+                met.append((card.pic, card.en))
+        if met:
+            break
+    return [*met[:CHAT_WORDS], *CHAT_ALWAYS]
+
+
+def known_words(units: Sequence[Unit], progress: Progress) -> list[str]:
+    """Every word the child has met, for Sio to use (`PRACTICE_WORDS` of them)."""
+    return [
+        card.en
+        for unit in units
+        for card in unit.words
+        if _state(progress, unit.word_id(card)).met
+    ]

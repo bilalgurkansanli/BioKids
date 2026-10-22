@@ -121,7 +121,8 @@ does and she is never heard speaking his voice unraised."""
 ENGLISH_VOICE: Final = "en_US-ljspeech-medium"
 """The English corner's voice (D-225): one woman reading, US English, from the
 LJ Speech recordings, which are in the public domain - so, unlike the Turkish
-voice, nothing limits who may use it. Zio speaks it; she is the one who teaches."""
+voice, nothing limits who may use it. Zio teaches with it; Sio talks with it,
+lowered (D-226)."""
 
 _ENGLISH_URL: Final = f"https://huggingface.co/rhasspy/piper-voices/resolve/{VOICES_COMMIT}/en/en_US/ljspeech/medium"
 
@@ -147,10 +148,11 @@ ENGLISH_FILES: Final = (
 )
 
 ENGLISH_LOCALE: Final = "en"
-ENGLISH_PERSONAS: Final = ("zio",)
-"""Only Zio: a woman's voice for Sio would be a stranger, and Sio in English
-keeps espeak-ng's man. The voice service raises no voice that only one persona
-has, so hers is heard as it was recorded."""
+ENGLISH_PERSONAS: Final = ("zio", "sio")
+"""Both, as in Turkish, the other way round (D-226): the voice is a woman's, so
+Zio speaks it as it is and the voice service lowers it for Sio. Zio first, so
+that her name exists before his does and he is never heard speaking hers
+unlowered."""
 
 DOWNLOAD_BYTES: Final = (
     PIPER_RELEASE.size + sum(f.size for f in VOICE_FILES) + sum(f.size for f in ENGLISH_FILES)
@@ -568,7 +570,8 @@ def remove(config: Config) -> None:
         for path in (named, model_config(named)):
             with contextlib.suppress(OSError):
                 path.unlink()
-    for persona in ENGLISH_PERSONAS:
+    # Sio's name before Zio's, the reverse of `install_english` (D-226).
+    for persona in reversed(ENGLISH_PERSONAS):
         named = persona_model(directory, ENGLISH_LOCALE, persona)
         for path in (named, model_config(named)):
             with contextlib.suppress(OSError):

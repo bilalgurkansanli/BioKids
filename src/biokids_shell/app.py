@@ -264,7 +264,7 @@ class ShellState:
         except (IpcError, OSError) as exc:
             log.info("the line was not read aloud: %s", exc)
 
-    async def say_and_wait(self, text: str, locale: str) -> bool:
+    async def say_and_wait(self, text: str, locale: str, persona: str = "zio") -> bool:
         """Zio says `text`; this returns once it has been said, or cannot be (D-216).
 
         The voice service answers `say` at once and tells its subscribers when
@@ -285,7 +285,7 @@ class ShellState:
             ack = await asyncio.wait_for(reader.readline(), timeout=SAY_CONNECT_S)
             if not ack or not IpcResponse.decode(ack).ok:
                 return False
-            reply = await self.voice.call("say", text=text, locale=locale, persona="zio")
+            reply = await self.voice.call("say", text=text, locale=locale, persona=persona)
             if not reply.ok or reply.data.get("status") == "dropped":
                 return False
             line = str(reply.data.get("id", ""))
@@ -675,7 +675,28 @@ def register_routes(app: FastAPI) -> None:
         if body is None:
             return JSONResponse({"error": "bad request"}, status_code=400)
         question = str(body.get("question", ""))[:600]
-        return await _answer_so_far(shell, await shell.client.ask_assistant(question))
+        if body.get("mode") != english.CHAT_MODE:
+            return await _answer_so_far(shell, await shell.client.ask_assistant(question))
+        # English with Sio (D-226): what was said so far, from the page, and
+        # the words this child has met, from the daemon.
+        raw = body.get("history")
+        history = [
+            [str(who), " ".join(str(said).split())[:300]]
+            for who, said in (
+                entry
+                for entry in (raw if isinstance(raw, list) else [])[-8:]
+                if isinstance(entry, list) and len(entry) == 2
+            )
+            if who in {"child", "sio"}
+        ]
+        progress, _today = _english_progress(await shell.client.english_state())
+        words = english.known_words(english.load_units(), progress)
+        return await _answer_so_far(
+            shell,
+            await shell.client.ask_assistant(
+                question, mode=english.CHAT_MODE, history=history, words=words
+            ),
+        )
 
     @app.post("/assistant/more")
     async def assistant_more(request: Request, shell: Shell) -> Response:
@@ -707,7 +728,10 @@ def register_routes(app: FastAPI) -> None:
         body = await _json_body(request)
         text = " ".join(str((body or {}).get("text", "")).split())[:MAX_SAY_CHARS]
         said = False
-        if text:
+        if text and (body or {}).get("mode") == english.CHAT_MODE:
+            # Sio, in English, whatever the child's own language (D-226).
+            said = await shell.say_and_wait(text, english.LANGUAGE, "sio")
+        elif text:
             data = await shell.client.state() or {}
             said = await shell.say_and_wait(
                 text, normalise_locale(str(data.get("locale", "tr")))
@@ -739,14 +763,18 @@ def register_routes(app: FastAPI) -> None:
         return JSONResponse({"ok": True}, headers={"Cache-Control": "no-store"})
 
     @app.post("/assistant/hear")
-    async def assistant_hear(request: Request, shell: Shell) -> Response:
-        """Press-and-speak (D-166): a short WAV in, its words out, nothing kept."""
+    async def assistant_hear(request: Request, shell: Shell, lang: str = "") -> Response:
+        """Press-and-speak (D-166): a short WAV in, its words out, nothing kept.
+        `lang=en` hears it as English: talking with Sio (D-226)."""
         if not _from_launcher(request, "audio/wav"):
             return JSONResponse({"error": "forbidden"}, status_code=403)
         audio = await request.body()
         if not audio or len(audio) > MAX_RECORDING_BYTES:
             return JSONResponse({"error": "too long"}, status_code=413)
-        text = await shell.client.hear_assistant(base64.b64encode(audio).decode("ascii"))
+        text = await shell.client.hear_assistant(
+            base64.b64encode(audio).decode("ascii"),
+            english.LANGUAGE if lang == english.LANGUAGE else "",
+        )
         del audio
         return JSONResponse(
             {"text": text or "", "ok": text is not None}, headers={"Cache-Control": "no-store"}
@@ -948,6 +976,35 @@ def register_routes(app: FastAPI) -> None:
                 "goodbye": english.GOODBYE,
                 "strings": _english_strings(tr),
             },
+        )
+
+    @app.get("/english/chat", response_class=HTMLResponse)
+    async def english_chat(request: Request, shell: Shell) -> Response:
+        """Talk with Sio in English (D-226): the assistant, in conversation.
+
+        Only where the parent turned the assistant on for this child, and the
+        assistant can answer: the same switch, the same checks, the same note
+        that a parent may see what is said.
+        """
+        data, instead = await english_gate(request)
+        if instead is not None or data is None:
+            return instead or RedirectResponse("/", status_code=303)
+        if not (data.get("assistant") or {}).get("enabled"):
+            return RedirectResponse("/english", status_code=303)
+        progress, _today = _english_progress(await shell.client.english_state())
+        units = english.load_units()
+        return await render(
+            shell,
+            request,
+            "english_chat.html",
+            data,
+            chat={
+                "mode": english.CHAT_MODE,
+                "opening": english.chat_opening(
+                    english.current_unit(units, progress), str(data.get("display_name", ""))
+                ),
+            },
+            chips=english.chat_chips(units, progress),
         )
 
     @app.get("/english/words", response_class=HTMLResponse)

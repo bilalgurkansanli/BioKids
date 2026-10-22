@@ -73,6 +73,7 @@
 [ai]
 # The optional assistant (biokids-ai).
 # assistant_per_10min = 20
+# english_turns_per_10min = 40   # English with Sio, counted apart (D-226)
 # llama_server_binary = "llama-server"
 # whisper_server_binary = "whisper-server"
 # kiwix_serve_binary = "kiwix-serve"

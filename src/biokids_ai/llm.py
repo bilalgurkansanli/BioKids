@@ -106,6 +106,7 @@ class ChatModel:
         name: str = "",
         wait_s: float | None = None,
         context: str = "",
+        conversation: prompts.Conversation | None = None,
     ) -> AsyncIterator[str]:
         """The answer as the model writes it, a piece at a time (D-216).
 
@@ -114,7 +115,11 @@ class ChatModel:
         an answer that broke off is not an answer that ended. Closing this
         early closes the connection, and llama-server stops writing.
         """
-        payload = _answer_payload(question, age, locale, persona, name, context)
+        payload = (
+            _answer_payload(question, age, locale, persona, name, context)
+            if conversation is None
+            else _practice_payload(question, age, name, conversation)
+        )
         payload["stream"] = True
         payload["chat_template_kwargs"] = {"enable_thinking": False}
         events = self._stream(
@@ -148,6 +153,26 @@ def _answer_payload(
         "temperature": 0.2,
         "top_p": 0.9,
         "max_tokens": prompts.MAX_TOKENS[band],
+    }
+
+
+def _practice_payload(
+    message: str, age: int, name: str, conversation: prompts.Conversation
+) -> dict[str, Any]:
+    """A turn of English with Sio (D-226): short, and a little livelier."""
+    band = prompts.band_for(age)
+    return {
+        "messages": prompts.practice_messages(
+            message,
+            age,
+            name,
+            conversation.history,
+            conversation.words,
+            conversation.first_language,
+        ),
+        "temperature": 0.4,
+        "top_p": 0.9,
+        "max_tokens": prompts.PRACTICE_MAX_TOKENS[band],
     }
 
 

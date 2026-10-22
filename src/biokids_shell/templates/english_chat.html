@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ _('english.chat.title') }}{% endblock %}
+
+{#
+  English with Sio (D-226): the assistant (D-165) as a conversation. Sio speaks
+  first, in English, about the words the child is learning; the child answers
+  by typing, by holding the microphone when the parent turned it on, or by
+  tapping a word. Everything the assistant page has holds here too: each
+  message is checked before it is answered, each sentence before it is shown,
+  and the note that a parent may see what is said is always on the screen.
+#}
+{% block body %}
+<div class="screen assistant assistant--english" data-band="{{ band }}"
+     data-voice="{{ 'on' if state.assistant and state.assistant.voice else 'off' }}">
+  <header class="head">
+    <a class="big-btn big-btn--quiet assistant__home" href="/english"
+       {% if young %}data-speak="{{ _('english.home') }}"{% endif %}>
+      <span aria-hidden="true">🔤</span> {{ _('english.home') }}
+    </a>
+    <h1 class="assistant__title">{{ _('english.chat.title') }}</h1>
+  </header>
+
+  <main class="assistant__main">
+    <div class="assistant__character" aria-hidden="true">
+      {{ characters.sio|safe if characters.sio else '' }}
+    </div>
+
+    <ol class="assistant__log" id="assistant-log" aria-live="polite"></ol>
+  </main>
+
+  <footer class="assistant__foot">
+    <div class="chips" id="assistant-chips" aria-label="{{ _('english.chat.chips') }}">
+      {% for pic, word in chips %}
+        <button class="chip" type="button" data-chip="{{ word }}">
+          <span aria-hidden="true">{{ pic }}</span> {{ word }}
+        </button>
+      {% endfor %}
+    </div>
+    <form class="assistant__form" id="assistant-form" autocomplete="off">
+      {% if state.assistant and state.assistant.voice %}
+        <button class="mic" id="assistant-mic" type="button"
+                aria-label="{{ _('assistant.mic') }}">
+          <span aria-hidden="true">🎤</span>
+        </button>
+      {% endif %}
+      <label class="visually-hidden" for="assistant-question">{{ _('english.chat.placeholder') }}</label>
+      <input class="assistant__input" id="assistant-question" name="question" type="text"
+             maxlength="300" placeholder="{{ _('english.chat.placeholder') }}" autocomplete="off"
+             lang="en" spellcheck="false">
+      <button class="big-btn" id="assistant-send" type="submit">{{ _('assistant.send') }}</button>
+    </form>
+    <p class="assistant__note">
+      <span aria-hidden="true">👀</span> {{ _('assistant.note') }}
+    </p>
+  </footer>
+
+  <div class="listening" id="assistant-listening" hidden>
+    <span class="listening__dot" aria-hidden="true">🎤</span>
+    <span>{{ _('assistant.listening') }}</span>
+  </div>
+</div>
+
+<script id="assistant-strings" type="application/json">{{ {
+  'thinking': _('english.chat.thinking'),
+  'loading': _('assistant.loading'),
+  'heard_nothing': _('english.chat.heard_nothing'),
+  'mic_failed': _('assistant.mic_failed'),
+  'resting': _('assistant.refuse.unavailable'),
+}|tojson }}</script>
+<script id="assistant-mode" type="application/json">{{ chat|tojson }}</script>
+<script src="/static/assistant.js?v={{ asset_version }}" defer></script>
+{% endblock %}

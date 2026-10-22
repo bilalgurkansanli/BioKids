@@ -718,6 +718,10 @@ word is said aloud before anything is asked, a wrong tap shakes and says the wor
 and the buttons wait while a voice speaks. The parent sees it in **Analiz**, as a card
 and a highlight; there is no setting beyond the tile itself.
 
+Where the assistant is on, the corner also has **Sio ile İngilizce konuş** (D-226): the
+assistant's page with Sio on the left, speaking first in English, the child's words to
+tap under the box, and the same note that a parent may see what is said.
+
 ## 4. Writing rules
 
 - **Turkish is the primary voice of the product.** Write Turkish first, translate to

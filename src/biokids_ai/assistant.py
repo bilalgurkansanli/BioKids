@@ -127,6 +127,9 @@ def is_small_talk(message: str) -> bool:
     return 0 < len(words) <= 6 and all(word in SMALL_TALK for word in words)
 
 
+Conversation = prompts.Conversation
+
+
 class Model(Protocol):
     async def classify(self, question: str, age: int, wait_s: float | None = None) -> str: ...
 
@@ -150,6 +153,7 @@ class Model(Protocol):
         name: str = "",
         wait_s: float | None = None,
         context: str = "",
+        conversation: Conversation | None = None,
     ) -> AsyncIterator[str]: ...
 
 
@@ -246,6 +250,7 @@ class Assistant:
         name: str = "",
         on_answering: Callable[[], object] | None = None,
         on_sentence: SentenceSink | None = None,
+        conversation: Conversation | None = None,
     ) -> Reply:
         """Check `question`, then answer it a sentence at a time.
 
@@ -276,9 +281,22 @@ class Assistant:
 
         if on_answering is not None:
             on_answering()
-        context = await self._look_up(question, locale)
+        if conversation is not None:
+            # A conversation is not a question to look up (D-226), and what was
+            # said before is screened again: it comes from the child's own page.
+            conversation = replace(
+                conversation,
+                history=tuple(
+                    (who, said)
+                    for who, said in conversation.history
+                    if self.lexicon.screen(said) is None
+                ),
+            )
+            context = ""
+        else:
+            context = await self._look_up(question, locale)
         return await self._answer(
-            question, age, locale, persona, name, context, on_sentence or _ignore
+            question, age, locale, persona, name, context, on_sentence or _ignore, conversation
         )
 
     async def _answer(
@@ -290,11 +308,14 @@ class Assistant:
         name: str,
         context: str,
         on_sentence: SentenceSink,
+        conversation: Conversation | None = None,
     ) -> Reply:
         """The model's answer, released one screened sentence at a time (D-216)."""
         released: list[str] = []
         splitter = SentenceSplitter()
-        pieces = self.model.stream_answer(question, age, locale, persona, name, context=context)
+        pieces = self.model.stream_answer(
+            question, age, locale, persona, name, context=context, conversation=conversation
+        )
         try:
             async for piece in pieces:
                 stopped = self._release(splitter.feed(piece), released, on_sentence)

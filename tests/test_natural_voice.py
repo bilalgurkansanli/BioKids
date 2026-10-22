@@ -365,7 +365,7 @@ def test_remove_takes_away_what_the_download_put_there_and_nothing_else(
     recording = config.paths.recorded_voice_dir / "tr" / "warn_1.wav"
     recording.parent.mkdir(parents=True, exist_ok=True)
     recording.write_bytes(b"a parent's voice")
-    own = voices(config) / "en-sio.onnx"
+    own = voices(config) / "de-zio.onnx"
     own.write_bytes(b"a voice the family added by hand")
 
     natural_voice.remove(config)
@@ -599,16 +599,21 @@ def test_the_download_lands_where_the_unit_may_write() -> None:
     assert root in defaults.model_dir.parents
 
 
-def test_the_english_voice_is_zios_and_heard_as_it_was_recorded(
+def test_the_english_voice_is_zios_as_recorded_and_sios_lowered(
     config: Config, server: Server
 ) -> None:
-    """D-225: one woman's voice, for Zio, the one who teaches; Sio keeps espeak-ng."""
+    """D-225, D-226: a woman's voice; Zio speaks it as it is, Sio lower."""
+    from biokids_voice.synth import SIO_DROP
+
     natural_voice.install(config, opener=server)
     bank = VoiceBank(config)
     model = bank.stock_model("zio", "en")
+    his = bank.stock_model("sio", "en")
     assert model is not None and model.read_bytes() == ENGLISH_MODEL
-    assert bank.stock_model("sio", "en") is None
-    assert bank.lift("zio", "en", model) == 1.0, "a voice only Zio has is not raised"
+    assert his is not None and his.samefile(model)
+    assert bank.lift("zio", "en", model) == 1.0
+    assert bank.lift("sio", "en", his) == SIO_DROP < 1
+    assert bank.lift("sio", "tr", bank.stock_model("sio", "tr")) == 1.0, "Turkish as before"
     assert natural_voice.installed(config)
     assert natural_voice.describe(config)["english"] == natural_voice.ENGLISH_VOICE
 

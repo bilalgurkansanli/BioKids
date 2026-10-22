@@ -38,7 +38,13 @@ from biokids_core.config import Config, get_config
 from biokids_core.errors import IpcError
 from biokids_core.ipc import MAX_LINE_BYTES, Event, Request, Response, ShellOp
 from biokids_core.types import ShutdownOutcome
-from biokids_daemon.assistant import AssistantGate
+from biokids_daemon.assistant import (
+    MAX_HISTORY,
+    MAX_TURN_CHARS,
+    MAX_WORDS,
+    PRACTICE,
+    AssistantGate,
+)
 from biokids_daemon.bus import EventBus
 from biokids_daemon.server import cancel_connections
 from biokids_daemon.supervisor import ChildRuntime, Supervisor
@@ -355,7 +361,25 @@ class ShellServer:
 
     async def _ask_assistant(self, caller: ShellCaller, request: Request) -> Response:
         question = str(request.args.get("question", ""))[:1000]
-        reply = await self.assistant.ask(caller.child_id, question)
+        if request.args.get("mode") != PRACTICE:
+            reply = await self.assistant.ask(caller.child_id, question)
+            return Response(id=request.id, ok=True, data=reply)
+        # English with Sio (D-226): the conversation so far and the words the
+        # child knows come from the child's own page, so only their shape and
+        # length are taken; the assistant service screens the words in them.
+        raw = request.args.get("history")
+        history = [
+            [str(entry[0]), str(entry[1])[:MAX_TURN_CHARS]]
+            for entry in (raw if isinstance(raw, list) else [])[-MAX_HISTORY:]
+            if isinstance(entry, list) and len(entry) == 2 and entry[0] in {"child", "sio"}
+        ]
+        listed = request.args.get("words")
+        words = [str(word)[:30] for word in (listed if isinstance(listed, list) else [])][
+            :MAX_WORDS
+        ]
+        reply = await self.assistant.ask(
+            caller.child_id, question, mode=PRACTICE, history=history, words=words
+        )
         return Response(id=request.id, ok=True, data=reply)
 
     async def _assistant_more(self, caller: ShellCaller, request: Request) -> Response:

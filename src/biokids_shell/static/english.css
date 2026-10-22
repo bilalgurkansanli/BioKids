@@ -87,6 +87,7 @@
 }
 
 .english__start { font-size: 1.6rem; }
+.english__chat { background: var(--bio-teal); }
 
 .english__path-title {
   margin: 0 0 var(--sp-2);

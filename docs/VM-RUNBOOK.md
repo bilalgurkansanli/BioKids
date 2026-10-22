@@ -1644,6 +1644,16 @@ lists them.
 With the assistant's microphone on, holding "Basılı tut ve söyle" and saying "cat" gives
 "Harika söyledin!".
 
+### 8.26 English with Sio (D-226)
+
+With the assistant on for Elif and its model downloaded, open **İngilizce → Sio ile
+İngilizce konuş**.
+
+**Pass:** Sio greets Elif in English and asks about the unit she is in, in a voice
+lower than Zio's English; tapping a word under the box answers, and Sio replies in one
+or two simple sentences ending in a question. Typing "kedi" gets the English for it.
+`porno` is refused with the catalog sentence and appears under the assistant's alerts.
+
 ## 9. After the run
 
 Only once §1–§8 have all passed:

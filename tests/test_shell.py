@@ -105,6 +105,7 @@ class FakeShellDaemon:
         self.english_answers: list[tuple[str, bool]] = []
         self.heard: list[str] = []
         self.hear_text: str | None = "a cat"
+        self.chat_asked: list[tuple[str, dict[str, Any]]] = []
         self.shutdown_answer: ShutdownOutcome | None = ShutdownOutcome.POWEROFF
 
     async def available(self) -> bool:
@@ -145,6 +146,10 @@ class FakeShellDaemon:
     async def hear_assistant(self, audio_b64: str, language: str = "") -> str | None:
         self.heard.append(language)
         return self.hear_text
+
+    async def ask_assistant(self, question: str, **chat: Any) -> dict[str, Any]:
+        self.chat_asked.append((question, chat))
+        return {"refused": False, "done": True, "sentences": ["A dog! Great!"], "text": ""}
 
     async def ask_a_parent(self, url: str, kind: str = "site") -> tuple[bool, str]:
         self.asked.append(url)
@@ -2175,3 +2180,76 @@ def test_without_the_daemon_a_lesson_still_starts_from_the_beginning(
 ) -> None:
     with_english.english = None
     assert 'href="/english/lesson"' in client.get("/english").text
+
+
+# ------------------------------------------------------ English with Sio (D-226)
+
+
+def test_the_chat_is_there_only_where_the_assistant_is_on(
+    client: TestClient, with_english: FakeShellDaemon
+) -> None:
+    assert with_english.data is not None
+    assert "/english/chat" not in client.get("/english").text
+    response = client.get("/english/chat", follow_redirects=False)
+    assert response.status_code == 303 and response.headers["location"] == "/english"
+
+    with_english.data["assistant"] = {"enabled": True, "voice": False}
+    assert 'href="/english/chat"' in client.get("/english").text
+    page = client.get("/english/chat").text
+    import json
+    import re
+
+    raw = re.search(r'id="assistant-mode" type="application/json">(.*?)</script>', page, re.S)
+    assert raw is not None
+    chat = json.loads(raw.group(1))
+    assert chat["mode"] == "english"
+    assert chat["opening"] == (
+        "Hello, Elif! I'm Sio. Let's talk in English! What is your favourite animal?"
+    ), "about the unit being learned"
+    assert 'data-chip="Yes"' in page and 'data-chip="I don&#39;t know"' in page
+    assert "assistant-mic" not in page, "no microphone unless the parent said so"
+    assert "/static/assistant.js" in page
+
+
+def test_a_turn_of_english_carries_the_conversation_and_the_known_words(
+    client: TestClient, with_english: FakeShellDaemon
+) -> None:
+    with_english.english = {
+        "today": "2026-10-22",
+        "items": {"animals/cat": [2, "2026-10-24", "2026-10-20"]},
+    }
+    history = [["sio", "What is your favourite animal?"], ["child", "cat"], ["x", "dropped"]]
+    reply = _json_post(
+        client, "/assistant/ask", {"question": "dog", "mode": "english", "history": history}
+    )
+    assert reply.status_code == 200
+    [(question, chat)] = with_english.chat_asked
+    assert question == "dog"
+    assert chat["mode"] == "english"
+    assert chat["history"] == history[:2]
+    assert chat["words"] == ["cat"]
+
+
+def test_sios_sentences_are_said_in_english_in_his_voice(
+    client: TestClient, with_english: FakeShellDaemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    said: list[tuple[str, str, str]] = []
+
+    async def say_and_wait(text: str, locale: str, persona: str = "zio") -> bool:
+        said.append((text, locale, persona))
+        return True
+
+    monkeypatch.setattr(client.app.state.shell, "say_and_wait", say_and_wait)  # type: ignore[attr-defined]
+    _json_post(client, "/assistant/say", {"text": "A dog!", "mode": "english"})
+    _json_post(client, "/assistant/say", {"text": "Gökyüzü mavidir."})
+    assert said == [("A dog!", "en", "sio"), ("Gökyüzü mavidir.", "tr", "zio")]
+
+
+def test_talking_with_sio_is_heard_as_english(
+    client: TestClient, with_english: FakeShellDaemon
+) -> None:
+    wav = b"RIFF" + b"\0" * 64
+    headers = {"origin": LAUNCHER, "content-type": "audio/wav", "sec-fetch-site": "same-origin"}
+    client.post("/assistant/hear?lang=en", content=wav, headers=headers)
+    client.post("/assistant/hear", content=wav, headers=headers)
+    assert with_english.heard == ["en", ""]

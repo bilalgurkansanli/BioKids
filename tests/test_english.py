@@ -246,3 +246,23 @@ def test_the_word_of_the_day_is_one_the_child_knows_and_changes_daily() -> None:
         english.word_of_the_day(UNITS, progress, TODAY + dt.timedelta(days=n)) for n in range(8)
     }
     assert len(days) > 1
+
+
+# ------------------------------------------------------ English with Sio (D-226)
+
+
+def test_sio_opens_with_a_question_about_the_unit_being_learned() -> None:
+    assert english.chat_opening(UNITS[1], "Elif") == (
+        "Hello, Elif! I'm Sio. Let's talk in English! What is your favourite colour?"
+    )
+    assert english.chat_opening(None, "").endswith("How are you today?")
+    assert set(english.CHAT_QUESTIONS) == {unit.slug for unit in UNITS}, "one for every unit"
+
+
+def test_the_words_to_tap_are_the_ones_just_met_then_the_answers_that_always_fit() -> None:
+    progress = _met("colours/red", "colours/blue", "animals/cat")
+    chips = english.chat_chips(UNITS, progress)
+    assert chips[:2] == [("🔴", "red"), ("🔵", "blue")]
+    assert chips[-4:] == list(english.CHAT_ALWAYS)
+    assert english.chat_chips(UNITS, {}) == list(english.CHAT_ALWAYS)
+    assert english.known_words(UNITS, progress) == ["cat", "red", "blue"]

@@ -40,6 +40,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final, cast
 
+from biokids_ai import prompts
 from biokids_ai.assistant import Assistant, Reply, cut, refuse
 from biokids_ai.knowledge import PORT as KNOWLEDGE_PORT
 from biokids_ai.knowledge import Book, Knowledge
@@ -334,6 +335,7 @@ class AssistantService:
                     name=str(args.get("name", ""))[:40],
                     on_answering=answer.decided.set,
                     on_sentence=answer.sentences.append,
+                    conversation=conversation_from(args),
                 )
                 answer.finish(reply)
         except asyncio.CancelledError:
@@ -517,6 +519,44 @@ class AssistantService:
             writer.close()
             with contextlib.suppress(OSError, ConnectionError):
                 await writer.wait_closed()
+
+
+def conversation_from(args: dict[str, Any]) -> prompts.Conversation | None:
+    """English with Sio (D-226), from what the daemon sent; None for a question.
+
+    Bounded here as well as in the daemon: what was said so far is the last
+    `PRACTICE_HISTORY` messages of at most `MAX_TURN_CHARS` each, and the words
+    are short ones.
+    """
+    if args.get("mode") != prompts.PRACTICE:
+        return None
+    history: list[tuple[str, str]] = []
+    raw = args.get("history")
+    for entry in raw if isinstance(raw, list) else []:
+        if (
+            isinstance(entry, list | tuple)
+            and len(entry) == 2
+            and entry[0] in {"child", "sio"}
+            and isinstance(entry[1], str)
+            and entry[1].strip()
+        ):
+            history.append((str(entry[0]), " ".join(entry[1].split())[:MAX_TURN_CHARS]))
+    words = args.get("words")
+    known = tuple(
+        str(word)[:MAX_WORD_CHARS]
+        for word in (words if isinstance(words, list) else [])
+        if isinstance(word, str) and word.strip()
+    )[: prompts.PRACTICE_WORDS]
+    language = str(args.get("first_language", "tr"))
+    return prompts.Conversation(
+        history=tuple(history[-prompts.PRACTICE_HISTORY :]),
+        words=known,
+        first_language=language if language in prompts.FIRST_LANGUAGE else "tr",
+    )
+
+
+MAX_TURN_CHARS = 300
+MAX_WORD_CHARS = 30
 
 
 def _int(value: object, default: int) -> int:

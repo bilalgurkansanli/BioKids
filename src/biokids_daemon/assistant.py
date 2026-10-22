@@ -58,6 +58,11 @@ WINDOW_S: Final = 600.0
 MAX_AUDIO_B64: Final = 700_000
 MAX_ALERT_TEXT: Final = 500
 MAX_ANSWER_ID: Final = 64
+PRACTICE: Final = "english"
+"""The conversation mode of English with Sio (D-226)."""
+MAX_HISTORY: Final = 8
+MAX_TURN_CHARS: Final = 300
+MAX_WORDS: Final = 30
 
 
 class AiClient(Protocol):
@@ -118,25 +123,44 @@ class AssistantGate:
         runtime = self.supervisor._require(child_id)
         return runtime, runtime.policy
 
-    def _over_limit(self, child_id: int) -> bool:
+    def _over_limit(self, child_id: int, practice: bool = False) -> bool:
+        """Too many in ten minutes. A conversation in English has its own count
+        (D-226): its turns are short and come quickly, and a child talking with
+        Sio should not use up their questions."""
         now = self._clock()
-        asked = self._asked[child_id]
+        asked = self._asked[child_id if not practice else -child_id]
         while asked and now - asked[0] > WINDOW_S:
             asked.popleft()
-        if len(asked) >= max(1, self.config.ai.assistant_per_10min):
+        limit = (
+            self.config.ai.english_turns_per_10min
+            if practice
+            else self.config.ai.assistant_per_10min
+        )
+        if len(asked) >= max(1, limit):
             return True
         asked.append(now)
         return False
 
-    async def ask(self, child_id: int, question: str) -> dict[str, Any]:
+    async def ask(
+        self,
+        child_id: int,
+        question: str,
+        *,
+        mode: str = "",
+        history: list[list[str]] | None = None,
+        words: list[str] | None = None,
+    ) -> dict[str, Any]:
         """A question to the assistant: refused here, refused there, or begun.
 
         Begun means `done` is false and `answer_id` names the answer for `more`.
+        With `mode` "english" it is a turn of a conversation in English with
+        Sio (D-226): the same switch, the same checks, the same alerts.
         """
         runtime, policy = self._policy(child_id)
+        practice = mode == PRACTICE
         if policy is None or not policy.assistant_enabled:
             return refusal("assistant.refuse.off", "off")
-        if self._over_limit(child_id):
+        if self._over_limit(child_id, practice):
             return refusal("assistant.refuse.slow_down", "slow_down")
         # One answer at a time per child: a new question stops the last one,
         # which the child has stopped reading, and frees the model for this.
@@ -145,13 +169,24 @@ class AssistantGate:
         child = repo.get_child(self.supervisor.session, child_id)
         age = child.age_on(dt.date.today()) if child is not None else 7
         try:
+            extra: dict[str, Any] = (
+                {
+                    "mode": PRACTICE,
+                    "history": history or [],
+                    "words": words or [],
+                    "first_language": runtime.locale,
+                }
+                if practice
+                else {}
+            )
             response = await self.client.call(
                 "ask",
                 question=question,
                 age=age,
                 locale=runtime.locale,
-                persona="zio",
+                persona="sio" if practice else "zio",
                 name=runtime.display_name,
+                **extra,
             )
         except IpcError as exc:
             log.warning("the assistant service is not answering: %s", exc)

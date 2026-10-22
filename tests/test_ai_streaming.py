@@ -166,6 +166,7 @@ class Streaming:
         name: str = "",
         wait_s: float | None = None,
         context: str = "",
+        conversation: Any = None,
     ) -> AsyncIterator[str]:
         self.calls.append("answer")
         try:
@@ -776,7 +777,7 @@ class Daemon:
     async def state(self) -> dict[str, Any]:
         return {"locale": "tr", "assistant": {"enabled": True}}
 
-    async def ask_assistant(self, question: str) -> dict[str, Any]:
+    async def ask_assistant(self, question: str, **_chat: Any) -> dict[str, Any]:
         self.asked.append(question)
         return self.replies.pop(0)
 

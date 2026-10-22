@@ -12,6 +12,11 @@
  * seconds - and stops the microphone the moment it is released, so Chromium's
  * own "recording" indicator goes out with it. The recording is turned into a
  * 16 kHz WAV in memory, posted once, and dropped.
+ *
+ * On /english/chat the same page is a conversation in English with Sio
+ * (D-226): Sio speaks first, every message carries the last few said, Sio's
+ * sentences are read in English in his voice, the microphone hears English,
+ * and the words under the box can be tapped as an answer.
  */
 (function () {
   "use strict";
@@ -32,6 +37,14 @@
   var listening = document.getElementById("assistant-listening");
   var character = document.querySelector(".assistant__character svg");
   var busy = false;
+
+  var modeNode = document.getElementById("assistant-mode");
+  var chat = modeNode ? JSON.parse(modeNode.textContent) : {};
+  var english = chat.mode === "english";
+  var speaker = english ? "sio" : "zio";
+  /* What was said, oldest first, as [who, text]: Sio remembers the last few. */
+  var history = [];
+  var HISTORY = 8;
 
   function bubble(text, who) {
     var item = document.createElement("li");
@@ -77,7 +90,9 @@
     if (saying || !unsaid.length) return;
     saying = true;
     if (character) character.classList.add("is-speaking");
-    post("/assistant/say", { text: unsaid.shift() })
+    var line = { text: unsaid.shift() };
+    if (english) line.mode = "english";
+    post("/assistant/say", line)
       .catch(function () {})
       .then(function () {
         saying = false;
@@ -95,7 +110,8 @@
     input.value = "";
     unsaid = []; /* what is still unsaid of the last answer is not said now */
     setBusy(true);
-    var answer = bubble(strings.thinking, "zio");
+    var answer = bubble(strings.thinking, speaker);
+    var said = [];
     answer.classList.add("bubble--thinking");
     var shown = 0;
     var polls = 0;
@@ -113,12 +129,17 @@
       sentence.textContent = (shown ? " " : "") + text;
       answer.appendChild(sentence);
       shown += 1;
+      said.push(text);
       answer.scrollIntoView({ block: "end", behavior: "smooth" });
       if (aloud) say(text);
     }
 
     function finish(ending, refused, aloud) {
       window.clearTimeout(slow);
+      if (english && !refused && said.length) {
+        history.push(["child", question], ["sio", said.join(" ")]);
+        history = history.slice(-HISTORY);
+      }
       if (ending) {
         if (refused && !shown) answer.classList.add("bubble--refused");
         add(ending, aloud);
@@ -161,7 +182,12 @@
         });
     }
 
-    post("/assistant/ask", { question: question })
+    var asked = { question: question };
+    if (english) {
+      asked.mode = "english";
+      asked.history = history.slice(-HISTORY);
+    }
+    post("/assistant/ask", asked)
       .then(take)
       .catch(function () {
         finish(strings.mic_failed, true, false);
@@ -180,6 +206,22 @@
     event.preventDefault();
     ask(input.value);
   });
+
+  /* A word tapped is an answer, for a child who cannot type it yet. */
+  var chips = document.getElementById("assistant-chips");
+  if (chips) {
+    chips.addEventListener("click", function (event) {
+      var chip = event.target.closest("[data-chip]");
+      if (chip) ask(chip.getAttribute("data-chip"));
+    });
+  }
+
+  /* Sio speaks first, in English, about the words the child is learning. */
+  if (english && chat.opening) {
+    bubble(chat.opening, "sio");
+    say(chat.opening);
+    history.push(["sio", chat.opening]);
+  }
 
   /* --------------------------------------------------------- press-and-speak */
 
@@ -225,7 +267,7 @@
       })
       .catch(function () {
         stopTracks();
-        bubble(strings.mic_failed, "zio");
+        bubble(strings.mic_failed, speaker);
       });
   }
 
@@ -242,7 +284,7 @@
       return; // shorter than a third of a second: a tap, not a question
     }
     setBusy(true);
-    fetch("/assistant/hear", {
+    fetch(english ? "/assistant/hear?lang=en" : "/assistant/hear", {
       method: "POST",
       headers: { "Content-Type": "audio/wav" },
       body: wav,
@@ -255,12 +297,12 @@
         if (heard.text) {
           ask(heard.text);
         } else {
-          bubble(strings.heard_nothing, "zio");
+          bubble(strings.heard_nothing, speaker);
         }
       })
       .catch(function () {
         setBusy(false);
-        bubble(strings.mic_failed, "zio");
+        bubble(strings.mic_failed, speaker);
       });
   }
 

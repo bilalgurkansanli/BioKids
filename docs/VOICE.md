@@ -155,10 +155,11 @@ biokids-core with the family's data deletes it with the recordings.
 ### The English corner's voice (D-225)
 
 The same download brings Piper's `en_US-ljspeech-medium`, a woman reading US English,
-from the public-domain LJ Speech recordings. It is installed as `en-zio.onnx` only: Zio
-teaches the English corner and is heard as recorded (a voice only she has is not
-raised), and Sio in English keeps espeak-ng's man. Lessons ask for each line with
-`locale: en`, whatever the child's own language.
+from the public-domain LJ Speech recordings. It is installed as `en-zio.onnx` and
+`en-sio.onnx`, one file: Zio teaches the English corner with it as recorded, and Sio,
+who talks with the child in English (D-226), speaks it lowered by `SIO_DROP` (0.84) - the
+mirror of the Turkish voice, a man's, which Zio speaks raised. Lessons and Sio's turns
+ask for each line with `locale: en`, whatever the child's own language.
 
 ## 4. A parent's own voice (D-174)
 

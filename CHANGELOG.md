@@ -19,7 +19,7 @@ Nothing yet.
 
 The first release of the packages, numbered by the rounds it took: 1.0 was the release
 candidate built as 0.1.0-2, and five rounds of the owner's tests followed (D-219).
-Decisions D-171 to D-225; read them in `docs/DECISIONS.md`. An upgrade from 0.1.0-1 or
+Decisions D-171 to D-226; read them in `docs/DECISIONS.md`. An upgrade from 0.1.0-1 or
 0.1.0-2 runs whichever of the migrations `3e8b51c0d2a7` (request kinds),
 `9a4f2c7e1b36` (day schedules), `c41d8e0f5a92` (the cuts), `077ca4545f23` (screen time
 per hour), `5d2f8a61c3e4` (special days) and `b7e41d2c9a63` (parents and appearance)
@@ -60,6 +60,10 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
   be forgotten; progress in Analiz. Twelve units, 98 words. A public-domain English voice
   comes with the natural voice (now about 153 MB). LearnEnglish Kids and StoryWeaver as
   optional web tiles. Migration `e3a9c75d1f08`.
+- **English with Sio** (D-226): where the assistant is on, the English corner opens a
+  conversation in simple English. Sio speaks first about the words being learned,
+  remembers the last few turns, says a mistake back the right way, and can be answered
+  by typing, speaking or tapping a word. The same checks and alerts as every question.
 - **Step-by-step guides** (D-224) under Yardım, open before signing in: mail (Gmail's
   app password, Yandex, iCloud, and why not Outlook), phone access, children, time, the
   internet, the voices, a forgotten PIN or passphrase. A failed test mail says which

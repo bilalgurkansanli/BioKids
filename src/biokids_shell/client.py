@@ -133,7 +133,14 @@ class ShellClient:
             return False, "shell.error.unknown"
         return response.ok, response.error or ""
 
-    async def ask_assistant(self, question: str) -> dict[str, Any]:
+    async def ask_assistant(
+        self,
+        question: str,
+        *,
+        mode: str = "",
+        history: list[list[str]] | None = None,
+        words: list[str] | None = None,
+    ) -> dict[str, Any]:
         """The start of the assistant's reply (D-165, D-216). Resting when unreachable.
 
         Its own connection with a long timeout: the first question after a pause
@@ -144,7 +151,11 @@ class ShellClient:
         """
         client = AsyncDaemonClient(self.socket_path, timeout=ASSISTANT_TIMEOUT_S)
         try:
-            response = await client.call(ShellOp.ASK_ASSISTANT, question=question)
+            args: dict[str, Any] = {"question": question}
+            if mode:
+                # A turn of English with Sio (D-226).
+                args |= {"mode": mode, "history": history or [], "words": words or []}
+            response = await client.call(ShellOp.ASK_ASSISTANT, **args)
         except (IpcError, OSError) as exc:
             log.warning("could not ask the assistant: %s", exc)
             return resting()

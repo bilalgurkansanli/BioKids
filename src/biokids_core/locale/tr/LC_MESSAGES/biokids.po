@@ -3332,3 +3332,25 @@ msgstr "İngilizce'de {count} yeni kelimeyle tanıştı."
 
 msgid "insights.s.english"
 msgstr "Öğrendiği kelimeleri gün içinde siz de kullanın; evde duyulan dil en hızlı öğrenilir."
+
+# --- English with Sio (D-226) ---
+msgid "english.chat.title"
+msgstr "Sio ile İngilizce"
+
+msgid "english.chat.open"
+msgstr "Sio ile İngilizce konuş"
+
+msgid "english.chat.placeholder"
+msgstr "İngilizce yaz…"
+
+msgid "english.chat.chips"
+msgstr "Dokunarak cevap ver"
+
+msgid "english.chat.thinking"
+msgstr "Sio düşünüyor…"
+
+msgid "english.chat.heard_nothing"
+msgstr "Duyamadım. Bir daha söyler misin?"
+
+msgid "assistant.panel.english"
+msgstr "Asistan açıkken, İngilizce köşesinde \"Sio ile İngilizce konuş\" da açılır: Sio, {name} ile öğrendiği kelimelerle basit İngilizce sohbet eder. Aynı denetimlerden geçer; uygunsuz bir şey yazılırsa yine size haber verilir."

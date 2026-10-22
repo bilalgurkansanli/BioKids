@@ -137,6 +137,9 @@ class VoiceConfig:
 class AiConfig:
     assistant_per_10min: int = 20
     """Questions a child may ask the assistant in ten minutes (D-165)."""
+    english_turns_per_10min: int = 40
+    """Turns of English with Sio in ten minutes (D-226): a conversation's turns
+    are short and quick, and counted apart from the questions."""
     llama_server_binary: str = "llama-server"
     whisper_server_binary: str = "whisper-server"
     kiwix_serve_binary: str = "kiwix-serve"

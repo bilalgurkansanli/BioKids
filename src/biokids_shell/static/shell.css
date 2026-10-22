@@ -698,6 +698,13 @@ svg {
   border-bottom-left-radius: var(--r-sm);
 }
 
+/* Sio, in English with Sio (D-226): his colour, on his side. */
+.bubble--sio {
+  align-self: flex-start;
+  border: 3px solid var(--bio-teal);
+  border-bottom-left-radius: var(--r-sm);
+}
+
 .bubble--child {
   align-self: flex-end;
   background: color-mix(in srgb, var(--bio-indigo) 10%, var(--surface));
@@ -710,6 +717,30 @@ svg {
 .assistant__foot {
   padding: var(--sp-3) var(--sp-4) var(--sp-4);
 }
+
+/* Words to tap as an answer, in English with Sio (D-226). */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+.chip {
+  min-height: 52px;
+  padding: 0 var(--sp-4);
+  border: 2px solid color-mix(in srgb, var(--bio-teal) 50%, var(--line));
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.chip span { font-family: var(--font-emoji); }
+.chip:hover, .chip:focus-visible { border-color: var(--bio-teal); }
 
 .assistant__form {
   display: flex;

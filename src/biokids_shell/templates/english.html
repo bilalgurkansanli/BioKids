@@ -55,6 +55,13 @@
          {% if young %}data-speak="{{ _('english.words') }}"{% endif %}>
         <span aria-hidden="true">📒</span>&nbsp;{{ _('english.words') }}
       </a>
+      {# D-226: only where the parent turned the assistant on for this child. #}
+      {% if state.assistant and state.assistant.enabled %}
+        <a class="big-btn english__chat" href="/english/chat"
+           {% if young %}data-speak="{{ _('english.chat.open') }}"{% endif %}>
+          <span aria-hidden="true">💬</span>&nbsp;{{ _('english.chat.open') }}
+        </a>
+      {% endif %}
     </section>
 
     <section class="english__path" aria-labelledby="path-title">

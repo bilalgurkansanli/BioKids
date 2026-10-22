@@ -1797,4 +1797,37 @@ that opens a page of the launcher:
   Council's LearnEnglish Kids and Pratham Books' StoryWeaver (CC BY 4.0, levelled
   read-along books).
 Not now: a conversation in English with the assistant, the next step the research points
-to; phonics and reading, for when a child has the spoken words to read.
+to; phonics and reading, for when a child has the spoken words to read. *Extended by
+D-226:* the conversation, with Sio.
+
+**D-226 [owner] English with Sio.** (2026-10-22)
+The step the research behind D-225 points to next: a conversation, where what the child
+says is answered. "Sio ile İngilizce konuş" in the English corner opens the assistant
+(D-165) as a conversation in English:
+- **Where**: only where the parent turned the assistant on for the child, and with the
+  microphone only where they turned press-and-speak on (D-166): the same switches, the
+  same page frame, the same note that a parent may see what is said. The panel's
+  assistant page says the switch opens this too.
+- **Sio speaks first**, in English, with a question about the unit the child is learning
+  ("What is your favourite animal?"). Under the box, the words the child met most
+  recently and "Yes", "No", "I don't know", "Hello!" can be tapped as an answer, for a
+  child who cannot yet type or say it; the microphone hears English (`lang=en`).
+- **Each turn** is a question to the assistant with `mode: english`: the word list and
+  the classifier run on it exactly as on any question, a refusal is a catalog sentence,
+  and an alert reaches the parent as before. It is not looked up in the encyclopedia. The
+  model is told who Sio is (`prompts.PRACTICE_SYSTEM`): very simple English, at most two
+  short sentences for a young child and three for an older one, the words the child has
+  met, one easy question at the end, a mistake said back the right way rather than
+  corrected ("You have a dog? I love dogs!"), and a message in Turkish answered with the
+  English for it. Two worked turns per age band show it how.
+- **Memory**: the page sends the last eight messages; the launcher, the daemon and the
+  assistant service each bound them (shape, 300 characters), and the service screens
+  them with the word list again, since they come from the child's own page.
+- **Its own count**: turns are short and quick, so they have their own limit,
+  `[ai] english_turns_per_10min` (40), apart from the questions'.
+- **Sio's voice**: the English voice is a woman's (D-225), so in English it is the other
+  way round from Turkish: Zio speaks it as recorded and Sio speaks it lowered by 0.84
+  (`synth.SIO_DROP`, about three semitones), Piper a little faster and the WAV a little
+  slower, as `ZIO_LIFT` does upward. The download now names it for both (`en-zio`,
+  `en-sio`); a family that installed the English voice under D-225 gets Sio's name the
+  next time the voice is installed.

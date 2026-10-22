@@ -3332,3 +3332,25 @@ msgstr "Met {count} new English words."
 
 msgid "insights.s.english"
 msgstr "Use the words they learn during the day too; the language heard at home is learned fastest."
+
+# --- English with Sio (D-226) ---
+msgid "english.chat.title"
+msgstr "English with Sio"
+
+msgid "english.chat.open"
+msgstr "Talk with Sio in English"
+
+msgid "english.chat.placeholder"
+msgstr "Write in English…"
+
+msgid "english.chat.chips"
+msgstr "Tap to answer"
+
+msgid "english.chat.thinking"
+msgstr "Sio is thinking…"
+
+msgid "english.chat.heard_nothing"
+msgstr "I didn't hear that. Can you say it again?"
+
+msgid "assistant.panel.english"
+msgstr "With the assistant on, \"Talk with Sio in English\" opens in the English corner too: Sio chats with {name} in simple English, using the words they have learned. It goes through the same checks, and you are told of anything unsuitable just the same."
