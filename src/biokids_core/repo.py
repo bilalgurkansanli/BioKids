@@ -302,6 +302,16 @@ def list_child_apps(
     return [(link, app) for link, app in session.execute(stmt).all()]
 
 
+def child_app(session: Session, child_id: int, app_slug: str) -> tuple[ChildApp, App] | None:
+    """One of the child's enabled apps, with its catalog entry; None when they
+    do not have it."""
+    link = session.get(ChildApp, {"child_id": child_id, "app_slug": app_slug})
+    if link is None or not link.enabled:
+        return None
+    app = session.get(App, app_slug)
+    return None if app is None else (link, app)
+
+
 def child_app_category(link: ChildApp, app: App) -> Category:
     raw = link.category_override or app.default_category
     try:

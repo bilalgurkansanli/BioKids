@@ -13,7 +13,21 @@ Debian version, because that is what `apt policy biokids` shows.
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- **Limits per kind of app and earned time work for the whole time an app is open**
+  (D-228). The launcher told the daemon which app was in front only at the tap, and
+  the daemon believes that for 90 seconds: after that no kind of time was charged and
+  learning never earned anything. The launcher now reports the app in front every 30
+  seconds, and the daemon looks up its kind itself, in the child's own apps.
+- **An app whose kind of time is used up is closed** (D-228), and the child sees the
+  calm screen that says so. It used to keep running. Audited as `app_stopped`.
+
+### Changed
+
+- IPC: `report_activity` takes `unit`, the app's `biokids-app-*.scope`, and no longer
+  reads `category`. A launcher still running the old code after an upgrade keeps
+  working; its reports are looked up the new way, without a scope until it restarts.
 
 ## [1.5.0-1] - 2026-10-21
 

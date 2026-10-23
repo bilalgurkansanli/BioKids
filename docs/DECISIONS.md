@@ -1888,3 +1888,43 @@ child's screen a tap sometimes opened nothing, or slowly.
     six seconds it now asks again, which brings an open window to the front and never
     starts a second copy (`_open_again`). Not for a site, which opens a window at every
     tap.
+
+**D-228 [claude] The app in front is reported while it is in front; its kind is the
+daemon's to look up; a used-up kind stops the app.** (2026-10-23)
+The end-to-end review found that limits per kind of app (D-193) and earned time (D-45)
+did not work past the first ninety seconds of an app. The launcher reported the app in
+front once, at the tap (`/launch`), and the daemon trusts a report for
+`ACTIVITY_TTL_SECONDS` (90); only the English corner's page said it again. After that
+the child was "in nothing in particular": no kind of time was charged, a learning
+streak reset on every tick so nothing was ever earned, and the history had no app for
+the rest of the hour. And when a kind's limit did run out, `Action.BLOCK` only
+published an event the launcher did not listen to, so the game went on. The tests hid
+it: their helper re-reported on every tick, "as the shell does", which no code did.
+- **Reported while in front.** `biokids_shell.focus.FocusReporter` asks X every
+  `FOCUS_REPORT_S` (30 s, a third of the daemon's 90, so two lost reports in a row cost
+  nothing) for the active window's `_NET_WM_PID` (`xdotool getactivewindow
+  getwindowpid`), finds its `biokids-app-*.scope` under the child's own
+  `user@<uid>.service` (`appbar.scope_of_pid`, the app bar's chain), and from the scope
+  the tile (`AppLauncher.slug_of`): an app tile by its own scope; a browser window as
+  the web tile tapped last, because every web tile's window is one Chromium in the scope
+  of whichever started it. The launcher itself in front, or a window that is no app of
+  the child's, is not reported: the last report runs out on its own, and the English
+  corner keeps reporting itself. The owner asked for "every 90 seconds"; 30 is what keeps
+  a report inside a 90-second trust.
+- **The kind is the daemon's.** `report_activity` names the app and its scope, never a
+  kind. The daemon looks the kind up in the child's own enabled apps, with the parent's
+  override (`repo.child_app`); an app the child does not have counts against no kind.
+  The launcher runs as the child, and a kind it named would be the child's word for what
+  they are doing. A `category` from a launcher older than this is not read.
+- **A used-up kind stops the app.** On `Action.BLOCK` the daemon stops the scope the
+  launcher named (`systemctl --user -M <child>@.host stop`, only a name matching
+  `APP_SCOPE`, now in `biokids_core.types`), audits `app_stopped`, and then publishes
+  `blocked`, on which the launcher goes to the calm screen for that reason. A stop that
+  fails is tried again on the next tick and the launcher is told only once the app is
+  gone. A report sampled just before the stop still names the stopped scope and is not
+  taken for the app being back. A page of the launcher's own (the English corner) has no
+  scope; leaving it is the whole of the stop. Stopping the browser's scope closes every
+  web tile's window, which is what a used-up Web limit means.
+- Unchanged: the day's limit never depended on any of this - it is counted from logind
+  whatever is in front - and an app the parent unticks while it is open is still not
+  stopped (`app_allowed` stays true in the tick).

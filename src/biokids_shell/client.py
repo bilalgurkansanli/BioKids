@@ -87,13 +87,15 @@ class ShellClient:
         except (IpcError, OSError):
             return
 
-    async def report_activity(self, app_slug: str, app_name: str, category: str) -> None:
+    async def report_activity(self, app_slug: str, app_name: str = "", unit: str = "") -> None:
+        """Which app is in front, and the scope it runs in when known. Its kind
+        is the daemon's to look up (D-228)."""
         try:
             await self._client.call(
                 ShellOp.REPORT_ACTIVITY,
                 app_slug=app_slug,
                 app_name=app_name,
-                category=category,
+                unit=unit,
             )
         except (IpcError, OSError):
             log.debug("could not report activity; the daemon will time it out")

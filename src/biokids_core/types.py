@@ -8,6 +8,7 @@ user-facing text, and that rule is what keeps Turkish and English honest.
 from __future__ import annotations
 
 import datetime as dt
+import re
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Final
@@ -467,3 +468,14 @@ class Decision:
     def remaining_minutes(self) -> int:
         """Rounded up: a child with 61 seconds left has "2 minutes", not "1"."""
         return -(-self.remaining_seconds // 60)
+
+
+# --------------------------------------------------------------------- app scopes
+
+APP_SCOPE: Final = re.compile(r"biokids-app-[A-Za-z0-9_-]+\.scope")
+"""The systemd scopes the launcher starts the child's apps in (`ARCHITECTURE.md`
+§7). The only units the app bar stops, and the only ones the daemon stops by name."""
+
+
+def is_app_scope(name: str) -> bool:
+    return APP_SCOPE.fullmatch(name) is not None

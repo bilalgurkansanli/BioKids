@@ -27,6 +27,7 @@ from biokids_core.ipc import AsyncDaemonClient
 from biokids_shell.app import ShellState, create_app
 from biokids_shell.client import ShellClient
 from biokids_shell.dimmer import BedtimeDimmer
+from biokids_shell.focus import FocusReporter
 from biokids_shell.kiosk import KioskSupervisor, keep_fullscreen, launcher_port
 from biokids_shell.relay import SessionRelay, WindowRaiser, voice_socket_path
 from biokids_shell.windows import (
@@ -125,6 +126,10 @@ async def main_async(args: argparse.Namespace) -> int:
         # The app bar: home, the app's volume and a close that works (D-197).
         # It takes the title bar's close button over once it is on screen.
         tasks.append(asyncio.create_task(appbar.supervise(stop_event), name="app-bar"))
+        # Which app is in front, while it is (D-228): the limits on kinds of
+        # app and the earned time count from these reports.
+        focus = FocusReporter(shell.launcher, shell.client.report_activity)
+        tasks.append(asyncio.create_task(focus.run(stop_event), name="focus"))
         # Give the launcher a moment to bind before pointing a browser at it;
         # Chromium's own error page is not something a four-year-old should see.
         await asyncio.sleep(0.5)

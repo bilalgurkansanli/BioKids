@@ -59,6 +59,7 @@ from biokids_core.ipc import Request as IpcRequest
 from biokids_core.ipc import Response as IpcResponse
 from biokids_core.types import AgeBand, Reason
 from biokids_shell import device, pictures
+from biokids_shell.appbar import scope_unit
 from biokids_shell.client import ShellClient
 from biokids_shell.launcher import AppLauncher, LaunchRequest
 from biokids_shell.relay import NOTICE_SECONDS, voice_socket_path
@@ -573,9 +574,15 @@ def register_routes(app: FastAPI) -> None:
             )
         )
         if result.ok:
+            # Straight away, so a limit applies from the tap on; the focus
+            # reporter says it again while the app stays in front (D-228). A
+            # web tile's own scope ends as it hands its window to the browser
+            # already open, so its scope is the reporter's to find.
             shell.in_background(
                 shell.client.report_activity(
-                    slug, str(tile.get("name", slug)), str(tile.get("category", ""))
+                    slug,
+                    str(tile.get("name", slug)),
+                    scope_unit(result.unit) if result.tracked and result.unit else "",
                 ),
                 "report-activity",
             )
@@ -956,7 +963,10 @@ def register_routes(app: FastAPI) -> None:
             units=units,
             done={unit.slug for unit in units if _unit_done(unit, progress)},
             word=english.word_of_the_day(
-                units, progress, today, salt=sum(map(ord, str(data.get("display_name", ""))))
+                units,
+                progress,
+                today,
+                salt=sum(ord(ch) for ch in str((data or {}).get("display_name", ""))),
             ),
             lesson_steps=len(lesson.steps),
         )
@@ -1111,9 +1121,7 @@ def register_routes(app: FastAPI) -> None:
         tile = _find_tile(data, english.SLUG)
         if tile is None:
             return JSONResponse({"ok": False})
-        await shell.client.report_activity(
-            english.SLUG, str(tile.get("name", english.SLUG)), str(tile.get("category", ""))
-        )
+        await shell.client.report_activity(english.SLUG, str(tile.get("name", english.SLUG)))
         return JSONResponse({"ok": True})
 
     # ------------------------------------------------------------- events

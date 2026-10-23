@@ -33,8 +33,10 @@ log = logging.getLogger("biokids_daemon.supervisor")
 
 ACTIVITY_TTL_SECONDS = 90
 """How long a focus report from the shell is trusted. Past this the child is
-treated as having nothing in particular on screen, which is the conservative
-reading: category limits stop applying, the general quota does not."""
+treated as having nothing in particular on screen: category limits stop
+applying, the general quota does not. The launcher reports the app in front
+every `biokids_shell.focus.FOCUS_REPORT_S` (D-228), so only a launcher that has
+stopped reporting - or the launcher itself in front - lets a report run out."""
 
 
 @dataclass
@@ -52,7 +54,15 @@ class ChildRuntime:
     app_slug: str = ""
     app_name: str = ""
     category: Category | None = None
+    """Looked up by the daemon from the child's own apps, never taken from the
+    report: the launcher says only which app is in front (D-228)."""
+    app_unit: str = ""
+    """The `biokids-app-*.scope` the app in front runs in, when the launcher
+    could say: what is stopped when the app's kind of time runs out."""
     activity_reported_at: float = 0.0
+    blocked_unit: str = ""
+    """The last scope stopped for a limit. A report the launcher sampled just
+    before the stop still names it, and is not taken for the app being back."""
 
     last_decision: Decision | None = None
     last_active: bool = False

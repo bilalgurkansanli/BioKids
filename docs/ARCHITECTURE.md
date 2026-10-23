@@ -520,8 +520,14 @@ if allowed, the shell spawns the app via `systemd-run --user --scope
 - killing an app at limit time is `systemctl --user stop`, clean and complete
 - per-app network rules, if they are ever built (D-66), attach to the same cgroups
 
-Focus tracking on X11: `_NET_ACTIVE_WINDOW` via python-xlib, mapped to a PID via
-`_NET_WM_PID`, mapped to a cgroup via `/proc/<pid>/cgroup`.
+Focus tracking on X11 (D-228): every 30 s the launcher's `FocusReporter`
+(`biokids_shell/focus.py`) reads the active window's `_NET_WM_PID` with xdotool, maps
+it to a `biokids-app-*.scope` via `/proc/<pid>/cgroup`, and the scope to a tile:
+an app tile by its own scope, a browser window as the web tile tapped last. It
+reports the tile and the scope, never a kind; the daemon looks the kind up in the
+child's own apps and trusts the report for 90 s. Nothing is reported while the
+launcher itself is in front. When a kind of app's time is used up the daemon stops the
+reported scope, then tells the launcher (`blocked`), which shows the calm screen.
 
 The app bar (D-197, `biokids_shell/appbar/`) already walks that chain in the child's
 session, through libwnck: the active window, its `_NET_WM_PID`, its

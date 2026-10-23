@@ -70,6 +70,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urlsplit
 
+from biokids_core.types import is_app_scope as is_app_scope
 from biokids_shell.kiosk import KIOSK_WINDOW_CLASS, launcher_port
 
 if TYPE_CHECKING:
@@ -91,13 +92,6 @@ EXIT_UNAVAILABLE: Final = 3
 """GTK 3 or libwnck 3 is missing. Not worth restarting for."""
 
 # ------------------------------------------------------------------ scopes
-
-APP_SCOPE: Final = re.compile(r"biokids-app-[A-Za-z0-9_-]+\.scope")
-"""The scopes `AppLauncher` starts apps in, and the only units the bar stops."""
-
-
-def is_app_scope(name: str) -> bool:
-    return APP_SCOPE.fullmatch(name) is not None
 
 
 def scope_unit(unit: str) -> str:

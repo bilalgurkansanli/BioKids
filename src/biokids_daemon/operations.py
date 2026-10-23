@@ -22,7 +22,13 @@ from biokids_core.ipc import EventKind
 from biokids_core.policy import bedtime_in, evaluate
 from biokids_core.repo import SEARCH_ALERT_APP
 from biokids_core.search_filter import MAX_SEARCH_WORDS
-from biokids_core.types import ActivityContext, Category, Decision, ShutdownOutcome
+from biokids_core.types import (
+    ActivityContext,
+    Category,
+    Decision,
+    ShutdownOutcome,
+    is_app_scope,
+)
 from biokids_daemon.base import ChildRuntime, log
 from biokids_daemon.end_sequence import EndSequenceMixin
 
@@ -518,16 +524,30 @@ class OperationsMixin(EndSequenceMixin):
         self.bus.publish(EventKind.BREAK_FINISHED, child_id=child_id)
 
     def report_activity(
-        self, child_id: int, app_slug: str, app_name: str = "", category: str = ""
+        self, child_id: int, app_slug: str, app_name: str = "", *, unit: str = ""
     ) -> None:
-        """The shell says what has focus. Trusted for `ACTIVITY_TTL_SECONDS`."""
+        """The shell says which app is in front. Trusted for `ACTIVITY_TTL_SECONDS`.
+
+        Its kind is looked up here, in the child's own apps with the parent's
+        override (D-228): the launcher runs as the child, and a category it
+        named would be the child's word for what they are doing. An app the
+        child does not have counts against no kind. `unit` is the app's scope,
+        kept only when it is one, so a limit can stop it.
+        """
         runtime = self._require(child_id)
+        unit = unit if is_app_scope(unit) else ""
+        if unit and unit == runtime.blocked_unit:
+            return
+        found = repo.child_app(self.session, child_id, app_slug) if app_slug else None
         runtime.app_slug = app_slug
-        runtime.app_name = app_name or app_slug
-        try:
-            runtime.category = Category(category) if category else None
-        except ValueError:
+        runtime.app_unit = unit
+        if found is None:
+            runtime.app_name = app_name or app_slug
             runtime.category = None
+        else:
+            link, app = found
+            runtime.app_name = app.name(runtime.locale)
+            runtime.category = repo.child_app_category(link, app)
         runtime.activity_reported_at = self.clock.read().boot
 
     def record_visit(self, child_id: int, host: str) -> None:
@@ -633,11 +653,10 @@ class OperationsMixin(EndSequenceMixin):
         reading = self.clock.read()
         state = self.ledger.state(child_id, reading.wall.date())
         allowed = repo.app_is_allowed(self.session, child_id, app_slug)
-        link_category: Category | None = None
-        for link, app in repo.list_child_apps(self.session, child_id):
-            if link.app_slug == app_slug:
-                link_category = repo.child_app_category(link, app)
-                break
+        found = repo.child_app(self.session, child_id, app_slug)
+        link_category: Category | None = (
+            None if found is None else repo.child_app_category(*found)
+        )
         return evaluate(
             runtime.policy,
             state,

@@ -400,7 +400,7 @@ class DaemonServer:
             child_id,
             str(request.args.get("app_slug", "")),
             str(request.args.get("app_name", "")),
-            str(request.args.get("category", "")),
+            unit=str(request.args.get("unit", "")),
         )
         return Response(id=request.id, ok=True)
 

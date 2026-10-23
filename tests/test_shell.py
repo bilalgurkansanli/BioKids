@@ -120,8 +120,8 @@ class FakeShellDaemon:
         self.launched.append(app_slug)
         return self.launch_answer
 
-    async def report_activity(self, app_slug: str, app_name: str, category: str) -> None:
-        self.activity.append((app_slug, app_name, category))
+    async def report_activity(self, app_slug: str, app_name: str = "", unit: str = "") -> None:
+        self.activity.append((app_slug, app_name, unit))
 
     async def first_run_done(self) -> None:
         self.first_run_calls += 1
@@ -370,7 +370,39 @@ def test_launching_asks_the_daemon_and_reports_the_activity(
         _settle(client)  # the report goes after the answer (D-208)
     assert response.json()["ok"] is True
     assert daemon.launched == ["tuxpaint"]
-    assert daemon.activity == [("tuxpaint", "Boya", "free")]
+    # The app, never its kind: that is the daemon's to look up (D-228). This
+    # launcher did not keep the app as its tile's, so no scope is named.
+    assert daemon.activity == [("tuxpaint", "Boya", "")]
+
+
+class _TrackingLauncher(_RecordingLauncher):
+    """A launcher that keeps an app tile's app, as AppLauncher does."""
+
+    async def launch(self, request: LaunchRequest) -> Any:
+        from biokids_shell.launcher import LaunchResult
+
+        self.requests.append(request)
+        tracked = request.kind == "app"
+        return LaunchResult(ok=True, unit=f"biokids-app-{request.slug}-1", tracked=tracked)
+
+
+def test_an_app_tile_is_reported_with_the_scope_it_runs_in(
+    config: Config, daemon: FakeShellDaemon
+) -> None:
+    """The scope is what the daemon stops when the app's kind of time is up."""
+    app = create_app(config)
+    app.state.shell.client = daemon  # type: ignore[assignment]
+    app.state.shell.launcher = _TrackingLauncher(config)
+    with TestClient(app, base_url=LAUNCHER) as client:
+        client.post("/launch/tuxpaint")
+        client.post("/launch/eba")
+        _settle(client)
+    assert daemon.activity == [
+        ("tuxpaint", "Boya", "biokids-app-tuxpaint-1.scope"),
+        # A web tile's own scope ends as it hands over to the browser already
+        # open; the focus reporter finds the browser's.
+        ("eba", "EBA", ""),
+    ]
 
 
 def test_a_refused_launch_says_why_without_starting_anything(
@@ -433,10 +465,10 @@ class _SlowToNoteDaemon(FakeShellDaemon):
         super().__init__(state)
         self.release: asyncio.Event | None = None
 
-    async def report_activity(self, app_slug: str, app_name: str, category: str) -> None:
+    async def report_activity(self, app_slug: str, app_name: str = "", unit: str = "") -> None:
         assert self.release is not None
         await self.release.wait()
-        await super().report_activity(app_slug, app_name, category)
+        await super().report_activity(app_slug, app_name, unit)
 
 
 def test_the_answer_does_not_wait_for_the_activity_report(config: Config) -> None:
@@ -454,7 +486,7 @@ def test_the_answer_does_not_wait_for_the_activity_report(config: Config) -> Non
 
         client.portal.call(daemon.release.set)  # type: ignore[union-attr]
         _settle(client)
-        assert daemon.activity == [("tuxpaint", "Boya", "free")]
+        assert daemon.activity == [("tuxpaint", "Boya", "")]
         assert not client.app.state.shell.background  # type: ignore[attr-defined]
 
 
@@ -462,7 +494,9 @@ def test_a_report_that_fails_is_logged_not_raised(
     config: Config, caplog: pytest.LogCaptureFixture
 ) -> None:
     class Broken(FakeShellDaemon):
-        async def report_activity(self, app_slug: str, app_name: str, category: str) -> None:
+        async def report_activity(
+            self, app_slug: str, app_name: str = "", unit: str = ""
+        ) -> None:
             raise RuntimeError("the daemon hiccuped")
 
     with _launcher_client(config, Broken(a_state())) as client:
@@ -2161,7 +2195,8 @@ def test_the_lesson_minutes_are_the_corners_in_its_kind_of_app(
     client: TestClient, with_english: FakeShellDaemon
 ) -> None:
     assert _json_post(client, "/english/active", {}).json() == {"ok": True}
-    assert with_english.activity == [("english", "İngilizce", "learning")]
+    # Its kind - learning, unless the parent chose otherwise - is the daemon's.
+    assert with_english.activity == [("english", "İngilizce", "")]
 
 
 def test_my_words_shows_the_met_ones_and_keeps_the_rest_for_later(

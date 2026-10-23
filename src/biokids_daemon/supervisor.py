@@ -184,7 +184,9 @@ class Supervisor(
                 runtime.app_slug = previous.app_slug
                 runtime.app_name = previous.app_name
                 runtime.category = previous.category
+                runtime.app_unit = previous.app_unit
                 runtime.activity_reported_at = previous.activity_reported_at
+                runtime.blocked_unit = previous.blocked_unit
                 runtime.last_decision = previous.last_decision
                 runtime.last_active = previous.last_active
                 runtime.end_action_sessions = previous.end_action_sessions
@@ -323,14 +325,46 @@ class Supervisor(
             case Action.LOCK | Action.TIMEOUT:
                 await self._enter_pause(runtime, decision)
             case Action.BLOCK:
-                self.bus.publish(
-                    EventKind.BLOCKED,
-                    child_id=runtime.child_id,
-                    reason_code=decision.reason_code,
-                    app=runtime.app_slug,
-                )
+                await self._block(runtime, decision)
             case _:
                 pass
+
+    async def _block(self, runtime: ChildRuntime, decision: Decision) -> None:
+        """The app in front may not be used now - its kind of time is used up
+        (D-193): stop it, and send the launcher to its calm screen (D-228).
+
+        Until D-228 this only told the launcher, which did not listen, and the
+        game went on past its limit. The scope is the one the launcher named
+        for the app in front; a page of the launcher's own, the English corner,
+        has none, and the launcher leaving it is the whole of the stop. A stop
+        that fails is tried again on the next tick, and the launcher is told
+        only once the app is gone: a calm screen behind a game that is still
+        running would be a screen about nothing the child can see.
+        """
+        unit = runtime.app_unit
+        if unit:
+            if not await self.enforcer.stop_app(runtime.unix_user, unit):
+                return
+            runtime.blocked_unit = unit
+        self.bus.publish(
+            EventKind.BLOCKED,
+            child_id=runtime.child_id,
+            reason_code=decision.reason_code,
+            app=runtime.app_slug,
+        )
+        repo.audit(
+            self.session,
+            actor="daemon",
+            action="app_stopped",
+            target=f"child:{runtime.child_id}",
+            detail={"app": runtime.app_slug, "reason": decision.reason_code},
+        )
+        # Nothing in particular is in front now; the launcher's next report
+        # says what is, and a report sampled before the stop is not believed.
+        runtime.app_slug = ""
+        runtime.app_name = ""
+        runtime.category = None
+        runtime.app_unit = ""
 
     async def _enter_pause(self, runtime: ChildRuntime, decision: Decision) -> None:
         """A break or a timeout: pause the child, do not lock them out.

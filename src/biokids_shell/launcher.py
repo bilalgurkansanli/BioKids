@@ -77,6 +77,9 @@ STILL_OPENING_S = 30.0
 """An app with no window yet this soon after it started is still opening it; a
 second tap waits for it rather than starting another. Later, a scope with no
 window is something left behind, and is stopped before the app starts again."""
+BROWSER_SCOPES_KEPT = 64
+"""Web tiles' scopes remembered (`AppLauncher.browser_scopes`). Each tap is one,
+and all but the browser's own end at once; a day of taps is far fewer."""
 WINDOW_SIZE = "{window}"
 """In a catalog `exec`: the size of a window that fills the screen inside its
 title bar and borders (D-227). For an app whose window cannot be maximised but
@@ -154,6 +157,13 @@ class AppLauncher:
     """unit -> when it started (monotonic): an app still opening its window is
     told apart from a scope that has none. By unit, not by tile, so the time is
     always that of the copy being asked about."""
+    browser_scopes: dict[str, None] = field(default_factory=dict)
+    """The scopes web tiles were started in, oldest first. The child's browser
+    runs in the first of them still alive, so a browser window in front is in
+    one of these (D-228). Kept to `BROWSER_SCOPES_KEPT`, the first always."""
+    last_web: str = ""
+    """The web tile tapped last: what a browser window in front is taken to be,
+    since every web tile's window is one Chromium's."""
     appbar_socket: Path | None = None
     """Where the running app bar listens (D-208); its usual place when None."""
     _watches: set[asyncio.Task[None]] = field(default_factory=set)
@@ -250,6 +260,8 @@ class AppLauncher:
             tracked = request.kind == "app"
             if tracked:
                 self._remember(request.slug, unit)
+            else:
+                self._remember_browser(request.slug, unit)
             # Remembered first, so that an app found to have failed is forgotten.
             self._keep_watching(process, request.slug, unit, until)
             return LaunchResult(ok=True, unit=unit, tracked=tracked)
@@ -299,6 +311,27 @@ class AppLauncher:
             self.started.pop(old, None)
         self.running[slug] = unit
         self.started[unit] = time.monotonic()
+
+    def _remember_browser(self, slug: str, unit: str) -> None:
+        self.last_web = slug
+        self.browser_scopes[scope_unit(unit)] = None
+        while len(self.browser_scopes) > BROWSER_SCOPES_KEPT:
+            # Never the oldest: that is the one the browser most likely runs in.
+            del self.browser_scopes[list(self.browser_scopes)[1]]
+
+    def slug_of(self, scope: str) -> str | None:
+        """The tile whose app runs in `scope`; None when it is not one of ours.
+
+        An app tile by its own scope. A browser window is the web tile tapped
+        last: the browser is one Chromium for every web tile, in the scope of
+        whichever started it, so the scope cannot tell which site is in front.
+        """
+        for slug, unit in self.running.items():
+            if scope_unit(unit) == scope:
+                return slug
+        if scope in self.browser_scopes and self.last_web:
+            return self.last_web
+        return None
 
     def _forget(self, slug: str, unit: str) -> None:
         """Forget `unit`, and the tile's app only if `unit` is still it."""

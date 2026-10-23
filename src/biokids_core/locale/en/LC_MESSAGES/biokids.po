@@ -999,6 +999,9 @@ msgstr "Data erased"
 msgid "audit.action.quota_exhausted"
 msgstr "Daily time used up"
 
+msgid "audit.action.app_stopped"
+msgstr "App closed: today's time for this kind of app is used up"
+
 msgid "audit.action.warning_spoken"
 msgstr "Warning given"
 

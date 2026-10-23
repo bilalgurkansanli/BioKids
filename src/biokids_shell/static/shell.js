@@ -700,6 +700,15 @@
       });
     });
 
+    /* The app in front was stopped: its kind of time is used up (D-228). The
+     * calm screen says so, as it does for a tap on such an app. */
+    source.addEventListener("blocked", function (event) {
+      var data = parse(event) || {};
+      window.location.href =
+        "/blocked?reason=" + encodeURIComponent(data.reason_code || "") +
+        "&slug=" + encodeURIComponent(data.app || "");
+    });
+
     /* A parent answered (D-173). The banner always; Zio or Sio says it too
      * when the voices are on, through the ordinary speak event. A yes to more
      * time also arrives as a tick, which moves the ring. */

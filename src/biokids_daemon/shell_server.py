@@ -320,11 +320,13 @@ class ShellServer:
         )
 
     async def _report_activity(self, caller: ShellCaller, request: Request) -> Response:
+        # A `category` from a launcher older than D-228 is not read: the
+        # daemon looks the kind of app up itself.
         self.supervisor.report_activity(
             caller.child_id,
             str(request.args.get("app_slug", "")),
             str(request.args.get("app_name", "")),
-            str(request.args.get("category", "")),
+            unit=str(request.args.get("unit", "")),
         )
         return Response(id=request.id, ok=True)
 

@@ -35,6 +35,7 @@ from biokids_daemon.enforcer import Enforcer, RecordingRunner
 from biokids_daemon.sessions import FakeSessionSource, SessionWatcher
 from biokids_daemon.supervisor import Supervisor
 from biokids_shell.app import CHEER_FILE, create_app
+from helpers import give_app
 from test_shell import LAUNCHER, FakeShellDaemon, _RecordingLauncher, _settle, a_state
 
 WEDNESDAY = dt.date(2026, 10, 21)
@@ -220,10 +221,16 @@ def supervisor(
 async def use(
     supervisor: Supervisor, clock: FakeClock, seconds: int, category: str = "learning"
 ) -> None:
-    """Run the loop with one app in focus, re-reported as the shell does."""
+    """Run the loop with one app in front, re-reported as the shell does.
+
+    The kind of app is the child's own apps' to say (D-228), so each kind is
+    its own app here: GCompris for learning, SuperTux for games.
+    """
+    slug = {"learning": "gcompris", "games": "supertux"}.get(category, category)
+    give_app(supervisor.session, 1, slug, category)
     for _ in range(seconds // TICK):
         clock.advance(TICK)
-        supervisor.report_activity(1, "gcompris", "GCompris", category)
+        supervisor.report_activity(1, slug)
         await supervisor.tick()
 
 

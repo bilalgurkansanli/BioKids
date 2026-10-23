@@ -999,6 +999,9 @@ msgstr "Veriler silindi"
 msgid "audit.action.quota_exhausted"
 msgstr "Günlük süre doldu"
 
+msgid "audit.action.app_stopped"
+msgstr "Uygulama kapatıldı: bu tür uygulamaların bugünkü süresi doldu"
+
 msgid "audit.action.warning_spoken"
 msgstr "Uyarı verildi"
 

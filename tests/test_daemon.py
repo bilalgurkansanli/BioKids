@@ -20,6 +20,7 @@ from collections.abc import Sequence
 from typing import Any
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
@@ -27,14 +28,17 @@ from biokids_core import repo
 from biokids_core.clock import FakeClock
 from biokids_core.config import Config
 from biokids_core.db import AuditLog, Child, Database, Policy
+from biokids_core.db.models import CategoryLimit
 from biokids_core.ipc import EventKind, Op, Request, Response
 from biokids_core.ledger import TickInput
-from biokids_core.types import EndAction, ShutdownOutcome
+from biokids_core.types import Category, EndAction, Reason, ShutdownOutcome
 from biokids_daemon.bus import EventBus
 from biokids_daemon.enforcer import CommandResult, Enforcer, RecordingRunner
 from biokids_daemon.server import DaemonServer
 from biokids_daemon.sessions import FakeSessionSource, SessionWatcher
 from biokids_daemon.supervisor import ACTIVITY_TTL_SECONDS, Supervisor, run_forever
+from biokids_shell.focus import FOCUS_REPORT_S
+from helpers import give_app
 
 TICK = 10
 
@@ -112,20 +116,45 @@ async def run_for(supervisor: Supervisor, clock: FakeClock, seconds: int) -> Non
         await supervisor.tick()
 
 
+async def run_in_front(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    seconds: int,
+    slug: str,
+    *,
+    unit: str = "",
+    child_id: int = 1,
+) -> None:
+    """Run the loop with `slug` in front, reported as the launcher's focus
+    reporter does (D-228): every FOCUS_REPORT_S, inside ACTIVITY_TTL_SECONDS."""
+    since_report = FOCUS_REPORT_S
+    for _ in range(seconds // TICK):
+        clock.advance(TICK)
+        if since_report >= FOCUS_REPORT_S:
+            supervisor.report_activity(child_id, slug, unit=unit)
+            since_report = 0
+        since_report += TICK
+        await supervisor.tick()
+
+
 async def run_learning(
     supervisor: Supervisor, clock: FakeClock, seconds: int, child_id: int = 1
 ) -> None:
-    """Run the loop with an educational app in focus the whole time.
+    """Run the loop with an educational app in front the whole time.
 
-    The shell re-sends the focus report; a report is only trusted for
-    ACTIVITY_TTL_SECONDS. Reporting once and then running for ten minutes models
-    a shell that crashed, and the learning streak resets every ninety seconds -
-    which is correct behaviour, and not what these tests are about.
+    Reported as the launcher's focus reporter does (D-228): every
+    FOCUS_REPORT_S, well inside ACTIVITY_TTL_SECONDS. The report names the app
+    and its scope; that it is a learning app is the child's own apps' to say.
     """
-    for _ in range(seconds // TICK):
-        clock.advance(TICK)
-        supervisor.report_activity(child_id, "gcompris", "GCompris", "learning")
-        await supervisor.tick()
+    give_app(supervisor.session, child_id, "gcompris", Category.LEARNING)
+    await run_in_front(
+        supervisor,
+        clock,
+        seconds,
+        "gcompris",
+        unit="biokids-app-gcompris-1.scope",
+        child_id=child_id,
+    )
 
 
 def set_quota(session: Session, child_id: int, minutes: int, **extra: object) -> None:
@@ -1101,7 +1130,8 @@ async def test_a_category_the_child_left_stops_capping_their_time(
     """
     await supervisor.start()
     source.log_in("elif")
-    supervisor.report_activity(1, "supertux", "SuperTux", "games")
+    give_app(supervisor.session, 1, "supertux", Category.GAMES)
+    supervisor.report_activity(1, "supertux")
 
     await run_for(supervisor, clock, TICK)
     runtime = supervisor.children[1]
@@ -1110,11 +1140,174 @@ async def test_a_category_the_child_left_stops_capping_their_time(
     await run_for(supervisor, clock, ACTIVITY_TTL_SECONDS * 2)
 
     last = events_of(bus, EventKind.TICK)[-1]
-    assert last["app"] in (None, "", "SuperTux"), "the runtime may still remember it"
+    assert last["app"] in (None, "", "Supertux"), "the runtime may still remember it"
     decision = runtime.last_decision
     assert decision is not None
     # What matters is what the engine was told, not what the runtime remembers.
     assert supervisor.children[1].activity_fresh(clock.read().boot) is False
+
+
+# ------------------------------------------------- the app in front (D-228)
+
+
+SUPERTUX = "biokids-app-supertux-1.scope"
+
+
+def games_limit(session: Session, minutes: int) -> None:
+    session.add(CategoryLimit(child_id=1, category=Category.GAMES.value, minutes=minutes))
+    session.commit()
+
+
+def stops_of(runner: RecordingRunner, unit: str) -> list[tuple[str, ...]]:
+    return [call for call in runner.calls if "stop" in call and unit in call]
+
+
+async def test_the_kind_of_app_is_the_childs_own_apps_not_the_reports(
+    supervisor: Supervisor, session: Session, source: FakeSessionSource
+) -> None:
+    """The launcher runs as the child: whatever it says an app is, the limit
+    that applies is the one the parent's catalog and override give it."""
+    give_app(session, 1, "supertux", Category.GAMES)
+    give_app(session, 1, "kturtle", Category.GAMES, override=Category.LEARNING)
+    give_app(session, 1, "mahjongg", Category.GAMES, enabled=False)
+    await supervisor.start()
+    source.log_in("elif")
+    runtime = supervisor.children[1]
+
+    supervisor.report_activity(1, "supertux", "Learning, honest")
+    assert runtime.category is Category.GAMES
+    assert runtime.app_name == "Supertux", "the catalog's name, not the report's"
+
+    supervisor.report_activity(1, "kturtle")
+    assert runtime.category is Category.LEARNING, "the parent's choice for this child"
+
+    for not_theirs in ("mahjongg", "solitaire"):
+        supervisor.report_activity(1, not_theirs)
+        assert runtime.app_slug == not_theirs
+        assert runtime.category is None, f"{not_theirs} counts against no kind"
+
+
+async def test_only_an_app_scope_is_kept_as_the_unit(
+    supervisor: Supervisor, session: Session
+) -> None:
+    give_app(session, 1, "supertux", Category.GAMES)
+    await supervisor.start()
+    runtime = supervisor.children[1]
+    for unit in ("biokids-shell.service", "biokids-voice.service", "*.scope", "a; b.scope"):
+        supervisor.report_activity(1, "supertux", unit=unit)
+        assert runtime.app_unit == "", unit
+    supervisor.report_activity(1, "supertux", unit=SUPERTUX)
+    assert runtime.app_unit == SUPERTUX
+
+
+async def test_a_game_played_past_its_limit_is_stopped(
+    supervisor: Supervisor,
+    session: Session,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    bus: EventBus,
+) -> None:
+    """What D-228 fixes: three minutes of games, played for five.
+
+    Reported only at the tap, the game stopped being a game after ninety
+    seconds and its limit never came. Reported while it is in front, its kind
+    of time runs out at three minutes, the game is stopped and the launcher is
+    sent to its calm screen - once.
+    """
+    set_quota(session, 1, 60)
+    games_limit(session, 3)
+    give_app(session, 1, "supertux", Category.GAMES)
+    await supervisor.start()
+    source.log_in("elif")
+
+    await run_in_front(supervisor, clock, 150, "supertux", unit=SUPERTUX)
+    assert stops_of(runner, SUPERTUX) == [], "two and a half minutes is within the limit"
+
+    await run_in_front(supervisor, clock, 150, "supertux", unit=SUPERTUX)
+
+    assert len(stops_of(runner, SUPERTUX)) == 1, "stopped once, not on every tick after"
+    assert runner.ran("systemctl", "--user", "-M", "elif@.host")
+    blocked = events_of(bus, EventKind.BLOCKED)
+    assert len(blocked) == 1
+    assert blocked[0]["reason_code"] == Reason.CATEGORY_EXHAUSTED
+    assert blocked[0]["app"] == "supertux"
+    runtime = supervisor.children[1]
+    assert runtime.app_slug == ""
+    assert runtime.category is None
+    rows = session.scalars(select(AuditLog).where(AuditLog.action == "app_stopped")).all()
+    assert len(rows) == 1
+    assert rows[0].detail["app"] == "supertux"
+
+
+async def test_a_report_sampled_before_the_stop_is_not_the_app_back(
+    supervisor: Supervisor,
+    session: Session,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+) -> None:
+    set_quota(session, 1, 60)
+    games_limit(session, 1)
+    give_app(session, 1, "supertux", Category.GAMES)
+    await supervisor.start()
+    source.log_in("elif")
+    await run_in_front(supervisor, clock, 90, "supertux", unit=SUPERTUX)
+    assert len(stops_of(runner, SUPERTUX)) == 1
+
+    supervisor.report_activity(1, "supertux", unit=SUPERTUX)
+    assert supervisor.children[1].app_slug == ""
+    await run_for(supervisor, clock, 60)
+    assert len(stops_of(runner, SUPERTUX)) == 1, "not stopped again for an old report"
+
+
+async def test_a_stop_that_fails_is_tried_again_before_the_launcher_is_told(
+    supervisor: Supervisor,
+    session: Session,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    bus: EventBus,
+) -> None:
+    """A calm screen behind a game still running is about nothing the child sees."""
+    set_quota(session, 1, 60)
+    games_limit(session, 1)
+    give_app(session, 1, "supertux", Category.GAMES)
+    await supervisor.start()
+    source.log_in("elif")
+    runner.returncode = 1
+
+    await run_in_front(supervisor, clock, 90, "supertux", unit=SUPERTUX)
+    assert len(stops_of(runner, SUPERTUX)) >= 2, "tried on each tick"
+    assert events_of(bus, EventKind.BLOCKED) == []
+    assert supervisor.children[1].app_slug == "supertux"
+
+    runner.returncode = 0
+    await run_in_front(supervisor, clock, TICK, "supertux", unit=SUPERTUX)
+    assert len(events_of(bus, EventKind.BLOCKED)) == 1
+
+
+async def test_a_page_of_the_launchers_own_is_left_not_stopped(
+    supervisor: Supervisor,
+    session: Session,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    bus: EventBus,
+) -> None:
+    """The English corner has no scope: the launcher leaving it is the stop."""
+    set_quota(session, 1, 60)
+    session.add(CategoryLimit(child_id=1, category=Category.LEARNING.value, minutes=1))
+    session.commit()
+    give_app(session, 1, "english", Category.LEARNING, kind="builtin")
+    await supervisor.start()
+    source.log_in("elif")
+
+    await run_in_front(supervisor, clock, 90, "english")
+    assert not [call for call in runner.calls if "stop" in call]
+    blocked = events_of(bus, EventKind.BLOCKED)
+    assert blocked
+    assert blocked[0]["app"] == "english"
 
 
 # ------------------------------------------------- re-arming the warnings
