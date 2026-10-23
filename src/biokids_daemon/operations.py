@@ -9,6 +9,7 @@ the actor the panel names.
 from __future__ import annotations
 
 import asyncio
+import base64
 import contextlib
 import datetime as dt
 from collections.abc import Awaitable, Iterable, Iterator
@@ -16,10 +17,10 @@ from typing import Any
 
 from sqlalchemy import func, select
 
-from biokids_core import repo
-from biokids_core.db.models import AiAlert, utcnow
+from biokids_core import notes, repo
+from biokids_core.db.models import AiAlert, SharedRecording, utcnow
 from biokids_core.ipc import EventKind
-from biokids_core.policy import bedtime_in, evaluate
+from biokids_core.policy import bedtime_in, evaluate, finish_up_offer
 from biokids_core.repo import SEARCH_ALERT_APP
 from biokids_core.search_filter import MAX_SEARCH_WORDS
 from biokids_core.types import (
@@ -27,6 +28,7 @@ from biokids_core.types import (
     Category,
     Decision,
     ShutdownOutcome,
+    SpeechRequest,
     is_app_scope,
 )
 from biokids_daemon.base import ChildRuntime, log
@@ -41,6 +43,10 @@ SEARCH_ALERTS_PER_DAY = 20
 who found the wall and keeps testing it has been noticed after the first few."""
 """The same host again within ten minutes is the same visit."""
 
+SHARED_RECORDING_MAX_BYTES = 700 * 1024
+"""Sesim's longest recording at its shared rate is about 640 KB (D-240)."""
+SHARED_RECORDINGS_PER_DAY = 10
+"""A day's recordings a child may send; the button is a child's to press."""
 POWER_GRACE_SECONDS = 6.0
 """The least time between answering "switch off" and doing it (D-209).
 
@@ -491,6 +497,224 @@ class OperationsMixin(EndSequenceMixin):
                 severity="alert",
             )
 
+    async def start_together(
+        self, child_id: int, minutes: int, actor: str = "parent"
+    ) -> dict[str, Any]:
+        """Birlikte modu (D-235): a parent is at the computer with the child.
+
+        For `minutes` nothing is counted - not the day, not a kind of app - and
+        nothing ends the time: no warning, no lock, no break. Using a computer
+        together is the screen time most worth having, and should cost the
+        child nothing. Started only from the panel, by a parent; it ends by
+        itself, or with a tap, or when the daemon restarts. A child already
+        locked out is let back in.
+        """
+        runtime = self._require(child_id)
+        reading = self.clock.read()
+        if not runtime.together_active(reading.boot):
+            runtime.together_started_at = reading.boot
+        runtime.together_until = reading.boot + max(1, minutes) * 60
+        runtime.together_warned = False
+        day = reading.wall.date()
+        self._clear_end_sequence(runtime, day, runtime.together_left(reading.boot))
+        runtime.paused_reason = ""
+        await self._unlock(runtime)
+        repo.audit(
+            self.session,
+            actor=actor,
+            action="together_started",
+            target=f"child:{child_id}",
+            detail={"minutes": minutes},
+        )
+        self.session.commit()
+        self._speak(
+            runtime,
+            SpeechRequest(
+                event="together_start",
+                vars={"name": runtime.display_name, "minutes": minutes},
+                expression="happy",
+            ),
+        )
+        self.bus.publish(EventKind.POLICY_CHANGED, child_id=child_id, together=True)
+        return {"child_id": child_id, "together_seconds": runtime.together_left(reading.boot)}
+
+    def stop_together(self, child_id: int, actor: str = "parent") -> None:
+        runtime = self._require(child_id)
+        if runtime.together_until:
+            self._end_together(runtime, self.clock.read().boot, actor=actor)
+
+    def _end_together(self, runtime: ChildRuntime, now_boot: float, *, actor: str) -> None:
+        """Back to counting: said once, audited with how long it lasted."""
+        minutes = (
+            max(0, int(min(now_boot, runtime.together_until) - runtime.together_started_at))
+            // 60
+        )
+        runtime.together_until = 0.0
+        runtime.together_started_at = 0.0
+        runtime.together_warned = False
+        repo.audit(
+            self.session,
+            actor=actor,
+            action="together_ended",
+            target=f"child:{runtime.child_id}",
+            detail={"minutes": minutes},
+        )
+        self.session.commit()
+        self._speak(
+            runtime,
+            SpeechRequest(
+                event="together_end", vars={"name": runtime.display_name}, expression="neutral"
+            ),
+        )
+        self.bus.publish(EventKind.POLICY_CHANGED, child_id=runtime.child_id, together=False)
+
+    def send_note(
+        self,
+        child_id: int,
+        kind: str,
+        text: str = "",
+        *,
+        from_name: str = "",
+        parent_id: int | None = None,
+        actor: str = "parent",
+    ) -> int:
+        """A parent's "Aferin" or note (D-233): kept, then shown to the child.
+
+        Stored and told in one step, so the child's launcher sees it live when
+        the child is at the computer, and finds it waiting in its state when
+        they are not. Zio says the "well done"; a note is read by the launcher,
+        which knows when it is on the screen. Raises ValueError for a note that
+        is not one; the audit row has its kind, never its words.
+        """
+        runtime = self._require(child_id)
+        note = notes.add(
+            self.session, child_id, kind, text, parent_id=parent_id, from_name=from_name
+        )
+        repo.audit(
+            self.session,
+            actor=actor,
+            action="praise_sent" if kind == "praise" else "note_sent",
+            target=f"child:{child_id}",
+        )
+        self.session.commit()
+        self.bus.publish(EventKind.PARENT_NOTE, child_id=child_id, note=notes.as_card(note))
+        if kind == "praise":
+            self._speak(
+                runtime,
+                SpeechRequest(
+                    event="praise",
+                    vars={"name": runtime.display_name, "parent": note.from_name},
+                    expression="happy",
+                ),
+            )
+        return note.id
+
+    def share_recording(self, child_id: int, audio_b64: str, seconds: float) -> bool:
+        """A recording the child sent from Sesim (D-240), for the parent's panel.
+
+        Only what the child chose, only a short WAV, and at most a handful a
+        day: a button a child can press is a button a child can press forty
+        times. The audit row says one was sent, never what is in it.
+        """
+        self._require(child_id)
+        try:
+            audio = base64.b64decode(audio_b64, validate=True)
+        except (ValueError, TypeError):
+            return False
+        if not (44 < len(audio) <= SHARED_RECORDING_MAX_BYTES) or audio[:4] != b"RIFF":
+            return False
+        if audio[8:12] != b"WAVE":
+            return False
+        since = utcnow() - dt.timedelta(days=1)
+        sent = self.session.scalar(
+            select(func.count())
+            .select_from(SharedRecording)
+            .where(SharedRecording.child_id == child_id, SharedRecording.created_at >= since)
+        )
+        if (sent or 0) >= SHARED_RECORDINGS_PER_DAY:
+            return False
+        self.session.add(
+            SharedRecording(
+                child_id=child_id, seconds=max(0.0, min(float(seconds), 60.0)), audio=audio
+            )
+        )
+        repo.audit(
+            self.session,
+            actor="child",
+            action="recording_shared",
+            target=f"child:{child_id}",
+        )
+        self.session.commit()
+        return True
+
+    def note_seen(self, child_id: int, note_id: int) -> bool:
+        """The child's screen showed the note; the panel says "okundu"."""
+        self._require(child_id)
+        seen = notes.mark_seen(self.session, child_id, note_id)
+        self.session.commit()
+        return seen
+
+    def finish_up(self, child_id: int) -> int:
+        """The last round the child asked for (D-230): seconds given, 0 for none.
+
+        Whether one is due is decided here, by the policy engine, never by the
+        launcher that asks: the parent's minutes, once today, only while the
+        day's quota is what is about to end it. Zio says so, the ring moves at
+        once, and the parent reads it on Today and in the audit log.
+        """
+        runtime = self._require(child_id)
+        reading = self.clock.read()
+        if runtime.together_active(reading.boot):
+            # Nothing is counted while a parent is here (D-235): a last round
+            # now would only spend tomorrow's... today's, for nothing.
+            return 0
+        day = reading.wall.date()
+        fresh = runtime.activity_fresh(reading.boot)
+        offer = finish_up_offer(
+            runtime.policy,
+            self.ledger.state(child_id, day),
+            ActivityContext(
+                app_slug=runtime.app_slug if fresh else None,
+                category=runtime.category if fresh else None,
+                session_active=True,
+            ),
+            reading.wall,
+        )
+        if offer <= 0:
+            return 0
+        state = self.ledger.finish_up(child_id, offer, day)
+        decision = evaluate(
+            runtime.policy, state, ActivityContext(session_active=True), reading.wall
+        )
+        # The one-minute warning is ahead of the clock again, and says so.
+        self.ledger.rearm_warnings(child_id, day, decision.remaining_seconds)
+        self.ledger.persist()
+        repo.audit(
+            self.session,
+            actor=f"child:{runtime.unix_user}",
+            action="finish_up_used",
+            target=f"child:{child_id}",
+            detail={"seconds": offer},
+        )
+        self.session.commit()
+        self._speak(
+            runtime,
+            SpeechRequest(
+                event="finish_up",
+                vars={"name": runtime.display_name, "minutes": offer // 60},
+                expression="happy",
+            ),
+        )
+        self.bus.publish(
+            EventKind.TICK,
+            child_id=child_id,
+            remaining_seconds=decision.remaining_seconds,
+            remaining_minutes=decision.remaining_minutes,
+            used_seconds=state.general_used_s,
+            finish_up=offer,
+        )
+        return offer
+
     def start_timeout(self, child_id: int, minutes: int, actor: str = "parent") -> None:
         self._require(child_id)
         self.ledger.start_penalty(child_id, minutes * 60)
@@ -635,6 +859,33 @@ class OperationsMixin(EndSequenceMixin):
             },
         }
 
+    def reading_state(self, child_id: int) -> dict[str, Any]:
+        """The calling child's boxes in the reading corner, and their day (D-241)."""
+        self._require(child_id)
+        today = self.clock.read().wall.date()
+        return {
+            "today": today.isoformat(),
+            "items": {
+                item: [
+                    state.box,
+                    state.due.isoformat() if state.due else None,
+                    state.first_day.isoformat() if state.first_day else None,
+                ]
+                for item, state in repo.reading_progress(self.session, child_id).items()
+            },
+        }
+
+    def reading_answer(self, child_id: int, item: str, right: bool) -> int | None:
+        """One answer in a reading lesson; the item's new box, or None."""
+        self._require(child_id)
+        state = repo.record_reading_answer(
+            self.session, child_id, item, right, self.clock.read().wall.date()
+        )
+        if state is None:
+            return None
+        self.session.commit()
+        return state.box
+
     def english_answer(self, child_id: int, item: str, right: bool) -> int | None:
         """One answer in a lesson; the box it leaves the item in, or None for an
         id that is not the corner's."""
@@ -657,7 +908,7 @@ class OperationsMixin(EndSequenceMixin):
         link_category: Category | None = (
             None if found is None else repo.child_app_category(*found)
         )
-        return evaluate(
+        decision = evaluate(
             runtime.policy,
             state,
             ActivityContext(
@@ -668,6 +919,9 @@ class OperationsMixin(EndSequenceMixin):
             ),
             reading.wall,
         )
+        # With a parent at the computer (D-235) the rules wait - but an app
+        # the parent never gave this child is still not on their screen.
+        return decision if not allowed else self._decided(runtime, decision, reading.boot)
 
 
 def _grace_deadline(seconds: float = POWER_GRACE_SECONDS) -> float:

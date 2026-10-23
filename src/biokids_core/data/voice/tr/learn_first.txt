@@ -1,0 +1,5 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}, {app}
+# Oyunlar, bugünkü öğrenme dakikalarından sonra açılır (D-232).
+Önce biraz öğrenelim {name}. Sonra oyunlar açılacak.
+Şimdi öğrenme zamanı. Biraz sonra oyun oynayabilirsin.
+Oyunlar birazdan açılacak. Önce bir öğrenme uygulaması seçelim.

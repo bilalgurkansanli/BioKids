@@ -26,6 +26,7 @@ import hashlib
 import json
 import logging
 import math
+import os
 import re
 import shlex
 import socket
@@ -46,10 +47,10 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from jinja2 import ChainableUndefined, Environment, FileSystemLoader, select_autoescape
 
-from biokids_core import album, daily, english, search_filter
+from biokids_core import album, daily, english, offscreen, reading, search_filter
 from biokids_core.appearance import Appearance
 from biokids_core.browser_policy import packed_extension
-from biokids_core.catalog import program_installed
+from biokids_core.catalog import TILE_ICONS, program_installed
 from biokids_core.config import Config, get_config
 from biokids_core.errors import IpcError
 from biokids_core.i18n import Translator, normalise_locale, translator
@@ -58,7 +59,7 @@ from biokids_core.ipc import Event as IpcEvent
 from biokids_core.ipc import Request as IpcRequest
 from biokids_core.ipc import Response as IpcResponse
 from biokids_core.types import AgeBand, Reason
-from biokids_shell import device, pictures
+from biokids_shell import device, pictures, recordings
 from biokids_shell.appbar import scope_unit
 from biokids_shell.client import ShellClient
 from biokids_shell.launcher import AppLauncher, LaunchRequest
@@ -80,50 +81,6 @@ INSTALLED_CHARACTER_DIR = "characters"
 """Under the share directory, beside `catalog/` and `voice/`, which is where the
 packaging already puts data the code needs to find at runtime."""
 
-TILE_ICONS: dict[str, str] = {
-    "blocks": "🧩",
-    "brush": "🖌️",
-    "numbers": "🔢",
-    "keyboard": "⌨️",
-    "star": "⭐",
-    "palette": "🎨",
-    "penguin": "🐧",
-    "bubble": "🫧",
-    "tiles": "🀄",
-    "document": "📝",
-    "table": "📊",
-    "folder": "📁",
-    "school": "🏫",
-    "tv": "📺",
-    "cat": "🐱",
-    "book": "📚",
-    "encyclopedia": "📖",
-    "science": "🔬",
-    "ladybug": "🐞",
-    "robot": "🤖",
-    "video": "🎬",
-    "game": "🎮",
-    "earth": "🌍",
-    "satellite": "🛰️",
-    "potato": "🥔",
-    "memory": "🧠",
-    "jigsaw": "🖼️",
-    "map": "🗺️",
-    "turtle": "🐢",
-    "fractions": "🍕",
-    "chess": "♟️",
-    "diamond": "💎",
-    "piano": "🎹",
-    "globe": "🌐",
-    "speaker": "🔊",
-    "sun": "☀️",
-    "power": "⏻",
-    "gallery": "🏞️",
-    "abc": "🔤",
-    "app": "🟦",
-}
-"""Emoji rather than an icon set: they render at any size, need no asset
-pipeline, and a five-year-old reads them faster than a line drawing."""
 
 AVATARS: dict[str, str] = {
     "fox": "🦊",
@@ -139,13 +96,28 @@ AVATARS: dict[str, str] = {
 the first thing they see on their own screen, so it has to be the one they chose
 rather than a default square."""
 
-BUILTIN_TILES = {"volume", "brightness", "shutdown", "drawings", english.SLUG}
+BUILTIN_TILES = {
+    "volume",
+    "brightness",
+    "shutdown",
+    "drawings",
+    "sesim",
+    reading.SLUG,
+    english.SLUG,
+}
 """Drawn by the launcher and handled in the browser; they start no process."""
-PAGE_TILES: dict[str, str] = {"drawings": "/pictures", english.SLUG: "/english"}
+PAGE_TILES: dict[str, str] = {
+    "drawings": "/pictures",
+    "sesim": "/sesim",
+    reading.SLUG: "/okuma",
+    english.SLUG: "/english",
+}
 """Built-in tiles that are a page of the launcher's own: Resimlerim (D-212) and
 the English corner (D-225)."""
 DEFAULT_VOLUME = 70
 """Where the volume slider starts when the sound's own level cannot be read."""
+BIRTHDAY_FILE = Path(".config") / "biokids" / "birthday-said"
+"""The date Zio last said "İyi ki doğdun" (D-236): once on the day, not on every load."""
 CHEER_FILE = Path(".config") / "biokids" / "album-cheered"
 """Under the home, beside the kiosk's and the browser's profiles: the date the
 album last celebrated a new sticker (D-211), and nothing else."""
@@ -191,6 +163,9 @@ class ShellState:
         loop keeps only a weak reference to a task and could collect one
         mid-flight."""
         self.home = Path.home()
+        getuid = getattr(os, "getuid", None)
+        self.uid: int | None = getuid() if getuid is not None else None
+        """The child the launcher runs as: what Sesim's files must belong to (D-240)."""
         """The child's home: their pictures (D-212) and the album's one note
         (D-211). The launcher runs as the child, so it is theirs."""
         self.cheered: str | None = None
@@ -224,6 +199,23 @@ class ShellState:
             self.cheer_file.write_text(day + "\n", encoding="utf-8")
         except OSError as exc:
             log.info("could not remember today's sticker celebration: %s", exc)
+        return True
+
+    def take_birthday(self) -> bool:
+        """True the first time today, then never again that day (D-236). Kept in a
+        file of the child's own, like the album's celebration."""
+        day = dt.date.today().isoformat()
+        path = self.home / BIRTHDAY_FILE
+        try:
+            if path.read_text(encoding="utf-8").strip() == day:
+                return False
+        except OSError:
+            pass
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(day + "\n", encoding="utf-8")
+        except OSError as exc:
+            log.info("could not remember the birthday wish: %s", exc)
         return True
 
     async def may_open(self, slug: str) -> bool:
@@ -460,8 +452,11 @@ def register_routes(app: FastAPI) -> None:
 
         screen = _screen_for(data)
         if screen is not None:
-            return await render(shell, request, screen, data)
+            # Şimdi ne yapsak? (D-231): something to do away from the screen.
+            cards = offscreen.for_screen(screen, data, dt.date.today())
+            return await render(shell, request, screen, data, offscreen=cards)
         volume = await device.get_volume()
+        brightness = await device.get_brightness()
         found = album.from_state(data)
         return await render(
             shell,
@@ -469,6 +464,8 @@ def register_routes(app: FastAPI) -> None:
             "home.html",
             data,
             volume=DEFAULT_VOLUME if volume is None else volume,
+            brightness=100 if brightness is None else max(20, min(100, brightness)),
+            birthday_say=bool(data.get("birthday")) and shell.take_birthday(),
             # Bugünün sürprizi (D-203): today's card, for this child's tiles.
             daily=daily.for_launcher(data, dt.date.today(), tile_can_start),
             # The sticker album's chip (D-211), for a child who has a sticker
@@ -603,6 +600,7 @@ def register_routes(app: FastAPI) -> None:
         url: str = "",
         slug: str = "",
         reason: str = Reason.FILTER_BLOCKED,
+        said: int = 0,
     ) -> Response:
         data = await shell.client.state()
         kind = _request_kind_for(reason, url, slug)
@@ -617,6 +615,8 @@ def register_routes(app: FastAPI) -> None:
             # A refused search carries nothing to the parent (D-202).
             ask_what="" if kind == "search" else url or slug,
             in_browser=_in_browser(reason, url),
+            # Zio already said why (D-229): the page does not say it again.
+            said=bool(said),
         )
 
     @app.post("/ask-a-parent")
@@ -632,6 +632,31 @@ def register_routes(app: FastAPI) -> None:
         data = await shell.client.state()
         return await render(
             shell, request, "asked.html", data, ok=ok, reason=reason, in_browser=browser == "1"
+        )
+
+    @app.post("/notes/{note_id}/seen")
+    async def note_seen(request: Request, shell: Shell, note_id: int) -> Response:
+        """The screen showed a parent's "well done" or note (D-233)."""
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        return JSONResponse(
+            {"ok": await shell.client.note_seen(note_id)}, headers={"Cache-Control": "no-store"}
+        )
+
+    @app.post("/finish-up")
+    async def finish_up(request: Request, shell: Shell) -> Response:
+        """ "Bitireyim", the last round (D-230): from the one-minute warning, or
+        from the footer as a plain form. Whether one is due is the daemon's
+        answer; this only asks, and says what came back."""
+        as_page = _is_form_post(request)
+        if not as_page and not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        seconds = await shell.client.finish_up()
+        if as_page:
+            return RedirectResponse("/", status_code=303)
+        return JSONResponse(
+            {"ok": seconds > 0, "minutes": seconds // 60},
+            headers={"Cache-Control": "no-store"},
         )
 
     @app.get("/shutdown", response_class=HTMLResponse)
@@ -775,10 +800,15 @@ def register_routes(app: FastAPI) -> None:
         except ValueError:
             return JSONResponse({"error": "bad request"}, status_code=400)
         text = " ".join(str(body.get("text", "") if isinstance(body, dict) else "").split())
-        if text:
-            data = await shell.client.state() or {}
-            await shell.say(text[:300], normalise_locale(str(data.get("locale", "tr"))))
-        return JSONResponse({"ok": bool(text)})
+        if not text:
+            return JSONResponse({"ok": False})
+        data = await shell.client.state() or {}
+        if data.get("voice_enabled") is False:
+            # The parent switched Zio off for this child: the card still
+            # shows, the sound stops, as for every line the daemon asks for.
+            return JSONResponse({"ok": False})
+        await shell.say(text[:300], normalise_locale(str(data.get("locale", "tr"))))
+        return JSONResponse({"ok": True})
 
     @app.post("/assistant/warmup")
     async def assistant_warmup(request: Request, shell: Shell) -> Response:
@@ -930,6 +960,230 @@ def register_routes(app: FastAPI) -> None:
                 "Content-Security-Policy": "default-src 'none'; sandbox",
             },
         )
+
+    # ------------------------------------------------------- Sesim (D-240)
+
+    @app.get("/sesim", response_class=HTMLResponse)
+    async def sesim_page(request: Request, shell: Shell) -> Response:
+        """The child's recordings, newest first, and the big button."""
+        data = await shell.client.state()
+        if data is None:
+            return await render(shell, request, "offline.html", None)
+        if _find_tile(data, "sesim") is None or _screen_for(data) is not None:
+            return RedirectResponse("/", status_code=303)
+        found = await asyncio.to_thread(recordings.recordings, shell.home, shell.uid)
+        tr = translator(normalise_locale(str(data.get("locale", "tr"))))
+        return await render(
+            shell,
+            request,
+            "sesim.html",
+            data,
+            recordings=found,
+            max_seconds=recordings.MAX_SECONDS,
+            strings_sesim={
+                "hold": tr("sesim.hold"),
+                "listening": tr("sesim.listening"),
+                "saved": tr("sesim.saved"),
+                "shared": tr("sesim.shared"),
+                "share_failed": tr("sesim.share_failed"),
+                "too_short": tr("sesim.error.too_short"),
+                "failed": tr("sesim.failed"),
+                "mic_failed": tr("assistant.mic_failed"),
+            },
+        )
+
+    @app.post("/sesim")
+    async def sesim_save(request: Request, shell: Shell) -> Response:
+        """One recording from the page: kept in the child's home, never sent."""
+        if not _from_launcher(request, "audio/wav"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        if not await shell.may_open("sesim"):
+            return JSONResponse({"ok": False}, status_code=404)
+        data = await request.body()
+        tr = translator(
+            normalise_locale(str((await shell.client.state() or {}).get("locale", "tr")))
+        )
+        if len(data) > recordings.MAX_SECONDS * 48000 * 2 + 1024:
+            return JSONResponse({"ok": False, "message": tr("sesim.error.too_long")})
+        try:
+            await asyncio.to_thread(recordings.save, shell.home, shell.uid, data)
+        except recordings.RecordingError as exc:
+            return JSONResponse({"ok": False, "message": tr(exc.key)})
+        except OSError as exc:
+            log.warning("could not keep the recording: %s", exc)
+            return JSONResponse({"ok": False, "message": tr("sesim.failed")})
+        return JSONResponse({"ok": True}, headers={"Cache-Control": "no-store"})
+
+    @app.get("/sesim/file/{name}")
+    async def sesim_file(request: Request, shell: Shell, name: str) -> Response:
+        """A recording, for the launcher's own page and nobody else's: as
+        Resimlerim's pictures are (D-212)."""
+        if request.headers.get("sec-fetch-site", "same-origin") not in {"same-origin", "none"}:
+            return PlainTextResponse("", status_code=403)
+        if not await shell.may_open("sesim"):
+            return PlainTextResponse("", status_code=404)
+        content = await asyncio.to_thread(recordings.read, shell.home, shell.uid, name)
+        if content is None:
+            return PlainTextResponse("", status_code=404)
+        return Response(
+            content,
+            media_type="audio/wav",
+            headers={
+                "Cache-Control": "no-store",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "X-Content-Type-Options": "nosniff",
+                "Content-Security-Policy": "default-src 'none'; sandbox",
+            },
+        )
+
+    @app.post("/sesim/{name}/delete")
+    async def sesim_delete(request: Request, shell: Shell, name: str) -> Response:
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        if not await shell.may_open("sesim"):
+            return JSONResponse({"ok": False}, status_code=404)
+        gone = await asyncio.to_thread(recordings.delete, shell.home, shell.uid, name)
+        return JSONResponse({"ok": gone}, headers={"Cache-Control": "no-store"})
+
+    @app.post("/sesim/{name}/share")
+    async def sesim_share(request: Request, shell: Shell, name: str) -> Response:
+        """ "Büyüğüme gönder": this one recording, made small, to the parent."""
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        if not await shell.may_open("sesim"):
+            return JSONResponse({"ok": False}, status_code=404)
+        content = await asyncio.to_thread(recordings.read, shell.home, shell.uid, name)
+        if content is None:
+            return JSONResponse({"ok": False}, status_code=404)
+        small = await asyncio.to_thread(recordings.shared, content)
+        # The length from the child's own recording: the small one's rate may
+        # be one the page never records at (22050 Hz in thirds is 7350).
+        _rate, seconds = recordings.wav_seconds(content)
+        sent = await shell.client.share_recording(
+            base64.b64encode(small).decode("ascii"), round(seconds, 1)
+        )
+        return JSONResponse({"ok": sent}, headers={"Cache-Control": "no-store"})
+
+    # ------------------------------------------------- Okuma köşesi (D-241)
+
+    async def reading_gate(request: Request) -> tuple[dict[str, Any] | None, Response | None]:
+        """The child's state, or the page to show instead, as for the English corner."""
+        data = await get_state(request).client.state()
+        if data is None:
+            return None, await render(get_state(request), request, "offline.html", None)
+        if _find_tile(data, reading.SLUG) is None or _screen_for(data) is not None:
+            return None, RedirectResponse("/", status_code=303)
+        return data, None
+
+    @app.get("/okuma", response_class=HTMLResponse)
+    async def reading_page(request: Request, shell: Shell) -> Response:
+        """The door: the five sound groups as a path, and today's lesson."""
+        data, instead = await reading_gate(request)
+        if instead is not None or data is None:
+            return instead or RedirectResponse("/", status_code=303)
+        progress, today = _english_progress(await shell.client.reading_state())
+        groups = reading.load_groups()
+        current = reading.current_group(groups, progress)
+        summary = reading.summarize(groups, progress)
+        lesson = reading.plan_lesson(groups, progress, today)
+        met = set(reading.letters_met(groups, progress))
+        return await render(
+            shell,
+            request,
+            "okuma.html",
+            data,
+            groups=[
+                {
+                    "slug": group.slug,
+                    "done": all(
+                        progress.get(item) is not None and progress[item].met
+                        for item in group.item_ids()
+                    ),
+                    "letters": [
+                        {
+                            "upper": reading.upper(letter.char) + letter.char,
+                            "met": letter.char in met,
+                        }
+                        for letter in group.letters
+                    ],
+                }
+                for group in groups
+            ],
+            current=current.slug if current else "",
+            steps=len(lesson.steps),
+            can_practise=reading.has_read_words(groups, progress),
+            summary=summary,
+        )
+
+    @app.get("/okuma/lesson", response_class=HTMLResponse)
+    async def reading_lesson(request: Request, shell: Shell, more: int = 0) -> Response:
+        """The lesson itself, drawn by okuma.js from the steps planned here."""
+        data, instead = await reading_gate(request)
+        if instead is not None or data is None:
+            return instead or RedirectResponse("/", status_code=303)
+        progress, today = _english_progress(await shell.client.reading_state())
+        groups = reading.load_groups()
+        steps = () if more else reading.plan_lesson(groups, progress, today).steps
+        practice = not steps
+        if practice:
+            steps = reading.practice(groups, progress)
+        if not steps:
+            return RedirectResponse("/okuma", status_code=303)
+        tr = translator(normalise_locale(str(data.get("locale", "tr"))))
+        return await render(
+            shell,
+            request,
+            "okuma_lesson.html",
+            data,
+            lesson={
+                "steps": [step.as_json() for step in steps],
+                "practice": practice,
+                "praise": list(reading.PRAISE),
+                "goodbye": reading.GOODBYE,
+                "strings": {
+                    "next": tr("reading.next"),
+                    "back": tr("reading.title"),
+                    "which_letter": tr("reading.which_letter"),
+                    "which_syllable": tr("reading.which_syllable"),
+                    "read_word": tr("reading.read_word"),
+                    "read_sentence": tr("reading.read_sentence"),
+                    "try_again": tr("reading.try_again"),
+                },
+            },
+        )
+
+    @app.post("/okuma/answer")
+    async def reading_answer(request: Request, shell: Shell) -> Response:
+        """One answer from the lesson page; the daemon moves the item's box."""
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        body = await _json_body(request) or {}
+        item = str(body.get("item", ""))[:64]
+        box = await shell.client.reading_answer(item, body.get("right") is True)
+        return JSONResponse({"ok": box is not None, "box": box or 0})
+
+    @app.post("/okuma/say")
+    async def reading_say(request: Request, shell: Shell) -> Response:
+        """A letter's sound, a syllable or a word, said in Turkish whatever the
+        child's own language: this corner teaches Turkish reading."""
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        body = await _json_body(request) or {}
+        text = " ".join(str(body.get("text", "")).split())[:MAX_SAY_CHARS]
+        said = await shell.say_and_wait(text, "tr") if text else False
+        return JSONResponse({"ok": said}, headers={"Cache-Control": "no-store"})
+
+    @app.post("/okuma/active")
+    async def reading_active(request: Request, shell: Shell) -> Response:
+        """While a lesson is in front, its minutes are learning minutes (D-228)."""
+        if not _from_launcher(request, "application/json"):
+            return JSONResponse({"error": "forbidden"}, status_code=403)
+        data = await shell.client.state()
+        tile = _find_tile(data, reading.SLUG)
+        if tile is None:
+            return JSONResponse({"ok": False})
+        await shell.client.report_activity(reading.SLUG, str(tile.get("name", reading.SLUG)))
+        return JSONResponse({"ok": True})
 
     # ------------------------------------------------- English corner (D-225)
 
@@ -1494,6 +1748,14 @@ def _browser_strings(tr: Translator) -> dict[str, str]:
         "request_approved_time": tr("shell.request.approved_time", minutes="{minutes}"),
         "request_denied": tr("shell.request.denied"),
         "timeup": tr("shell.timeup.title"),
+        # A parent's "well done" and notes (D-233). {from} is their name.
+        "note_praise": tr("shell.note.praise", **{"from": "{from}"}),
+        "note_praise_nameless": tr("shell.note.praise_nameless"),
+        "note_from": tr("shell.note.from", **{"from": "{from}"}),
+        "note_from_nameless": tr("shell.note.from_nameless"),
+        # The last round (D-230): "+3 dk" under the button, and the answer.
+        "finishup_more": tr("shell.finishup.more", minutes="{minutes}"),
+        "finishup_granted": tr("shell.finishup.granted_minutes", minutes="{minutes}"),
         # Over a tapped tile until its app's window is in front (D-208).
         "opening": tr("shell.opening"),
         # What a screen reader says for the ring, kept in step with the number.
@@ -1524,6 +1786,9 @@ def _spoken_lines(tr: Translator) -> dict[str, str]:
         "blocked": tr("shell.blocked.title"),
         "earned": tr("shell.earned.title"),
         "break_start": tr("shell.break.title"),
+        "break_end": tr("shell.break.over"),
+        "app_stopped": tr("shell.blocked.category.title"),
+        "finish_up": tr("shell.finishup.granted"),
         "request_approved": tr("shell.request.approved"),
         "request_denied": tr("shell.request.denied"),
     }

@@ -939,6 +939,30 @@ async def test_a_break_pauses_the_child_without_locking_them_out(
     assert supervisor.shell_state(1)["allow"] is True, "the child is back on the grid"
 
 
+async def test_zio_says_when_a_break_begins_and_when_it_ends(
+    supervisor: Supervisor,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    session: Session,
+    bus: EventBus,
+) -> None:
+    """D-229: both lines were asked for and neither was ever said - the daemon
+    named the event, and no line file existed for it."""
+    set_quota(session, 1, 120, break_enabled=True, break_work_min=1, break_rest_min=1)
+    await supervisor.start()
+    source.log_in("elif")
+
+    await run_for(supervisor, clock, 70)
+    spoken = [e["event"] for e in events_of(bus, EventKind.SPEAK)]
+    assert "break_start" in spoken
+    assert "break_end" not in spoken
+
+    await run_for(supervisor, clock, 90)
+    ends = [e for e in events_of(bus, EventKind.SPEAK) if e["event"] == "break_end"]
+    assert len(ends) == 1, "said once, as the child comes back"
+    assert ends[0]["vars"]["name"] == "Elif"
+
+
 async def test_a_timeout_pauses_rather_than_locking_too(
     supervisor: Supervisor,
     clock: FakeClock,
@@ -1238,6 +1262,10 @@ async def test_a_game_played_past_its_limit_is_stopped(
     rows = session.scalars(select(AuditLog).where(AuditLog.action == "app_stopped")).all()
     assert len(rows) == 1
     assert rows[0].detail["app"] == "supertux"
+    # And Zio says why (D-229): a window closing with no word looks broken.
+    said = [e for e in events_of(bus, EventKind.SPEAK) if e["event"] == "app_stopped"]
+    assert len(said) == 1
+    assert said[0]["vars"] == {"name": "Elif", "app": "Supertux"}
 
 
 async def test_a_report_sampled_before_the_stop_is_not_the_app_back(
@@ -1308,6 +1336,250 @@ async def test_a_page_of_the_launchers_own_is_left_not_stopped(
     blocked = events_of(bus, EventKind.BLOCKED)
     assert blocked
     assert blocked[0]["app"] == "english"
+
+
+# ------------------------------------------------------ the last round (D-230)
+
+
+async def test_the_last_round_is_given_once_and_said(
+    supervisor: Supervisor,
+    session: Session,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    bus: EventBus,
+) -> None:
+    set_quota(session, 1, 10)
+    await supervisor.start()
+    source.log_in("elif")
+    await run_for(supervisor, clock, 7 * 60)
+    assert supervisor.finish_up(1) == 0, "three minutes left: the day is not ending yet"
+
+    await run_for(supervisor, clock, 2 * 60)
+    offered = supervisor.shell_state(1)["finish_up"]
+    assert offered == {"offer_seconds": 180, "used_seconds": 0}
+    assert supervisor.finish_up(1) == 180
+    assert supervisor.finish_up(1) == 0, "once a day"
+
+    state = supervisor.shell_state(1)
+    assert state["finish_up"] == {"offer_seconds": 0, "used_seconds": 180}
+    # The minute or so that was left, and the three minutes on top.
+    assert 180 < state["remaining_seconds"] <= 300
+    assert supervisor.status()["children"][0]["finish_up_seconds"] == 180
+    said = [e for e in events_of(bus, EventKind.SPEAK) if e["event"] == "finish_up"]
+    assert len(said) == 1
+    assert said[0]["vars"]["minutes"] == 3
+    rows = session.scalars(select(AuditLog).where(AuditLog.action == "finish_up_used")).all()
+    assert len(rows) == 1
+    assert rows[0].actor == "child:elif"
+
+    # The three minutes are spent like any others, and the day then ends.
+    await run_for(supervisor, clock, 5 * 60)
+    assert supervisor.shell_state(1)["allow"] is False
+
+
+async def test_the_last_round_survives_a_restart_as_taken(
+    supervisor: Supervisor,
+    session: Session,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    db: Database,
+    bus: EventBus,
+    config: Config,
+    runner: RecordingRunner,
+) -> None:
+    """Once a day means once a day, not once per daemon."""
+    set_quota(session, 1, 10)
+    await supervisor.start()
+    source.log_in("elif")
+    await run_for(supervisor, clock, 9 * 60 + 30)
+    assert supervisor.finish_up(1) == 180
+    await supervisor.stop()
+
+    second = Supervisor(
+        database=db,
+        bus=bus,
+        watcher=SessionWatcher(source),
+        enforcer=Enforcer(config, runner),
+        clock=clock,
+        config=config,
+    )
+    await second.start()
+    await run_for(second, clock, 2 * 60 + 30)
+    assert second.finish_up(1) == 0
+    assert second.shell_state(1)["finish_up"]["used_seconds"] == 180
+
+
+# ---------------------------------------------- games after learning (D-232)
+
+
+async def test_a_game_opened_before_the_learning_is_closed_with_its_own_words(
+    supervisor: Supervisor,
+    session: Session,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    bus: EventBus,
+) -> None:
+    set_quota(session, 1, 120, learn_first_min=10)
+    give_app(session, 1, "supertux", Category.GAMES)
+    give_app(session, 1, "gcompris", Category.LEARNING)
+    await supervisor.start()
+    source.log_in("elif")
+    assert supervisor.request_launch(1, "supertux").reason_code == Reason.LEARN_FIRST
+    assert supervisor.request_launch(1, "gcompris").allow is True
+
+    await run_in_front(supervisor, clock, 30, "supertux", unit=SUPERTUX)
+    assert len(stops_of(runner, SUPERTUX)) == 1
+    said = [e["event"] for e in events_of(bus, EventKind.SPEAK)]
+    assert "learn_first" in said and "app_stopped" not in said
+
+    state = supervisor.shell_state(1)
+    assert state["learn_first"] == {"minutes": 10, "left_seconds": 600}
+
+    await run_in_front(supervisor, clock, 10 * 60, "gcompris")
+    assert supervisor.shell_state(1)["learn_first"]["left_seconds"] == 0
+    assert supervisor.request_launch(1, "supertux").allow is True
+
+
+# ------------------------------------------------------ Birlikte modu (D-235)
+
+
+async def test_together_nothing_is_counted_and_nothing_ends_the_time(
+    supervisor: Supervisor,
+    session: Session,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+    bus: EventBus,
+) -> None:
+    set_quota(session, 1, 10)
+    await supervisor.start()
+    source.log_in("elif")
+    await run_for(supervisor, clock, 11 * 60)
+    assert supervisor.shell_state(1)["allow"] is False, "the day's time is up"
+    used = supervisor.shell_state(1)["used_seconds"]
+
+    await supervisor.start_together(1, 30, actor="parent:1")
+    assert runner.ran("loginctl", "unlock-session"), "a child already locked is let back in"
+    runner.calls.clear()
+    warnings_before = len(events_of(bus, EventKind.WARNING))
+
+    await run_for(supervisor, clock, 20 * 60)
+    state = supervisor.shell_state(1)
+    assert state["allow"] is True
+    assert state["reason_code"] == "together.active"
+    assert state["used_seconds"] == used, "not a second counted"
+    assert 9 * 60 < state["together_seconds"] <= 10 * 60
+    assert not runner.ran("loginctl", "lock-session")
+    assert len(events_of(bus, EventKind.WARNING)) == warnings_before
+    assert supervisor.request_launch(1, "anything").allow is False, "the parent's apps only"
+    assert supervisor.status()["children"][0]["together_seconds"] > 0
+
+    await run_for(supervisor, clock, 11 * 60)
+    assert supervisor.shell_state(1)["together_seconds"] == 0
+    assert supervisor.shell_state(1)["allow"] is False, "and then the day is over again"
+    said = [e["event"] for e in events_of(bus, EventKind.SPEAK)]
+    assert "together_start" in said and "together_end" in said
+    actions = [
+        row.action
+        for row in session.scalars(select(AuditLog).where(AuditLog.action.like("together_%")))
+    ]
+    assert actions == ["together_started", "together_ended"]
+
+
+async def test_together_hides_the_rules_from_the_launcher_too(
+    supervisor: Supervisor, session: Session, clock: FakeClock, source: FakeSessionSource
+) -> None:
+    """The tiles must not say "learn first" while the games are open, and the
+    last round is not spent while nothing is counted."""
+    set_quota(session, 1, 10, learn_first_min=15)
+    await supervisor.start()
+    source.log_in("elif")
+    await run_for(supervisor, clock, 9 * 60)
+    assert supervisor.shell_state(1)["finish_up"]["offer_seconds"] > 0
+    assert supervisor.shell_state(1)["learn_first"]["left_seconds"] > 0
+    await supervisor.start_together(1, 30)
+    state = supervisor.shell_state(1)
+    assert state["finish_up"]["offer_seconds"] == 0
+    assert state["learn_first"]["left_seconds"] == 0
+    assert supervisor.finish_up(1) == 0
+
+
+async def test_the_end_of_together_is_said_before_it_comes(
+    supervisor: Supervisor,
+    session: Session,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    bus: EventBus,
+) -> None:
+    set_quota(session, 1, 120)
+    await supervisor.start()
+    source.log_in("elif")
+    await supervisor.start_together(1, 30)
+    await run_for(supervisor, clock, 24 * 60)
+    assert "together_soon" not in [e["event"] for e in events_of(bus, EventKind.SPEAK)]
+    await run_for(supervisor, clock, 2 * 60)
+    soon = [e for e in events_of(bus, EventKind.SPEAK) if e["event"] == "together_soon"]
+    assert len(soon) == 1 and 3 <= soon[0]["vars"]["minutes"] <= 5
+    await run_for(supervisor, clock, 2 * 60)
+    assert (
+        len([e for e in events_of(bus, EventKind.SPEAK) if e["event"] == "together_soon"]) == 1
+    )
+
+
+async def test_the_launcher_is_told_whether_zio_may_speak(
+    supervisor: Supervisor, session: Session
+) -> None:
+    await supervisor.start()
+    assert supervisor.shell_state(1)["voice_enabled"] is True
+    set_quota(session, 1, 60, voice_enabled=False)
+    supervisor.reload()
+    assert supervisor.shell_state(1)["voice_enabled"] is False
+
+
+async def test_together_ends_with_a_tap(
+    supervisor: Supervisor, session: Session, clock: FakeClock, source: FakeSessionSource
+) -> None:
+    set_quota(session, 1, 60)
+    await supervisor.start()
+    source.log_in("elif")
+    await supervisor.start_together(1, 60)
+    await run_for(supervisor, clock, 5 * 60)
+    supervisor.stop_together(1, actor="parent:1")
+    await run_for(supervisor, clock, 60)
+    state = supervisor.shell_state(1)
+    assert state["together_seconds"] == 0
+    assert state["used_seconds"] >= 50, "counting again"
+    row = session.scalars(select(AuditLog).where(AuditLog.action == "together_ended")).one()
+    assert row.detail["minutes"] == 5
+
+
+async def test_together_is_forgotten_by_a_restart(
+    supervisor: Supervisor,
+    session: Session,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    db: Database,
+    bus: EventBus,
+    config: Config,
+    runner: RecordingRunner,
+) -> None:
+    """Never written down: the safe side of a daemon that restarts is counting."""
+    set_quota(session, 1, 60)
+    await supervisor.start()
+    source.log_in("elif")
+    await supervisor.start_together(1, 60)
+    await supervisor.stop()
+    second = Supervisor(
+        database=db,
+        bus=bus,
+        watcher=SessionWatcher(source),
+        enforcer=Enforcer(config, runner),
+        clock=clock,
+        config=config,
+    )
+    await second.start()
+    assert second.shell_state(1)["together_seconds"] == 0
 
 
 # ------------------------------------------------- re-arming the warnings

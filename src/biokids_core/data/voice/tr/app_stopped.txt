@@ -1,0 +1,5 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}, {app}
+# Bir tür uygulamanın bugünkü süresi doldu ve uygulama kapandı (D-228). {app}: uygulamanın adı.
+{app} için bugünkü süren doldu {name}. Başka bir şey seçebilirsin.
+Bunun bugünlük süresi bitti. Hadi başka bir şey seçelim.
+Bugünlük bu kadar, onu kapattım. Ana ekrandan başka bir şey seçebilirsin.

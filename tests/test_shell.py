@@ -19,6 +19,7 @@ import json
 import pathlib
 import re
 import shutil
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -109,6 +110,8 @@ class FakeShellDaemon:
         self.shutdown_answer: ShutdownOutcome | None = ShutdownOutcome.POWEROFF
         self.switch_answer = True
         self.switch_calls = 0
+        self.finish_up_answer = 0
+        self.finish_up_calls = 0
 
     async def available(self) -> bool:
         return self.data is not None
@@ -122,6 +125,10 @@ class FakeShellDaemon:
 
     async def report_activity(self, app_slug: str, app_name: str = "", unit: str = "") -> None:
         self.activity.append((app_slug, app_name, unit))
+
+    async def finish_up(self) -> int:
+        self.finish_up_calls += 1
+        return self.finish_up_answer
 
     async def first_run_done(self) -> None:
         self.first_run_calls += 1
@@ -722,6 +729,38 @@ def test_every_blocked_state_has_its_own_screen(
     daemon.data["penalty_seconds"] = 300
     page = client.get("/").text
     assert marker in page
+
+
+@pytest.mark.parametrize(
+    ("reason", "bedtime", "cards", "title"),
+    [
+        (Reason.QUOTA_EXHAUSTED, False, 1, "Şimdi ne yapsak?"),
+        (Reason.QUOTA_EXHAUSTED, True, 1, "Şimdi ne yapsak?"),
+        (Reason.WINDOW_WAITING, False, 1, "Şimdi ne yapsak?"),
+        (Reason.BREAK_ACTIVE, False, 3, "Haydi biraz hareket!"),
+        (Reason.PENALTY_ACTIVE, False, 0, None),
+    ],
+)
+def test_the_screens_that_end_the_time_say_what_to_do_next(
+    client: TestClient,
+    daemon: FakeShellDaemon,
+    reason: str,
+    bedtime: bool,
+    cards: int,
+    title: str | None,
+) -> None:
+    """D-231: away from the screen, and Zio says it."""
+    assert daemon.data is not None
+    daemon.data.update(
+        allow=False, reason_code=reason, bedtime=bedtime, break_seconds=300, penalty_seconds=300
+    )
+    page = client.get("/").text
+    assert page.count('class="offscreen__card"') == cards
+    if title:
+        assert title in page
+        assert "data-offscreen-say=" in page
+    else:
+        assert "offscreen" not in page.split("<body", 1)[1].split("<script", 1)[0]
 
 
 def test_the_break_screen_has_no_way_out(client: TestClient, daemon: FakeShellDaemon) -> None:
@@ -2352,3 +2391,170 @@ async def test_the_client_says_whether_the_switch_was_taken(
     assert await client.switch_user() is expected
     client._client = _AnsweringClient(IpcError("gone"))  # type: ignore[assignment]
     assert await client.switch_user() is False
+
+
+# ------------------------------------------------------ the last round (D-230)
+
+
+def test_the_last_round_is_asked_of_the_daemon(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    daemon.finish_up_answer = 180
+    response = client.post("/finish-up", json={})
+    assert response.json() == {"ok": True, "minutes": 3}
+    assert daemon.finish_up_calls == 1
+
+
+def test_a_last_round_not_due_says_no(client: TestClient, daemon: FakeShellDaemon) -> None:
+    assert client.post("/finish-up", json={}).json() == {"ok": False, "minutes": 0}
+
+
+def test_the_last_round_from_the_footer_goes_home(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    response = client.post("/finish-up", data={"go": "1"}, follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/"
+    assert daemon.finish_up_calls == 1
+
+
+def test_another_site_cannot_ask_for_the_last_round(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    response = client.post("/finish-up", json={}, headers={"Origin": "https://example.com"})
+    assert response.status_code == 403
+    assert daemon.finish_up_calls == 0
+
+
+def test_the_footer_offers_the_last_round_only_when_due(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    assert 'action="/finish-up"' not in client.get("/").text
+    assert daemon.data is not None
+    daemon.data["finish_up"] = {"offer_seconds": 180, "used_seconds": 0}
+    page = client.get("/").text
+    assert 'action="/finish-up"' in page
+    assert "+3 dk" in page
+    # The warning's own button is always in the page, hidden until offered.
+    assert 'id="notice-finish"' in page
+
+
+# ------------------------------------------------ games after learning (D-232)
+
+
+def test_game_tiles_say_how_much_learning_is_left(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    assert daemon.data is not None
+    daemon.data["tiles"].append(
+        {
+            "slug": "supertux",
+            "name": "SuperTux",
+            "icon": "game",
+            "kind": "app",
+            "url": "",
+            "exec": "supertux2",
+            "category": "games",
+        }
+    )
+    daemon.data["learn_first"] = {"minutes": 15, "left_seconds": 9 * 60 + 1}
+    page = client.get("/").text
+    assert page.count("tile--waiting") == 1, "the game, not the learning or free tiles"
+    assert "10 dk öğrenince" in page
+
+    daemon.data["learn_first"] = {"minutes": 15, "left_seconds": 0}
+    assert "tile--waiting" not in client.get("/").text
+
+
+def test_the_calm_screen_for_learning_first_shows_the_way(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    assert daemon.data is not None
+    daemon.data["learn_first"] = {"minutes": 15, "left_seconds": 5 * 60}
+    page = client.get("/blocked?reason=games.learn_first&slug=supertux").text
+    assert "Önce biraz öğrenelim" in page
+    assert "15 dakika öğrendikten sonra" in page and "5 dakika kaldı" in page
+    assert 'class="learn-bar"' in page
+    assert "width: 67%" in page
+    assert "Büyüğüme sor" not in page, "a rule about order is not asked away"
+
+
+# ------------------------------------------------------ Birlikte modu (D-235)
+
+
+def test_the_home_screen_says_a_grown_up_is_here(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    assert "together-chip" not in client.get("/").text
+    assert daemon.data is not None
+    daemon.data["together_seconds"] = 20 * 60
+    page = client.get("/").text
+    assert "together-chip" in page and "20 dk" in page
+
+
+# ---------------------------------------------------------- a birthday (D-236)
+
+
+def test_a_birthday_is_shown_all_day_and_said_once(
+    client: TestClient, daemon: FakeShellDaemon, tmp_path: Path
+) -> None:
+    client.app.state.shell.home = tmp_path  # type: ignore[attr-defined]
+    assert "birthday__cake" not in client.get("/").text
+    assert daemon.data is not None
+    daemon.data["birthday"] = True
+    first = client.get("/").text
+    assert "İyi ki doğdun Elif!" in first and "data-birthday-say" in first
+    again = client.get("/").text
+    assert "İyi ki doğdun Elif!" in again and "data-birthday-say" not in again
+
+
+def test_the_brightness_slider_starts_where_the_screen_is(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from biokids_shell import device
+
+    async def sixty() -> int:
+        return 60
+
+    monkeypatch.setattr(device, "get_brightness", sixty)
+    assert 'id="brightness" min="20" max="100" step="5" value="60"' in client.get("/").text
+
+
+# ----------------------------------------------------- the review (D-229..D-241)
+
+
+def test_the_launcher_stays_quiet_when_zio_is_off(
+    client: TestClient, daemon: FakeShellDaemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    said: list[str] = []
+
+    async def say(text: str, locale: str) -> None:
+        said.append(text)
+
+    monkeypatch.setattr(client.app.state.shell, "say", say)  # type: ignore[attr-defined]
+    assert client.post("/speak-label", json={"text": "Merhaba"}).json() == {"ok": True}
+    assert daemon.data is not None
+    daemon.data["voice_enabled"] = False
+    assert client.post("/speak-label", json={"text": "Merhaba"}).json() == {"ok": False}
+    assert said == ["Merhaba"]
+
+
+def test_a_stopped_app_is_said_once_not_twice(client: TestClient) -> None:
+    """Zio says why the game went (D-229); the calm screen it lands on is quiet."""
+    quiet = client.get("/blocked?reason=category.exhausted&slug=supertux&said=1").text
+    assert "data-speak-on-load" not in quiet
+    spoken = client.get("/blocked?reason=category.exhausted&slug=supertux").text
+    assert "data-speak-on-load" in spoken
+
+
+def test_another_site_cannot_post_the_last_round_form(
+    client: TestClient, daemon: FakeShellDaemon
+) -> None:
+    response = client.post(
+        "/finish-up",
+        data={"go": "1"},
+        headers={"Origin": "https://example.com", "Sec-Fetch-Site": "cross-site"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 403
+    assert daemon.finish_up_calls == 0

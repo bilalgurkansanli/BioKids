@@ -37,6 +37,9 @@ parental-control tool that implies more protection than it provides is worse tha
 | Finding the parent panel | PIN gate; nftables rejects the children's connections to the panel's port and the tailnet (D-171) |
 | Guessing the PIN | argon2id, 5 attempts then 15-minute lockout, audited; with two parents each PIN has its own count and lockout (D-218, section 3) |
 | Adding a parent of their own, with a PIN they know | behind the family's passphrase, audited and mailed (D-218) |
+| Asking for more time from the launcher | the one ShellOp that brings time, `FINISH_UP` (D-230), gives only the minutes the parent set, once a day, in the day's last two minutes, and only where the quota is what ends the day; the daemon decides, not the launcher |
+| Starting Birlikte modu to stop the clock | only from the panel, by a parent (`Op.TOGETHER`, D-235); nothing on the shell socket starts it, and a daemon restart ends it |
+| Filling the parent's panel with recordings | at most ten a day, each a short WAV the daemon checks (`SHARE_RECORDING`, D-240) |
 
 ### Out of scope — document, do not pretend
 
@@ -234,7 +237,9 @@ from `[retention]` in `/etc/biokids/config.toml`:
 | minutes per day and per app (`usage_tick`, `ledger_day`) | `usage_days` | 400 days |
 | the audit log | `audit_days` | 365 days |
 | the children's requests | `requests_days` | 90 days |
-| what a child has learned in the English corner (`english_item`, D-225) | - | as long as the child is |
+| what a child has learned in the English corner (`english_item`, D-225) and the reading corner (`reading_item`, D-241) | - | as long as the child is |
+| a parent's "well done" and notes (`parent_note`, D-233) | `activity_days` | 30 days |
+| the recordings a child chose to send (`shared_recording`, D-240) | - | 7 days |
 
 The insights screen and the Sunday mail's highlights (D-206) are computed from these
 when they are read and store nothing of their own; the mail names no site and no
@@ -243,7 +248,17 @@ child's sticker album (D-211), from `usage_tick`: a sticker leaves the album wit
 minutes it was earned with. The launcher keeps one date in the child's home, the day
 it last celebrated a sticker (`~/.config/biokids/album-cheered`). The child's pictures
 (D-212) are read where their drawing programs saved them and are copied nowhere; the
-parent's panel does not see them.
+parent's panel does not see them. Sesim's recordings (D-240) stay in the child's home,
+`~/.local/share/biokids/sesim/`, as the launcher saved them; only one the child sends
+with "Büyüğüme gönder" reaches the panel, down-sampled. The day Zio last wished a
+birthday (D-236) is one more date there, `~/.config/biokids/birthday-said`.
+A backup (D-238) leaves the machine only as the file the parent downloads to their own
+device: sealed with the family's passphrase (argon2id, AES-256-GCM), never holding a PIN,
+the passphrase, a recovery code or the mail settings, and audited when taken. The key's
+cost is fixed by the format, not read from the file. Restoring one needs this machine's
+passphrase, checks every value as the panel's forms do, and never switches protection off.
+Anyone holding the file can guess passphrases offline at argon2's cost per guess, so the
+file is as private as the passphrase is strong.
 Panel sessions are deleted a day after their idle timeout, and only the 20 newest boot
 epochs are kept. Removing a child deletes everything recorded for them except the audit
 log (D-191); purging `biokids-core` deletes the database, if the parent says yes.

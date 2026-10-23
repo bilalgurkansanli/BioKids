@@ -100,6 +100,57 @@ class ShellClient:
         except (IpcError, OSError):
             log.debug("could not report activity; the daemon will time it out")
 
+    async def reading_state(self) -> dict[str, Any] | None:
+        """The calling child's boxes in the reading corner (D-241), or None."""
+        try:
+            response = await self._client.call(ShellOp.READING_STATE)
+        except (IpcError, OSError) as exc:
+            log.warning("could not read the reading corner's progress: %s", exc)
+            return None
+        return response.data if response.ok else None
+
+    async def reading_answer(self, item: str, right: bool) -> int | None:
+        try:
+            response = await self._client.call(ShellOp.READING_ANSWER, item=item, right=right)
+        except (IpcError, OSError) as exc:
+            log.warning("the reading answer was not recorded: %s", exc)
+            return None
+        return int(response.data.get("box", 0)) if response.ok else None
+
+    async def share_recording(self, audio_b64: str, seconds: float) -> bool:
+        """Sesim (D-240): the recording the child chose, for the parent's panel."""
+        try:
+            response = await self._client.call(
+                ShellOp.SHARE_RECORDING, audio=audio_b64, seconds=seconds
+            )
+        except (IpcError, OSError) as exc:
+            log.warning("could not send the recording: %s", exc)
+            return False
+        return response.ok
+
+    async def note_seen(self, note_id: int) -> bool:
+        """The screen showed a parent's note (D-233); the panel says "okundu"."""
+        try:
+            return (await self._client.call(ShellOp.NOTE_SEEN, note_id=note_id)).ok
+        except (IpcError, OSError) as exc:
+            log.info("could not say that a note was seen: %s", exc)
+            return False
+
+    async def finish_up(self) -> int:
+        """Ask for the last round (D-230): the seconds given, 0 when none was due
+        or the daemon could not be asked."""
+        try:
+            response = await self._client.call(ShellOp.FINISH_UP)
+        except (IpcError, OSError) as exc:
+            log.warning("could not ask for the last round: %s", exc)
+            return 0
+        if not response.ok:
+            return 0
+        try:
+            return max(0, int(response.data.get("seconds", 0)))
+        except (TypeError, ValueError):
+            return 0
+
     async def first_run_done(self) -> None:
         try:
             await self._client.call(ShellOp.FIRST_RUN_DONE)

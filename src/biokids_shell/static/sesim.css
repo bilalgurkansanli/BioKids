@@ -1,0 +1,139 @@
+/* Sesim (D-240): one big round button, the child's recordings under it. */
+
+.sesim {
+  grid-template-rows: auto 1fr;
+}
+
+.sesim__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.sesim__title {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.sesim__title span { font-family: var(--font-emoji); }
+
+.sesim__main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-5) var(--sp-6);
+  overflow-y: auto;
+}
+
+.sesim__record {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  width: min(42vh, 280px);
+  height: min(42vh, 280px);
+  border: 0;
+  border-radius: 50%;
+  background: var(--bio-coral);
+  color: #fff;
+  font: inherit;
+  font-size: 1.4rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-2);
+  cursor: pointer;
+  touch-action: none;
+  transition: transform .15s ease, background .2s ease;
+}
+
+.sesim__record.is-on {
+  background: var(--danger);
+  transform: scale(1.06);
+  animation: sesim-listen 1.2s ease-in-out infinite;
+}
+
+.sesim__record-icon {
+  font-family: var(--font-emoji);
+  font-size: 5rem;
+  line-height: 1;
+}
+
+.sesim__timer {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.2rem;
+}
+
+.sesim__hint,
+.sesim__empty p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 1.15rem;
+  text-align: center;
+}
+
+.sesim__message {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  font-weight: 700;
+}
+
+.sesim__message[data-tone="ok"] { border: 2px solid var(--ok); }
+.sesim__message[data-tone="warn"] { border: 2px solid var(--warn); }
+
+.sesim__list {
+  display: grid;
+  gap: var(--sp-3);
+  width: min(44rem, 100%);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sesim__item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.sesim__when {
+  flex: 1;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.sesim__avatar { font-family: var(--font-emoji); font-size: 1.6rem; }
+
+.sesim__play,
+.sesim__delete,
+.sesim__share {
+  min-width: 64px;
+  min-height: 64px;
+  border: 0;
+  border-radius: var(--r-pill);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sesim__play { background: var(--ok); color: #fff; font-size: 1.6rem; }
+.sesim__share { padding: 0 var(--sp-4); background: var(--bio-indigo); color: #fff; }
+.sesim__delete { background: var(--line); font-family: var(--font-emoji); font-size: 1.4rem; }
+.sesim__share span { font-family: var(--font-emoji); }
+
+@keyframes sesim-listen {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 45%, transparent); }
+  50% { box-shadow: 0 0 0 22px color-mix(in srgb, var(--danger) 0%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sesim__record,
+  .sesim__record.is-on { animation: none; transition: none; }
+}

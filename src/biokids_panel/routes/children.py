@@ -13,10 +13,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from biokids_core import repo, search_filter
+from biokids_core import album, daily, offscreen, repo, search_filter
 from biokids_core.appearance import TEXT_SIZES, Appearance, reading_font_installed
 from biokids_core.catalog import (
     ALWAYS_ON_TILES,
+    TILE_ICONS,
     Catalog,
     CatalogEntry,
     enable_for_child,
@@ -25,7 +26,7 @@ from biokids_core.catalog import (
     new_for_child,
     sync_catalog,
 )
-from biokids_core.db.models import CategoryLimit, Child, Policy
+from biokids_core.db.models import CategoryLimit, Child, Policy, birthday_value
 from biokids_core.errors import ConfigError, IpcError
 from biokids_core.ipc import Op
 from biokids_core.provision import unprovision, unprovision_via_systemd
@@ -34,6 +35,7 @@ from biokids_panel import auth
 from biokids_panel.common import PanelView, View, _call_daemon, _daemon_status, see_other
 from biokids_panel.context import AVATARS, PanelContext
 from biokids_panel.forms import (
+    _minutes_or_zero,
     _one_of,
     _parse_window_list,
     _policy_snapshot,
@@ -44,6 +46,9 @@ from biokids_panel.forms import (
 from biokids_panel.routes import special_days
 
 log = logging.getLogger(__name__)
+
+FINISH_UP_CHOICES = (0, 2, 3, 5)
+"""The last round's minutes a parent may pick (D-230); 0 is off."""
 
 INDICATORS = ("badge", "small", "hidden")
 """How the launcher shows that the family can see the time and the sites (D-76).
@@ -131,6 +136,9 @@ def child_edit_save(
     text_size: Annotated[str, Form()] = "",
     high_contrast: Annotated[str, Form()] = "",
     reading_font: Annotated[str, Form()] = "",
+    calm_screen: Annotated[str, Form()] = "",
+    birthday_day: Annotated[str, Form()] = "",
+    birthday_month: Annotated[str, Form()] = "",
     csrf_token: Annotated[str, Form()] = "",
 ) -> Response:
     page = f"/children/{child_id}/edit"
@@ -159,10 +167,26 @@ def child_edit_save(
         # The Ekran fieldset (D-217) was on the page that posted: its two
         # checkboxes say "off" by being absent, which a form without the
         # fieldset must not be taken to mean.
-        chosen = Appearance.of(text_size, high_contrast == "on", reading_font == "on")
+        chosen = Appearance.of(
+            text_size, high_contrast == "on", reading_font == "on", calm_screen == "on"
+        )
         child.text_size = chosen.text_size
         child.high_contrast = chosen.high_contrast
         child.reading_font = chosen.reading_font
+        child.calm_screen = chosen.calm
+    # The birthday (D-236): both or neither; a day that is not one is refused.
+    if birthday_day.strip() or birthday_month.strip():
+        try:
+            given = birthday_value(int(birthday_month), int(birthday_day))
+        except ValueError:
+            given = None
+        if given is None:
+            return _edit_page(
+                view, child, status_code=400, error=view.tr("child.birthday.invalid")
+            )
+        child.birthday = given
+    else:
+        child.birthday = None
     after = _child_snapshot(child)
     if after == before:
         return see_other(f"{page}?saved=1")
@@ -255,6 +279,63 @@ def child_delete(
     return see_other("/children?saved=removed")
 
 
+# ------------------------------------------------------------ preview (D-239)
+
+
+@router.get("/children/{child_id}/preview", response_class=HTMLResponse)
+def preview(view: View, child_id: int) -> Response:
+    """What the child's screen looks like with the rules as they are now.
+
+    Drawn from the database - the tiles, today's minutes, the day's card, a
+    warning and the end of the day - never from the child's session: a picture
+    of the settings, not a view of the screen (CONTRIBUTING: no live mirroring).
+    """
+    if blocked := view.guard():
+        return blocked
+    session = view.session
+    child = repo.get_child(session, child_id)
+    if child is None:
+        return view.not_found()
+    today = dt.date.today()
+    policy = repo.load_policy(session, child, today=today)
+    learned = album.learning_seconds(session, child.id, since=today).get(today, 0)
+    learn_first = policy.learn_first_min if policy else 0
+    waiting = bool(learn_first) and learned < learn_first * 60
+    tiles = [
+        {
+            "slug": app.slug,
+            "name": app.name(view.tr.locale),
+            "icon": TILE_ICONS.get(app.icon, TILE_ICONS["app"]),
+            "waiting": waiting and repo.child_app_category(link, app) is Category.GAMES,
+        }
+        for link, app in repo.list_child_apps(session, child.id)
+        if app.kind != "__gone__" and app.slug not in ALWAYS_ON_TILES
+    ]
+    band = child.band(today).value
+    end_action = policy.end_action.value if policy else ""
+    return view.render(
+        "child_preview.html",
+        child=child,
+        band=band,
+        tiles=tiles,
+        learn_first=max(0, learn_first - learned // 60),
+        quota_minutes=policy.quota_minutes(today) if policy else 0,
+        daily=daily.card_for(
+            today, child_id=child.id, band=band, locale=view.tr.locale, tiles=tiles
+        ),
+        warning_line=view.tr("quota.warning", minutes=5),
+        finish_up=policy.finish_up_min if policy else 0,
+        end_line=view.tr(
+            f"shell.timeup.body.{end_action}"
+            if end_action in ("poweroff", "lock", "logout")
+            else "shell.timeup.body"
+        ),
+        offscreen=[
+            c.as_dict(view.tr.locale) for c in offscreen.choose("end", band, today, child.id)
+        ],
+    )
+
+
 # ---------------------------------------------------------------------- time
 
 
@@ -293,6 +374,8 @@ def time_save(
     earn_enabled: Annotated[str, Form()] = "",
     earn_ratio: Annotated[float, Form()] = 1.0,
     earn_cap_min: Annotated[int, Form()] = 60,
+    finish_up_min: Annotated[int, Form()] = 3,
+    learn_first_min: Annotated[str, Form()] = "",
     limit_games: Annotated[str, Form()] = "",
     limit_learning: Annotated[str, Form()] = "",
     limit_web: Annotated[str, Form()] = "",
@@ -374,6 +457,8 @@ def time_save(
                 "earn_enabled": earn_enabled,
                 "earn_ratio": earn_ratio,
                 "earn_cap_min": earn_cap_min,
+                "finish_up_min": finish_up_min,
+                "learn_first_min": learn_first_min,
                 **{f"limit_{cat.value}": typed for cat, typed in typed_limits.items()},
             },
             # An install that skipped the wizard's third step has no
@@ -395,6 +480,8 @@ def time_save(
     policy.earn_enabled = earn_enabled == "on"
     policy.earn_ratio = max(0.0, min(earn_ratio, 5.0))
     policy.earn_cap_min = max(0, min(earn_cap_min, 480))
+    policy.finish_up_min = finish_up_min if finish_up_min in FINISH_UP_CHOICES else 3
+    policy.learn_first_min = _minutes_or_zero(learn_first_min, 120)
     limits_before = _save_category_limits(session, child_id, limits)
 
     after = _policy_snapshot(policy)
@@ -684,7 +771,10 @@ def _edit_page(
         child=child,
         this_year=dt.date.today().year,
         indicators=INDICATORS,
-        screen=Appearance.of(child.text_size, child.high_contrast, child.reading_font),
+        screen=Appearance.of(
+            child.text_size, child.high_contrast, child.reading_font, child.calm_screen
+        ),
+        birthday=_birthday_parts(child.birthday),
         text_sizes=TEXT_SIZES,
         reading_font_installed=reading_font_installed(),
         passphrase_fresh=state.passphrase_fresh(),
@@ -701,6 +791,8 @@ def _child_snapshot(child: Child) -> dict[str, Any]:
         "locale": child.locale,
         "supervision_indicator": child.supervision_indicator,
         "text_size": child.text_size,
+        "calm_screen": child.calm_screen,
+        "birthday": child.birthday or "",
         "high_contrast": bool(child.high_contrast),
         "reading_font": bool(child.reading_font),
     }
@@ -861,3 +953,14 @@ def _assistant_status(ctx: PanelContext) -> dict[str, Any]:
         log.warning("the daemon did not answer assistant_status: %s", exc)
         return {"running": False}
     return dict(response.data) if response.ok else {"running": False}
+
+
+def _birthday_parts(value: str | None) -> dict[str, int] | None:
+    """`MM-DD` as the two selects show it, or None."""
+    if not value:
+        return None
+    try:
+        month, day = (int(part) for part in value.split("-"))
+    except ValueError:
+        return None
+    return {"month": month, "day": day}

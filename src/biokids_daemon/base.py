@@ -21,7 +21,7 @@ from biokids_core.config import Config, get_config
 from biokids_core.db.session import Database
 from biokids_core.ipc import EventKind
 from biokids_core.ledger import TimeLedger
-from biokids_core.types import Category, ChildPolicy, Decision, SpeechRequest
+from biokids_core.types import Action, Category, ChildPolicy, Decision, Reason, SpeechRequest
 from biokids_daemon.bus import EventBus
 from biokids_daemon.dnsfilter import DnsFilter, FilterHealth
 from biokids_daemon.enforcer import LOCK_ATTEMPTS_BEFORE_LOGOUT, Enforcer
@@ -94,6 +94,21 @@ class ChildRuntime:
     """Refused searches already told to the parent, by their words (D-222)."""
     earned_announced_at: float = 0.0
     """When the last celebration went out, in BOOTTIME seconds. Zero means never."""
+    together_until: float = 0.0
+    """Birlikte modu (D-235): until when, in BOOTTIME seconds, a parent is at the
+    computer with the child and nothing is counted. Zero is not together. Never
+    written down: a daemon that restarts counts again, which is the safe side."""
+    together_started_at: float = 0.0
+    together_warned: bool = False
+    """The "five more minutes together" line was said for this stretch."""
+
+    def together_active(self, now_boot: float) -> bool:
+        return now_boot < self.together_until
+
+    def together_left(self, now_boot: float) -> int:
+        return (
+            max(0, int(self.together_until - now_boot)) if self.together_active(now_boot) else 0
+        )
 
     def activity_fresh(self, now_boot: float) -> bool:
         return (
@@ -206,6 +221,22 @@ class SupervisorBase:
         self._afterwards.clear()
 
     # ---------------------------------------------------------------- speech
+
+    def _decided(self, runtime: ChildRuntime, decision: Decision, now_boot: float) -> Decision:
+        """The engine's decision, or "allowed" while a parent is with the child.
+
+        Birlikte modu (D-235) is a parent's word, not a rule of the engine, so
+        it is applied here, to every decision the daemon acts on or shows: the
+        tick, the launcher's state, Today, and a tap on a tile.
+        """
+        if not runtime.together_active(now_boot):
+            return decision
+        return Decision(
+            allow=True,
+            action=Action.NONE,
+            reason_code=Reason.TOGETHER,
+            remaining_seconds=decision.remaining_seconds,
+        )
 
     def _publish_speech(self, runtime: ChildRuntime, decision: Decision) -> None:
         """Ask for a line. The daemon never speaks; the shell relays to the voice

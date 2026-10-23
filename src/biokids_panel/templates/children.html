@@ -27,6 +27,10 @@
         <a class="btn" href="/children/{{ child.id }}/apps">{{ _('apps.title') }}</a>
         <a class="btn" href="/children/{{ child.id }}/internet">{{ _('internet.title') }}</a>
         <a class="btn" href="/children/{{ child.id }}/assistant">{{ _('assistant.panel.title') }}</a>
+        {# D-239: the child's screen with these rules, before the child sees it. #}
+        <a class="btn" href="/children/{{ child.id }}/preview">
+          <span aria-hidden="true">👀</span> {{ _('preview.open') }}
+        </a>
         <a class="btn btn--quiet" href="/children/{{ child.id }}/edit">{{ _('common.edit') }}</a>
       </div>
     </article>

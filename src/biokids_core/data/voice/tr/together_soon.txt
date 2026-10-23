@@ -1,0 +1,5 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}
+# Birlikte modu birkaç dakika sonra bitiyor (D-235).
+Birlikte zamanın {minutes} dakika sonra bitiyor {name}.
+Birlikte {minutes} dakikanız kaldı. Sonra süre yine sayılacak.
+Az kaldı: birlikte zaman birazdan bitiyor.

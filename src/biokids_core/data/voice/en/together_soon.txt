@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}
+# Together time ends in a few minutes (D-235).
+Together time ends in {minutes} minutes, {name}.
+You have {minutes} more minutes together. Then the time is counted again.
+Not long now: together time ends soon.

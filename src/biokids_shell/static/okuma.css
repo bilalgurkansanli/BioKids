@@ -1,0 +1,160 @@
+/* Okuma köşesi (D-241): big letters, big pictures, nothing small to read. */
+
+.okuma { grid-template-rows: auto 1fr; }
+
+.okuma__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.okuma__title { margin: 0; font-size: 2rem; }
+.okuma__title span { font-family: var(--font-emoji); }
+
+.okuma__main,
+.okuma__stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-5) var(--sp-6);
+  overflow-y: auto;
+}
+
+/* The five groups, as a path the child walks. */
+.okuma__path {
+  display: grid;
+  gap: var(--sp-3);
+  width: min(44rem, 100%);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.okuma__group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  justify-content: center;
+  padding: var(--sp-3);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 3px solid transparent;
+}
+
+.okuma__group.is-current { border-color: var(--bio-amber); }
+.okuma__group.is-done { background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+
+.okuma__letter {
+  display: grid;
+  place-items: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 14px;
+  background: var(--line);
+  color: var(--ink-soft);
+  font-family: var(--font-kid);
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.okuma__letter.is-met { background: var(--bio-indigo); color: #fff; }
+
+.okuma__start { margin-top: var(--sp-2); font-size: 1.5rem; }
+.okuma__done p,
+.okuma__summary { margin: 0; text-align: center; color: var(--ink-soft); font-size: 1.2rem; }
+
+/* The lesson. */
+.okuma__bar {
+  flex: 1;
+  height: 14px;
+  border-radius: var(--r-pill);
+  background: var(--line);
+  overflow: hidden;
+}
+
+.okuma__bar-fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ok);
+  transition: width .3s ease;
+}
+
+.okuma__stars { font-size: 1.4rem; font-weight: 700; }
+
+.okuma__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+  width: min(46rem, 100%);
+  padding: var(--sp-5);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+  text-align: center;
+}
+
+.okuma__pair { display: flex; gap: var(--sp-4); align-items: baseline; margin: 0; }
+.okuma__upper,
+.okuma__lower { font-family: var(--font-kid); font-weight: 700; line-height: 1; }
+.okuma__upper { font-size: 9rem; color: var(--bio-indigo); }
+.okuma__lower { font-size: 7rem; color: var(--bio-coral); }
+
+.okuma__example { display: flex; align-items: center; gap: var(--sp-3); margin: 0; }
+.okuma__pic { font-family: var(--font-emoji); font-size: 4rem; }
+.okuma__word { font-size: 2.4rem; font-weight: 700; }
+
+.okuma__row { display: flex; gap: var(--sp-3); }
+
+.okuma__hear {
+  width: 96px;
+  height: 96px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bio-amber);
+  font-family: var(--font-emoji);
+  font-size: 2.6rem;
+  cursor: pointer;
+}
+
+.okuma__prompt { margin: 0; font-size: 1.5rem; font-weight: 600; color: var(--ink-soft); }
+.okuma__text { margin: 0; font-family: var(--font-kid); font-weight: 700; }
+.okuma__text--word { font-size: 5rem; letter-spacing: .04em; }
+.okuma__text--sentence { font-size: 3rem; }
+.okuma__syllables { margin: 0; font-size: 1.6rem; color: var(--ink-soft); }
+
+.okuma__choices { display: flex; flex-wrap: wrap; gap: var(--sp-3); justify-content: center; }
+
+.okuma__choice {
+  min-width: 8rem;
+  min-height: 8rem;
+  padding: var(--sp-3);
+  border: 4px solid var(--line);
+  border-radius: var(--r-lg);
+  background: #fff;
+  font-family: var(--font-kid);
+  font-size: 3rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.okuma__choice--pic { font-family: var(--font-emoji); font-size: 4.5rem; }
+.okuma__choice.is-right { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, #fff); }
+.okuma__choice.is-wrong { border-color: var(--warn); animation: okuma-shake .4s ease; }
+
+.okuma__big { margin: 0; font-size: 4rem; font-weight: 700; }
+.okuma__line { margin: 0; font-size: 1.6rem; }
+
+@keyframes okuma-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .okuma__choice.is-wrong { animation: none; }
+  .okuma__bar-fill { transition: none; }
+}

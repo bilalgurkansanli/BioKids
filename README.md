@@ -47,8 +47,12 @@ The full text is in [`CLAUDE.md`](CLAUDE.md) §2.
   recorded voice — and shown in front of whatever app is open. Then the screen locks,
   counts down, and the computer shuts down (or only locks, or logs out: the parent
   chooses).
-- **Breaks and earned time.** Optional forced breaks; time in learning apps can earn
-  extra game time, at a ratio the parent sets.
+- **Breaks and earned time.** Optional forced breaks, with a few moves and rest for the
+  eyes; time in learning apps can earn extra game time, at a ratio the parent sets; and,
+  if the parent wants, games open only after the day's learning.
+- **A gentle end.** Once a day, as the time runs out, the child may ask for a last round
+  to finish what they are doing; and the screens that end the time suggest something to
+  do away from the screen.
 - **Limits per kind of app**: at most so many minutes of games, learning, web or other
   apps a day, inside the day's time.
 - **A child launcher** instead of a desktop: big tiles for the apps and sites the parent
@@ -74,6 +78,15 @@ The full text is in [`CLAUDE.md`](CLAUDE.md) §2.
   grant and clock change.
 - **Recorded parent voices.** A parent can record the seven spoken lines on their phone,
   and the child hears them in that voice.
+- **The warm side of the panel.** "Aferin!" in one tap or a short note to the child's
+  screen; "Birlikteyiz" while a parent plays with the child, when nothing is counted;
+  a few things to talk about in the evening, from the child's day; and the child can
+  send a recording of their own from **Sesim**.
+- **Learning to read.** The reading corner teaches Turkish reading in first grade's
+  order, five sound groups from letters to sentences, beside the English corner.
+- **Peace of mind.** A protection list that shows what is in place and what to do where
+  something is not, a preview of the child's screen, and an encrypted backup to move
+  everything to a new computer.
 - **Optional: "Sor Bana", a local assistant.** A child types or, if allowed, says a
   question and gets an answer for their age from a language model running on the
   machine, checked against an offline encyclopedia. It refuses what a child should not

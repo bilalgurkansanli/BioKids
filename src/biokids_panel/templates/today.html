@@ -27,6 +27,12 @@
       </form>
     </div>
   {% endif %}
+  {% if protection_attention %}
+    {# Koruma durumu (D-237): something on the protection list needs the parent. #}
+    <a class="notice notice--warn notice--link" href="/settings#health">
+      <span aria-hidden="true">🛡️</span> {{ _('health.today', count=protection_attention) }}
+    </a>
+  {% endif %}
   {% for item in assistant_alerts %}
     <a class="notice notice--warn notice--link" href="/children/{{ item.child.id }}/assistant">
       <span aria-hidden="true">💬</span>
@@ -42,6 +48,33 @@
   <div id="cards">
     {% include "partials/child_cards.html" %}
   </div>
+
+  {#
+    D-234: a few things to ask about this evening, from each child's day.
+    Outside #cards, which live.js replaces; for the evening, not for a child
+    waiting at the computer, so under the cards and above the week.
+  #}
+  {% if talk %}
+    <section class="card talk-card" aria-labelledby="talk-title">
+      <h2 id="talk-title"><span aria-hidden="true">💬</span> {{ _('talk.title') }}</h2>
+      <p class="help">{{ _('talk.help') }}</p>
+      {% for item in talk %}
+        {% if talk|length > 1 %}
+          <h3 class="week-card__name">
+            <span aria-hidden="true">{{ item.child.avatar|avatar }}</span> {{ item.child.display_name }}
+          </h3>
+        {% endif %}
+        <ul class="highlights highlights--compact">
+          {% for prompt in item.prompts %}
+            <li class="highlight highlight--good">
+              <span class="highlight__icon" aria-hidden="true">{{ prompt.icon }}</span>
+              <p class="highlight__text">{{ prompt.text }}</p>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endfor %}
+    </section>
+  {% endif %}
 
   {#
     D-206: the week in a few sentences, under the live cards and outside

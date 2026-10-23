@@ -387,7 +387,10 @@ class TimeLedger:
         file_by_hour(runtime.pending_hour_seconds, wall, elapsed)
 
         category = item.category
-        if category is not None:
+        # A learning app left open with nobody at it is not learning: its idle
+        # minutes count against the day but not as learning, which opens games
+        # (D-232), earns stickers (D-211) and is what Analiz calls learning.
+        if category is not None and not (item.idle and category is Category.LEARNING):
             key = (category, item.app_slug)
             runtime.pending_category_seconds[key] = (
                 runtime.pending_category_seconds.get(key, 0) + elapsed
@@ -505,6 +508,23 @@ class TimeLedger:
         self.persist()
         return self.state(child_id, day)
 
+    def finish_up(self, child_id: int, seconds: int, day: dt.date | None = None) -> LedgerState:
+        """The last round (D-230): `seconds` more today, once.
+
+        Allowance, as a grant is, and kept apart from `granted_s` so that the
+        history says which minutes a parent gave and which the child asked for.
+        A second call the same day changes nothing: whether one is offered at
+        all is the policy engine's (`finish_up_offer`), and this is the ledger
+        keeping its word if two taps arrive at once.
+        """
+        day = day or self._clock.read().wall.date()
+        row = self._day_row(child_id, day)
+        if not row.finish_up_s:
+            row.finish_up_s = max(0, seconds)
+            self._mark_dirty(child_id)
+            self.persist()
+        return self.state(child_id, day)
+
     def start_penalty(self, child_id: int, seconds: int, day: dt.date | None = None) -> None:
         day = day or self._clock.read().wall.date()
         row = self._day_row(child_id, day)
@@ -546,6 +566,7 @@ class TimeLedger:
         row.learning_streak_s = 0
         row.learning_credited_s = 0
         row.granted_s = 0
+        row.finish_up_s = 0
         row.warned = set()
         row.end_sequence_started_at = None
         row.end_sequence_boot_id = None
@@ -659,6 +680,7 @@ class TimeLedger:
             general_used_s=row.general_s,
             earned_s=row.earned_s,
             granted_s=row.granted_s,
+            finish_up_s=row.finish_up_s or 0,
             category_used_s=self._category_seconds(child_id, day),
             penalty_remaining_s=row.penalty_remaining_s,
             break_remaining_s=row.break_remaining_s,

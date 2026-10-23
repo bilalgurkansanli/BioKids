@@ -1,0 +1,5 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}, {app}
+# Son tur hakkı: çocuk günde bir kez birkaç dakika daha ister (D-230). {minutes}: verilen dakika.
+Tamam {name}, {minutes} dakika daha. Sonra kapatıyoruz.
+Peki, işini bitir. {minutes} dakikan var.
+Son tur! {minutes} dakika sonra bitiriyoruz.

@@ -49,6 +49,19 @@
     </form>
   {% endif %}
 
+  {# A tap on "1 sa" fills the box above it (D-236). Buttons, so the form is
+     not sent; without JavaScript they do nothing and the box still works. #}
+  {% macro presets(field) %}
+    <div class="presets" role="group" aria-label="{{ _('time.presets') }}">
+      {% for minutes in (30, 60, 90, 120) %}
+        <button class="chip" type="button"
+                onclick="this.form.elements['{{ field }}'].value = {{ minutes }}">
+          {{ _('time.preset.' ~ minutes) }}
+        </button>
+      {% endfor %}
+    </div>
+  {% endmacro %}
+
   <form class="card" method="post" action="/children/{{ child.id }}/time">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
 
@@ -56,6 +69,7 @@
       <label for="weekday">{{ _('time.weekday_quota') }}</label>
       <input id="weekday" name="weekday_quota_min" type="number" min="0" max="1440" step="5"
              value="{{ policy.weekday_quota_min }}" inputmode="numeric">
+      {{ presets('weekday_quota_min') }}
       <span class="help">{{ _('time.quota.help') }}</span>
     </div>
 
@@ -63,6 +77,7 @@
       <label for="weekend">{{ _('time.weekend_quota') }}</label>
       <input id="weekend" name="weekend_quota_min" type="number" min="0" max="1440" step="5"
              value="{{ policy.weekend_quota_min }}" inputmode="numeric">
+      {{ presets('weekend_quota_min') }}
     </div>
 
     {#
@@ -160,12 +175,12 @@
       </div>
       <div class="row row--wrap">
         <div class="field grow">
-          <label for="bw">{{ _('time.break_enabled') }} — {{ _('common.minutes') }}</label>
+          <label for="bw">{{ _('time.break.work_minutes') }}</label>
           <input id="bw" name="break_work_min" type="number" min="5" max="240"
                  value="{{ policy.break_work_min }}">
         </div>
         <div class="field grow">
-          <label for="br">{{ _('shell.break.title') }} — {{ _('common.minutes') }}</label>
+          <label for="br">{{ _('time.break.rest_minutes') }}</label>
           <input id="br" name="break_rest_min" type="number" min="1" max="60"
                  value="{{ policy.break_rest_min }}">
         </div>
@@ -181,15 +196,38 @@
       </div>
       <div class="row row--wrap">
         <div class="field grow">
-          <label for="ratio">{{ _('time.earn_enabled') }} ×</label>
+          <label for="ratio">{{ _('time.earn.ratio') }}</label>
           <input id="ratio" name="earn_ratio" type="number" min="0" max="5" step="0.5"
                  value="{{ policy.earn_ratio }}">
         </div>
         <div class="field grow">
-          <label for="cap">{{ _('common.all') }} — {{ _('common.minutes') }}</label>
+          <label for="cap">{{ _('time.earn.cap') }}</label>
           <input id="cap" name="earn_cap_min" type="number" min="0" max="480"
                  value="{{ policy.earn_cap_min }}">
         </div>
+      </div>
+
+      {# The last round (D-230): on by default with three minutes, because the
+         moment it is for - a level cut in half - is the one every family has. #}
+      <div class="field" id="finish-up">
+        <label for="finish_up_min">{{ _('time.finish_up') }}</label>
+        <select id="finish_up_min" name="finish_up_min">
+          {% for minutes in (0, 2, 3, 5) %}
+            <option value="{{ minutes }}" {% if policy.finish_up_min == minutes %}selected{% endif %}>
+              {{ _('time.finish_up.off') if minutes == 0 else _('time.finish_up.minutes', minutes=minutes) }}
+            </option>
+          {% endfor %}
+        </select>
+        <span class="help">{{ _('time.finish_up.help') }}</span>
+      </div>
+
+      {# Games after the day's learning (D-232). Empty or 0 is no such rule. #}
+      <div class="field" id="learn-first">
+        <label for="learn_first_min">{{ _('time.learn_first') }}</label>
+        <input id="learn_first_min" name="learn_first_min" type="number" min="0" max="120"
+               step="5" inputmode="numeric"
+               value="{{ policy.learn_first_min if policy.learn_first_min else '' }}">
+        <span class="help">{{ _('time.learn_first.help') }}</span>
       </div>
 
       {# D-44: a cap on one kind of app inside the day's time. Empty is no cap

@@ -179,7 +179,7 @@
   </form>
 
   {# -------------------------------------------------------- passphrase #}
-  <form class="card" method="post" action="/settings/passphrase">
+  <form class="card" method="post" action="/settings/passphrase" id="passphrase">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
     <h2>{{ _('wizard.passphrase.field') }}</h2>
     <p class="muted small">{{ _('wizard.passphrase.help') }}</p>
@@ -206,15 +206,36 @@
     <button class="btn" type="submit">{{ _('common.save') }}</button>
   </form>
 
-  {# ---------------------------------------------------- service health #}
-  <section class="card">
-    <h2>{{ _('audit.actor.daemon') }}</h2>
-    <p class="status {% if daemon_up %}status--online{% else %}status--blocked{% endif %}">
-      {% if daemon_up %}{{ _('common.on') }}{% else %}{{ _('today.daemon_down') }}{% endif %}
-    </p>
-    {% if not daemon_up %}
-      <p class="muted small">{{ _('error.daemon_unreachable') }}</p>
-    {% endif %}
+  {# ------------------------------------------- Koruma durumu (D-237) #}
+  {# Everything that protects the child, in one list: green where all is
+     well, and what to do where it is not. Read only; there with the daemon
+     down, which is when it matters most. #}
+  <section class="card health" id="health" aria-labelledby="health-title">
+    <h2 id="health-title"><span aria-hidden="true">🛡️</span> {{ _('health.title') }}</h2>
+    <p class="help">{{ _('health.help') }}</p>
+    <ul class="health__list">
+      {% for check in checks %}
+        <li class="health__item health__item--{{ check.level }}">
+          <span class="health__icon" aria-hidden="true">
+            {{ {'ok': '✅', 'info': 'ℹ️', 'warn': '⚠️', 'bad': '⛔'}[check.level] }}
+          </span>
+          <div class="health__body">
+            <p class="health__title">{{ _('health.' ~ check.key ~ '.title') }}</p>
+            <p class="health__text">{{ _('health.' ~ check.key ~ '.' ~ (check.variant or check.level), **(check.values or {})) }}</p>
+            {% if check.link and check.level != 'ok' %}
+              <a class="health__link" href="{{ check.link }}">{{ _('health.what_to_do') }} →</a>
+            {% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {# Yedekle ve taşı (D-238). #}
+  <section class="card card--flat">
+    <h2><span aria-hidden="true">💾</span> {{ _('backup.title') }}</h2>
+    <p class="muted">{{ _('backup.settings.help') }}</p>
+    <a class="btn" href="/settings/backup">{{ _('backup.settings.open') }}</a>
   </section>
 
   {# Where a parent who looks here for sites or the assistant finds them: they

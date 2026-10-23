@@ -285,7 +285,7 @@ msgid "shell.firstrun.p3"
 msgstr "Some pages will not open. If one does not, you can ask a grown-up."
 
 msgid "shell.firstrun.p4"
-msgstr "Your mum and dad can see which sites you visited. This is not a secret."
+msgstr "Your family can see how long you spend on the computer. It is not a secret."
 
 msgid "shell.firstrun.ok"
 msgstr "I understand"
@@ -2241,7 +2241,7 @@ msgstr "It checks its answers against Wikipedia summaries kept on this computer;
 
 # D-187: the child is told about the visited-sites list
 msgid "shell.firstrun.p5"
-msgstr "Your family can see which websites you visit: only the site's name, not the pages."
+msgstr "They also see which websites you open: the site's name, not its pages. If a search does not open, they see what you searched for."
 
 # Editing and removing a child (D-191)
 msgid "child.edit.title"
@@ -3408,3 +3408,687 @@ msgstr "Home"
 
 msgid "shell.cover.back"
 msgstr "Tap to go back"
+
+msgid "shell.break.over"
+msgstr "Break's over"
+
+msgid "shell.finishup.granted"
+msgstr "Last round! A few more minutes"
+
+msgid "shell.finishup.button"
+msgstr "Let me finish"
+
+msgid "shell.finishup.more"
+msgstr "+{minutes} min"
+
+msgid "shell.finishup.granted_minutes"
+msgstr "Last round! {minutes} more minutes, then we stop."
+
+msgid "shell.blocked.learn_first.title"
+msgstr "Let's learn a little first"
+
+msgid "shell.blocked.learn_first.body"
+msgstr "Games open after {minutes} minutes of learning today. {left} minutes to go."
+
+msgid "shell.blocked.learn_first.pick"
+msgstr "Learning apps"
+
+msgid "shell.tile.learn_first"
+msgstr "after {minutes} min of learning"
+
+msgid "time.presets"
+msgstr "Quick choice"
+
+msgid "time.preset.30"
+msgstr "30 min"
+
+msgid "time.preset.60"
+msgstr "1 h"
+
+msgid "time.preset.90"
+msgstr "1.5 h"
+
+msgid "time.preset.120"
+msgstr "2 h"
+
+msgid "time.break.work_minutes"
+msgstr "A break after how many minutes"
+
+msgid "time.break.rest_minutes"
+msgstr "How long the break lasts, in minutes"
+
+msgid "time.earn.ratio"
+msgstr "Minutes earned for each minute of learning"
+
+msgid "time.earn.cap"
+msgstr "The most minutes that can be earned in a day"
+
+msgid "time.finish_up"
+msgstr "The last round"
+
+msgid "time.finish_up.off"
+msgstr "Off"
+
+msgid "time.finish_up.minutes"
+msgstr "{minutes} minutes"
+
+msgid "time.finish_up.help"
+msgstr "As the time runs out, once a day, the child can tap “Let me finish” to get this much extra to finish a game or a drawing. If they use it, Today tells you."
+
+msgid "time.learn_first"
+msgstr "Games open after how many minutes of learning?"
+
+msgid "time.learn_first.help"
+msgstr "Type 15, for example, and games open once the child has used learning apps for 15 minutes today. Leave it empty for no such rule."
+
+msgid "today.finish_up_used"
+msgstr "{name} took their last round today (+{minutes} min)"
+
+msgid "audit.action.finish_up_used"
+msgstr "The child took the last round"
+
+msgid "shell.offscreen.title"
+msgstr "What shall we do now?"
+
+msgid "shell.offscreen.break_title"
+msgstr "Let's move a little!"
+
+msgid "shell.note.praise"
+msgstr "{from} says well done!"
+
+msgid "shell.note.praise_nameless"
+msgstr "A big well done just came for you!"
+
+msgid "shell.note.from"
+msgstr "{from} wrote:"
+
+msgid "shell.note.from_nameless"
+msgstr "There's a note for you:"
+
+msgid "shell.note.ok"
+msgstr "OK"
+
+msgid "today.send.title"
+msgstr "Send something"
+
+msgid "today.send.help"
+msgstr "It shows on their screen at once and Zio reads it out. If the computer is off, they see it when it is next on."
+
+msgid "today.send.praise"
+msgstr "Well done!"
+
+msgid "today.send.note"
+msgstr "A short note"
+
+msgid "today.send.note_placeholder"
+msgstr "For example: I'll be home at six, love you."
+
+msgid "today.send.note_send"
+msgstr "Send the note"
+
+msgid "today.send.praised"
+msgstr "{name} will see your well done on their screen."
+
+msgid "today.send.noted"
+msgstr "Your note to {name} is on its way."
+
+msgid "today.send.empty"
+msgstr "The note was empty, so it was not sent."
+
+msgid "today.notes.praise_seen"
+msgstr "Saw your well done"
+
+msgid "today.notes.praise_waiting"
+msgstr "Your well done is waiting; they will see it when the computer is on"
+
+msgid "today.notes.note_seen"
+msgstr "Read your note"
+
+msgid "today.notes.note_waiting"
+msgstr "Your note is waiting; they will see it when the computer is on"
+
+msgid "audit.action.praise_sent"
+msgstr "A well done was sent to the child"
+
+msgid "audit.action.note_sent"
+msgstr "A note was sent to the child"
+
+msgid "talk.title"
+msgstr "What shall we talk about today?"
+
+msgid "talk.help"
+msgstr "A few ideas from your child's day, for a chat this evening."
+
+msgid "talk.surprise"
+msgstr "On {name}'s home screen today: {text} Ask them this evening whether they remember."
+
+msgid "talk.riddle"
+msgstr "Today's riddle on {name}'s screen: {riddle} (The answer: {answer}) Ask them this evening!"
+
+msgid "talk.english"
+msgstr "{name} learned the English words {words} today. Ask them what “{tr_word}” is in English."
+
+msgid "talk.and"
+msgstr " and "
+
+msgid "talk.app"
+msgstr "{name} spent most of today in {app} ({minutes} min). {hint}"
+
+msgid "talk.app.hint.games"
+msgstr "Ask which level they got to."
+
+msgid "talk.app.hint.learning"
+msgstr "Ask them to tell you what they learned."
+
+msgid "talk.app.hint.web"
+msgstr "Ask what they saw there."
+
+msgid "talk.app.hint.free"
+msgstr "Ask them to show you what they made."
+
+msgid "talk.sticker"
+msgstr "{name} added a new sticker to their album today. Ask to see it; they will be delighted."
+
+msgid "talk.challenge"
+msgstr "Today's task on {name}'s screen: {text} Ask whether they did it."
+
+msgid "shell.together"
+msgstr "Together · time not counted ({minutes} min)"
+
+msgid "today.together.title"
+msgstr "We're together"
+
+msgid "today.together.help"
+msgstr "While you sit and play together, the time is not counted, with no warnings and no lock. It ends by itself when the time you chose is up."
+
+msgid "today.together.minutes_30"
+msgstr "30 min"
+
+msgid "today.together.minutes_60"
+msgstr "1 h"
+
+msgid "today.together.minutes_120"
+msgstr "2 h"
+
+msgid "today.together.on"
+msgstr "Together: the time is not counted for {minutes} more minutes"
+
+msgid "today.together.stop"
+msgstr "End"
+
+msgid "today.together.done"
+msgstr "Together is on: the time is not counted for {minutes} minutes."
+
+msgid "today.together.stopped"
+msgstr "Together is over; the time is counted again."
+
+msgid "audit.action.together_started"
+msgstr "Together started"
+
+msgid "audit.action.together_ended"
+msgstr "Together ended"
+
+msgid "child.birthday"
+msgstr "Birthday (optional)"
+
+msgid "child.birthday.day"
+msgstr "Day"
+
+msgid "child.birthday.month"
+msgstr "Month"
+
+msgid "child.birthday.help"
+msgstr "Only so that Zio says “Happy birthday” on the day. You can leave it empty."
+
+msgid "child.birthday.invalid"
+msgstr "That month has no such day; choose the day and the month together, or leave both empty."
+
+msgid "child.screen.calm"
+msgstr "Calm screen"
+
+msgid "child.screen.calm.help"
+msgstr "No moving shapes and no celebration animations. For children whom movement unsettles."
+
+msgid "shell.birthday"
+msgstr "Happy birthday, {name}!"
+
+msgid "today.birthday"
+msgstr "Today is {name}'s birthday 🎉"
+
+msgid "month.1"
+msgstr "January"
+
+msgid "month.2"
+msgstr "February"
+
+msgid "month.3"
+msgstr "March"
+
+msgid "month.4"
+msgstr "April"
+
+msgid "month.5"
+msgstr "May"
+
+msgid "month.6"
+msgstr "June"
+
+msgid "month.7"
+msgstr "July"
+
+msgid "month.8"
+msgstr "August"
+
+msgid "month.9"
+msgstr "September"
+
+msgid "month.10"
+msgstr "October"
+
+msgid "month.11"
+msgstr "November"
+
+msgid "month.12"
+msgstr "December"
+
+msgid "health.title"
+msgstr "Protection"
+
+msgid "health.help"
+msgstr "Everything that protects your child, in one place. Green is in place; next to a warning is what to do."
+
+msgid "health.what_to_do"
+msgstr "What to do"
+
+msgid "health.today"
+msgstr "Protection: something needs you ({count})"
+
+msgid "health.daemon.title"
+msgstr "BioKids is running"
+
+msgid "health.daemon.ok"
+msgstr "The service that counts the time and applies the rules is running."
+
+msgid "health.daemon.bad"
+msgstr "The service is not answering. The children's sessions lock to stay safe; try restarting the computer."
+
+msgid "health.filter.title"
+msgstr "Internet filter"
+
+msgid "health.filter.ok"
+msgstr "Adult, gambling and harmful sites are closed for the children."
+
+msgid "health.filter.bad"
+msgstr "The filter is not working. The children are locked to stay safe; restart the computer if it is not back in a few minutes."
+
+msgid "health.filter.info"
+msgstr "Not known right now, because the service is not answering."
+
+msgid "health.browser_policy.title"
+msgstr "Browser rules"
+
+msgid "health.browser_policy.ok"
+msgstr "The children's browser opens with BioKids' rules."
+
+msgid "health.browser_policy.bad"
+msgstr "The browser rules could not be written. Restart the computer; if that does not help, reinstall BioKids."
+
+msgid "health.extension.title"
+msgstr "BioKids browser extension"
+
+msgid "health.extension.ok"
+msgstr "Closed sites show the child a calm page and searches are checked."
+
+msgid "health.extension.warn"
+msgstr "The extension is not ready; closed sites show the browser's own error. Run “sudo biokids-admin pack-extension” in a terminal."
+
+msgid "health.other_browser.title"
+msgstr "Another browser"
+
+msgid "health.other_browser.ok"
+msgstr "There is no browser BioKids does not manage."
+
+msgid "health.other_browser.warn"
+msgstr "This computer has a browser BioKids does not manage ({names}). An app's help link could open it; we suggest removing it."
+
+msgid "health.mail.title"
+msgstr "Mail alerts"
+
+msgid "health.mail.ok"
+msgstr "You get mail if something goes wrong, and the weekly summary."
+
+msgid "health.mail.warn"
+msgstr "Mail is not set up. If something goes wrong, nobody is told."
+
+msgid "health.backup.title"
+msgstr "Backup"
+
+msgid "health.backup.ok"
+msgstr "The last backup was {days} days ago."
+
+msgid "health.backup.info"
+msgstr "No recent backup. Take one so your child's stickers and progress are not lost if the computer changes."
+
+msgid "health.disk.title"
+msgstr "Disk space"
+
+msgid "health.disk.ok"
+msgstr "There is enough free space ({gb} GB)."
+
+msgid "health.disk.warn"
+msgstr "Very little disk space is left ({gb} GB). BioKids may not be able to keep records; delete what you do not need."
+
+msgid "health.disk.info"
+msgstr "The free space could not be read."
+
+msgid "health.clock.title"
+msgstr "Clock"
+
+msgid "health.clock.ok"
+msgstr "The computer's clock is set from the internet."
+
+msgid "health.clock.info"
+msgstr "The clock was not seen being set from the internet. Time is counted without it; only the day and the allowed hours use the clock."
+
+msgid "health.boot_password.title"
+msgstr "Boot password"
+
+msgid "health.boot_password.ok"
+msgstr "The boot menu is protected by a password."
+
+msgid "health.boot_password.info"
+msgstr "The boot menu has no password. Not needed for ages 4 to 10; see the guide if you want to slow down a child who knows computers."
+
+msgid "backup.title"
+msgstr "Back up and move"
+
+msgid "backup.intro"
+msgstr "Keep your children's rules, apps, stickers, English progress and history in one file, and bring them back on a new computer."
+
+msgid "backup.settings.help"
+msgstr "So your child's album and progress are not lost when the computer changes."
+
+msgid "backup.settings.open"
+msgstr "Back up and move"
+
+msgid "backup.take.title"
+msgstr "Take a backup"
+
+msgid "backup.take.help"
+msgstr "The file is locked with your family's passphrase and holds no PIN, passphrase or mail setting. Anyone who knows the passphrase can open it, so keep the file only somewhere you trust."
+
+msgid "backup.take.last"
+msgstr "Last backup: {day}"
+
+msgid "backup.take.never"
+msgstr "No backup taken yet."
+
+msgid "backup.take.passphrase"
+msgstr "We will ask for this passphrase to open the backup, too."
+
+msgid "backup.take.button"
+msgstr "Download the backup"
+
+msgid "backup.set_passphrase"
+msgstr "Set a family passphrase"
+
+msgid "backup.restore.title"
+msgstr "Restore from a backup"
+
+msgid "backup.restore.help"
+msgstr "Choose the file from the old computer. Children not on this computer are added; those who are get their rules and progress. Nothing that happened on this computer is deleted."
+
+msgid "backup.restore.file"
+msgstr "Backup file"
+
+msgid "backup.restore.passphrase"
+msgstr "The old computer's family passphrase (leave empty if it is the same)"
+
+msgid "backup.restore.passphrase.help"
+msgstr "The passphrase you used when taking the backup."
+
+msgid "backup.restore.button"
+msgstr "Restore"
+
+msgid "backup.restored.title"
+msgstr "The backup is restored"
+
+msgid "backup.restored.body"
+msgstr "{count} children restored: {names}."
+
+msgid "backup.restored.next"
+msgstr "If a child was added, restart the computer once so their picture is on the login screen. Set up mail again in Settings."
+
+msgid "backup.error.not_ours"
+msgstr "This is not a BioKids backup file, or it is damaged."
+
+msgid "backup.error.passphrase"
+msgstr "The passphrase is wrong, or the file was changed."
+
+msgid "backup.error.version"
+msgstr "This backup is in a format this BioKids cannot open. Update BioKids first."
+
+msgid "backup.error.no_passphrase"
+msgstr "Set a family passphrase first; the backup is locked with it."
+
+msgid "audit.action.backup_taken"
+msgstr "A backup was taken"
+
+msgid "audit.action.backup_restored"
+msgstr "A backup was restored"
+
+msgid "audit.action.backup_restore_failed"
+msgstr "A backup could not be restored"
+
+msgid "guide.machine.title"
+msgstr "Protecting the computer itself"
+
+msgid "guide.machine.intro"
+msgstr "BioKids protects the children's accounts on this computer. What lies outside them you can close yourself if you wish. All of it is optional; most of it can be undone, but a forgotten BIOS password and disk encryption chosen at install cannot."
+
+msgid "guide.machine.step.1"
+msgstr "If there is a browser BioKids does not manage (such as Firefox), an app's help link could open it. If you do not use it, remove it in a terminal with:"
+
+msgid "guide.machine.step.2"
+msgstr "As the computer starts, open its settings (usually F2, F10 or Del), set an administrator password and put the internal disk first in the boot order. This stops another system being started from a USB stick."
+
+msgid "guide.machine.step.3"
+msgstr "Write the password down. A forgotten BIOS password may need the manufacturer."
+
+msgid "guide.machine.step.4"
+msgstr "A boot menu (GRUB) password is for experienced users. On Debian it makes every boot ask for the password; to lock only the editing of the menu, the menu entries in /etc/grub.d/10_linux need --unrestricted. If you are not sure, skip this step; BioKids does not need it. To undo it, remove the lines you added and run update-grub."
+
+msgid "guide.machine.step.5"
+msgstr "Encrypting the whole disk is chosen when Debian is installed; it cannot be added later."
+
+msgid "guide.machine.tip.1.q"
+msgstr "Do I need these?"
+
+msgid "guide.machine.tip.1.a"
+msgstr "No. For ages 4 to 10 BioKids is enough on its own; these are for slowing down a child who knows computers."
+
+msgid "guide.machine.tip.2.q"
+msgstr "What if I forget the password?"
+
+msgid "guide.machine.tip.2.a"
+msgstr "You can remove a GRUB password by deleting the lines and running update-grub (from a live USB if need be). For a BIOS password, ask the manufacturer's support."
+
+msgid "guide.machine.open"
+msgstr "Back to Protection"
+
+msgid "preview.open"
+msgstr "See their screen"
+
+msgid "preview.title"
+msgstr "Screen preview"
+
+msgid "preview.intro"
+msgstr "This is how your child's screen looks with your rules. It is a preview; it does not show your child's screen live."
+
+msgid "preview.home"
+msgstr "Home screen"
+
+msgid "preview.hello"
+msgstr "Hello {name}"
+
+msgid "preview.today_minutes"
+msgstr "{minutes} minutes today"
+
+msgid "preview.change_apps"
+msgstr "Change the apps"
+
+msgid "preview.warning"
+msgstr "As the time runs low"
+
+msgid "preview.warning.help"
+msgstr "Warnings come in front of the screen at 10, 5 and 1 minute, and Zio reads them. With the last round on, “Let me finish” appears at 1 minute."
+
+msgid "preview.end"
+msgstr "When the time is up"
+
+msgid "preview.change_time"
+msgstr "Change the time rules"
+
+msgid "sesim.title"
+msgstr "My voice"
+
+msgid "sesim.hold"
+msgstr "Hold and speak"
+
+msgid "sesim.listening"
+msgstr "Listening…"
+
+msgid "sesim.hint"
+msgstr "Tell a story or sing a song. Up to {seconds} seconds."
+
+msgid "sesim.empty"
+msgstr "No recordings yet. Hold the big button and tell something!"
+
+msgid "sesim.play"
+msgstr "Play"
+
+msgid "sesim.share"
+msgstr "Send to a grown-up"
+
+msgid "sesim.delete"
+msgstr "Delete"
+
+msgid "sesim.seconds"
+msgstr "{seconds} s"
+
+msgid "sesim.saved"
+msgstr "Saved! Tap ▶ to listen."
+
+msgid "sesim.shared"
+msgstr "Sent! A grown-up can listen to it."
+
+msgid "sesim.share_failed"
+msgstr "I couldn't send it now. Try again later."
+
+msgid "sesim.failed"
+msgstr "I couldn't save it. Try again."
+
+msgid "sesim.error.not_audio"
+msgstr "This is not a recording."
+
+msgid "sesim.error.too_short"
+msgstr "That was too short. Speak a little longer."
+
+msgid "sesim.error.too_long"
+msgstr "That was too long."
+
+msgid "sesim.error.full"
+msgstr "You have lots of recordings. Delete one to make room."
+
+msgid "sesim.error.too_fast"
+msgstr "Wait a second, then record again."
+
+msgid "today.voice.sent"
+msgstr "{name} sent you a recording ({seconds} s)"
+
+msgid "today.voice.new"
+msgstr "New"
+
+msgid "audit.action.recording_shared"
+msgstr "The child sent a recording"
+
+msgid "reading.title"
+msgstr "Reading"
+
+msgid "reading.path"
+msgstr "The sound groups"
+
+msgid "reading.start"
+msgstr "Today's lesson"
+
+msgid "reading.more"
+msgstr "Read a bit more"
+
+msgid "reading.done_today"
+msgstr "That's all for today. You read so well! New letters tomorrow."
+
+msgid "reading.summary"
+msgstr "You know {letters} of {total} letters and have read {words} words."
+
+msgid "reading.next"
+msgstr "Next"
+
+msgid "reading.which_letter"
+msgstr "Listen. Which letter does it start with?"
+
+msgid "reading.which_syllable"
+msgstr "Listen. Which one did you hear?"
+
+msgid "reading.read_word"
+msgstr "Read it and find its picture."
+
+msgid "reading.read_sentence"
+msgstr "Read the sentence and find its picture."
+
+msgid "reading.try_again"
+msgstr "Look again."
+
+msgid "insights.reading"
+msgstr "The reading corner"
+
+msgid "insights.reading.met"
+msgstr "Met {letters} of {total} letters and read {words} words."
+
+msgid "insights.reading.period"
+msgstr "Practised reading on {days} days in this period"
+
+msgid "insights.reading.now"
+msgstr "Now on the “{group}” group ({done} of {total} groups done)."
+
+msgid "insights.reading.all_done"
+msgstr "Finished all five sound groups. Congratulations!"
+
+msgid "insights.reading.tip"
+msgstr "The order is the one school uses. The bold letters are well known now; look for them together in a book this evening."
+
+msgid "talk.reading"
+msgstr "{name} met the letters {letters} in the reading corner today. Look for them together in a book this evening."
+
+msgid "talk.reading_one"
+msgstr "{name} met the letter {letters} in the reading corner today. Look for it together in a book this evening."
+
+msgid "insights.h.reading"
+msgstr "Met {count} new letters in the reading corner."
+
+msgid "insights.s.reading"
+msgstr "Look for these letters in a book together this evening; seeing reading at home helps most."
+
+msgid "talk.english_one"
+msgstr "{name} learned the English word {words} today. Ask them what “{tr_word}” is in English."
+
+msgid "health.backup.ok_today"
+msgstr "A backup was taken today."
+
+msgid "backup.error.this_passphrase"
+msgstr "This computer's family passphrase is wrong. A restore can change every rule, so it needs this passphrase first."
+
+msgid "backup.restore.this_passphrase"
+msgstr "This computer's family passphrase"
+
+msgid "backup.restore.this_passphrase.help"
+msgstr "A restore can change the rules, so like turning protection off it needs this passphrase."

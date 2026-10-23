@@ -60,6 +60,7 @@ from biokids_panel.forms import (
 )
 from biokids_panel.routes import (
     audit,
+    backup,
     children,
     history,
     insights,
@@ -90,6 +91,7 @@ ROUTERS = (
     history.router,
     insights.router,
     settings.router,
+    backup.router,
     parents.router,
 )
 """Every screen but the wizard's, in the order they are matched."""

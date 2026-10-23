@@ -244,6 +244,32 @@
         </section>
       {% endif %}
 
+      {# ------------------------------------------- the reading corner (D-241) #}
+      {% if reading_card %}
+        {% set rd = reading_card.summary %}
+        <section class="card" id="reading" aria-labelledby="h-reading">
+          <h2 id="h-reading"><span aria-hidden="true">✏️</span> {{ _('insights.reading') }}</h2>
+          <p>{{ _('insights.reading.met', letters=rd.letters_met, total=rd.letters_total, words=rd.words_read) }}</p>
+          <p class="muted">
+            {{ _('insights.reading.period', days=reading_card.days) }}
+            {% if reading_card.seconds %}· {{ reading_card.seconds|duration(_) }}{% endif %}
+          </p>
+          <p>
+            {% if rd.current %}
+              {{ _('insights.reading.now', group=rd.current.title, done=rd.groups_done, total=rd.groups_total) }}
+            {% else %}
+              {{ _('insights.reading.all_done') }}
+            {% endif %}
+          </p>
+          {% if reading_card.letters %}
+            <p class="english-words">
+              {% for letter in reading_card.letters %}<span class="english-words__word{% if letter.known %} is-known{% endif %}">{{ letter.char }}</span>{% endfor %}
+            </p>
+          {% endif %}
+          <p class="muted small">{{ _('insights.reading.tip') }}</p>
+        </section>
+      {% endif %}
+
       {# ----------------------------------------------------- kinds of app #}
       {% if ins.shares %}
         <section class="card" aria-labelledby="h-kinds">

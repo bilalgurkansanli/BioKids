@@ -1,0 +1,5 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {parent}
+# Bir ebeveyn panelden "Aferin" dedi (D-233). {parent}: ebeveynin adı.
+{parent} sana aferin dedi {name}!
+Aferin {name}! Ailen seninle gurur duyuyor.
+Bir müjdem var: sana kocaman bir aferin geldi!

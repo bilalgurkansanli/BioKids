@@ -33,7 +33,8 @@
   {% if child.ring_seconds %}
     {% set quota = child.ring_seconds|int %}
   {% else %}
-    {% set quota = child.quota_seconds|int + child.granted_seconds|default(0)|int %}
+    {% set quota = child.quota_seconds|int + child.granted_seconds|default(0)|int
+                   + child.finish_up_seconds|default(0)|int %}
   {% endif %}
   {% set fraction = (remaining / quota) if quota > 0 else 0 %}
   {% set tone = 'danger' if fraction <= 0.10 else ('warn' if fraction <= 0.25 else 'ok') %}
@@ -111,6 +112,15 @@
       </div>
     </div>
 
+    {# The last round the child asked for today (D-230): theirs to take, the
+       parent's to know about. #}
+    {% if child.finish_up_seconds|default(0)|int > 0 %}
+      <p class="card-line">
+        <span aria-hidden="true">🏁</span>
+        {{ _('today.finish_up_used', name=child.display_name, minutes=(child.finish_up_seconds|int // 60)) }}
+      </p>
+    {% endif %}
+
     {# Today's special days (D-215), read from the database: there with the
        daemon down, each with its own way back. #}
     {% for special in (specials|default({})).get(child.child_id, []) %}
@@ -126,6 +136,47 @@
           <button class="btn btn--quiet" type="submit">{{ _('special.remove') }}</button>
         </form>
       </div>
+    {% endfor %}
+
+    {# The child's birthday (D-236), so nobody at work forgets it. #}
+    {% if child.birthday %}
+      <p class="card-line card-line--note">
+        <span aria-hidden="true">🎂</span> {{ _('today.birthday', name=child.display_name) }}
+      </p>
+    {% endif %}
+
+    {# Birlikte modu (D-235): on, how long still, and the way to end it. #}
+    {% if child.together_seconds|default(0)|int > 0 %}
+      <div class="special-line together-line">
+        <span class="special-line__text">
+          <span aria-hidden="true">👨‍👧</span>
+          {{ _('today.together.on', minutes=((child.together_seconds|int + 59) // 60)) }}
+        </span>
+        <form method="post" action="/children/{{ child.child_id }}/together/stop">
+          <input type="hidden" name="csrf_token" value="{{ csrf }}">
+          <button class="btn btn--quiet" type="submit">{{ _('today.together.stop') }}</button>
+        </form>
+      </div>
+    {% endif %}
+
+    {# What the child sent from Sesim (D-240): theirs to send, yours to hear. #}
+    {% for voice in (voices|default({})).get(child.child_id, []) %}
+      <div class="card-line card-line--voice">
+        <p class="card-line__text">
+          <span aria-hidden="true">🎙️</span>
+          {{ _('today.voice.sent', name=child.display_name, seconds=voice.seconds) }}
+          {% if not voice.heard %}<span class="badge-new">{{ _('today.voice.new') }}</span>{% endif %}
+        </p>
+        <audio controls preload="none"
+               src="/children/{{ child.child_id }}/recordings/{{ voice.id }}.wav"></audio>
+      </div>
+    {% endfor %}
+
+    {# What a parent sent today and whether it was seen (D-233). #}
+    {% for line in (sent|default({})).get(child.child_id, []) %}
+      <p class="card-line card-line--note">
+        <span aria-hidden="true">💛</span> {{ line }}
+      </p>
     {% endfor %}
 
     {% if child.managed and not child.unknown %}
@@ -158,7 +209,48 @@
       buttons and closed, so the card still reads in three seconds. A holiday
       of several days is set on the time screen, one tap away.
     #}
-    <details class="special-pick">
+    {#
+      D-233: the warm side of the panel. "Aferin!" in one tap, or a sentence,
+      shown on the child's screen and read out by Zio. Closed, like the
+      special day under it, so the card still reads in three seconds.
+    #}
+    {% if not child.together_seconds|default(0)|int %}
+    <details class="special-pick together-pick" data-keep="together-{{ child.child_id }}">
+      <summary><span aria-hidden="true">👨‍👧</span> {{ _('today.together.title') }}</summary>
+      <p class="help">{{ _('today.together.help', name=child.display_name) }}</p>
+      <div class="actions special-choices">
+        {% for minutes in (30, 60, 120) %}
+          <form method="post" action="/children/{{ child.child_id }}/together">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <input type="hidden" name="minutes" value="{{ minutes }}">
+            <button class="btn" type="submit">{{ _('today.together.minutes_' ~ minutes) }}</button>
+          </form>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
+    <details class="special-pick send-pick" data-keep="send-{{ child.child_id }}">
+      <summary><span aria-hidden="true">💛</span> {{ _('today.send.title') }}</summary>
+      <p class="help">{{ _('today.send.help') }}</p>
+      <form method="post" action="/children/{{ child.child_id }}/praise">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button class="btn btn--ok send-pick__praise" type="submit">
+          <span aria-hidden="true">⭐</span> {{ _('today.send.praise') }}
+        </button>
+      </form>
+      <form method="post" action="/children/{{ child.child_id }}/note" class="send-pick__note">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <label for="note-{{ child.child_id }}">{{ _('today.send.note') }}</label>
+        <textarea id="note-{{ child.child_id }}" name="text" rows="2" maxlength="140" required
+                  placeholder="{{ _('today.send.note_placeholder') }}"></textarea>
+        <button class="btn btn--primary" type="submit">
+          <span aria-hidden="true">💌</span> {{ _('today.send.note_send') }}
+        </button>
+      </form>
+    </details>
+
+    <details class="special-pick" data-keep="special-{{ child.child_id }}">
       <summary><span aria-hidden="true">🎉</span> {{ _('special.today.title') }}</summary>
       <p class="help">{{ _('special.today.help') }}</p>
       {% with special_child=child.child_id, special_next="/today" %}

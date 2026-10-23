@@ -285,7 +285,7 @@ msgid "shell.firstrun.p3"
 msgstr "Bazı sayfalar açılmaz. Açılmazsa bir büyüğüne sorabilirsin."
 
 msgid "shell.firstrun.p4"
-msgstr "Annen ve baban hangi sitelere girdiğini görebilir. Bu bir sır değil."
+msgstr "Ailen bilgisayarda ne kadar vakit geçirdiğini görebilir. Bu bir sır değil."
 
 msgid "shell.firstrun.ok"
 msgstr "Anladım"
@@ -2241,7 +2241,7 @@ msgstr "Cevaplarını bu bilgisayardaki Vikipedi özetleriyle kontrol ediyor; in
 
 # D-187: the child is told about the visited-sites list
 msgid "shell.firstrun.p5"
-msgstr "Ailen, internette hangi sitelere girdiğini görebilir: sadece sitenin adını, sayfaları değil."
+msgstr "İnternette hangi sitelere girdiğini de görür: sitenin adını, sayfaları değil. Açılmayan bir arama olursa ne aradığını da görür."
 
 # Editing and removing a child (D-191)
 msgid "child.edit.title"
@@ -3331,7 +3331,7 @@ msgid "insights.english.robot"
 msgstr "İngilizce kelimeler şu an robot sesiyle okunuyor. Doğal ses için İngilizce sesi indirin."
 
 msgid "insights.h.english"
-msgstr "İngilizce'de {count} yeni kelimeyle tanıştı."
+msgstr "İngilizcede {count} yeni kelimeyle tanıştı."
 
 msgid "insights.s.english"
 msgstr "Öğrendiği kelimeleri gün içinde siz de kullanın; evde duyulan dil en hızlı öğrenilir."
@@ -3408,3 +3408,687 @@ msgstr "Ana sayfa"
 
 msgid "shell.cover.back"
 msgstr "Geri dönmek için dokun"
+
+msgid "shell.break.over"
+msgstr "Mola bitti"
+
+msgid "shell.finishup.granted"
+msgstr "Son tur! Birkaç dakika daha"
+
+msgid "shell.finishup.button"
+msgstr "Bitireyim"
+
+msgid "shell.finishup.more"
+msgstr "+{minutes} dk"
+
+msgid "shell.finishup.granted_minutes"
+msgstr "Son tur! {minutes} dakika daha. Sonra kapatıyoruz."
+
+msgid "shell.blocked.learn_first.title"
+msgstr "Önce biraz öğrenelim"
+
+msgid "shell.blocked.learn_first.body"
+msgstr "Oyunlar, bugün {minutes} dakika öğrendikten sonra açılır. {left} dakika kaldı."
+
+msgid "shell.blocked.learn_first.pick"
+msgstr "Öğrenme uygulamaları"
+
+msgid "shell.tile.learn_first"
+msgstr "{minutes} dk öğrenince"
+
+msgid "time.presets"
+msgstr "Hızlı seçim"
+
+msgid "time.preset.30"
+msgstr "30 dk"
+
+msgid "time.preset.60"
+msgstr "1 sa"
+
+msgid "time.preset.90"
+msgstr "1,5 sa"
+
+msgid "time.preset.120"
+msgstr "2 sa"
+
+msgid "time.break.work_minutes"
+msgstr "Kaç dakikada bir mola versin"
+
+msgid "time.break.rest_minutes"
+msgstr "Mola kaç dakika sürsün"
+
+msgid "time.earn.ratio"
+msgstr "Her öğrenme dakikası kaç dakika kazandırsın"
+
+msgid "time.earn.cap"
+msgstr "Bir günde en fazla kazanılacak dakika"
+
+msgid "time.finish_up"
+msgstr "Son tur hakkı"
+
+msgid "time.finish_up.off"
+msgstr "Kapalı"
+
+msgid "time.finish_up.minutes"
+msgstr "{minutes} dakika"
+
+msgid "time.finish_up.help"
+msgstr "Süre bitmek üzereyken çocuk günde bir kez “Bitireyim” diyerek oyununu ya da resmini bitirmek için bu kadar ek süre alabilir. Bugün kullanırsa Bugün ekranında görürsünüz."
+
+msgid "time.learn_first"
+msgstr "Oyunlar kaç dakika öğrendikten sonra açılsın?"
+
+msgid "time.learn_first.help"
+msgstr "Örneğin 15 yazarsanız oyunlar, çocuk bugün 15 dakika öğrenme uygulaması kullandıktan sonra açılır. Boş bırakırsanız böyle bir kural olmaz."
+
+msgid "today.finish_up_used"
+msgstr "{name} bugün son turunu kullandı (+{minutes} dk)"
+
+msgid "audit.action.finish_up_used"
+msgstr "Çocuk son tur hakkını kullandı"
+
+msgid "shell.offscreen.title"
+msgstr "Şimdi ne yapsak?"
+
+msgid "shell.offscreen.break_title"
+msgstr "Haydi biraz hareket!"
+
+msgid "shell.note.praise"
+msgstr "{from} sana aferin dedi!"
+
+msgid "shell.note.praise_nameless"
+msgstr "Sana kocaman bir aferin geldi!"
+
+msgid "shell.note.from"
+msgstr "{from} yazdı:"
+
+msgid "shell.note.from_nameless"
+msgstr "Sana bir not var:"
+
+msgid "shell.note.ok"
+msgstr "Tamam"
+
+msgid "today.send.title"
+msgstr "Bir şey gönder"
+
+msgid "today.send.help"
+msgstr "Ekranında hemen görünür, Zio da okur. Bilgisayar kapalıysa açınca görür."
+
+msgid "today.send.praise"
+msgstr "Aferin!"
+
+msgid "today.send.note"
+msgstr "Kısa bir not"
+
+msgid "today.send.note_placeholder"
+msgstr "Örneğin: Akşam altıda geliyorum, seni seviyorum."
+
+msgid "today.send.note_send"
+msgstr "Notu gönder"
+
+msgid "today.send.praised"
+msgstr "{name} ekranında aferininizi görecek."
+
+msgid "today.send.noted"
+msgstr "Notunuz {name} için iletildi."
+
+msgid "today.send.empty"
+msgstr "Notta bir şey yazmıyordu, gönderilmedi."
+
+msgid "today.notes.praise_seen"
+msgstr "Aferininizi gördü"
+
+msgid "today.notes.praise_waiting"
+msgstr "Aferininiz bekliyor; bilgisayarı açınca görecek"
+
+msgid "today.notes.note_seen"
+msgstr "Notunuzu okudu"
+
+msgid "today.notes.note_waiting"
+msgstr "Notunuz bekliyor; bilgisayarı açınca görecek"
+
+msgid "audit.action.praise_sent"
+msgstr "Çocuğa aferin gönderildi"
+
+msgid "audit.action.note_sent"
+msgstr "Çocuğa not gönderildi"
+
+msgid "talk.title"
+msgstr "Bugün ne konuşalım?"
+
+msgid "talk.help"
+msgstr "Çocuğunuzun bugününden akşam sohbeti için birkaç fikir."
+
+msgid "talk.surprise"
+msgstr "{name} bugün ana ekranında şunu gördü: {text} Akşam ona sorun, hatırlıyor mu?"
+
+msgid "talk.riddle"
+msgstr "{name} bugün şu bilmeceyle karşılaştı: {riddle} (Cevabı: {answer}) Akşam ona sorun!"
+
+msgid "talk.english"
+msgstr "{name} bugün İngilizcede {words} kelimelerini öğrendi. Akşam “{tr_word}” İngilizce ne demek diye sorun."
+
+msgid "talk.and"
+msgstr " ve "
+
+msgid "talk.app"
+msgstr "{name} bugün en çok {app} ile vakit geçirdi ({minutes} dk). {hint}"
+
+msgid "talk.app.hint.games"
+msgstr "Hangi bölüme geldiğini sorun."
+
+msgid "talk.app.hint.learning"
+msgstr "Ne öğrendiğini anlatmasını isteyin."
+
+msgid "talk.app.hint.web"
+msgstr "Orada ne gördüğünü sorun."
+
+msgid "talk.app.hint.free"
+msgstr "Ne yaptığını göstermesini isteyin."
+
+msgid "talk.sticker"
+msgstr "{name} bugün albümüne yeni bir çıkartma ekledi. Göstermesini isteyin, çok sevinecek."
+
+msgid "talk.challenge"
+msgstr "{name} için bugünün görevi şuydu: {text} Yapıp yapmadığını sorun."
+
+msgid "shell.together"
+msgstr "Birlikteyiz · süre sayılmıyor ({minutes} dk)"
+
+msgid "today.together.title"
+msgstr "Birlikteyiz"
+
+msgid "today.together.help"
+msgstr "Yanında oturup birlikte oynarken süre sayılmaz; uyarı ve kilit de olmaz. Seçtiğiniz süre dolunca kendiliğinden biter."
+
+msgid "today.together.minutes_30"
+msgstr "30 dk"
+
+msgid "today.together.minutes_60"
+msgstr "1 sa"
+
+msgid "today.together.minutes_120"
+msgstr "2 sa"
+
+msgid "today.together.on"
+msgstr "Birlikte modu açık: {minutes} dk daha süre sayılmıyor"
+
+msgid "today.together.stop"
+msgstr "Bitir"
+
+msgid "today.together.done"
+msgstr "Birlikte modu açıldı: {minutes} dk boyunca süre sayılmayacak."
+
+msgid "today.together.stopped"
+msgstr "Birlikte modu bitti; süre yine sayılıyor."
+
+msgid "audit.action.together_started"
+msgstr "Birlikte modu açıldı"
+
+msgid "audit.action.together_ended"
+msgstr "Birlikte modu bitti"
+
+msgid "child.birthday"
+msgstr "Doğum günü (isteğe bağlı)"
+
+msgid "child.birthday.day"
+msgstr "Gün"
+
+msgid "child.birthday.month"
+msgstr "Ay"
+
+msgid "child.birthday.help"
+msgstr "Yalnızca o gün Zio'nun “İyi ki doğdun” demesi için. Boş bırakabilirsiniz."
+
+msgid "child.birthday.invalid"
+msgstr "Bu gün o ayda yok; günü ve ayı birlikte seçin ya da ikisini de boş bırakın."
+
+msgid "child.screen.calm"
+msgstr "Sakin ekran"
+
+msgid "child.screen.calm.help"
+msgstr "Hareketli şekiller ve kutlama animasyonları olmaz. Hareketten kolay etkilenen çocuklar için."
+
+msgid "shell.birthday"
+msgstr "İyi ki doğdun {name}!"
+
+msgid "today.birthday"
+msgstr "Bugün doğum günü: {name} 🎉"
+
+msgid "month.1"
+msgstr "Ocak"
+
+msgid "month.2"
+msgstr "Şubat"
+
+msgid "month.3"
+msgstr "Mart"
+
+msgid "month.4"
+msgstr "Nisan"
+
+msgid "month.5"
+msgstr "Mayıs"
+
+msgid "month.6"
+msgstr "Haziran"
+
+msgid "month.7"
+msgstr "Temmuz"
+
+msgid "month.8"
+msgstr "Ağustos"
+
+msgid "month.9"
+msgstr "Eylül"
+
+msgid "month.10"
+msgstr "Ekim"
+
+msgid "month.11"
+msgstr "Kasım"
+
+msgid "month.12"
+msgstr "Aralık"
+
+msgid "health.title"
+msgstr "Koruma durumu"
+
+msgid "health.help"
+msgstr "Çocuğunuzu koruyan her şey burada. Yeşil olanlar yerinde; uyarı olanların yanında ne yapacağınız yazar."
+
+msgid "health.what_to_do"
+msgstr "Ne yapmalıyım"
+
+msgid "health.today"
+msgstr "Koruma durumunda ilginizi bekleyen konular var ({count})"
+
+msgid "health.daemon.title"
+msgstr "BioKids çalışıyor"
+
+msgid "health.daemon.ok"
+msgstr "Süreyi sayan ve kuralları uygulayan servis çalışıyor."
+
+msgid "health.daemon.bad"
+msgstr "Servis yanıt vermiyor. Çocuk oturumları güvenlik için kilitlenir; bilgisayarı yeniden başlatmayı deneyin."
+
+msgid "health.filter.title"
+msgstr "İnternet filtresi"
+
+msgid "health.filter.ok"
+msgstr "Yetişkin, kumar ve zararlı siteler çocuklar için kapalı."
+
+msgid "health.filter.bad"
+msgstr "Filtre çalışmıyor. Güvenlik için çocuklar kilitlenir; birkaç dakika içinde düzelmezse bilgisayarı yeniden başlatın."
+
+msgid "health.filter.info"
+msgstr "Servis yanıt vermediği için şu an bilinmiyor."
+
+msgid "health.browser_policy.title"
+msgstr "Tarayıcı kuralları"
+
+msgid "health.browser_policy.ok"
+msgstr "Çocukların tarayıcısı BioKids'in kurallarıyla açılıyor."
+
+msgid "health.browser_policy.bad"
+msgstr "Tarayıcı kuralları yazılamamış. Bilgisayarı yeniden başlatın; düzelmezse BioKids'i yeniden kurun."
+
+msgid "health.extension.title"
+msgstr "BioKids tarayıcı eklentisi"
+
+msgid "health.extension.ok"
+msgstr "Kapalı siteler çocuğa sakin bir sayfayla gösteriliyor ve aramalar denetleniyor."
+
+msgid "health.extension.warn"
+msgstr "Eklenti hazır değil; kapalı sitelerde tarayıcının kendi hata sayfası görünür. Terminalde “sudo biokids-admin pack-extension” çalıştırın."
+
+msgid "health.other_browser.title"
+msgstr "Başka tarayıcı"
+
+msgid "health.other_browser.ok"
+msgstr "BioKids'in yönetmediği bir tarayıcı yok."
+
+msgid "health.other_browser.warn"
+msgstr "Bu bilgisayarda BioKids'in yönetmediği bir tarayıcı var ({names}). Bir uygulamanın yardım bağlantısı onu açabilir; kaldırmanızı öneririz."
+
+msgid "health.mail.title"
+msgstr "E-posta uyarıları"
+
+msgid "health.mail.ok"
+msgstr "Bir sorun olursa ve haftalık özet için e-posta alırsınız."
+
+msgid "health.mail.warn"
+msgstr "E-posta ayarlı değil. Bir sorun olursa haber alamazsınız."
+
+msgid "health.backup.title"
+msgstr "Yedek"
+
+msgid "health.backup.ok"
+msgstr "Son yedek {days} gün önce alındı."
+
+msgid "health.backup.info"
+msgstr "Yakın zamanda yedek alınmadı. Bilgisayar değişirse çocuğunuzun çıkartmaları ve ilerlemesi kaybolmasın diye bir yedek alın."
+
+msgid "health.disk.title"
+msgstr "Disk alanı"
+
+msgid "health.disk.ok"
+msgstr "Yeterli boş alan var ({gb} GB)."
+
+msgid "health.disk.warn"
+msgstr "Diskte çok az yer kaldı ({gb} GB). BioKids kayıt tutamayabilir; gereksiz dosyaları silin."
+
+msgid "health.disk.info"
+msgstr "Boş alan okunamadı."
+
+msgid "health.clock.title"
+msgstr "Saat"
+
+msgid "health.clock.ok"
+msgstr "Bilgisayarın saati internetten ayarlı."
+
+msgid "health.clock.info"
+msgstr "Saatin internetten ayarlandığı görülmedi. Süre saatten bağımsız sayılır; yalnızca hangi gün olduğu ve izinli saatler saate bakar."
+
+msgid "health.boot_password.title"
+msgstr "Önyükleme parolası"
+
+msgid "health.boot_password.ok"
+msgstr "Önyükleme menüsü parolayla korunuyor."
+
+msgid "health.boot_password.info"
+msgstr "Önyükleme menüsünde parola yok. 4-10 yaş için gerekli değil; teknik bilgisi olan bir çocuğu yavaşlatmak isterseniz rehbere bakın."
+
+msgid "backup.title"
+msgstr "Yedekle ve taşı"
+
+msgid "backup.intro"
+msgstr "Çocuklarınızın kurallarını, uygulamalarını, çıkartmalarını, İngilizce ilerlemesini ve geçmişini tek bir dosyada saklayın; yeni bir bilgisayara geçince geri yükleyin."
+
+msgid "backup.settings.help"
+msgstr "Bilgisayar değişince çocuğunuzun albümü ve ilerlemesi kaybolmasın."
+
+msgid "backup.settings.open"
+msgstr "Yedekle ve taşı"
+
+msgid "backup.take.title"
+msgstr "Yedek al"
+
+msgid "backup.take.help"
+msgstr "Dosya ailenizin parolasıyla şifrelenir; içinde PIN, parola ya da e-posta ayarı olmaz. Parolayı bilen biri dosyayı açabilir, bu yüzden dosyayı yalnızca güvendiğiniz bir yerde saklayın."
+
+msgid "backup.take.last"
+msgstr "Son yedek: {day}"
+
+msgid "backup.take.never"
+msgstr "Henüz yedek alınmadı."
+
+msgid "backup.take.passphrase"
+msgstr "Yedeği açmak için de bu parolayı soracağız."
+
+msgid "backup.take.button"
+msgstr "Yedeği indir"
+
+msgid "backup.set_passphrase"
+msgstr "Aile parolası belirle"
+
+msgid "backup.restore.title"
+msgstr "Yedekten geri yükle"
+
+msgid "backup.restore.help"
+msgstr "Eski bilgisayardan aldığınız dosyayı seçin. Bu bilgisayarda olmayan çocuklar eklenir; olanların kuralları ve ilerlemesi güncellenir. Bu bilgisayarda yaşananlar silinmez."
+
+msgid "backup.restore.file"
+msgstr "Yedek dosyası"
+
+msgid "backup.restore.passphrase"
+msgstr "Eski bilgisayarın aile parolası (aynıysa boş bırakın)"
+
+msgid "backup.restore.passphrase.help"
+msgstr "Yedeği alırken kullandığınız parola."
+
+msgid "backup.restore.button"
+msgstr "Geri yükle"
+
+msgid "backup.restored.title"
+msgstr "Yedek geri yüklendi"
+
+msgid "backup.restored.body"
+msgstr "{count} çocuk geri yüklendi: {names}."
+
+msgid "backup.restored.next"
+msgstr "Yeni bir çocuk eklendiyse bilgisayarı bir kez yeniden başlatın; giriş ekranında resmi görünsün. E-posta ayarlarını Ayarlar'dan yeniden yapın."
+
+msgid "backup.error.not_ours"
+msgstr "Bu bir BioKids yedek dosyası değil ya da bozulmuş."
+
+msgid "backup.error.passphrase"
+msgstr "Parola yanlış ya da dosya değiştirilmiş."
+
+msgid "backup.error.version"
+msgstr "Bu yedek, bu BioKids sürümünün açamadığı bir biçimde. Önce BioKids'i güncelleyin."
+
+msgid "backup.error.no_passphrase"
+msgstr "Yedek almak için önce bir aile parolası belirleyin; dosya onunla şifrelenir."
+
+msgid "audit.action.backup_taken"
+msgstr "Yedek alındı"
+
+msgid "audit.action.backup_restored"
+msgstr "Yedek geri yüklendi"
+
+msgid "audit.action.backup_restore_failed"
+msgstr "Yedek geri yüklenemedi"
+
+msgid "guide.machine.title"
+msgstr "Bilgisayarın kendisini korumak"
+
+msgid "guide.machine.intro"
+msgstr "BioKids bu bilgisayardaki çocuk hesaplarını korur. Bunların dışında kalanları isterseniz siz kapatabilirsiniz. Hepsi isteğe bağlıdır; çoğu geri alınabilir, ama unutulan bir BIOS parolası ve kurulumda seçilen disk şifrelemesi öyle değildir."
+
+msgid "guide.machine.step.1"
+msgstr "BioKids'in yönetmediği bir tarayıcı varsa (Firefox gibi) bir uygulamanın yardım bağlantısı onu açabilir. Kullanmıyorsanız terminalde şu komutla kaldırın:"
+
+msgid "guide.machine.step.2"
+msgstr "Bilgisayarı açarken ayarlara girin (genellikle F2, F10 ya da Del tuşu), bir yönetici parolası koyun ve dahili diski önyüklemede ilk sıraya alın. Bu, USB bellekten başka bir sistem başlatmayı engeller."
+
+msgid "guide.machine.step.3"
+msgstr "Parolayı bir yere yazın. Unutulan bir BIOS parolası için üreticiye başvurmak gerekebilir."
+
+msgid "guide.machine.step.4"
+msgstr "Önyükleme menüsüne (GRUB) parola koymak deneyimli kullanıcılar içindir. Debian'da bunu yaparsanız her açılışta parola sorulur; yalnızca menüyü düzenlemeyi kilitlemek için /etc/grub.d/10_linux içindeki menü satırlarına --unrestricted eklenmelidir. Emin değilseniz bu adımı atlayın; BioKids için gerekli değildir. Geri almak için eklediğiniz satırları silip update-grub çalıştırın."
+
+msgid "guide.machine.step.5"
+msgstr "Diskin tamamını şifrelemek Debian kurulurken seçilir, sonradan eklenmez."
+
+msgid "guide.machine.tip.1.q"
+msgstr "Bunlar şart mı?"
+
+msgid "guide.machine.tip.1.a"
+msgstr "Hayır. 4-10 yaş için BioKids tek başına yeterlidir; bunlar bilgisayardan anlayan bir çocuğu yavaşlatmak içindir."
+
+msgid "guide.machine.tip.2.q"
+msgstr "Parolayı unutursam?"
+
+msgid "guide.machine.tip.2.a"
+msgstr "GRUB parolasını, satırları silip update-grub çalıştırarak kaldırabilirsiniz (gerekirse bir canlı USB'den). BIOS parolası için üreticinin desteğine başvurun."
+
+msgid "guide.machine.open"
+msgstr "Koruma durumuna dön"
+
+msgid "preview.open"
+msgstr "Ekranını gör"
+
+msgid "preview.title"
+msgstr "Ekran önizlemesi"
+
+msgid "preview.intro"
+msgstr "Kurallarınızla çocuğunuzun ekranı böyle görünür. Bu bir önizlemedir; çocuğunuzun ekranını canlı göstermez."
+
+msgid "preview.home"
+msgstr "Ana ekran"
+
+msgid "preview.hello"
+msgstr "Merhaba {name}"
+
+msgid "preview.today_minutes"
+msgstr "Bugün {minutes} dakika"
+
+msgid "preview.change_apps"
+msgstr "Uygulamaları değiştir"
+
+msgid "preview.warning"
+msgstr "Süre azalınca"
+
+msgid "preview.warning.help"
+msgstr "Uyarılar 10, 5 ve 1 dakika kala ekranın önüne gelir ve Zio okur. Son tur hakkı açıksa 1 dakika kala “Bitireyim” düğmesi çıkar."
+
+msgid "preview.end"
+msgstr "Süre bitince"
+
+msgid "preview.change_time"
+msgstr "Süre kurallarını değiştir"
+
+msgid "sesim.title"
+msgstr "Sesim"
+
+msgid "sesim.hold"
+msgstr "Basılı tut ve konuş"
+
+msgid "sesim.listening"
+msgstr "Dinliyorum…"
+
+msgid "sesim.hint"
+msgstr "Bir hikâye anlat ya da şarkı söyle. En fazla {seconds} saniye."
+
+msgid "sesim.empty"
+msgstr "Henüz kaydın yok. Büyük düğmeye basılı tut ve bir şey anlat!"
+
+msgid "sesim.play"
+msgstr "Dinle"
+
+msgid "sesim.share"
+msgstr "Büyüğüme gönder"
+
+msgid "sesim.delete"
+msgstr "Sil"
+
+msgid "sesim.seconds"
+msgstr "{seconds} sn"
+
+msgid "sesim.saved"
+msgstr "Kaydettim! Dinlemek için ▶'ye bas."
+
+msgid "sesim.shared"
+msgstr "Gönderdim! Büyüğün dinleyebilecek."
+
+msgid "sesim.share_failed"
+msgstr "Şimdi gönderemedim. Sonra yine dene."
+
+msgid "sesim.failed"
+msgstr "Kaydedemedim. Bir daha dene."
+
+msgid "sesim.error.not_audio"
+msgstr "Bu bir ses kaydı değil."
+
+msgid "sesim.error.too_short"
+msgstr "Çok kısa oldu. Biraz daha uzun konuş."
+
+msgid "sesim.error.too_long"
+msgstr "Çok uzun oldu."
+
+msgid "sesim.error.full"
+msgstr "Çok kaydın var. Yenisi için birini sil."
+
+msgid "sesim.error.too_fast"
+msgstr "Bir saniye bekle, sonra yine kaydet."
+
+msgid "today.voice.sent"
+msgstr "{name} size bir ses kaydı gönderdi ({seconds} sn)"
+
+msgid "today.voice.new"
+msgstr "Yeni"
+
+msgid "audit.action.recording_shared"
+msgstr "Çocuk bir ses kaydı gönderdi"
+
+msgid "reading.title"
+msgstr "Okuma"
+
+msgid "reading.path"
+msgstr "Ses grupları"
+
+msgid "reading.start"
+msgstr "Bugünün dersi"
+
+msgid "reading.more"
+msgstr "Biraz daha oku"
+
+msgid "reading.done_today"
+msgstr "Bugünlük bu kadar. Çok iyi okudun! Yarın yeni harfler var."
+
+msgid "reading.summary"
+msgstr "{total} harften {letters} tanesini tanıyorsun, {words} kelime okudun."
+
+msgid "reading.next"
+msgstr "İleri"
+
+msgid "reading.which_letter"
+msgstr "Dinle. Hangi harfle başlıyor?"
+
+msgid "reading.which_syllable"
+msgstr "Dinle. Hangisini duydun?"
+
+msgid "reading.read_word"
+msgstr "Oku ve resmini bul."
+
+msgid "reading.read_sentence"
+msgstr "Cümleyi oku ve resmini bul."
+
+msgid "reading.try_again"
+msgstr "Bir daha bak."
+
+msgid "insights.reading"
+msgstr "Okuma köşesi"
+
+msgid "insights.reading.met"
+msgstr "{total} harften {letters} tanesiyle tanıştı ve {words} kelime okudu."
+
+msgid "insights.reading.period"
+msgstr "Bu dönemde {days} gün okuma çalıştı"
+
+msgid "insights.reading.now"
+msgstr "Şu an “{group}” grubunda ({total} gruptan {done} tanesi bitti)."
+
+msgid "insights.reading.all_done"
+msgstr "Beş ses grubunun hepsini bitirdi. Tebrikler!"
+
+msgid "insights.reading.tip"
+msgstr "Sıra okulun ses temelli yöntemindekiyle aynı. Koyu harfleri artık iyi biliyor; akşam bir kitapta bu harfleri birlikte arayabilirsiniz."
+
+msgid "talk.reading"
+msgstr "{name} bugün okuma köşesinde {letters} harfleriyle tanıştı. Akşam bir kitapta bu harfleri birlikte arayın."
+
+msgid "talk.reading_one"
+msgstr "{name} bugün okuma köşesinde {letters} harfiyle tanıştı. Akşam bir kitapta bu harfi birlikte arayın."
+
+msgid "insights.h.reading"
+msgstr "Okuma köşesinde {count} yeni harfle tanıştı."
+
+msgid "insights.s.reading"
+msgstr "Akşam birlikte bir kitapta bu harfleri arayın; okumayı evde görmek en çok işe yarar."
+
+msgid "talk.english_one"
+msgstr "{name} bugün İngilizcede {words} kelimesini öğrendi. Akşam “{tr_word}” İngilizce ne demek diye sorun."
+
+msgid "health.backup.ok_today"
+msgstr "Bugün yedek alındı."
+
+msgid "backup.error.this_passphrase"
+msgstr "Bu bilgisayarın aile parolası yanlış. Geri yükleme bütün kuralları değiştirebildiği için önce bu parola gerekir."
+
+msgid "backup.restore.this_passphrase"
+msgstr "Bu bilgisayarın aile parolası"
+
+msgid "backup.restore.this_passphrase.help"
+msgstr "Geri yükleme kuralları değiştirebilir; korumayı kapatmak gibi, bu parolayla onaylanır."

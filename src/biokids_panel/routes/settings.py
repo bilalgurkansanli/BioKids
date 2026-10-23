@@ -9,14 +9,25 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Response
 from fastapi.responses import HTMLResponse
 
-from biokids_core import appearance, mail, repo, security
+from biokids_core import appearance, backup, health, mail, repo, security
 from biokids_panel import auth, parents
-from biokids_panel.common import View, see_other
+from biokids_panel.common import View, _daemon_status, see_other
 from biokids_panel.routes.misc import PANEL_AT_LOGIN
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def protection(view: View) -> list[health.Check]:
+    """Koruma durumu (D-237), for Ayarlar and the line on Today. Reads only."""
+    status, reachable = _daemon_status(view.ctx, view.session)
+    return health.checks(
+        view.ctx.config,
+        status if reachable else None,
+        mail_configured=mail.load_settings(view.session, view.ctx.config) is not None,
+        last_backup=backup.last_taken(view.session),
+    )
 
 
 @router.get("/settings", response_class=HTMLResponse)
@@ -31,6 +42,7 @@ def settings_view(view: View) -> Response:
         "settings.html",
         family=repo.get_family(session),
         daemon_up=view.ctx.client.available(),
+        checks=protection(view),
         mail_settings=mail.load_settings(session, view.ctx.config),
         text_sizes=appearance.TEXT_SIZES,
         parents=parents.shown(everyone, view.tr),

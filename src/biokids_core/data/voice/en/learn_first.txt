@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}, {app}
+# Games open after today's learning minutes (D-232).
+Let's learn a little first, {name}. Then the games open.
+It's learning time now. You can play a game a bit later.
+The games open soon. Let's pick a learning app first.

@@ -1,0 +1,481 @@
+# Okuma köşesi - the Turkish reading corner (D-241).
+#
+# The way Turkish first grade teaches reading (MEB's ses temelli cümle
+# yöntemi): sounds in five groups, each group's letters met one by one, then
+# syllables made of the letters met so far, then words, then a short sentence.
+# A child never sees a letter they have not met: the loader refuses a syllable,
+# a word or a sentence that uses one (tests/test_reading.py too).
+#
+# Rules for every entry:
+#   - Words a child of five to seven knows, each with a picture that says it
+#     at once; nothing frightening.
+#   - `syllables` is the word as it is read aloud in the classroom, "an-ne".
+#   - A sentence is short, plain, and its picture is one of the words met.
+#   - Turkish lower case throughout; the page draws the capital too.
+#
+# Fields:
+#   [[group]]   slug, title, letters (in the order they are met)
+#   [[group.letter]]  char, hint (syllables Zio says to make the sound: "la, le,
+#                     li"), word, pic (a word with the sound, and its picture)
+#   [[group.syllables]] one list of syllables
+#   [[group.word]]    text, syllables, pic
+#   [[group.sentence]] text, pic
+
+# ------------------------------------------------------------------ group 1
+
+[[group]]
+slug = "g1"
+title = "e l a k i n"
+letters = ["e", "l", "a", "k", "i", "n"]
+syllables = ["el", "al", "la", "le", "ka", "ke", "ki", "na", "ne", "in"]
+
+[[group.letter]]
+char = "e"
+hint = "e, e, el"
+word = "el"
+pic = "✋"
+
+[[group.letter]]
+char = "l"
+hint = "el, al, la, le"
+word = "lale"
+pic = "🌷"
+
+[[group.letter]]
+char = "a"
+hint = "a, a, al"
+word = "anne"
+pic = "👩"
+
+[[group.letter]]
+char = "k"
+hint = "ka, ke, ki"
+word = "kek"
+pic = "🧁"
+
+[[group.letter]]
+char = "i"
+hint = "i, i, in"
+word = "inek"
+pic = "🐄"
+
+[[group.letter]]
+char = "n"
+hint = "na, ne, ni"
+word = "nane"
+pic = "🌿"
+
+[[group.word]]
+text = "el"
+syllables = "el"
+pic = "✋"
+
+[[group.word]]
+text = "kek"
+syllables = "kek"
+pic = "🧁"
+
+[[group.word]]
+text = "anne"
+syllables = "an-ne"
+pic = "👩"
+
+[[group.word]]
+text = "lale"
+syllables = "la-le"
+pic = "🌷"
+
+[[group.word]]
+text = "kale"
+syllables = "ka-le"
+pic = "🏰"
+
+[[group.word]]
+text = "inek"
+syllables = "i-nek"
+pic = "🐄"
+
+[[group.word]]
+text = "nane"
+syllables = "na-ne"
+pic = "🌿"
+
+[[group.sentence]]
+text = "Lale al."
+pic = "🌷"
+
+[[group.sentence]]
+text = "Anne kek al."
+pic = "🧁"
+
+# ------------------------------------------------------------------ group 2
+
+[[group]]
+slug = "g2"
+title = "o m u t ü y"
+letters = ["o", "m", "u", "t", "ü", "y"]
+syllables = ["om", "ma", "me", "mu", "ut", "ta", "te", "tü", "ya", "yo"]
+
+[[group.letter]]
+char = "o"
+hint = "o, o, ot"
+word = "ot"
+pic = "🌱"
+
+[[group.letter]]
+char = "m"
+hint = "ma, me, mi"
+word = "mum"
+pic = "🕯️"
+
+[[group.letter]]
+char = "u"
+hint = "u, u, um"
+word = "kutu"
+pic = "📦"
+
+[[group.letter]]
+char = "t"
+hint = "ta, te, ti"
+word = "at"
+pic = "🐴"
+
+[[group.letter]]
+char = "ü"
+hint = "ü, ü, üt"
+word = "tüy"
+pic = "🪶"
+
+[[group.letter]]
+char = "y"
+hint = "ya, ye, yo"
+word = "ay"
+pic = "🌙"
+
+[[group.word]]
+text = "at"
+syllables = "at"
+pic = "🐴"
+
+[[group.word]]
+text = "ay"
+syllables = "ay"
+pic = "🌙"
+
+[[group.word]]
+text = "mum"
+syllables = "mum"
+pic = "🕯️"
+
+[[group.word]]
+text = "kutu"
+syllables = "ku-tu"
+pic = "📦"
+
+[[group.word]]
+text = "elma"
+syllables = "el-ma"
+pic = "🍎"
+
+[[group.word]]
+text = "limon"
+syllables = "li-mon"
+pic = "🍋"
+
+[[group.word]]
+text = "tilki"
+syllables = "til-ki"
+pic = "🦊"
+
+[[group.word]]
+text = "kemik"
+syllables = "ke-mik"
+pic = "🦴"
+
+[[group.sentence]]
+text = "Ela elma al."
+pic = "🍎"
+
+[[group.sentence]]
+text = "Ali mum yak."
+pic = "🕯️"
+
+# ------------------------------------------------------------------ group 3
+
+[[group]]
+slug = "g3"
+title = "ö r ı d s b"
+letters = ["ö", "r", "ı", "d", "s", "b"]
+syllables = ["ör", "ra", "re", "rı", "da", "de", "sa", "su", "ba", "be"]
+
+[[group.letter]]
+char = "ö"
+hint = "ö, ö, ör"
+word = "ördek"
+pic = "🦆"
+
+[[group.letter]]
+char = "r"
+hint = "ra, re, ri"
+word = "armut"
+pic = "🍐"
+
+[[group.letter]]
+char = "ı"
+hint = "ı, ı, ır"
+word = "balık"
+pic = "🐟"
+
+[[group.letter]]
+char = "d"
+hint = "da, de, di"
+word = "kedi"
+pic = "🐱"
+
+[[group.letter]]
+char = "s"
+hint = "sa, se, su"
+word = "su"
+pic = "💧"
+
+[[group.letter]]
+char = "b"
+hint = "ba, be, bi"
+word = "bebek"
+pic = "👶"
+
+[[group.word]]
+text = "su"
+syllables = "su"
+pic = "💧"
+
+[[group.word]]
+text = "kedi"
+syllables = "ke-di"
+pic = "🐱"
+
+[[group.word]]
+text = "bebek"
+syllables = "be-bek"
+pic = "👶"
+
+[[group.word]]
+text = "ördek"
+syllables = "ör-dek"
+pic = "🦆"
+
+[[group.word]]
+text = "araba"
+syllables = "a-ra-ba"
+pic = "🚗"
+
+[[group.word]]
+text = "balık"
+syllables = "ba-lık"
+pic = "🐟"
+
+[[group.word]]
+text = "armut"
+syllables = "ar-mut"
+pic = "🍐"
+
+[[group.word]]
+text = "domates"
+syllables = "do-ma-tes"
+pic = "🍅"
+
+[[group.word]]
+text = "sabun"
+syllables = "sa-bun"
+pic = "🧼"
+
+[[group.sentence]]
+text = "Bebek uyudu."
+pic = "👶"
+
+[[group.sentence]]
+text = "Ördek suda."
+pic = "🦆"
+
+# ------------------------------------------------------------------ group 4
+
+[[group]]
+slug = "g4"
+title = "z ç g ş c p"
+letters = ["z", "ç", "g", "ş", "c", "p"]
+syllables = ["az", "ze", "ça", "çi", "ga", "gü", "şa", "şe", "ca", "pa"]
+
+[[group.letter]]
+char = "z"
+hint = "za, ze, zi"
+word = "muz"
+pic = "🍌"
+
+[[group.letter]]
+char = "ç"
+hint = "ça, çe, çi"
+word = "çiçek"
+pic = "🌸"
+
+[[group.letter]]
+char = "g"
+hint = "ga, ge, gi"
+word = "göz"
+pic = "👁️"
+
+[[group.letter]]
+char = "ş"
+hint = "şa, şe, şi"
+word = "kuş"
+pic = "🐦"
+
+[[group.letter]]
+char = "c"
+hint = "ca, ce, ci"
+word = "cam"
+pic = "🪟"
+
+[[group.letter]]
+char = "p"
+hint = "pa, pe, pi"
+word = "top"
+pic = "⚽"
+
+[[group.word]]
+text = "muz"
+syllables = "muz"
+pic = "🍌"
+
+[[group.word]]
+text = "top"
+syllables = "top"
+pic = "⚽"
+
+[[group.word]]
+text = "kuş"
+syllables = "kuş"
+pic = "🐦"
+
+[[group.word]]
+text = "göz"
+syllables = "göz"
+pic = "👁️"
+
+[[group.word]]
+text = "çiçek"
+syllables = "çi-çek"
+pic = "🌸"
+
+[[group.word]]
+text = "güneş"
+syllables = "gü-neş"
+pic = "☀️"
+
+[[group.word]]
+text = "kapı"
+syllables = "ka-pı"
+pic = "🚪"
+
+[[group.word]]
+text = "kitap"
+syllables = "ki-tap"
+pic = "📖"
+
+[[group.word]]
+text = "çanta"
+syllables = "çan-ta"
+pic = "🎒"
+
+[[group.sentence]]
+text = "Kuş uçtu."
+pic = "🐦"
+
+[[group.sentence]]
+text = "Ece top at."
+pic = "⚽"
+
+# ------------------------------------------------------------------ group 5
+
+[[group]]
+slug = "g5"
+title = "h ğ v f j"
+letters = ["h", "ğ", "v", "f", "j"]
+syllables = ["ha", "he", "ağ", "dağ", "va", "ev", "fa", "fi", "je", "jö"]
+
+[[group.letter]]
+char = "h"
+hint = "ha, he, hi"
+word = "horoz"
+pic = "🐓"
+
+[[group.letter]]
+char = "ğ"
+hint = "ağ, dağ, ağaç"
+word = "dağ"
+pic = "⛰️"
+
+[[group.letter]]
+char = "v"
+hint = "va, ve, vi"
+word = "ev"
+pic = "🏠"
+
+[[group.letter]]
+char = "f"
+hint = "fa, fe, fi"
+word = "fil"
+pic = "🐘"
+
+[[group.letter]]
+char = "j"
+hint = "ja, je, ji"
+word = "jelibon"
+pic = "🍬"
+
+[[group.word]]
+text = "ev"
+syllables = "ev"
+pic = "🏠"
+
+[[group.word]]
+text = "fil"
+syllables = "fil"
+pic = "🐘"
+
+[[group.word]]
+text = "dağ"
+syllables = "dağ"
+pic = "⛰️"
+
+[[group.word]]
+text = "horoz"
+syllables = "ho-roz"
+pic = "🐓"
+
+[[group.word]]
+text = "fare"
+syllables = "fa-re"
+pic = "🐭"
+
+[[group.word]]
+text = "ağaç"
+syllables = "a-ğaç"
+pic = "🌳"
+
+[[group.word]]
+text = "havuç"
+syllables = "ha-vuç"
+pic = "🥕"
+
+[[group.word]]
+text = "tavuk"
+syllables = "ta-vuk"
+pic = "🐔"
+
+[[group.sentence]]
+text = "Fil suyu sever."
+pic = "🐘"
+
+[[group.sentence]]
+text = "Tavuk yem yedi."
+pic = "🐔"

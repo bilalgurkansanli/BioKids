@@ -11,7 +11,8 @@ every 24 hours (`Supervisor.housekeeping`).
 The windows are in `[retention]` of config.toml:
 
 * activity (usage events, which include the sites visited, the assistant's
-  alerts, and the hours of the day the computer was used): `activity_days`, a
+  alerts, the hours of the day the computer was used, and a parent's notes to a
+  child, D-233): `activity_days`, a
   month by default - the most personal records go first. *When* in the day a
   child sat at the computer is closer to a timeline than how long they did,
   and no screen reads more than thirty days of it (D-206);
@@ -43,6 +44,8 @@ from biokids_core.db.models import (
     DayOverride,
     LedgerDay,
     PanelSession,
+    ParentNote,
+    SharedRecording,
     UsageEvent,
     UsageHour,
     UsageTick,
@@ -53,6 +56,9 @@ log = logging.getLogger(__name__)
 
 BOOT_EPOCHS_KEPT: Final = 20
 SESSION_GRACE: Final = dt.timedelta(days=1)
+SHARED_RECORDING_KEPT: Final = dt.timedelta(days=7)
+"""A child's recording sent to the parent (D-240) is kept a week, not a month:
+it is their voice, and Today shows it for that week only."""
 
 
 def _run(session: Session, statement: Delete) -> int:
@@ -74,6 +80,17 @@ def prune(session: Session, config: Config, now: dt.datetime | None = None) -> d
     deleted = {
         "usage_event": _run(session, delete(UsageEvent).where(UsageEvent.ts_wall < activity)),
         "ai_alert": _run(session, delete(AiAlert).where(AiAlert.ts < activity)),
+        # A parent's "well done" and notes (D-233), with the rest of the day.
+        "parent_note": _run(
+            session, delete(ParentNote).where(ParentNote.created_at < activity)
+        ),
+        # What a child sent from Sesim (D-240), audio and all.
+        "shared_recording": _run(
+            session,
+            delete(SharedRecording).where(
+                SharedRecording.created_at < now - SHARED_RECORDING_KEPT
+            ),
+        ),
         "usage_tick": _run(session, delete(UsageTick).where(UsageTick.day < usage_day)),
         "usage_hour": _run(session, delete(UsageHour).where(UsageHour.day < activity_day)),
         "ledger_day": _run(session, delete(LedgerDay).where(LedgerDay.day < usage_day)),

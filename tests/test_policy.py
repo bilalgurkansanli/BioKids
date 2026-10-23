@@ -16,7 +16,9 @@ import pytest
 from biokids_core.policy import (
     _category_remaining,
     evaluate,
+    finish_up_offer,
     general_allowance_seconds,
+    learn_first_left,
     remaining_seconds,
 )
 from biokids_core.types import (
@@ -558,3 +560,116 @@ def test_a_day_that_names_only_its_minutes_keeps_the_usual_hours() -> None:
     sunday = dt.datetime(2026, 10, 11, 21, 0)
     assert policy.quota_minutes(sunday.date()) == 30
     assert not policy.window_open(sunday)
+
+
+# ------------------------------------------------- the last round (D-230)
+
+
+def test_the_last_round_is_offered_in_the_days_last_two_minutes() -> None:
+    """A one-hour day with 90 seconds left: three minutes are on offer."""
+    policy = make_policy(finish_up_min=3)
+    assert (
+        finish_up_offer(
+            policy, state(general_used_s=60 * 60 - 90), ActivityContext(), AFTERNOON
+        )
+        == 180
+    )
+
+
+@pytest.mark.parametrize(
+    ("used", "why"),
+    [
+        (60 * 60 - 5 * 60, "five minutes left is not the end yet"),
+        (60 * 60, "the time is already up: the screen is locked, nobody can tap"),
+    ],
+)
+def test_the_last_round_waits_for_the_end(used: int, why: str) -> None:
+    offer = finish_up_offer(
+        make_policy(), state(general_used_s=used), ActivityContext(), AFTERNOON
+    )
+    assert offer == 0, why
+
+
+def test_the_last_round_is_once_a_day() -> None:
+    near_end = state(general_used_s=60 * 60 - 60, finish_up_s=180)
+    assert finish_up_offer(make_policy(), near_end, ActivityContext(), AFTERNOON) == 0
+
+
+def test_a_parent_can_turn_the_last_round_off() -> None:
+    near_end = state(general_used_s=60 * 60 - 60)
+    assert (
+        finish_up_offer(make_policy(finish_up_min=0), near_end, ActivityContext(), AFTERNOON)
+        == 0
+    )
+
+
+def test_the_last_round_is_not_offered_when_minutes_cannot_help() -> None:
+    """Allowance moves the quota, not a closing window, a used-up kind of app or
+    a penalty; offering it there would be a button that does nothing."""
+    near_end = state(general_used_s=60 * 60 - 60)
+    closing = make_policy(weekday_windows=(TimeWindow.parse("16:00-17:00"),))
+    at_five_to = dt.datetime(2026, 9, 21, 16, 59, 30)
+    assert finish_up_offer(closing, near_end, ActivityContext(), at_five_to) == 0
+
+    games = make_policy(category_limits_min={Category.GAMES: 20})
+    games_out = state(general_used_s=60 * 60 - 60, category_used_s={Category.GAMES: 20 * 60})
+    assert (
+        finish_up_offer(games, games_out, ActivityContext(category=Category.GAMES), AFTERNOON)
+        == 0
+    )
+
+    penalised = state(general_used_s=60 * 60 - 60, penalty_remaining_s=300)
+    assert finish_up_offer(make_policy(), penalised, ActivityContext(), AFTERNOON) == 0
+
+
+def test_the_last_round_is_allowance_like_a_grant() -> None:
+    policy = make_policy()
+    taken = state(general_used_s=60 * 60, finish_up_s=180)
+    assert general_allowance_seconds(policy, taken) == 63 * 60
+    decision = evaluate(policy, taken, ActivityContext(), AFTERNOON)
+    assert decision.allow is True
+    assert decision.remaining_seconds == 180
+
+
+# ------------------------------------------------ games after learning (D-232)
+
+
+def test_games_wait_for_the_days_learning() -> None:
+    policy = make_policy(learn_first_min=15)
+    early = state(category_used_s={Category.LEARNING: 10 * 60})
+    decision = evaluate(policy, early, ActivityContext(category=Category.GAMES), AFTERNOON)
+    assert decision.allow is False
+    assert decision.action is Action.BLOCK
+    assert decision.reason_code == Reason.LEARN_FIRST
+    assert learn_first_left(policy, early) == 5 * 60
+
+
+def test_learning_and_everything_else_are_open_meanwhile() -> None:
+    policy = make_policy(learn_first_min=15)
+    for category in (Category.LEARNING, Category.WEB, Category.FREE, None):
+        decision = evaluate(policy, state(), ActivityContext(category=category), AFTERNOON)
+        assert decision.allow is True, category
+
+
+def test_games_open_once_the_learning_is_done() -> None:
+    policy = make_policy(learn_first_min=15)
+    done = state(category_used_s={Category.LEARNING: 15 * 60})
+    assert learn_first_left(policy, done) == 0
+    decision = evaluate(policy, done, ActivityContext(category=Category.GAMES), AFTERNOON)
+    assert decision.allow is True
+
+
+def test_used_up_games_say_so_before_learn_first() -> None:
+    """Out of game time, a child is not told to go and learn first."""
+    policy = make_policy(learn_first_min=15, category_limits_min={Category.GAMES: 10})
+    over = state(category_used_s={Category.GAMES: 10 * 60})
+    decision = evaluate(policy, over, ActivityContext(category=Category.GAMES), AFTERNOON)
+    assert decision.reason_code == Reason.CATEGORY_EXHAUSTED
+
+
+def test_no_rule_no_wait() -> None:
+    assert learn_first_left(make_policy(), state()) == 0
+    decision = evaluate(
+        make_policy(), state(), ActivityContext(category=Category.GAMES), AFTERNOON
+    )
+    assert decision.allow is True

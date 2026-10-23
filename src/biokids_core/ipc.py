@@ -77,6 +77,12 @@ class Op(StrEnum):
     """A parent's yes or no to something a child asked for (D-173)."""
     UNLOCK_NOW = "unlock_now"
     """Let a child back into a screen BioKids locked, without adding time."""
+    TOGETHER = "together"
+    """Birlikte modu (D-235): a parent at the computer with the child, for so many
+    minutes, in which nothing is counted; 0 minutes ends it."""
+    SEND_NOTE = "send_note"
+    """A parent's "Aferin" or one sentence to a child (D-233): stored, and shown on
+    the child's screen at once or the next time it opens."""
     DAY_CHANGED = "day_changed"
     """A parent made today special or took it back (D-215): re-read the rules,
     and let a child whose day just got longer back in."""
@@ -87,8 +93,10 @@ class ShellOp(StrEnum):
 
     Deliberately short. Everything here is either a read scoped to the calling
     child or a request the daemon is free to refuse; nothing on this list can
-    grant time, unlock a session or reach another child. The daemon establishes
-    *which* child is calling from the peer's uid, never from an argument.
+    unlock a session or reach another child, and the only time it can bring is
+    the last round a parent set (D-230): once a day, in the day's last minutes.
+    The daemon establishes *which* child is calling from the peer's uid, never
+    from an argument.
     """
 
     PING = "ping"
@@ -104,10 +112,21 @@ class ShellOp(StrEnum):
     """Where the calling child is in the English corner: their boxes (D-225)."""
     ENGLISH_ANSWER = "english_answer"
     """One answer in an English lesson; the item's box moves (D-225)."""
+    READING_STATE = "reading_state"
+    """Where the calling child is in the reading corner: their boxes (D-241)."""
+    READING_ANSWER = "reading_answer"
+    """One answer in a reading lesson; the item's box moves (D-241)."""
     SWITCH_USER = "switch_user"
     """"Oturumu değiştir" on the child's screen (D-227): the child's session ends,
     their apps given their grace first, and the login screen comes back."""
     FIRST_RUN_DONE = "first_run_done"
+    SHARE_RECORDING = "share_recording"
+    """Sesim (D-240): the one recording the child chose to send their parent."""
+    NOTE_SEEN = "note_seen"
+    """The child's screen showed a parent's note (D-233), so the panel can say so."""
+    FINISH_UP = "finish_up"
+    """The last round (D-230): the few minutes a parent allowed, once a day, as
+    the day runs out. The daemon decides whether one is due; the child only asks."""
     REQUEST_SHUTDOWN = "request_shutdown"
     """The child pressed the shutdown tile (D-100). The daemon decides, and says
     at once which it will be, `ShutdownOutcome`, before doing it (D-209)."""
@@ -151,6 +170,8 @@ class EventKind(StrEnum):
     ACCESS_REQUEST = "access_request"
     REQUEST_DECIDED = "request_decided"
     """A parent answered what the child asked for (D-173)."""
+    PARENT_NOTE = "parent_note"
+    """A parent sent the child a "well done" or a note (D-233)."""
     ASSISTANT_ALERT = "assistant_alert"
     """The assistant refused a question a parent should know about (D-165)."""
 

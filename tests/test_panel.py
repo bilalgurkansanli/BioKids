@@ -21,7 +21,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from biokids_core import repo, security
+from biokids_core import notes, repo, security
 from biokids_core.catalog import load_catalog
 from biokids_core.config import Config
 from biokids_core.db import AiAlert, AuditLog, Database, Parent, Policy
@@ -544,6 +544,74 @@ def test_a_quota_cannot_exceed_a_day(
     )
     with db.session() as session:
         assert repo.get_or_create_policy(session, 1).weekday_quota_min == 24 * 60
+
+
+def test_the_last_round_and_learning_first_are_saved(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """D-230, D-232: both under Gelişmiş, both in the audit row."""
+    login(client)
+    page = client.get("/children/1/time").text
+    assert 'name="finish_up_min"' in page and 'name="learn_first_min"' in page
+    assert "Son tur hakkı" in page
+    client.post(
+        "/children/1/time",
+        data={
+            "weekday_quota_min": 60,
+            "end_action": "lock",
+            "enabled": "on",
+            "finish_up_min": 5,
+            "learn_first_min": "15",
+            "csrf_token": csrf_of(client),
+        },
+        follow_redirects=False,
+    )
+    with db.session() as session:
+        policy = repo.get_or_create_policy(session, 1)
+        assert policy.finish_up_min == 5
+        assert policy.learn_first_min == 15
+        row = repo.recent_audit(session, limit=1)[0]
+    assert row.detail["after"]["finish_up_min"] == 5
+    assert row.detail["after"]["learn_first_min"] == 15
+
+
+@pytest.mark.parametrize(
+    ("finish_up", "learn_first", "saved"),
+    [(7, "", (3, 0)), (0, "abc", (0, 0)), (2, "999", (2, 120)), (3, " ", (3, 0))],
+)
+def test_odd_values_for_the_new_rules_are_kept_sensible(
+    client: TestClient,
+    family_ready: None,
+    db: Database,
+    finish_up: int,
+    learn_first: str,
+    saved: tuple[int, int],
+) -> None:
+    login(client)
+    client.post(
+        "/children/1/time",
+        data={
+            "weekday_quota_min": 60,
+            "end_action": "lock",
+            "enabled": "on",
+            "finish_up_min": finish_up,
+            "learn_first_min": learn_first,
+            "csrf_token": csrf_of(client),
+        },
+        follow_redirects=False,
+    )
+    with db.session() as session:
+        policy = repo.get_or_create_policy(session, 1)
+        assert (policy.finish_up_min, policy.learn_first_min) == saved
+
+
+def test_the_quota_boxes_have_quick_choices(client: TestClient, family_ready: None) -> None:
+    """D-236: a tap fills the box; the labels are the screen's own words."""
+    login(client)
+    page = client.get("/children/1/time").text
+    assert page.count('class="chip"') == 8
+    assert "elements['weekday_quota_min'].value = 90" in page
+    assert "Kaç dakikada bir mola versin" in page, "the break's own label, not a borrowed one"
 
 
 # ------------------------------------------------------- daemon unreachable
@@ -3315,7 +3383,7 @@ def test_insights_show_the_english_corner_with_its_words(
     assert "2 kelimeyle tanıştı, 1 tanesini iyi biliyor." in page
     assert "Bu dönemde 2 yeni kelime" in page
     assert "🐱 cat" in page
-    assert "İngilizce'de 2 yeni kelimeyle tanıştı." in page, "and a highlight"
+    assert "İngilizcede 2 yeni kelimeyle tanıştı." in page, "and a highlight"
 
 
 def test_no_english_card_for_a_child_who_has_neither_the_tile_nor_a_word(
@@ -3422,3 +3490,211 @@ def test_the_login_script_opens_only_a_path_on_the_panel() -> None:
     ).read_text(encoding="utf-8")
     assert 'wanted.startswith("/") and not wanted.startswith("//")' in script
     assert 'not wanted.startswith("/wizard")' in script, "--setup-only opens the wizard only"
+
+
+# ------------------------------------------- a parent's notes (D-233)
+
+
+def test_well_done_in_one_tap(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    login(client)
+    page = client.get("/today").text
+    response = client.post(
+        "/children/1/praise", data={"csrf_token": csrf_of(client)}, follow_redirects=False
+    )
+    assert response.headers["location"] == "/today?praised=1"
+    ((_op, args),) = [(o, a) for o, a in daemon.calls if o == "send_note"]
+    assert args["kind"] == "praise"
+    assert args["from_name"] == "Anne"
+    assert args["actor"].startswith("parent:")
+    assert "Bir şey gönder" in page or daemon.status["children"] == []
+
+
+def test_a_note_is_sent_and_an_empty_one_is_not(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    login(client)
+    token = csrf_of(client)
+    sent = client.post(
+        "/children/1/note",
+        data={"text": "Akşam altıda geliyorum", "csrf_token": token},
+        follow_redirects=False,
+    )
+    assert sent.headers["location"] == "/today?noted=1"
+    empty = client.post(
+        "/children/1/note", data={"text": "   ", "csrf_token": token}, follow_redirects=False
+    )
+    assert empty.headers["location"] == "/today?note_empty=1"
+    assert [a["text"] for o, a in daemon.calls if o == "send_note"] == [
+        "Akşam altıda geliyorum"
+    ]
+
+
+def test_today_says_whether_the_child_saw_it(
+    client: TestClient, family_ready: None, daemon: FakeDaemon, db: Database
+) -> None:
+    daemon.status = {
+        "children": [
+            {
+                "child_id": 1,
+                "display_name": "Elif",
+                "managed": True,
+                "online": False,
+                "allow": True,
+                "remaining_seconds": 1800,
+                "quota_seconds": 3600,
+            }
+        ]
+    }
+    with db.session() as session:
+        praise = notes.add(session, 1, "praise", "", parent_id=1, from_name="Anne")
+        notes.add(session, 1, "note", "Seni seviyorum", parent_id=1, from_name="Anne")
+        praise.shown_at = utcnow()
+        session.commit()
+    login(client)
+    page = client.get("/today").text
+    assert "Aferininizi gördü" in page
+    assert "Notunuz bekliyor" in page
+    assert "Bir şey gönder" in page
+
+
+# -------------------------------------------- Bugün ne konuşalım? (D-234)
+
+
+def test_today_has_something_to_talk_about_for_a_child_who_used_it(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    import datetime as dt
+
+    from biokids_core.db.models import LedgerDay
+
+    login(client)
+    assert "Bugün ne konuşalım?" not in client.get("/today").text
+    with db.session() as session:
+        session.add(LedgerDay(child_id=1, day=dt.date.today(), general_s=1200))
+        session.commit()
+    assert "Bugün ne konuşalım?" in client.get("/today").text
+
+
+# ------------------------------------------------------ Birlikte modu (D-235)
+
+
+def test_together_is_started_and_ended_from_the_card(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    login(client)
+    token = csrf_of(client)
+    started = client.post(
+        "/children/1/together",
+        data={"minutes": 30, "csrf_token": token},
+        follow_redirects=False,
+    )
+    assert started.headers["location"] == "/today?together=1&minutes=30"
+    odd = client.post(
+        "/children/1/together",
+        data={"minutes": 999, "csrf_token": token},
+        follow_redirects=False,
+    )
+    assert odd.status_code == 303
+    stopped = client.post(
+        "/children/1/together/stop", data={"csrf_token": token}, follow_redirects=False
+    )
+    assert stopped.headers["location"] == "/today?together_stopped=1"
+    asked = [args["minutes"] for op, args in daemon.calls if op == "together"]
+    assert asked == [30, 60, 0], "an odd number is the hour, and 0 ends it"
+
+
+def test_the_card_says_together_is_on(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    daemon.status = {
+        "children": [
+            {
+                "child_id": 1,
+                "display_name": "Elif",
+                "managed": True,
+                "online": True,
+                "allow": True,
+                "remaining_seconds": 1800,
+                "quota_seconds": 3600,
+                "together_seconds": 25 * 60,
+            }
+        ]
+    }
+    login(client)
+    page = client.get("/today").text
+    assert "Birlikte modu açık: 25 dk" in page
+    assert 'action="/children/1/together/stop"' in page
+    assert 'action="/children/1/together"' not in page, "no second start while it is on"
+
+
+# ------------------------------------------- a birthday and a calm screen (D-236)
+
+
+def _edit(client: TestClient, **extra: object) -> Any:
+    data: dict[str, object] = {
+        "display_name": "Elif",
+        "birth_year": 2020,
+        "screen": "1",
+        "text_size": "normal",
+        "csrf_token": csrf_of(client),
+    }
+    data.update(extra)
+    return client.post("/children/1/edit", data=data, follow_redirects=False)
+
+
+def test_a_birthday_is_the_day_and_month_only(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    page = client.get("/children/1/edit").text
+    assert 'name="birthday_day"' in page and "Şubat" in page
+    assert _edit(client, birthday_day="29", birthday_month="2").status_code == 303
+    with db.session() as session:
+        child = repo.get_child(session, 1)
+        assert child is not None and child.birthday == "02-29"
+        assert child.birthday_on(dt.date(2027, 2, 28)), "in a year with no 29th, the 28th"
+        assert child.birthday_on(dt.date(2028, 2, 29))
+        assert not child.birthday_on(dt.date(2028, 2, 28))
+    assert 'value="29" selected' in client.get("/children/1/edit").text
+
+
+def test_a_day_the_month_does_not_have_is_refused(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    response = _edit(client, birthday_day="31", birthday_month="4")
+    assert response.status_code == 400
+    assert "Bu gün o ayda yok" in response.text
+    half = _edit(client, birthday_day="12", birthday_month="")
+    assert half.status_code == 400, "both or neither"
+    with db.session() as session:
+        child = repo.get_child(session, 1)
+        assert child is not None and child.birthday is None
+
+
+def test_leaving_both_empty_takes_the_birthday_away(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    _edit(client, birthday_day="5", birthday_month="6")
+    _edit(client, birthday_day="", birthday_month="")
+    with db.session() as session:
+        child = repo.get_child(session, 1)
+        assert child is not None and child.birthday is None
+
+
+def test_a_calm_screen_is_saved_for_the_child(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    login(client)
+    _edit(client, calm_screen="on")
+    with db.session() as session:
+        child = repo.get_child(session, 1)
+        assert child is not None and child.calm_screen is True
+    assert 'id="child-calm" name="calm_screen" checked' in client.get("/children/1/edit").text
+    _edit(client)
+    with db.session() as session:
+        child = repo.get_child(session, 1)
+        assert child is not None and child.calm_screen is False

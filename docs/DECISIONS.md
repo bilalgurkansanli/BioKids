@@ -1928,3 +1928,149 @@ it: their helper re-reported on every tick, "as the shell does", which no code d
 - Unchanged: the day's limit never depended on any of this - it is counted from logind
   whatever is in front - and an app the parent unticks while it is open is still not
   stopped (`app_allowed` stays true in the tick).
+
+**D-229 [claude] Zio says what the daemon had long been asking for.** (2026-10-23)
+The daemon asked the voice for `earned` and `break_start`, and VOICE.md promised
+`blocked` and `break_end`, but no line file existed for any of them: the voice service
+logged "no line for event" and the child heard nothing. And `break_start` was never even
+asked for in practice, because the ledger starts a break itself and the engine then sees
+it running (`BREAK_ACTIVE`), which carries no line. Now every one has its lines in both
+languages, the supervisor speaks `break_start` when the ledger starts a break and
+`break_end` when it ends, and a game closed for a used-up kind of time (D-228) is said
+out loud (`app_stopped`): a window closing with no word is what a child takes for the
+computer breaking. The placeholder set gains `{parent}` for D-233.
+
+**D-230 [owner] Son tur: the last round, once a day.** (2026-10-23)
+The hardest moment of screen time is not the limit but the cut in the middle of a level
+or a drawing. On the one-minute warning the child sees "🏁 Bitireyim +3 dk"; one tap gives
+the parent's minutes once that day, Zio says so, the ring moves, and Today says "Elif son
+turunu kullandı". The policy engine decides whether one is due (`finish_up_offer`): only
+while the day's quota is what ends the day - not a closing window, a used-up kind of app
+or a penalty, which allowance cannot move - in the last two minutes, and once. The
+minutes are allowance like a grant, kept apart from `granted_s` (`ledger_day.finish_up_s`)
+so the history tells a parent's minutes from the child's. `policy.finish_up_min`, 3 by
+default (0, 2, 3 or 5 under Gelişmiş). This is the one ShellOp that can bring time
+(`FINISH_UP`), and only what the parent set, once a day: SECURITY.md says so.
+
+**D-231 [owner] Şimdi ne yapsak?: the end of screen time is a hand-over.** (2026-10-23)
+The screens that end or pause the time now say what to do away from the screen: one card
+on time-up, the good-night and between-windows screens, three moves and rest for the eyes
+in a break. Written by people (`data/offscreen/offscreen.toml`), safe in a room, never
+pointing back at a screen, by age band; chosen like the day's surprise, deterministic
+from the moment, the date and the child, so siblings differ and tomorrow brings the next.
+Zio reads them after the daemon's own line. A broken card file costs the cards, never
+the screen.
+
+**D-232 [owner] Önce öğren, sonra oyna.** (2026-10-23)
+One rule under Gelişmiş: games open after so many minutes of learning apps today. A rule
+about order, not amount - earned time (D-45) is about amount - and what parents mean by
+"no games before homework". In the engine as rule 5b, after the games limit (a child out
+of game time is not told to learn first); a game tile says "🔒 10 dk öğrenince", a tap
+on it gets a calm screen with a bar that fills, and a game already open is closed with
+its own line. It counts the ledger's learning minutes, which D-228 made real; a
+lesson left on the screen with nobody at it (idle) is not learning, so it neither opens
+the games nor earns a sticker. `policy.learn_first_min`, none by default.
+
+**D-233 [owner] Aferin, and a short note.** (2026-10-23)
+The panel was all control. On each child's card, closed under "💛 Bir şey gönder": "⭐
+Aferin!" in one tap, or one sentence of up to 140 characters. It reaches the child's
+screen at once (the relay brings the launcher forward for it as for a warning) or waits
+for the next time it opens, for a week; Zio says the well done and reads the note; the
+card says "Notunuzu okudu" once the screen showed it. One way only. Stored by the daemon
+in the same step as it tells the launcher (`parent_note`), kept for
+`retention.activity_days`; the audit log has that one was sent, never its words.
+
+**D-234 [owner] Bugün ne konuşalım?** (2026-10-23)
+"None of this replaces talking to your child", made concrete: on Today, for each child
+who used the computer today, up to three things to ask about in the evening - the card
+on their home screen this morning (a riddle with its answer for the parent, a task to ask
+about), the English words and the letters they met for the first time, the app they spent
+most of the day in with a question that fits its kind, a sticker earned. Nothing new is
+collected: every sentence comes from what the panel already keeps (`biokids_core/talk.py`).
+No sentence glues a suffix to a name, which Turkish vowel harmony would get wrong for
+half of them.
+
+**D-235 [owner] Birlikte modu.** (2026-10-23)
+Using a computer with a parent is the screen time most worth having and should cost the
+child nothing. On the card, "👨‍👧 Birlikteyiz" for 30 minutes, an hour or two: nothing is
+counted, nothing warns or locks, a child already locked out is let back in, and it ends
+by itself or with "Bitir". Started only from the panel by a parent - never with a PIN
+typed on the child's screen. Applied in the daemon as an override of every decision it
+acts on or shows (`_decided`), except that an app the parent never gave the child stays
+off their screen. The launcher shows neither the last round nor "learn first" while it
+lasts, and the last round is not spent on it. Zio says five minutes before it ends that
+the counting starts again. Never written down: a daemon that restarts counts again, the
+safe side. Audited with how long it lasted.
+
+**D-236 [owner] Small touches.** (2026-10-23)
+- A birthday, optional: the day and the month only, never more (the year is the birth year
+  already kept). On the day Zio says "İyi ki doğdun Elif!" once and the home screen shows a
+  cake; Today says so. 29 February is the 28th in other years.
+- A calm screen per child: nothing moves, pulses or celebrates (`data-motion="calm"`).
+- The quota boxes get quick choices (30 dk, 1 sa, 1,5 sa, 2 sa), and the Gelişmiş labels
+  that were made of unrelated keys ("Break — minutes") get words of their own.
+- Zio turned off on the time screen means the launcher is quiet too: tiles read aloud,
+  the off-screen cards and the birthday are not spoken (`voice_enabled` in the shell's
+  state; `/speak-label` refuses).
+- The brightness slider starts where the screen is; switch-user and shut-down read
+  themselves aloud for the young band; the online Vikipedi tile is named "Vikipedi
+  (internet)" beside the offline one; the first-run screen says that a refused search's
+  words reach the family (D-222), which it did not.
+
+**D-237 [claude] Koruma durumu.** (2026-10-23)
+A list under Ayarlar of everything that protects the child, with a line on Today when
+something needs the parent: the service, the DNS filter, the browser policy, the
+extension, another browser on the machine (Firefox reaches the child through any app's
+help link and has none of the protections - the review found it), mail for alerts, the
+last backup, disk space, the clock, a boot password. Green only when it really is; with
+the daemon down the filter is "unknown", not green. Each warning links to what to do; a
+new guide, "Bilgisayarın kendisini korumak", covers removing another browser, the BIOS and
+GRUB passwords and how to undo them (SECURITY.md section 6). Read only.
+
+**D-238 [owner] Yedekle ve taşı.** (2026-10-23)
+A family's BioKids in one file for a new computer: each child, their rules, apps, sites,
+special days to come, English and reading progress, minutes per day and app, the family's
+search words, and the parent's own recorded voices. Never a PIN, passphrase, recovery code
+or mail setting. Sealed with the family's passphrase: argon2id makes the key with fixed
+parameters (time 3, 64 MiB, 4 lanes) that the format names and a file cannot choose - the
+header is read before anything is authenticated, and a file naming its own cost could hold
+the panel - and AES-256-GCM seals the gzip'd contents with the header as associated data,
+so a file changed in any byte does not open; both libraries were already dependencies.
+Taking one needs the passphrase (D-48) and is audited. Restoring needs this machine's
+passphrase too, and the old computer's if it was different: a restore rewrites every rule,
+so it is a protection change. It makes each missing child the way the panel does, adds
+history only where this machine has none for that day, and checks every value the way the
+panel's forms do - a value a form would refuse is left as it was, an avatar or app this
+machine does not know is not taken. A file can switch protection on, never off.
+The file is as strong as the passphrase: anyone holding it can try passphrases offline, at
+argon2's cost per guess, so the page says to keep it only somewhere the family trusts.
+
+**D-239 [owner] Ekran önizlemesi.** (2026-10-23)
+"See their screen" on each child: the tiles, today's minutes, the day's card, a warning
+with the last round, and the end of the day with its card - drawn from the database, never
+from the child's session. A picture of the settings, so CONTRIBUTING's "no live screen
+mirroring" stays true, and the page says it is a preview.
+
+**D-240 [owner] Sesim.** (2026-10-23)
+A tile where the child holds a big button to tell a story or sing, up to 40 seconds, and
+hears it back. Kept in the child's own home (`~/.local/share/biokids/sesim/`) by the
+launcher that runs as them, like Resimlerim's drawings: only mono 16-bit WAV it read the
+header of, only names it made, only the child's own regular files, never a link, at most
+forty; the list reads each file's header only. One reaches the parent only when the child
+taps "Büyüğüme gönder": down-sampled to about 8 kHz from whatever rate the page recorded at,
+so it fits one daemon message, at most ten a day, kept as a row (`shared_recording`) for
+seven days - a child's voice is not kept a month - and played on the child's card on
+Today. The microphone is the launcher's only, as for the assistant (D-166).
+
+**D-241 [owner] Okuma köşesi.** (2026-10-23)
+Learning to read Turkish in the order first grade teaches it - MEB's sound-based method:
+e l a k i n, o m u t ü y, ö r ı d s b, z ç g ş c p, h ğ v f j. Each letter met (big,
+capital and small, a picture, Zio making its sound in syllables), then found by its sound,
+then syllables heard and found, then words read and their picture tapped - read, not
+heard: Zio reads the word only once the answer is in, or in syllables after two tries -
+then a short sentence. Never a letter not yet met: the content file is refused if a
+syllable, word or sentence uses one, the choices on every step come only from the letters
+met, and a new letter's example word is written under its picture only when every letter
+of it is known - otherwise the picture alone, and Zio says the word. The English corner's boxes (D-225), its own table (`reading_item`), learning
+minutes, a card in Analiz, and a line in "Bugün ne konuşalım?". Speech recognition is not
+used: reading here works on every machine, with or without the assistant.

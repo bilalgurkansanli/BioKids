@@ -1,0 +1,5 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}, {app}
+# Açılamayan bir site.
+Bu sayfa açılmıyor {name}. İstersen bir büyüğüne sor.
+Bu sayfayı açamıyoruz. Bir büyüğüne sorabilirsin.
+Bu site kapalı. Başka bir şey seçelim mi?

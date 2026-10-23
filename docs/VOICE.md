@@ -12,8 +12,10 @@ on screen while a line plays.
 
 **One-way only.** The child never speaks to Zio or Sio. They do not listen and they
 do not chat. The assistant (D-165) is a separate tile that a parent switches on: Zio
-reads its answers aloud through the `say` operation below, and its push-to-talk
-button (D-166) is the only place in BioKids that uses the microphone.
+reads its answers aloud through the `say` operation below. The microphone is used in
+three places, each only while the child holds a button and only on the launcher's own
+pages: the assistant's push-to-talk (D-166), saying a word back in the English corner
+(D-225), and Sesim (D-240), whose recordings stay in the child's home.
 
 A parent can record the lines themselves (D-174, section 4) and Zio or Sio speaks
 them in that voice. That is the emotional core of the whole product: a 6-year-old
@@ -200,6 +202,16 @@ events are marked.
 | `bedtime_10`, `bedtime_5`, `bedtime_1` | on | "Akşam oldu Elif. 10 dakika sonra yatma vakti." |
 | `bedtime` | on | "İyi geceler, Elif. Yarın görüşürüz." |
 | `request_approved` | on | "Annen izin verdi, şimdi girebilirsin." |
+| `app_stopped` | on | "Bunun bugünlük süresi bitti. Hadi başka bir şey seçelim." (D-228, D-229) |
+| `learn_first` | on | "Önce biraz öğrenelim Elif. Sonra oyunlar açılacak." (D-232) |
+| `finish_up` | on | "Tamam Elif, 3 dakika daha. Sonra kapatıyoruz." (D-230) |
+| `praise` | on | "Anne sana aferin dedi Elif!" (D-233; `{parent}` is the parent's name) |
+| `together_start`, `together_end` | on | "Birlikte vakit geçirmek ne güzel Elif! Şimdi süren sayılmıyor." (D-235) |
+
+Until D-229 `earned`, `break_start`, `break_end` and `blocked` were in this table and in no
+line file, so the voice service said nothing for them. They ship now, and the daemon
+speaks `break_start` and `break_end` itself, since the ledger, not the engine, starts a
+break.
 
 The `bedtime` lines are the evening's (D-214): when a day ends at night, the engine
 asks for `bedtime_10` instead of `warn_10` and `bedtime` instead of `time_up`, with Zio

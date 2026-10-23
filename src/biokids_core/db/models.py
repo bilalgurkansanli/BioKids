@@ -32,6 +32,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -152,14 +153,32 @@ class Child(Base):
     text_size: Mapped[str] = mapped_column(String(8), default="normal", server_default="normal")
     high_contrast: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     reading_font: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    calm_screen: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    """No moving shapes and no celebrations on the child's screen (D-236)."""
+    birthday: Mapped[str | None] = mapped_column(String(5), default=None)
+    """`MM-DD`, only if a parent gave it, for Zio's "İyi ki doğdun" (D-236). The
+    day and month, never more: the year is `birth_year`, kept for the age."""
 
     policy: Mapped[Policy | None] = relationship(
         back_populates="child", uselist=False, cascade="all, delete-orphan"
     )
 
     def age_on(self, day: dt.date) -> int:
-        """Age in whole years. Birth *year* only — we never ask for a birth date."""
+        """Age in whole years, from the birth *year* only. A parent may give the
+        day and month for the celebration (D-236); they are never used here."""
         return max(0, day.year - self.birth_year)
+
+    def birthday_on(self, day: dt.date) -> bool:
+        """Today is the day the parent gave; 29 February is the 28th in other years."""
+        if not self.birthday:
+            return False
+        try:
+            month, date = (int(part) for part in self.birthday.split("-"))
+        except ValueError:
+            return False
+        if (month, date) == (2, 29) and not _leap(day.year):
+            return (day.month, day.day) == (2, 28)
+        return (day.month, day.day) == (month, date)
 
     def band(self, day: dt.date) -> AgeBand:
         try:
@@ -196,6 +215,12 @@ class Policy(Base):
     earn_min_session_min: Mapped[int] = mapped_column(Integer, default=10)
     earn_idle_pause_min: Mapped[int] = mapped_column(Integer, default=3)
     earn_spendable_general: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    finish_up_min: Mapped[int] = mapped_column(Integer, default=3, server_default="3")
+    """The last round (D-230): minutes a child may ask for once a day as their
+    time runs out, to finish a level or a drawing. 0 turns it off."""
+    learn_first_min: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    """Minutes of learning apps before games open today (D-232). 0 is no rule."""
 
     filter_mode: Mapped[str] = mapped_column(String(16), default=FilterMode.ALLOWLIST.value)
 
@@ -453,6 +478,8 @@ class LedgerDay(Base):
     earned minutes, so a streak that keeps growing does not pay twice."""
     granted_s: Mapped[int] = mapped_column(Integer, default=0)
     """Minutes the parent added by hand with "+10 dk" (D-47), for the audit view."""
+    finish_up_s: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    """The last round the child took today (D-230); zero until they do. Once a day."""
 
     warned_json: Mapped[str] = mapped_column(Text, default="[]")
     """Warning thresholds already spoken today. Survives a daemon restart so a
@@ -605,6 +632,58 @@ class VoiceLine(Base):
     __table_args__ = (Index("ix_voice_line_event", "event", "locale"),)
 
 
+class ParentNote(Base):
+    """A "well done" or a short note from a parent to a child (D-233).
+
+    Sent from the panel - often from a phone at work - and shown on the child's
+    screen: at once when they are at the computer, else the next time the
+    launcher opens. One way only: the child answers with a hug, not a message,
+    and "Büyüğüme sor" (D-173) is their way to ask for something. Kept for
+    `retention.activity_days`, like the rest of what happened in a day; the
+    audit log says that one was sent, never what it said.
+    """
+
+    __tablename__ = "parent_note"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    child_id: Mapped[int] = mapped_column(
+        ForeignKey("child.id", ondelete="CASCADE"), index=True
+    )
+    parent_id: Mapped[int | None] = mapped_column(Integer, default=None)
+    from_name: Mapped[str] = mapped_column(String(64), default="", server_default="")
+    """The parent's name as the child knows it, kept with the note: a parent
+    renamed or removed later does not change who it was from."""
+    kind: Mapped[str] = mapped_column(String(8), default="note", server_default="note")
+    """`praise` (the "Aferin" button) | `note` (a sentence the parent wrote)."""
+    text: Mapped[str] = mapped_column(String(160), default="", server_default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    shown_at: Mapped[dt.datetime | None] = mapped_column(DateTime, default=None)
+    """When the child's screen showed it; the panel then says "okundu"."""
+
+    __table_args__ = (CheckConstraint("kind in ('praise','note')", name="ck_parent_note_kind"),)
+
+
+class SharedRecording(Base):
+    """A recording a child chose to send their parent from Sesim (D-240).
+
+    The child's recordings stay in their own home; only the one they press
+    "Büyüğüme gönder" on comes here, down-sampled for a phone. Kept with the
+    day's records for `retention.activity_days`, audio and all: a row, not a
+    file, so it goes with them.
+    """
+
+    __tablename__ = "shared_recording"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    child_id: Mapped[int] = mapped_column(
+        ForeignKey("child.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    seconds: Mapped[float] = mapped_column(Float, default=0.0)
+    audio: Mapped[bytes] = mapped_column(LargeBinary)
+    heard_at: Mapped[dt.datetime | None] = mapped_column(DateTime, default=None)
+
+
 class EnglishItem(Base):
     """Where one child is with one thing in the English corner (D-225).
 
@@ -630,6 +709,24 @@ class EnglishItem(Base):
     last_day: Mapped[dt.date] = mapped_column(Date)
 
 
+class ReadingItem(Base):
+    """Where one child is with one thing in the reading corner (D-241): a letter,
+    a syllable, a word or a sentence, in the English corner's boxes."""
+
+    __tablename__ = "reading_item"
+
+    child_id: Mapped[int] = mapped_column(
+        ForeignKey("child.id", ondelete="CASCADE"), primary_key=True
+    )
+    item: Mapped[str] = mapped_column(String(64), primary_key=True)
+    box: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    due: Mapped[dt.date] = mapped_column(Date)
+    first_day: Mapped[dt.date] = mapped_column(Date)
+    right: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    wrong: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    last_day: Mapped[dt.date] = mapped_column(Date)
+
+
 class Setting(Base):
     __tablename__ = "setting"
 
@@ -638,6 +735,19 @@ class Setting(Base):
 
 
 # ------------------------------------------------------------------- helpers
+
+
+def _leap(year: int) -> bool:
+    return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+
+
+def birthday_value(month: int, day: int) -> str | None:
+    """`MM-DD` for a real day of some year (29 February included), else None."""
+    try:
+        dt.date(2024, month, day)
+    except (TypeError, ValueError):
+        return None
+    return f"{month:02d}-{day:02d}"
 
 
 def _as_dict(value: Any) -> dict[str, Any]:

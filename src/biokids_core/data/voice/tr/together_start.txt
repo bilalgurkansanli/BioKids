@@ -1,0 +1,5 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}
+# Bir büyük çocukla birlikte bilgisayar başında; süre sayılmıyor (D-235).
+Birlikte vakit geçirmek ne güzel {name}! Şimdi süren sayılmıyor.
+Harika, birliktesiniz! Bu sürede saat duruyor.
+Birlikte oynuyorsunuz, süre sayılmıyor. İyi eğlenceler!

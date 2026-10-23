@@ -1,0 +1,5 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}, {app}
+# Zorunlu mola başlıyor. {minutes}: molanın dakikası.
+Biraz mola verelim {name}. {minutes} dakika gözlerini dinlendir.
+Mola zamanı. {minutes} dakika sonra devam ederiz.
+Hadi biraz kalkıp gerinelim. Sonra kaldığın yerden devam.

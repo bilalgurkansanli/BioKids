@@ -87,6 +87,11 @@ GUIDES: Final = (
     Guide("time", "⏰", 6, 3, "/children"),
     Guide("internet", "🌐", 5, 3, "/children"),
     Guide("voice", "🗣️", 4, 2, "/voices"),
+    # D-237: what BioKids leaves to the family - other browsers, the firmware,
+    # the boot menu - and how to undo each (SECURITY.md section 6).
+    Guide(
+        "machine", "🛡️", 5, 2, "/settings#health", commands={1: "sudo apt remove firefox-esr"}
+    ),
     Guide(
         "forgot",
         "🔑",

@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}
+# A grown-up is at the computer with the child; nothing is counted (D-235).
+How lovely to be together, {name}! Your time is not counted now.
+Great, you're together! The clock stops for a while.
+You're playing together, so the time is not counted. Have fun!

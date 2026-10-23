@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}
+# Together time is over; the time is counted again (D-235).
+Together time is over, {name}. Your time is counted again.
+Together time has ended, so the clock is running again.
+Your time together is over. The clock carries on from where it stopped.

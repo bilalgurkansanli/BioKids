@@ -1,0 +1,348 @@
+# Şimdi ne yapsak? - "what shall we do now?" (D-231).
+#
+# When the screen time ends, at night, between two of the day's windows, and in
+# a break, Zio hands the child over to something away from the screen instead
+# of only taking the screen away. Everything here was written and checked by
+# people; nothing is generated.
+#
+# Rules for every card:
+#   - Something a child can do safely in a room, alone or with a grown-up
+#     ("bir büyüğünle"). Nothing that needs scissors, the stove, the street or
+#     water play; no climbing.
+#   - Nothing that sends the child back to a screen.
+#   - The child is "sen", never "siz" (UX.md §4). One short sentence, written to
+#     be read aloud: Zio says it. English says the same thing.
+#   - Lengths (tests/test_offscreen.py): text 90.
+#
+# Fields:
+#   [[card]]  id (stable), moment, kind, emoji, text_tr, text_en,
+#             bands (optional; default both, "4-7" and "8-10")
+#
+# Moments: end (the day's time is up, or a window closed until later), night
+# (the day ended in the evening, D-214), break (a forced break, D-46: a few
+# moves and rest for the eyes).
+# Kinds: make, play, talk, help, read, move, eyes, calm.
+
+# ---------------------------------------------------------------- the end
+
+[[card]]
+id = "end-draw-animal"
+moment = "end"
+kind = "make"
+emoji = "🎨"
+text_tr = "Kâğıda en sevdiğin hayvanı çiz."
+text_en = "Draw your favourite animal on paper."
+
+[[card]]
+id = "end-tell-learned"
+moment = "end"
+kind = "talk"
+emoji = "💬"
+text_tr = "Bir büyüğüne bugün öğrendiğin bir şeyi anlat."
+text_en = "Tell a grown-up one thing you learned today."
+
+[[card]]
+id = "end-toy-story"
+moment = "end"
+kind = "play"
+emoji = "🧸"
+text_tr = "Oyuncaklarından birine bir isim ver, ona bir hikâye anlat."
+text_en = "Give one of your toys a name and tell it a story."
+
+[[card]]
+id = "end-book-pictures"
+moment = "end"
+kind = "read"
+emoji = "📚"
+text_tr = "Bir kitap seç ve resimlerine bak."
+text_en = "Pick a book and look at its pictures."
+bands = ["4-7"]
+
+[[card]]
+id = "end-read-page"
+moment = "end"
+kind = "read"
+emoji = "📖"
+text_tr = "Bir kitaptan iki sayfa oku."
+text_en = "Read two pages of a book."
+bands = ["8-10"]
+
+[[card]]
+id = "end-find-blue"
+moment = "end"
+kind = "play"
+emoji = "🔍"
+text_tr = "Odanda mavi renkli beş şey bul."
+text_en = "Find five blue things in your room."
+
+[[card]]
+id = "end-water"
+moment = "end"
+kind = "calm"
+emoji = "💧"
+text_tr = "Bir bardak su iç."
+text_en = "Drink a glass of water."
+
+[[card]]
+id = "end-tower"
+moment = "end"
+kind = "make"
+emoji = "🧱"
+text_tr = "Bloklarınla ya da legolarınla bir kule yap."
+text_en = "Build a tower with your blocks or bricks."
+
+[[card]]
+id = "end-plant-leaves"
+moment = "end"
+kind = "play"
+emoji = "🪴"
+text_tr = "Evdeki bir bitkiye bak: kaç yaprağı var, say."
+text_en = "Look at a plant at home and count its leaves."
+
+[[card]]
+id = "end-dance"
+moment = "end"
+kind = "move"
+emoji = "💃"
+text_tr = "En sevdiğin şarkıyı söyle ve dans et."
+text_en = "Sing your favourite song and dance to it."
+
+[[card]]
+id = "end-tidy"
+moment = "end"
+kind = "help"
+emoji = "🧺"
+text_tr = "Oyuncaklarını topla, her birini yerine koy."
+text_en = "Tidy up your toys and put each one back in its place."
+
+[[card]]
+id = "end-paper-plane"
+moment = "end"
+kind = "make"
+emoji = "✈️"
+text_tr = "Bir büyüğünle kâğıttan bir uçak yap."
+text_en = "Make a paper plane with a grown-up."
+
+[[card]]
+id = "end-sky"
+moment = "end"
+kind = "play"
+emoji = "☁️"
+text_tr = "Pencereden dışarı bak: gökyüzü bugün ne renk?"
+text_en = "Look out of the window: what colour is the sky today?"
+
+[[card]]
+id = "end-hug"
+moment = "end"
+kind = "talk"
+emoji = "🤗"
+text_tr = "Ailenden birine kocaman sarıl."
+text_en = "Give someone in your family a big hug."
+
+[[card]]
+id = "end-animal-guess"
+moment = "end"
+kind = "play"
+emoji = "🐸"
+text_tr = "Bir hayvanı taklit et, ailen hangisi olduğunu bilsin."
+text_en = "Pretend to be an animal and let your family guess which."
+
+[[card]]
+id = "end-laugh"
+moment = "end"
+kind = "talk"
+emoji = "😄"
+text_tr = "Bugün seni en çok ne güldürdü? Birine anlat."
+text_en = "What made you laugh the most today? Tell someone."
+
+[[card]]
+id = "end-three-plans"
+moment = "end"
+kind = "make"
+emoji = "✍️"
+text_tr = "Bir kâğıda yarın yapmak istediğin üç şeyi yaz."
+text_en = "Write down three things you want to do tomorrow."
+bands = ["8-10"]
+
+[[card]]
+id = "end-own-riddle"
+moment = "end"
+kind = "talk"
+emoji = "🤔"
+text_tr = "Kendi bilmeceni uydur, ailene sor."
+text_en = "Make up a riddle of your own and ask your family."
+bands = ["8-10"]
+
+[[card]]
+id = "end-help-table"
+moment = "end"
+kind = "help"
+emoji = "🍽️"
+text_tr = "Sofrayı kurarken bir büyüğüne yardım et."
+text_en = "Help a grown-up lay the table."
+
+# ---------------------------------------------------------------- the night
+
+[[card]]
+id = "night-teeth"
+moment = "night"
+kind = "calm"
+emoji = "🪥"
+text_tr = "Dişlerini fırçalama zamanı."
+text_en = "Time to brush your teeth."
+
+[[card]]
+id = "night-pyjamas"
+moment = "night"
+kind = "calm"
+emoji = "🌙"
+text_tr = "Pijamalarını giy, yatağın seni bekliyor."
+text_en = "Put on your pyjamas, your bed is waiting."
+
+[[card]]
+id = "night-bedtime-book"
+moment = "night"
+kind = "read"
+emoji = "📚"
+text_tr = "Yatarken okumak için bir kitap seç."
+text_en = "Choose a book to read at bedtime."
+
+[[card]]
+id = "night-best-thing"
+moment = "night"
+kind = "talk"
+emoji = "💬"
+text_tr = "Bugün en çok neyi sevdin? Ailenden birine anlat."
+text_en = "What did you like best today? Tell someone in your family."
+
+[[card]]
+id = "night-toys"
+moment = "night"
+kind = "calm"
+emoji = "🧸"
+text_tr = "Oyuncaklarına iyi geceler de."
+text_en = "Say good night to your toys."
+bands = ["4-7"]
+
+[[card]]
+id = "night-breaths"
+moment = "night"
+kind = "calm"
+emoji = "🌬️"
+text_tr = "Üç kez derin nefes al, yavaşça ver."
+text_en = "Take three deep breaths and let them out slowly."
+
+[[card]]
+id = "night-clothes"
+moment = "night"
+kind = "help"
+emoji = "👕"
+text_tr = "Yarın giyeceğin kıyafetleri hazırla."
+text_en = "Get tomorrow's clothes ready."
+bands = ["8-10"]
+
+# ---------------------------------------------------------------- the break
+
+[[card]]
+id = "break-jump"
+moment = "break"
+kind = "move"
+emoji = "🦘"
+text_tr = "Olduğun yerde on kere zıpla."
+text_en = "Jump ten times on the spot."
+
+[[card]]
+id = "break-reach"
+moment = "break"
+kind = "move"
+emoji = "🙆"
+text_tr = "Kollarını yukarı uzat, tavana dokunmaya çalış."
+text_en = "Stretch your arms up and try to touch the ceiling."
+
+[[card]]
+id = "break-one-foot"
+moment = "break"
+kind = "move"
+emoji = "🦩"
+text_tr = "Bir ayağının üstünde beşe kadar say, sonra diğer ayak."
+text_en = "Stand on one foot and count to five, then the other foot."
+
+[[card]]
+id = "break-shoulders"
+moment = "break"
+kind = "move"
+emoji = "🔄"
+text_tr = "Omuzlarını beş kere öne, beş kere arkaya çevir."
+text_en = "Roll your shoulders forwards five times, then back five times."
+
+[[card]]
+id = "break-far-look"
+moment = "break"
+kind = "eyes"
+emoji = "👀"
+text_tr = "Pencereden en uzaktaki şeye bak ve ona kadar say."
+text_en = "Look at the farthest thing out of the window and count to ten."
+
+[[card]]
+id = "break-breaths"
+moment = "break"
+kind = "calm"
+emoji = "😌"
+text_tr = "Gözlerini kapat, üç kez derin nefes al."
+text_en = "Close your eyes and take three deep breaths."
+
+[[card]]
+id = "break-cat"
+moment = "break"
+kind = "move"
+emoji = "🐱"
+text_tr = "Bir kedi gibi uzun uzun gerin."
+text_en = "Have a long stretch, like a cat."
+
+[[card]]
+id = "break-green"
+moment = "break"
+kind = "eyes"
+emoji = "🟢"
+text_tr = "Odada yeşil renkli üç şey bul."
+text_en = "Find three green things in the room."
+
+[[card]]
+id = "break-palms"
+moment = "break"
+kind = "eyes"
+emoji = "👐"
+text_tr = "Ellerini birbirine sürt, ısınınca gözlerinin üstüne koy."
+text_en = "Rub your hands together and rest them over your eyes."
+
+[[card]]
+id = "break-tree"
+moment = "break"
+kind = "move"
+emoji = "🌳"
+text_tr = "Bir ağaç gibi dur: tek ayak, kollar yukarı."
+text_en = "Stand like a tree: on one foot, arms up high."
+
+[[card]]
+id = "break-steps"
+moment = "break"
+kind = "move"
+emoji = "🚶"
+text_tr = "Olduğun yerde yirmi adım yürü."
+text_en = "Walk twenty steps on the spot."
+
+[[card]]
+id = "break-circle"
+moment = "break"
+kind = "eyes"
+emoji = "⭕"
+text_tr = "Gözlerinle havaya büyük bir daire çiz."
+text_en = "Draw a big circle in the air with your eyes."
+
+[[card]]
+id = "break-water"
+moment = "break"
+kind = "calm"
+emoji = "💧"
+text_tr = "Bir bardak su iç."
+text_en = "Drink a glass of water."

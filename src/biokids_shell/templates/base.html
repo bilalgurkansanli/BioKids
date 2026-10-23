@@ -10,7 +10,8 @@
    tokens.css turns the attributes into token overrides, display.css fits the
    tiles around the larger words. #}
 <html lang="{{ locale }}" data-text-size="{{ appearance.text_size }}"
-      data-contrast="{{ appearance.contrast }}" data-font="{{ appearance.font }}">
+      data-contrast="{{ appearance.contrast }}" data-font="{{ appearance.font }}"
+      data-motion="{{ appearance.motion }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -70,6 +71,33 @@
           <span class="notice__ring-unit">{{ _('shell.minutes_unit') }}</span>
         </span>
       </div>
+      {# The last round (D-230): on the one-minute warning, once a day, where
+         the parent allows one. shell.js shows it only when /state offers one;
+         the daemon decides again when it is pressed. #}
+      <button class="notice__finish" id="notice-finish" type="button" hidden
+              {% if young %}data-speak="{{ _('shell.finishup.button') }}"{% endif %}>
+        <span class="notice__finish-flag" aria-hidden="true">🏁</span>
+        <span class="notice__finish-text">{{ _('shell.finishup.button') }}</span>
+        <span class="notice__finish-more" id="notice-finish-more"></span>
+      </button>
+    </div>
+  </div>
+
+  {# A parent's "well done" or note (D-233): over whatever is on the screen,
+     until "Tamam", or for a quarter of a minute. Live when the child is here;
+     the home screen shows the ones waiting from while they were away. #}
+  <div class="note-card" id="note-card" role="dialog" aria-modal="true"
+       aria-labelledby="note-card-title" data-kind="praise" hidden>
+    <div class="note-card__stage">
+      <div class="note-card__character" aria-hidden="true">
+        {{ characters.zio|expression('happy')|safe if characters.zio else '' }}
+      </div>
+      <span class="note-card__emoji" aria-hidden="true" id="note-card-emoji">⭐</span>
+      <p class="note-card__title" id="note-card-title"></p>
+      <p class="note-card__text" id="note-card-text" hidden></p>
+      <button class="big-btn big-btn--ok" id="note-card-ok" type="button">
+        {{ _('shell.note.ok') }}
+      </button>
     </div>
   </div>
 

@@ -172,7 +172,9 @@ class SessionRelay:
             await self._pause
 
     async def handle(self, event: Event) -> None:
-        if event.kind == EventKind.WARNING:
+        if event.kind in (EventKind.WARNING, EventKind.PARENT_NOTE):
+            # A parent's "well done" or note (D-233) comes in front of the app
+            # for the same few seconds as a warning: it is for now.
             # A task, so that the SPEAK that follows straight after is relayed
             # now rather than when the pause is over.
             if self._pause is None or self._pause.done():

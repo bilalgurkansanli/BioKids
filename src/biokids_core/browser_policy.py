@@ -154,8 +154,9 @@ def kiosk_policy(
         "BrowserGuestModeEnabled": False,
         "BrowserAddPersonEnabled": False,
         # The microphone: the launcher's own page may use it - for press-and-
-        # speak, and only while the child holds the button (D-166) - and no
-        # site, app page or extension may. No prompt either way.
+        # speak (D-166) and Sesim's recordings (D-240), each only while the
+        # child holds the button - and no site, app page or extension may. No
+        # prompt either way.
         "AudioCaptureAllowed": False,
         "AudioCaptureAllowedUrls": [f"http://{o}" for o in origins],
         "VideoCaptureAllowed": False,

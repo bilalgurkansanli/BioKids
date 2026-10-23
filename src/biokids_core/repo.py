@@ -32,6 +32,7 @@ from biokids_core.db.models import (
     Family,
     Parent,
     Policy,
+    ReadingItem,
     Setting,
     UsageEvent,
     utcnow,
@@ -207,6 +208,8 @@ def load_policy(
         earn_idle_pause_min=row.earn_idle_pause_min,
         earn_spendable_general=row.earn_spendable_general,
         category_limits_min=load_category_limits(session, child.id),
+        finish_up_min=max(0, row.finish_up_min or 0),
+        learn_first_min=max(0, row.learn_first_min or 0),
         voice_enabled=row.voice_enabled,
         filter_mode=_enum_or(FilterMode, row.filter_mode, FilterMode.ALLOWLIST),
         assistant_enabled=bool(row.assistant_enabled),
@@ -579,6 +582,46 @@ def english_progress(session: Session, child_id: int) -> dict[str, english.ItemS
         (row.item, row.box, row.due, row.first_day)
         for row in session.scalars(select(EnglishItem).where(EnglishItem.child_id == child_id))
     )
+
+
+def reading_progress(session: Session, child_id: int) -> dict[str, english.ItemState]:
+    """A child's boxes in the reading corner (D-241), by item."""
+    return english.states(
+        (row.item, row.box, row.due, row.first_day)
+        for row in session.scalars(select(ReadingItem).where(ReadingItem.child_id == child_id))
+    )
+
+
+def record_reading_answer(
+    session: Session, child_id: int, item: str, right: bool, today: dt.date
+) -> english.ItemState | None:
+    """One answer in a reading lesson: the item's box moves, as in English."""
+    from biokids_core import reading
+
+    if not reading.is_item(item):
+        return None
+    row = session.get(ReadingItem, (child_id, item))
+    before = english.ItemState(row.box, row.due, row.first_day) if row is not None else None
+    after = english.answered(before, right, today)
+    assert after.due is not None and after.first_day is not None
+    if row is None:
+        row = ReadingItem(
+            child_id=child_id,
+            item=item,
+            first_day=after.first_day,
+            due=after.due,
+            last_day=today,
+        )
+        session.add(row)
+    row.box = after.box
+    row.due = after.due
+    row.last_day = today
+    if right:
+        row.right = (row.right or 0) + 1
+    else:
+        row.wrong = (row.wrong or 0) + 1
+    session.flush()
+    return after
 
 
 def record_english_answer(

@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}, {app}
+# A kind of app's time for today ran out, and the app was closed (D-228). {app}: its name.
+Your time for {app} is up for today, {name}. You can pick something else.
+That's all for this one today. Let's pick something else.
+That's enough of that for today, so I closed it. Pick something else from the home screen.

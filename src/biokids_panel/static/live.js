@@ -77,17 +77,52 @@
     }
   }
 
+  /* A parent writing a note or listening to a child's recording (D-233,
+   * D-240) is in the middle of something: the cards wait for them. */
+  var waitingReload = null;
+
+  function cardsBusy(target) {
+    var active = document.activeElement;
+    if (active && target.contains(active) && /^(TEXTAREA|INPUT|SELECT)$/.test(active.tagName)) {
+      return true;
+    }
+    var busy = false;
+    Array.prototype.forEach.call(target.querySelectorAll("audio"), function (audio) {
+      if (!audio.paused) busy = true;
+    });
+    Array.prototype.forEach.call(target.querySelectorAll("textarea"), function (text) {
+      if (text.value.trim()) busy = true;
+    });
+    return busy;
+  }
+
   function reloadCards() {
     /* For anything structural — a lock screen appearing, a child logging in —
      * ask the server for the rendered cards rather than rebuilding them here.
      * The template is the single description of what a card looks like. */
+    var target = document.getElementById("cards");
+    if (target && cardsBusy(target)) {
+      window.clearTimeout(waitingReload);
+      waitingReload = window.setTimeout(reloadCards, 15000);
+      return;
+    }
     fetch("/today/cards", { credentials: "same-origin" })
       .then(function (response) {
         return response.ok ? response.text() : null;
       })
       .then(function (html) {
         var target = document.getElementById("cards");
-        if (html && target) target.innerHTML = html;
+        if (!html || !target || cardsBusy(target)) return;
+        /* What the parent had opened stays open. */
+        var open = [];
+        Array.prototype.forEach.call(target.querySelectorAll("details[data-keep]"), function (d) {
+          if (d.open) open.push(d.getAttribute("data-keep"));
+        });
+        target.innerHTML = html;
+        open.forEach(function (key) {
+          var again = target.querySelector('details[data-keep="' + key + '"]');
+          if (again) again.open = true;
+        });
       })
       .catch(function () {
         /* Offline. The page stays as it was, which is the right outcome. */

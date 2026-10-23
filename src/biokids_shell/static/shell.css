@@ -612,6 +612,38 @@ svg {
 
 .notice__ring-track { fill: none; stroke: var(--line); stroke-width: 12; }
 
+/* The last round (D-230): one big button under the ring, green because it is a
+ * yes, with the flag a child who cannot read knows from games. */
+.notice__finish {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 84px;
+  padding: 0 var(--sp-6);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--ok);
+  color: #fff;
+  font: inherit;
+  font-size: 1.6rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-2);
+  cursor: pointer;
+}
+
+.notice__finish[hidden] { display: none; }
+.notice__finish:disabled { opacity: .6; }
+.notice__finish-flag { font-size: 2.2rem; line-height: 1; }
+.notice__finish-more {
+  padding: 2px 12px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, .22);
+  font-size: 1.2rem;
+}
+
+.tile-small--finish { border-color: var(--ok); }
+.tile-small__more { font-weight: 700; color: var(--ok); }
+
 .notice__ring-value {
   fill: none;
   stroke: var(--notice-accent);
@@ -1102,3 +1134,214 @@ svg {
   .open-app.is-opening,
   .daily__go.is-opening { animation: none; }
 }
+
+/* Games waiting for the day's learning (D-232): the tile is quieter, and says
+ * how much is still to go; the calm screen shows it as a bar that fills. */
+.tile--waiting { opacity: .72; }
+.tile__badge {
+  margin-top: var(--sp-1);
+  padding: 2px 10px;
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.learn-bar {
+  width: min(28rem, 80vw);
+  height: 22px;
+  margin: var(--sp-4) auto;
+  border-radius: var(--r-pill);
+  background: var(--line);
+  overflow: hidden;
+}
+
+.learn-bar__done {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ok);
+}
+
+/* Şimdi ne yapsak? (D-231): the next thing to do, away from the screen. Big
+ * pictures a child who cannot read knows at once, the sentence beside them. */
+.offscreen {
+  margin-top: var(--sp-5);
+  width: min(40rem, 92vw);
+}
+
+.offscreen__title {
+  margin: 0 0 var(--sp-3);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.offscreen__cards {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.offscreen__card {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  text-align: start;
+}
+
+.offscreen__emoji {
+  flex: 0 0 auto;
+  font-family: var(--font-emoji);
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.offscreen__text {
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+/* A break's three moves sit side by side where there is room, so the screen
+ * never grows past a laptop's height; one under the other on a narrow one. */
+.offscreen--list { width: min(60rem, 94vw); }
+.offscreen--list .offscreen__cards { grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.offscreen--list .offscreen__card { flex-direction: column; text-align: center; }
+.offscreen--list .offscreen__text { font-size: 1.2rem; }
+
+.full--night .offscreen__card {
+  background: color-mix(in srgb, var(--surface) 88%, var(--bio-indigo));
+}
+
+/* A parent's "well done" or note (D-233): warm, over everything, one big
+ * "Tamam". The star for a well done, the envelope for a note. */
+.note-card {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-5);
+  background:
+    radial-gradient(circle at 50% 38%, #FFF1D6 0%, transparent 62%),
+    var(--bg);
+}
+
+.note-card[hidden] { display: none; }
+
+.note-card__stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  max-width: 40rem;
+  text-align: center;
+  animation: note-in .45s cubic-bezier(.2, .8, .2, 1);
+}
+
+.note-card__character { width: min(26vh, 190px); height: min(26vh, 190px); }
+.note-card__character svg { width: 100%; height: 100%; }
+
+.note-card__emoji {
+  font-family: var(--font-emoji);
+  font-size: 4.5rem;
+  line-height: 1;
+}
+
+.note-card[data-kind="praise"] .note-card__emoji { animation: note-star 1.6s ease-in-out infinite; }
+
+.note-card__title {
+  margin: 0;
+  font-size: clamp(1.8rem, calc(4vw * var(--font-scale)), 2.6rem);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.note-card__text {
+  margin: 0;
+  padding: var(--sp-4) var(--sp-5);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 4px solid var(--bio-coral);
+  box-shadow: var(--shadow-2);
+  font-size: clamp(1.4rem, calc(3vw * var(--font-scale)), 2rem);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+@keyframes note-in {
+  from { opacity: 0; transform: translateY(18px) scale(.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes note-star {
+  0%, 100% { transform: scale(1) rotate(0); }
+  50% { transform: scale(1.12) rotate(8deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-card__stage,
+  .note-card[data-kind="praise"] .note-card__emoji { animation: none; }
+}
+
+/* Birlikte modu (D-235): a grown-up is here; the ring stands still. */
+.together-chip {
+  justify-self: center;
+  margin: var(--sp-2) auto 0;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--ok) 16%, var(--surface));
+  border: 2px solid var(--ok);
+  font-size: 1.15rem;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.together-chip span { font-family: var(--font-emoji); }
+
+/* The child's birthday (D-236). */
+.birthday {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  margin: var(--sp-2) auto 0;
+  padding: var(--sp-2) var(--sp-5);
+  width: fit-content;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--bio-coral) 16%, var(--surface));
+  border: 2px solid var(--bio-coral);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.birthday__cake {
+  font-family: var(--font-emoji);
+  font-size: 2rem;
+  animation: birthday-bob 2.4s ease-in-out infinite;
+}
+
+@keyframes birthday-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* A calm screen (D-236): what a parent chooses for a child whom movement
+ * unsettles. Nothing moves, nothing pulses, nothing celebrates; the same
+ * screens and the same words. Like prefers-reduced-motion, chosen per child. */
+[data-motion="calm"] *,
+[data-motion="calm"] *::before,
+[data-motion="calm"] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+

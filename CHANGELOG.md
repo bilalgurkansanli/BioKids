@@ -13,6 +13,38 @@ Debian version, because that is what `apt policy biokids` shows.
 
 ## [Unreleased]
 
+An upgrade runs migration `4f6a2b9c1d7e`, after `biokids-admin backup-db` has copied the
+database: new columns with defaults that change nothing (`policy.finish_up_min` 3,
+`policy.learn_first_min` 0, `ledger_day.finish_up_s`, `child.calm_screen`, `child.birthday`)
+and three empty tables (`parent_note`, `shared_recording`, `reading_item`).
+
+### Added
+
+- **Son tur** (D-230): on the one-minute warning, once a day, "🏁 Bitireyim" gives the
+  parent's minutes (3 by default) to finish a level or a drawing. Today says so.
+- **Şimdi ne yapsak?** (D-231): the time-up, good-night, between-windows and break screens
+  suggest something to do away from the screen - three moves and rest for the eyes in a
+  break - and Zio says it.
+- **Önce öğren, sonra oyna** (D-232): games open after so many minutes of learning today.
+- **Aferin and notes** (D-233): one tap, or one sentence, from the panel to the child's
+  screen; the card says when it was seen.
+- **Bugün ne konuşalım?** (D-234): a few things to ask the child about this evening, on Today.
+- **Birlikte modu** (D-235): a parent at the computer with the child; nothing is counted.
+- **A birthday and a calm screen** (D-236), quick quota choices, and labels of their own on
+  the time screen.
+- **Koruma durumu** (D-237): everything that protects the child in one list under Ayarlar,
+  with a line on Today when something needs the parent, and a guide to protecting the
+  computer itself.
+- **Yedekle ve taşı** (D-238): the family's BioKids in one file sealed with the family's
+  passphrase, restored on a new computer behind that computer's passphrase. Every value
+  in the file is checked as the panel's forms check it, and a file never switches
+  protection off.
+- **Ekran önizlemesi** (D-239): the child's screen, drawn from the rules, in the panel.
+- **Sesim** (D-240): the child records a story or a song and hears it back; one can be sent
+  to the parent, who can listen to it for a week.
+- **Okuma köşesi** (D-241): learning to read Turkish in first grade's order, five sound
+  groups from letters to sentences, with a card in Analiz.
+
 ### Fixed
 
 - **Limits per kind of app and earned time work for the whole time an app is open**
@@ -22,9 +54,18 @@ Debian version, because that is what `apt policy biokids` shows.
   seconds, and the daemon looks up its kind itself, in the child's own apps.
 - **An app whose kind of time is used up is closed** (D-228), and the child sees the
   calm screen that says so. It used to keep running. Audited as `app_stopped`.
+- **Zio says the lines the daemon asked for** (D-229): earned minutes, a break beginning
+  and ending, and a closed app were silent, for want of a line file; `break_start` was
+  never even asked for.
+- The brightness slider starts where the screen is, not at full (D-236); switch-user and
+  shut-down read themselves aloud for the young band; the first-run screen says that a
+  refused search's words reach the family.
 
 ### Changed
 
+- IPC: new ops `send_note`, `together` (panel socket) and `finish_up`, `note_seen`,
+  `share_recording`, `reading_state`, `reading_answer` (shell socket); a new event
+  `parent_note`.
 - IPC: `report_activity` takes `unit`, the app's `biokids-app-*.scope`, and no longer
   reads `category`. A launcher still running the old code after an upgrade keeps
   working; its reports are looked up the new way, without a scope until it restarts.

@@ -65,6 +65,7 @@ from biokids_core.db.models import (
     EnglishItem,
     LedgerDay,
     Policy,
+    ReadingItem,
     UsageEvent,
     UsageHour,
     UsageTick,
@@ -240,6 +241,8 @@ class Facts:
     """Searches the browser refused and the parent was told of (D-222)."""
     english_new_words: int = 0
     """English words met for the first time on the days shown (D-225)."""
+    reading_new_letters: int = 0
+    """Letters met for the first time in the reading corner on the days shown (D-241)."""
     tracked_from: dt.date | None = None
     """The first day BioKids knew this child. Earlier days are not zeros."""
 
@@ -397,6 +400,17 @@ def load_facts(
             )
             if english.is_word(item)
         ),
+        reading_new_letters=sum(
+            1
+            for item in session.scalars(
+                select(ReadingItem.item).where(
+                    ReadingItem.child_id == child_id,
+                    ReadingItem.first_day >= shown.first,
+                    ReadingItem.first_day <= shown.last,
+                )
+            )
+            if "/letter-" in item
+        ),
         tracked_from=tracked_from,
     )
 
@@ -547,6 +561,8 @@ class Insights:
     """Days shown that earned a sticker in the child's album (D-211)."""
     english_new_words: int = 0
     """English words met for the first time on the days shown (D-225)."""
+    reading_new_letters: int = 0
+    """Letters met for the first time in the reading corner (D-241)."""
 
     @property
     def includes_today(self) -> bool:
@@ -561,6 +577,7 @@ class Insights:
             or self.assistant_alerts > 0
             or self.refused_searches > 0
             or self.english_new_words > 0
+            or self.reading_new_letters > 0
             or bool(self.sites)
         )
 
@@ -628,6 +645,7 @@ def summarize(facts: Facts, period: Period, span: Span, today: dt.date) -> Insig
         assistant_alerts=facts.assistant_alerts,
         refused_searches=facts.refused_searches,
         english_new_words=facts.english_new_words,
+        reading_new_letters=facts.reading_new_letters,
         sites=sites,
         more_sites=more_sites,
         hours=hours,
@@ -1092,6 +1110,20 @@ def highlights(ins: Insights, ctx: Context, limit: int = MAX_HIGHLIGHTS) -> list
                 suggestion="insights.s.english",
                 link=f"/insights?child={child}#english",
                 link_label="insights.english",
+            )
+        )
+
+    if ins.reading_new_letters:
+        found.append(
+            Highlight(
+                "insights.h.reading",
+                46,
+                "✏️",
+                Tone.GOOD,
+                {"count": ins.reading_new_letters},
+                suggestion="insights.s.reading",
+                link=f"/insights?child={child}#reading",
+                link_label="insights.reading",
             )
         )
 

@@ -1,0 +1,24 @@
+{#
+  Şimdi ne yapsak? (D-231): what to do away from the screen, on the screens that
+  end or pause it. One card at the end of the day and at night, a few moves in a
+  break. Zio says them, after the line the daemon already asked for: the voice
+  service queues, it never talks over itself. Chosen in biokids_core/offscreen.py
+  from cards people wrote; nothing on them leads back to a screen.
+#}
+{% if offscreen %}
+  <section class="offscreen{% if offscreen|length > 1 %} offscreen--list{% endif %}"
+           aria-labelledby="offscreen-title">
+    <h2 class="offscreen__title" id="offscreen-title">
+      {{ _('shell.offscreen.break_title') if offscreen|length > 1 else _('shell.offscreen.title') }}
+    </h2>
+    <ul class="offscreen__cards"
+        data-offscreen-say="{{ offscreen|map(attribute='text')|join(' ') }}">
+      {% for card in offscreen %}
+        <li class="offscreen__card" data-kind="{{ card.kind }}">
+          <span class="offscreen__emoji" aria-hidden="true">{{ card.emoji }}</span>
+          <span class="offscreen__text">{{ card.text }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}

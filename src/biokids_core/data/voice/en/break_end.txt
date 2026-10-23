@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}, {app}
+# The break is over.
+Break's over, {name}. You can carry on.
+All rested? Off you go, where you left off.
+The break is over. Welcome back.

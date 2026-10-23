@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}, {app}
+# The last round: once a day the child asks for a few minutes more (D-230). {minutes}: granted.
+Okay, {name}, {minutes} more minutes. Then we stop.
+All right, finish what you're doing. You have {minutes} minutes.
+Last round! We stop in {minutes} minutes.

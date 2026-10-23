@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {parent}
+# A parent tapped "Well done" in the panel (D-233). {parent}: their name.
+{parent} says well done, {name}!
+Well done, {name}! Your family is proud of you.
+Good news: a big well done just came for you!

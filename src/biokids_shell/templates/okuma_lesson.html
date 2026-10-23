@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ _('reading.title') }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="/static/okuma.css?v={{ asset_version }}">
+{% endblock %}
+
+{#
+  One reading lesson (D-241), step by step: a letter met, a sound found, a
+  syllable found, a word or a sentence read and its picture tapped. okuma.js
+  draws each step from the data below; Zio says what is to be heard, and reads
+  a word aloud only once the child has answered, so the reading is theirs.
+#}
+{% block body %}
+<div class="screen okuma okuma--lesson" data-band="{{ band }}">
+  <header class="okuma__head">
+    <a class="big-btn big-btn--quiet" href="/okuma"
+       {% if young %}data-speak="{{ _('reading.title') }}"{% endif %}>
+      <span aria-hidden="true">✏️</span> {{ _('reading.title') }}
+    </a>
+    <div class="okuma__bar" aria-hidden="true"><div class="okuma__bar-fill" id="okuma-progress"></div></div>
+    <span class="okuma__stars" aria-live="polite"><span aria-hidden="true">⭐</span> <span id="okuma-stars">0</span></span>
+  </header>
+  <main class="okuma__stage" id="okuma-stage" aria-live="polite">
+    <noscript><p>{{ _('english.needs_script') }}</p></noscript>
+  </main>
+</div>
+<script type="application/json" id="okuma-data">{{ lesson|tojson }}</script>
+<script src="/static/okuma.js?v={{ asset_version }}"></script>
+{% endblock %}

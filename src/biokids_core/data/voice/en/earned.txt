@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}, {app}
+# Minutes earned in a learning app (D-45). {minutes}: the minutes earned.
+Well done, {name}! You earned {minutes} minutes.
+Great work, you earned {minutes} more minutes.
+All that learning paid off: {minutes} more minutes for you.

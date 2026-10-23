@@ -164,6 +164,7 @@ def test_a_parents_appearance_is_kept_with_their_account(
         "text_size": "x-large",
         "high_contrast": True,
         "reading_font": False,
+        "calm": False,
     }
 
 
@@ -283,6 +284,7 @@ async def test_the_daemon_hands_the_childs_screen_to_the_launcher(
             "text_size": "large",
             "high_contrast": True,
             "reading_font": False,
+            "calm": False,
         }
     finally:
         await supervisor.stop()
@@ -492,3 +494,23 @@ def test_the_phone_menu_keeps_six_entries_at_a_larger_size() -> None:
     assert 'html[data-text-size="x-large"] .nav a' in narrow.group(1)
     assert "min-width: 0" in narrow.group(1)
     assert "flex-wrap: wrap" in _rule(css, ".topbar")
+
+
+# ------------------------------------------------------- a calm screen (D-236)
+
+
+def test_a_calm_screen_reaches_every_launcher_page(
+    launcher: tuple[TestClient, FakeShellDaemon],
+) -> None:
+    client, daemon = launcher
+    assert 'data-motion="normal"' in html_tag(client.get("/").text)
+    assert daemon.data is not None
+    daemon.data["appearance"] = {"text_size": "normal", "calm": True}
+    for page in ("/", "/start", "/shutdown"):
+        assert 'data-motion="calm"' in html_tag(client.get(page).text), page
+
+
+def test_the_calm_screen_stops_every_animation() -> None:
+    css = (Path(shell_app.__file__).parent / "static" / "shell.css").read_text(encoding="utf-8")
+    rule = css[css.index('[data-motion="calm"] *') :]
+    assert "animation: none !important" in rule and "transition: none !important" in rule

@@ -36,7 +36,7 @@ from biokids_core.clock import GuardedClock
 from biokids_core.ipc import EventKind
 from biokids_core.ledger import TickInput, TimeLedger
 from biokids_core.policy import BEDTIME_EVENT, bedtime_in, evaluate
-from biokids_core.types import Action, ActivityContext, Decision, SpeechRequest
+from biokids_core.types import Action, ActivityContext, Decision, Reason, SpeechRequest
 from biokids_daemon.access_requests import (
     REQUEST_EXPIRY,
     REQUEST_KINDS,
@@ -67,6 +67,9 @@ from biokids_daemon.notifier import Notifier
 from biokids_daemon.operations import OperationsMixin
 from biokids_daemon.sessions import UserPresence
 from biokids_daemon.views import ViewsMixin
+
+TOGETHER_WARN_SECONDS = 5 * 60
+"""Birlikte modu's end is said this long before (D-235)."""
 
 __all__ = [
     "ACTIVITY_TTL_SECONDS",
@@ -200,6 +203,9 @@ class Supervisor(
                 runtime.lock_attempts = previous.lock_attempts
                 runtime.earned_pending_s = previous.earned_pending_s
                 runtime.earned_announced_at = previous.earned_announced_at
+                runtime.together_until = previous.together_until
+                runtime.together_started_at = previous.together_started_at
+                runtime.together_warned = previous.together_warned
             fresh[child.id] = runtime
             by_user[child.unix_user] = child.id
 
@@ -223,12 +229,35 @@ class Supervisor(
         inputs: list[TickInput] = []
         presence: dict[int, UserPresence] = {}
         for runtime in self.children.values():
+            if runtime.together_until and not runtime.together_active(reading.boot):
+                self._end_together(runtime, reading.boot, actor="daemon")
+            elif (
+                runtime.together_active(reading.boot)
+                and not runtime.together_warned
+                and runtime.together_left(reading.boot) <= TOGETHER_WARN_SECONDS
+            ):
+                # The child should hear it coming, as they hear the day's end.
+                runtime.together_warned = True
+                self._speak(
+                    runtime,
+                    SpeechRequest(
+                        event="together_soon",
+                        vars={
+                            "name": runtime.display_name,
+                            "minutes": max(1, runtime.together_left(reading.boot) // 60),
+                        },
+                        expression="neutral",
+                    ),
+                )
             seen = self.watcher.presence(runtime.unix_user)
             presence[runtime.child_id] = seen
             inputs.append(
                 TickInput(
                     child_id=runtime.child_id,
-                    active=seen.active and not self.watcher.suspending,
+                    # With a parent at the computer (D-235) nothing is counted.
+                    active=seen.active
+                    and not self.watcher.suspending
+                    and not runtime.together_active(reading.boot),
                     idle=seen.idle,
                     category=runtime.category if runtime.activity_fresh(reading.boot) else None,
                     app_slug=runtime.app_slug if runtime.activity_fresh(reading.boot) else "",
@@ -256,8 +285,30 @@ class Supervisor(
                 self._on_earned(runtime, result.earned_seconds, reading.boot)
             if result.break_started:
                 self.bus.publish(EventKind.BREAK_STARTED, child_id=runtime.child_id)
+                # The ledger starts the break, so the engine sees it already
+                # running (BREAK_ACTIVE) and never asks for this line (D-229).
+                if runtime.policy is not None:
+                    self._speak(
+                        runtime,
+                        SpeechRequest(
+                            event="break_start",
+                            vars={
+                                "name": runtime.display_name,
+                                "minutes": runtime.policy.break_rest_min,
+                            },
+                            expression="sleepy",
+                        ),
+                    )
             if result.break_finished:
                 self.bus.publish(EventKind.BREAK_FINISHED, child_id=runtime.child_id)
+                self._speak(
+                    runtime,
+                    SpeechRequest(
+                        event="break_end",
+                        vars={"name": runtime.display_name},
+                        expression="happy",
+                    ),
+                )
             if result.penalty_finished:
                 self.bus.publish(EventKind.TIMEOUT_FINISHED, child_id=runtime.child_id)
 
@@ -265,16 +316,20 @@ class Supervisor(
             # The same freshness test the ledger got, so the engine does not keep
             # applying the limit of an app the child has already left.
             fresh = runtime.activity_fresh(reading.boot)
-            decision = evaluate(
-                runtime.policy,
-                state,
-                ActivityContext(
-                    app_slug=(runtime.app_slug or None) if fresh else None,
-                    category=runtime.category if fresh else None,
-                    app_allowed=True,
-                    session_active=seen.active,
+            decision = self._decided(
+                runtime,
+                evaluate(
+                    runtime.policy,
+                    state,
+                    ActivityContext(
+                        app_slug=(runtime.app_slug or None) if fresh else None,
+                        category=runtime.category if fresh else None,
+                        app_allowed=True,
+                        session_active=seen.active,
+                    ),
+                    reading.wall,
                 ),
-                reading.wall,
+                reading.boot,
             )
             decisions.append(decision)
 
@@ -358,6 +413,20 @@ class Supervisor(
             action="app_stopped",
             target=f"child:{runtime.child_id}",
             detail={"app": runtime.app_slug, "reason": decision.reason_code},
+        )
+        # Zio says why the game went (D-229): a window closing on its own,
+        # with no word, is what a child takes for the computer breaking.
+        self._speak(
+            runtime,
+            SpeechRequest(
+                # Games before the day's learning (D-232) is a different
+                # sentence: nothing ran out, something comes first.
+                event="learn_first"
+                if decision.reason_code == Reason.LEARN_FIRST
+                else "app_stopped",
+                vars={"name": runtime.display_name, "app": runtime.app_name},
+                expression="neutral",
+            ),
         )
         # Nothing in particular is in front now; the launcher's next report
         # says what is, and a report sampled before the stop is not believed.

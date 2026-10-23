@@ -1,0 +1,5 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}, {app}
+# Öğrenme uygulamasında kazanılan dakikalar (D-45). {minutes}: kazanılan dakika.
+Aferin {name}! {minutes} dakika kazandın.
+Harika çalıştın, {minutes} dakika kazandın.
+Öğrendikçe kazanıyorsun: {minutes} dakika daha senin.

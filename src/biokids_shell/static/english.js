@@ -13,6 +13,9 @@
 (function () {
   "use strict";
 
+  var finished = false;
+  /* Set once the lesson is over: no more "active" reports after it (D-232). */
+
   function post(path, body, type) {
     return fetch(path, {
       method: "POST",
@@ -283,6 +286,9 @@
   }
 
   function finish() {
+    /* A lesson that is over is not learning, however long its last card stays
+     * on the screen: the reports stop (D-232). */
+    finished = true;
     var bar = document.getElementById("lesson-progress");
     if (bar) bar.style.width = "100%";
     var row = el("div", "lesson-actions");
@@ -452,7 +458,7 @@
   /* While the page is in front, the corner's minutes are learning minutes:
    * the daemon trusts a report for ninety seconds, so every forty-five. */
   function active() {
-    if (document.visibilityState === "visible") post("/english/active", {});
+    if (!finished && document.visibilityState === "visible") post("/english/active", {});
   }
   active();
   window.setInterval(active, 45000);

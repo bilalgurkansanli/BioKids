@@ -479,6 +479,39 @@
       if (target) sayAloud(target.getAttribute("data-speak"));
     });
   }
+  /* The child's birthday (D-236): Zio says it once, the day it is. */
+  var birthday = document.querySelector("[data-birthday-say]");
+  if (birthday) {
+    window.setTimeout(function () {
+      sayAloud(birthday.getAttribute("data-birthday-say"));
+    }, 900);
+  }
+
+  /* Şimdi ne yapsak? (D-231): Zio says what to do next, for every age, a
+   * moment after the line the daemon asked for - the voice queues them. */
+  var nextThing = document.querySelector("[data-offscreen-say]");
+  if (nextThing) {
+    /* Once per card: the end screens reload as the countdown and the lock
+     * arrive, and the child should hear the suggestion once, not each time. */
+    var thing = nextThing.getAttribute("data-offscreen-say");
+    var heard = null;
+    try {
+      heard = window.sessionStorage.getItem("biokids-offscreen-said");
+    } catch (err) {
+      heard = null;
+    }
+    if (heard !== thing) {
+      try {
+        window.sessionStorage.setItem("biokids-offscreen-said", thing);
+      } catch (err) {
+        /* Without storage it may be said twice; never not at all. */
+      }
+      window.setTimeout(function () {
+        sayAloud(thing);
+      }, 1500);
+    }
+  }
+
   var spoken = document.querySelector("[data-speak-on-load]");
   if (spoken) {
     var parts = [];
@@ -604,8 +637,73 @@
     return true;
   }
 
+  /* The last round (D-230). On the one-minute warning the page asks /state
+   * whether one is due - the parent's minutes, once a day, while the quota is
+   * what ends the day - and shows "Bitireyim" if so. A tap asks the daemon,
+   * which decides again; the answer replaces the sentence, and the screen
+   * stays a moment longer so the child sees that it worked. */
+  var finishButton = document.getElementById("notice-finish");
+  var finishMore = document.getElementById("notice-finish-more");
+
+  function offerFinishUp() {
+    if (!finishButton) return;
+    fetch("/state", { cache: "no-store", credentials: "same-origin" })
+      .then(function (response) {
+        return response.ok ? response.json() : null;
+      })
+      .then(function (data) {
+        var offer = data && data.finish_up ? Number(data.finish_up.offer_seconds) || 0 : 0;
+        if (offer <= 0 || !notice || notice.hidden) return;
+        var strings = window.BIOKIDS_STRINGS || {};
+        var minutes = Math.round(offer / 60);
+        if (finishMore) {
+          finishMore.textContent = (strings.finishup_more || "+{minutes}").replace(
+            "{minutes}",
+            minutes,
+          );
+        }
+        finishButton.disabled = false;
+        finishButton.hidden = false;
+      })
+      .catch(function () {});
+  }
+
+  if (finishButton) {
+    finishButton.addEventListener("click", function () {
+      finishButton.disabled = true;
+      fetch("/finish-up", {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      })
+        .then(function (response) {
+          return response.ok ? response.json() : null;
+        })
+        .then(function (result) {
+          finishButton.hidden = true;
+          if (!result || !result.ok) return;
+          var strings = window.BIOKIDS_STRINGS || {};
+          if (noticeLine) {
+            noticeLine.textContent = (strings.finishup_granted || "+{minutes}").replace(
+              "{minutes}",
+              result.minutes,
+            );
+          }
+          if (notice) notice.setAttribute("data-level", "info");
+          window.clearTimeout(noticeTimer);
+          noticeTimer = window.setTimeout(hideNotice, 2500);
+        })
+        .catch(function () {
+          finishButton.hidden = true;
+        });
+    });
+  }
+
   function hideNotice() {
     if (!notice) return;
+    if (finishButton) finishButton.hidden = true;
     notice.classList.remove("is-visible");
     speakingFaces(false);
     window.setTimeout(function () {
@@ -638,6 +736,80 @@
     window.setTimeout(ask, 300);
   }
 
+  /* ------------------------------------------------- a parent's notes */
+
+  /* D-233: a "well done" or one sentence from a parent, shown over whatever is
+   * on the screen. Live from the event stream, or waiting in the home page from
+   * while the child was away; one at a time, each marked seen as it shows. Zio
+   * says a waiting "well done" and every note; a live "well done" is already
+   * being said by the daemon's own line. */
+  var noteCard = document.getElementById("note-card");
+  var noteQueue = [];
+  var noteTimer = null;
+
+  function noteText(withName, nameless, from) {
+    var strings = window.BIOKIDS_STRINGS || {};
+    return from ? (strings[withName] || "").replace("{from}", from) : strings[nameless] || "";
+  }
+
+  function showNextNote() {
+    if (!noteCard || !noteCard.hidden || !noteQueue.length) return;
+    var entry = noteQueue.shift();
+    var note = entry.note;
+    var praise = note.kind === "praise";
+    var title = praise
+      ? noteText("note_praise", "note_praise_nameless", note.from)
+      : noteText("note_from", "note_from_nameless", note.from);
+    noteCard.setAttribute("data-kind", praise ? "praise" : "note");
+    document.getElementById("note-card-emoji").textContent = praise ? "⭐" : "💌";
+    document.getElementById("note-card-title").textContent = title;
+    var body = document.getElementById("note-card-text");
+    body.textContent = praise ? "" : note.text || "";
+    body.hidden = praise;
+    noteCard.hidden = false;
+    if (!praise || !entry.live) sayAloud(praise ? title : title + " " + (note.text || ""));
+    if (note.id) {
+      fetch("/notes/" + encodeURIComponent(note.id) + "/seen", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      }).catch(function () {});
+    }
+    window.clearTimeout(noteTimer);
+    noteTimer = window.setTimeout(hideNote, 15000);
+  }
+
+  function hideNote() {
+    if (!noteCard) return;
+    noteCard.hidden = true;
+    window.clearTimeout(noteTimer);
+    window.setTimeout(showNextNote, 600);
+  }
+
+  function queueNote(note, live) {
+    if (!note) return;
+    for (var i = 0; i < noteQueue.length; i += 1) {
+      if (noteQueue[i].note.id === note.id) return;
+    }
+    noteQueue.push({ note: note, live: live });
+    showNextNote();
+  }
+
+  if (noteCard) {
+    document.getElementById("note-card-ok").addEventListener("click", hideNote);
+    var waiting = document.getElementById("waiting-notes");
+    if (waiting) {
+      try {
+        JSON.parse(waiting.textContent).forEach(function (note) {
+          queueNote(note, false);
+        });
+      } catch (err) {
+        /* A note that cannot be read is one fewer note, never a broken page. */
+      }
+    }
+  }
+
   /* -------------------------------------------------------------- events */
 
   function connect() {
@@ -656,7 +828,9 @@
       if (!data) return;
       updateRing(data.remaining_seconds || 0);
       var minutes = data.minutes || 0;
-      if (!showNotice(minutes, data.remaining_seconds || 0, !!data.bedtime)) {
+      var shown = showNotice(minutes, data.remaining_seconds || 0, !!data.bedtime);
+      if (shown && minutes <= 1) offerFinishUp();
+      if (!shown) {
         showBanner(
           (window.BIOKIDS_STRINGS && window.BIOKIDS_STRINGS.warning
             ? window.BIOKIDS_STRINGS.warning
@@ -704,9 +878,16 @@
      * calm screen says so, as it does for a tap on such an app. */
     source.addEventListener("blocked", function (event) {
       var data = parse(event) || {};
+      /* Zio is already saying why (D-229): the page stays quiet. */
       window.location.href =
         "/blocked?reason=" + encodeURIComponent(data.reason_code || "") +
-        "&slug=" + encodeURIComponent(data.app || "");
+        "&slug=" + encodeURIComponent(data.app || "") + "&said=1";
+    });
+
+    /* A parent's "well done" or note (D-233), live. */
+    source.addEventListener("parent_note", function (event) {
+      var data = parse(event);
+      queueNote(data && data.note, true);
     });
 
     /* A parent answered (D-173). The banner always; Zio or Sio says it too

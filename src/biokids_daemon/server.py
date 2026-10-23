@@ -45,6 +45,8 @@ except ImportError:  # pragma: no cover - the Windows development host
 log = logging.getLogger(__name__)
 
 MAX_GRANT_SECONDS = 12 * 3600
+TOGETHER_MAX_MINUTES = 4 * 60
+"""Birlikte modu (D-235) is an afternoon at most; a longer one is a typo."""
 """The most one grant may add. A day has no use for more."""
 MAX_TIMEOUT_MINUTES = 24 * 60
 
@@ -229,6 +231,8 @@ class DaemonServer:
             Op.GET_STATUS: self._get_status,
             Op.GET_CHILD: self._get_child,
             Op.GRANT_TIME: self._grant_time,
+            Op.SEND_NOTE: self._send_note,
+            Op.TOGETHER: self._together,
             Op.LOCK_NOW: self._lock_now,
             Op.LOGOUT_NOW: self._logout_now,
             Op.POWEROFF_NOW: self._poweroff_now,
@@ -278,6 +282,34 @@ class DaemonServer:
         actor = str(request.args.get("actor", "parent"))
         data = await self.supervisor.grant_time(child_id, seconds, actor)
         return Response(id=request.id, ok=True, data=data)
+
+    async def _together(self, request: Request) -> Response:
+        child_id = _int_arg(request, "child_id")
+        minutes = _int_arg(request, "minutes", default=60)
+        actor = str(request.args.get("actor", "parent"))
+        if minutes <= 0:
+            self.supervisor.stop_together(child_id, actor)
+            return Response(id=request.id, ok=True, data={"child_id": child_id})
+        if minutes > TOGETHER_MAX_MINUTES:
+            return Response.failure(request.id, "error.invalid_input")
+        data = await self.supervisor.start_together(child_id, minutes, actor)
+        return Response(id=request.id, ok=True, data=data)
+
+    async def _send_note(self, request: Request) -> Response:
+        child_id = _int_arg(request, "child_id")
+        raw_parent = request.args.get("parent_id")
+        try:
+            note_id = self.supervisor.send_note(
+                child_id,
+                str(request.args.get("kind", "")),
+                str(request.args.get("text", "")),
+                from_name=str(request.args.get("from_name", "")),
+                parent_id=int(raw_parent) if isinstance(raw_parent, int) else None,
+                actor=str(request.args.get("actor", "parent")),
+            )
+        except ValueError:
+            return Response.failure(request.id, "error.invalid_input")
+        return Response(id=request.id, ok=True, data={"note_id": note_id})
 
     async def _lock_now(self, request: Request) -> Response:
         child_id = _int_arg(request, "child_id")

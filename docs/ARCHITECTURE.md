@@ -389,6 +389,7 @@ Precedence, highest first:
 3. quota exhausted
 4. forced break due
 5. category limit exhausted
+   - 5b. games before the day's learning minutes (D-232)
 6. app not in the child's catalog
 7. URL blocked by filter
 8. allow
@@ -430,6 +431,9 @@ access_request(id, child_id, kind, url, minutes, created_at, status, decided_at,
 boot_epoch(id, boot_id, first_seen_wall, last_seen_wall, last_boot_offset)
 ledger_day(child_id, day, general_s, earned_s, granted_s, penalty_remaining_s, ...)
 usage_tick(child_id, day, category, app_slug, seconds)
+parent_note(id, child_id, parent_id, from_name, kind, text, created_at, shown_at)   -- D-233
+shared_recording(id, child_id, created_at, seconds, audio, heard_at)               -- D-240
+reading_item(child_id, item, box, due, first_day, right, wrong, last_day)          -- D-241
 usage_hour(child_id, day, hour, seconds)                 -- hour 0-23, local (D-206)
 usage_event(id, child_id, ts_wall, ts_boot, kind, payload_json)  -- "visit": {"host": …}
 ai_alert(id, child_id, ts, score, category, reason_key, text, notified, dismissed)
@@ -456,13 +460,13 @@ transaction; a failure is logged and tried again the next day. The windows are
 
 | Key | Default | Deletes |
 |---|---|---|
-| `activity_days` | 30 | `usage_event` (visited sites, ledger gaps), `ai_alert` and `usage_hour` (D-206) |
+| `activity_days` | 30 | `usage_event` (visited sites, ledger gaps), `ai_alert`, `usage_hour` (D-206) and `parent_note` (D-233) |
 | `usage_days` | 400 | `usage_tick`, `ledger_day`, and `day_override` rows that ended before (D-215) |
 | `audit_days` | 365 | `audit_log` |
 | `requests_days` | 90 | `access_request` |
 
-It also deletes `panel_session` rows a day past the idle timeout, and keeps only the 20
-newest `boot_epoch` rows.
+It also deletes `panel_session` rows a day past the idle timeout and `shared_recording`
+rows after seven days (D-240), and keeps only the 20 newest `boot_epoch` rows.
 
 ---
 

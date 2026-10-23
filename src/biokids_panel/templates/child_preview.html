@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ _('preview.title') }} · {{ child.display_name }}{% endblock %}
+
+{#
+  D-239: what the child's screen looks like with the rules as they are now -
+  their tiles, today's time, the day's card, a warning and the end of the day -
+  so a parent sees the result of a setting before the child does. Drawn here
+  from the database, never from the child's session: this is a picture of the
+  rules, not a view of the screen, and CONTRIBUTING's "no live screen
+  mirroring" stays true.
+#}
+{% block content %}
+  <p><a href="/children">← {{ _('nav.children') }}</a></p>
+  <h1><span aria-hidden="true">👀</span> {{ _('preview.title') }}: {{ child.display_name }}</h1>
+  <p class="muted">{{ _('preview.intro') }}</p>
+
+  <section class="preview" aria-label="{{ _('preview.home') }}">
+    <h2 class="preview__caption">{{ _('preview.home') }}</h2>
+    <div class="preview__screen preview__screen--{{ band }}">
+      <div class="preview__head">
+        <span class="preview__avatar" aria-hidden="true">{{ child.avatar|avatar }}</span>
+        <span class="preview__hello">{{ _('preview.hello', name=child.display_name) }}</span>
+        <span class="preview__ring" role="img"
+              aria-label="{{ _('preview.today_minutes', minutes=quota_minutes) }}">
+          <strong>{{ quota_minutes }}</strong> {{ _('shell.minutes_unit') }}
+        </span>
+      </div>
+      {% if daily %}
+        <div class="preview__daily">
+          <span aria-hidden="true">{{ daily.emoji or '💡' }}</span>
+          <span>{{ daily.text }}</span>
+        </div>
+      {% endif %}
+      {% if tiles %}
+        <ul class="preview__tiles">
+          {% for tile in tiles %}
+            <li class="preview__tile{% if tile.waiting %} preview__tile--waiting{% endif %}">
+              <span class="preview__tile-icon" aria-hidden="true">{{ tile.icon }}</span>
+              <span class="preview__tile-name">{{ tile.name }}</span>
+              {% if tile.waiting %}<span class="preview__badge">🔒 {{ _('shell.tile.learn_first', minutes=learn_first) }}</span>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">{{ _('shell.no_apps') }}</p>
+      {% endif %}
+    </div>
+    <a class="btn btn--quiet" href="/children/{{ child.id }}/apps">{{ _('preview.change_apps') }}</a>
+  </section>
+
+  <section class="preview" aria-label="{{ _('preview.warning') }}">
+    <h2 class="preview__caption">{{ _('preview.warning') }}</h2>
+    <div class="preview__screen preview__screen--notice">
+      <p class="preview__line">{{ warning_line }}</p>
+      {% if finish_up %}
+        <span class="preview__finish">🏁 {{ _('shell.finishup.button') }} · {{ _('shell.finishup.more', minutes=finish_up) }}</span>
+      {% endif %}
+    </div>
+    <p class="help">{{ _('preview.warning.help') }}</p>
+  </section>
+
+  <section class="preview" aria-label="{{ _('preview.end') }}">
+    <h2 class="preview__caption">{{ _('preview.end') }}</h2>
+    <div class="preview__screen preview__screen--end">
+      <p class="preview__line">{{ _('shell.timeup.title') }}</p>
+      <p class="small">{{ end_line }}</p>
+      {% for card in offscreen %}
+        <p class="preview__next"><span aria-hidden="true">{{ card.emoji }}</span> {{ card.text }}</p>
+      {% endfor %}
+    </div>
+    <a class="btn btn--quiet" href="/children/{{ child.id }}/time">{{ _('preview.change_time') }}</a>
+  </section>
+{% endblock %}

@@ -58,12 +58,26 @@ DEFAULT_EVENTS: Final = (
     "bedtime",
     "request_approved",
     "request_denied",
+    "earned",
+    "break_start",
+    "break_end",
+    "blocked",
+    "app_stopped",
+    "learn_first",
+    "finish_up",
+    "praise",
+    "together_start",
+    "together_soon",
+    "together_end",
 )
-"""What Phase 0 ships, and the night's warnings and good night (D-214). VOICE.md
-§5 lists more events for later phases; they need no code, only two more text
-files each."""
+"""What ships: Phase 0's lines, the night's warnings and good night (D-214), and
+the moments the daemon asked for long before anything said them - earned
+minutes, a break beginning and ending, a closed site - with the app a used-up
+kind of time closed, games waiting for the day's learning, and the last
+round a child asked for (D-229, D-230, D-232). A
+new event needs no code here, only two more text files."""
 
-PLACEHOLDERS: Final = ("name", "minutes", "app")
+PLACEHOLDERS: Final = ("name", "minutes", "app", "parent")
 """The substitutions a line may use. Anything else is dropped rather than shown."""
 
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")

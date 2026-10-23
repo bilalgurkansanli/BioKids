@@ -396,6 +396,34 @@ no opening ring.
 
 ---
 
+### 2.10 What the family touches added (D-229 to D-241)
+
+- **The one-minute warning** carries "🏁 Bitireyim +3 dk" when a last round is due
+  (D-230): green, under the ring, read aloud for 4–7; tapped, the sentence becomes "Son
+  tur! 3 dakika daha" and the screen holds a moment longer. The home screen's footer has
+  the same button in the day's last two minutes.
+- **The screens that end or pause the time** end with "Şimdi ne yapsak?": one card -
+  a big picture and one sentence - or, in a break, "Haydi biraz hareket!" and three
+  (D-231). Zio reads them after the daemon's own line.
+- **Game tiles waiting for the day's learning** are quieter and carry "🔒 10 dk
+  öğrenince" (D-232); a tap gets the calm screen with a bar that fills and one button,
+  "📚 Öğrenme uygulamaları". No ask button: it is a rule about order.
+- **A parent's "well done" or note** (D-233) comes over whatever is on the screen: Zio
+  happy, a star or an envelope, "Anne sana aferin dedi!" or "Anne yazdı:" and the
+  sentence in a bubble, one "Tamam". It goes by itself after a quarter of a minute.
+- **"👨‍👧 Birlikteyiz · süre sayılmıyor"** under the ring while a parent is with the child
+  (D-235); **"🎂 İyi ki doğdun Elif!"** on the birthday (D-236), said once that day.
+- **A calm screen** (D-236): nothing moves, pulses or celebrates; the same screens and
+  the same words.
+- **Sesim** (D-240): one big round coral button, "Basılı tut ve konuş", that turns red,
+  grows a little and counts the seconds while it listens; the recordings under it, each
+  with ▶, "💌 Büyüğüme gönder" and a bin that asks once (tap again within three seconds).
+- **Okuma** (D-241): the door is the five sound groups as a path, the met letters lit,
+  and "▶ Bugünün dersi". A lesson is one card at a time: the letter as big as the screen
+  allows, capital and small; or the instruction ("Dinle. Hangi harfle başlıyor?", "Oku ve
+  resmini bul.") with a 🔊 button and three big choices. Right is green and a star; wrong
+  is a shake and the sound once more.
+
 ## 3. Parent panel
 
 ### 3.1 Information architecture
@@ -726,6 +754,24 @@ and a highlight; there is no setting beyond the tile itself.
 Where the assistant is on, the corner also has **Sio ile İngilizce konuş** (D-226): the
 assistant's page with Sio on the left, speaking first in English, the child's words to
 tap under the box, and the same note that a parent may see what is said.
+
+### 3.12 What the family touches added to the panel (D-230 to D-239)
+
+- **Today's card** gains, each only when it applies: "🏁 son turunu kullandı", "💛
+  Aferininizi gördü" or "Notunuz bekliyor", "👨‍👧 Birlikte modu açık" with Bitir, "🎂
+  Bugün doğum günü", and a child's recording with a player. Under the buttons, closed like
+  the special day: "👨‍👧 Birlikteyiz" (30 dk, 1 sa, 2 sa) and "💛 Bir şey gönder" (Aferin!,
+  or a note). The card still reads in three seconds: everything new is either a line
+  that is there only when something happened, or folded away.
+- **Bugün ne konuşalım?** (D-234) is a card of its own under the children, above the
+  week, for the evening.
+- **The time screen** has quick choices under each quota and, under Gelişmiş, the last
+  round (Kapalı, 2, 3, 5 dakika) and the learning-first minutes, each with its one line.
+- **Çocuklar** has "👀 Ekranını gör" for each child (D-239); **Düzenle** has the
+  birthday (two selects, both or neither) and, under Ekran, "Sakin ekran".
+- **Ayarlar** opens with **Koruma durumu** (D-237) and links to **Yedekle ve taşı**
+  (D-238); Today shows one line when something on the protection list needs the parent.
+- **Analiz** has a reading card beside the English one (D-241).
 
 ## 4. Writing rules
 

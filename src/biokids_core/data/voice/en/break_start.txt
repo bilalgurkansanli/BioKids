@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}, {app}
+# A break begins. {minutes}: how long it lasts.
+Let's take a little break, {name}. Rest your eyes for {minutes} minutes.
+Break time. We carry on in {minutes} minutes.
+Let's get up and stretch for a bit. Then you can pick up where you left off.

@@ -111,6 +111,10 @@ class Reason:
     BREAK_DUE: Final = "break.due"
     BREAK_ACTIVE: Final = "break.active"
     CATEGORY_EXHAUSTED: Final = "category.exhausted"
+    TOGETHER: Final = "together.active"
+    """A parent is at the computer with the child (D-235): nothing is counted."""
+    LEARN_FIRST: Final = "games.learn_first"
+    """Games open after today's learning minutes (D-232); not yet."""
     APP_NOT_ALLOWED: Final = "app.not_allowed"
     FILTER_BLOCKED: Final = "filter.blocked"
     SEARCH_BLOCKED: Final = "search.blocked"
@@ -276,6 +280,12 @@ class ChildPolicy:
 
     category_limits_min: dict[Category, int] = field(default_factory=dict)
 
+    finish_up_min: int = 3
+    """The last round (D-230): minutes a child may ask for once a day as the
+    day's time runs out. 0 is off."""
+    learn_first_min: int = 0
+    """Minutes of learning before games open today (D-232). 0 is no such rule."""
+
     voice_enabled: bool = True
     """Whether Zio and Sio speak for this child.
 
@@ -412,6 +422,9 @@ class LedgerState:
     usage: a grant must be worth ten minutes whether the child has used fifty
     minutes or two."""
     category_used_s: dict[Category, int] = field(default_factory=dict)
+    finish_up_s: int = 0
+    """The last round taken today (D-230): extra allowance, like a grant, and
+    the sign that it is not offered again until tomorrow."""
     penalty_remaining_s: int = 0
     break_remaining_s: int = 0
     seconds_since_break_s: int = 0

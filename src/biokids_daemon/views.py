@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from biokids_core import album, repo
+from biokids_core import album, notes, repo
 from biokids_core.appearance import Appearance
 from biokids_core.policy import (
     bedtime_in,
     evaluate,
+    finish_up_offer,
     general_allowance_seconds,
+    learn_first_left,
     no_limit_ring_seconds,
 )
 from biokids_core.types import ActivityContext, Category
@@ -29,15 +31,19 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
         for runtime in self.children.values():
             presence = self.watcher.presence(runtime.unix_user)
             state = self.ledger.state(runtime.child_id, day)
-            decision = evaluate(
-                runtime.policy,
-                state,
-                ActivityContext(
-                    app_slug=runtime.app_slug or None,
-                    category=runtime.category,
-                    session_active=presence.active,
+            decision = self._decided(
+                runtime,
+                evaluate(
+                    runtime.policy,
+                    state,
+                    ActivityContext(
+                        app_slug=runtime.app_slug or None,
+                        category=runtime.category,
+                        session_active=presence.active,
+                    ),
+                    reading.wall,
                 ),
-                reading.wall,
+                reading.boot,
             )
             policy = runtime.policy
             children.append(
@@ -61,6 +67,11 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
                     "quota_seconds": (policy.quota_minutes(day) * 60) if policy else 0,
                     "earned_seconds": state.earned_s,
                     "granted_seconds": state.granted_s,
+                    # The last round the child took today (D-230), for Today.
+                    "finish_up_seconds": state.finish_up_s,
+                    "birthday": self._birthday_today(runtime.child_id, day),
+                    # Birlikte modu (D-235): how long the parent is still "with" them.
+                    "together_seconds": runtime.together_left(reading.boot),
                     "penalty_seconds": state.penalty_remaining_s,
                     "break_seconds": state.break_remaining_s,
                     "allow": decision.allow,
@@ -89,6 +100,10 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
             },
         }
 
+    def _birthday_today(self, child_id: int, day: Any) -> bool:
+        child = repo.get_child(self.session, child_id)
+        return bool(child and child.birthday_on(day))
+
     def shell_state(self, child_id: int) -> dict[str, Any]:
         """Everything the child's launcher draws, in one call.
 
@@ -103,15 +118,14 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
         state = self.ledger.state(child_id, day)
         policy = runtime.policy
 
-        decision = evaluate(
-            policy,
-            state,
-            ActivityContext(
-                app_slug=runtime.app_slug or None,
-                category=runtime.category,
-                session_active=True,
-            ),
-            reading.wall,
+        context = ActivityContext(
+            app_slug=runtime.app_slug or None,
+            category=runtime.category,
+            session_active=True,
+        )
+        together = runtime.together_active(reading.boot)
+        decision = self._decided(
+            runtime, evaluate(policy, state, context, reading.wall), reading.boot
         )
 
         child = repo.get_child(self.session, child_id)
@@ -152,7 +166,9 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
             # Text size, contrast and the reading font a parent chose for this
             # child's screen (D-217); the launcher puts them on <html>.
             "appearance": (
-                Appearance.of(child.text_size, child.high_contrast, child.reading_font)
+                Appearance.of(
+                    child.text_size, child.high_contrast, child.reading_font, child.calm_screen
+                )
                 if child
                 else Appearance()
             ).as_dict(),
@@ -187,6 +203,35 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
                     and self.assistant_ready.get("voice")
                 ),
             },
+            # The last round (D-230): what "Bitireyim" would give now, and
+            # whether today's is taken. The launcher shows the button; the
+            # daemon decides again when it is pressed.
+            "finish_up": {
+                # Nothing to finish while nothing is counted (D-235).
+                "offer_seconds": 0
+                if together
+                else finish_up_offer(policy, state, context, reading.wall),
+                "used_seconds": state.finish_up_s,
+            },
+            # Games after today's learning (D-232): how much is still to go,
+            # so the game tiles can say it before a tap is refused.
+            "learn_first": {
+                "minutes": policy.learn_first_min if policy else 0,
+                # With a parent here the rules wait (D-235); the tiles say so.
+                "left_seconds": 0 if together else learn_first_left(policy, state),
+            },
+            # Whether Zio may speak for this child at all: the launcher's own
+            # read-aloud (cards, notes, labels) obeys the same switch as the
+            # daemon's lines (`base._speak`).
+            "voice_enabled": bool(
+                self.config.voice.enabled and (policy is None or policy.voice_enabled)
+            ),
+            # The day a parent gave as the child's birthday (D-236).
+            "birthday": bool(child and child.birthday_on(day)),
+            # Birlikte modu (D-235): a parent is here and nothing is counted.
+            "together_seconds": runtime.together_left(reading.boot),
+            # A parent's "well done" and notes waiting to be shown (D-233).
+            "notes": [notes.as_card(note) for note in notes.unseen(self.session, child_id)],
             "countdown_seconds": self._countdown_remaining(
                 runtime, day, reading.boot, reading.boot_id
             ),

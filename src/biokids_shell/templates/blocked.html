@@ -1,12 +1,31 @@
 {% extends "_full.html" %}
-{% set speak_on_load = true %}
+{% set speak_on_load = not said|default(false) %}
 {% set tone = 'full--warm' %}
 {% set persona = 'zio' %}
 {% set expression = 'concerned' %}
 {% block title %}{{ _('shell.blocked.title') }}{% endblock %}
 {% block inner %}
   {# Never the URL, never an error code, never the word "forbidden" (UX.md §2.5). #}
-  {% if reason == 'category.exhausted' %}
+  {% if reason == 'games.learn_first' %}
+  {# Games after the day's learning (D-232): nothing ran out, something comes
+     first. How far along the child is, as a bar a child can read. #}
+  {% set rule = state.learn_first if state and state.learn_first else {} %}
+  {% set needed = rule.minutes|default(0)|int %}
+  {% set left = ((rule.left_seconds|default(0)|int + 59) // 60)|int %}
+  <h1>{{ _('shell.blocked.learn_first.title') }}</h1>
+  <p>{{ _('shell.blocked.learn_first.body', minutes=needed, left=left) }}</p>
+  {% if needed > 0 %}
+    <div class="learn-bar" role="img"
+         aria-label="{{ _('shell.blocked.learn_first.body', minutes=needed, left=left) }}">
+      <span class="learn-bar__done" style="width: {{ (100 * (needed - left) / needed)|round|int }}%"></span>
+    </div>
+  {% endif %}
+  <div class="btn-row">
+    <a class="big-btn" href="/#learning">
+      <span aria-hidden="true">📚</span> {{ _('shell.blocked.learn_first.pick') }}
+    </a>
+  </div>
+  {% elif reason == 'category.exhausted' %}
   <h1>{{ _('shell.blocked.category.title') }}</h1>
   <p>{{ _('shell.blocked.category.body') }}</p>
   <div class="btn-row">

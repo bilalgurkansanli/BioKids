@@ -38,6 +38,31 @@
       </div>
     </fieldset>
 
+    {# D-236: only for Zio's "İyi ki doğdun", and only if the parent wants it.
+       The day and the month; the year is the one above. #}
+    <fieldset class="birthday-pick">
+      <legend>{{ _('child.birthday') }}</legend>
+      <div class="row row--wrap">
+        <label class="grow">{{ _('child.birthday.day') }}
+          <select name="birthday_day">
+            <option value="">—</option>
+            {% for d in range(1, 32) %}
+              <option value="{{ d }}" {% if birthday and birthday.day == d %}selected{% endif %}>{{ d }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="grow">{{ _('child.birthday.month') }}
+          <select name="birthday_month">
+            <option value="">—</option>
+            {% for m in range(1, 13) %}
+              <option value="{{ m }}" {% if birthday and birthday.month == m %}selected{% endif %}>{{ _('month.' ~ m) }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+      <span class="help">{{ _('child.birthday.help') }}</span>
+    </fieldset>
+
     <div class="field">
       <label for="locale">{{ _('child.locale') }}</label>
       <select id="locale" name="locale">
@@ -71,6 +96,11 @@
         <input type="checkbox" id="child-hc" name="high_contrast" {% if screen.high_contrast %}checked{% endif %}>
         <label for="child-hc">{{ _('appearance.contrast') }}
           <span class="help">{{ _('child.screen.contrast.help') }}</span></label>
+      </div>
+      <div class="checkline">
+        <input type="checkbox" id="child-calm" name="calm_screen" {% if screen.calm %}checked{% endif %}>
+        <label for="child-calm">{{ _('child.screen.calm') }}
+          <span class="help">{{ _('child.screen.calm.help') }}</span></label>
       </div>
       <div class="checkline">
         <input type="checkbox" id="child-font" name="reading_font" {% if screen.reading_font %}checked{% endif %}>

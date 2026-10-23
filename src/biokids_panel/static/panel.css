@@ -375,6 +375,29 @@ a {
 
 /* ------------------------------------------------------------------- forms */
 
+/* Quick choices under a number box (D-236): 30 dk, 1 sa, 1,5 sa, 2 sa. A tap
+ * fills the box; typing on a phone's number pad is the slow way. */
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.chip {
+  min-height: var(--target-older);
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip:active { transform: scale(.97); }
+
 .field {
   margin-bottom: var(--sp-4);
 }
@@ -1242,6 +1265,39 @@ td.num { white-space: nowrap; font-variant-numeric: tabular-nums; }
 }
 
 .special-line__text { font-weight: 600; }
+
+/* A line of what happened today on a child's card: the last round the child
+ * took (D-230), a "well done" sent (D-233). Quieter than a special day. */
+.together-line { background: color-mix(in srgb, var(--ok) 14%, var(--surface)); }
+
+.card-line--voice { background: color-mix(in srgb, var(--bio-indigo) 10%, var(--surface)); }
+.card-line--voice audio { width: 100%; margin-top: var(--sp-2); }
+.card-line__text { margin: 0; }
+
+.card-line--note { background: color-mix(in srgb, var(--bio-coral) 10%, var(--surface)); }
+
+/* D-233: "Aferin!" and a short note, under the card's buttons. */
+.send-pick form { margin-top: var(--sp-3); }
+.send-pick__praise { width: 100%; font-size: 1.1rem; }
+.send-pick__note { display: grid; gap: var(--sp-2); }
+.send-pick__note label { font-weight: 600; }
+.send-pick__note textarea {
+  width: 100%;
+  min-height: 4.5rem;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  font: inherit;
+  resize: vertical;
+}
+
+.card-line {
+  margin: var(--sp-2) 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--ok) 10%, var(--surface));
+  font-weight: 600;
+}
 .special-line form { display: flex; }
 .special-line .btn { flex: 0 0 auto; }
 
@@ -1395,3 +1451,93 @@ td.num { white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 .help summary { cursor: pointer; }
 .help p { margin-bottom: 0; }
+
+/* Koruma durumu (D-237): one line per check, what needs the parent first. */
+.health__list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+.health__item {
+  display: flex;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  border-left: 4px solid var(--line);
+  background: var(--surface);
+}
+.health__item--ok { border-left-color: var(--ok); }
+.health__item--info { border-left-color: var(--bio-indigo); }
+.health__item--warn { border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 8%, var(--surface)); }
+.health__item--bad { border-left-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
+.health__icon { font-size: 1.3rem; line-height: 1.4; }
+.health__title { margin: 0; font-weight: 700; }
+.health__text { margin: 0; color: var(--ink-soft); }
+.health__link { font-weight: 600; }
+
+/* D-239: the child's screen, drawn small, from the rules. Warm like the
+ * launcher, framed like a screen, never mistaken for the real one. */
+.preview { margin-bottom: var(--sp-5); }
+.preview__caption { font-size: 1.05rem; margin: 0 0 var(--sp-2); }
+.preview__screen {
+  padding: var(--sp-3);
+  border: 6px solid var(--ink);
+  border-radius: 18px;
+  background: #FBF7F2;
+  color: #221E1C;
+  box-shadow: var(--shadow-2);
+}
+.preview__head { display: flex; align-items: center; gap: var(--sp-2); }
+.preview__avatar { font-size: 1.8rem; }
+.preview__hello { flex: 1; font-weight: 700; font-size: 1.1rem; }
+.preview__ring {
+  padding: var(--sp-1) var(--sp-3);
+  border: 3px solid #2EA86A;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.preview__daily {
+  display: flex;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: 12px;
+  background: #FFF1D6;
+}
+.preview__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: var(--sp-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.preview__screen--8-10 .preview__tiles { grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr)); }
+.preview__tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--sp-2);
+  border-radius: 12px;
+  background: #fff;
+  text-align: center;
+  font-size: .85rem;
+  font-weight: 600;
+}
+.preview__tile-icon { font-size: 1.8rem; line-height: 1.1; }
+.preview__tile--waiting { opacity: .7; }
+.preview__badge { font-size: .7rem; color: #6B625C; }
+.preview__screen--notice,
+.preview__screen--end { text-align: center; }
+.preview__line { margin: var(--sp-2) 0; font-size: 1.3rem; font-weight: 700; }
+.preview__finish {
+  display: inline-block;
+  margin-top: var(--sp-2);
+  padding: var(--sp-1) var(--sp-4);
+  border-radius: 999px;
+  background: #2EA86A;
+  color: #fff;
+  font-weight: 700;
+}
+.preview__next { margin: var(--sp-2) 0 0; font-weight: 600; }
+
+/* D-241: the letters a child has met; the well-known ones bold. */
+.english-words__word.is-known { font-weight: 800; background: color-mix(in srgb, var(--ok) 18%, var(--surface)); }
+

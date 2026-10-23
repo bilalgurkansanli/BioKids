@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ _('backup.title') }} · {{ _('panel.title') }}{% endblock %}
+
+{#
+  Yedekle ve taşı (D-238). Two cards: take a backup, bring one back. Each says
+  in one line what it does, and what is not in the file (any PIN, passphrase or
+  mail setting), so a parent knows what to set up again on the new computer.
+#}
+{% block content %}
+  <p><a href="/settings">← {{ _('nav.settings') }}</a></p>
+  <h1><span aria-hidden="true">💾</span> {{ _('backup.title') }}</h1>
+  <p class="muted">{{ _('backup.intro') }}</p>
+
+  {% if error %}
+    <div class="notice notice--danger" role="alert">{{ error }}</div>
+  {% endif %}
+  {% if restored %}
+    <div class="notice notice--ok" role="status">
+      <div class="notice__title">{{ _('backup.restored.title') }}</div>
+      <p class="small">
+        {{ _('backup.restored.body', names=restored.children|join(', '), count=restored.children|length) }}
+      </p>
+      <p class="small">{{ _('backup.restored.next') }}</p>
+    </div>
+  {% endif %}
+
+  <section class="card" aria-labelledby="take-title">
+    <h2 id="take-title">{{ _('backup.take.title') }}</h2>
+    <p class="help">{{ _('backup.take.help') }}</p>
+    <p class="small muted">
+      {% if last %}{{ _('backup.take.last', day=last|when) }}{% else %}{{ _('backup.take.never') }}{% endif %}
+    </p>
+    {% if has_passphrase %}
+      <form method="post" action="/settings/backup">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <div class="field">
+          <label for="bk-pp">{{ _('auth.passphrase.title') }}</label>
+          <input id="bk-pp" name="passphrase" type="password" required autocomplete="current-password">
+          <span class="help">{{ _('backup.take.passphrase') }}</span>
+        </div>
+        <button class="btn btn--primary" type="submit">
+          <span aria-hidden="true">⬇️</span> {{ _('backup.take.button') }}
+        </button>
+      </form>
+    {% else %}
+      <div class="notice notice--warn">{{ _('backup.error.no_passphrase') }}</div>
+      <a class="btn" href="/settings#passphrase">{{ _('backup.set_passphrase') }}</a>
+    {% endif %}
+  </section>
+
+  <section class="card" aria-labelledby="restore-title">
+    <h2 id="restore-title">{{ _('backup.restore.title') }}</h2>
+    <p class="help">{{ _('backup.restore.help') }}</p>
+    <form method="post" action="/settings/backup/restore" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <div class="field">
+        <label for="bk-file">{{ _('backup.restore.file') }}</label>
+        <input id="bk-file" name="file" type="file" accept=".biokids" required>
+      </div>
+      <div class="field">
+        <label for="bk-this">{{ _('backup.restore.this_passphrase') }}</label>
+        <input id="bk-this" name="passphrase" type="password" required autocomplete="current-password">
+        <span class="help">{{ _('backup.restore.this_passphrase.help') }}</span>
+      </div>
+      <div class="field">
+        <label for="bk-old">{{ _('backup.restore.passphrase') }}</label>
+        <input id="bk-old" name="old_passphrase" type="password" autocomplete="off">
+        <span class="help">{{ _('backup.restore.passphrase.help') }}</span>
+      </div>
+      <button class="btn" type="submit">
+        <span aria-hidden="true">⬆️</span> {{ _('backup.restore.button') }}
+      </button>
+    </form>
+  </section>
+{% endblock %}

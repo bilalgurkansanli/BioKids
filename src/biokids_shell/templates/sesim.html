@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ _('sesim.title') }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="/static/sesim.css?v={{ asset_version }}">
+{% endblock %}
+
+{#
+  Sesim (D-240): the child holds the big button and tells a story or sings,
+  then hears it back. Their recordings stay in their own home; one goes to the
+  parent only when the child sends it. Pictures for a child who cannot read:
+  the microphone, a play triangle, a bin, an envelope.
+#}
+{% block body %}
+<div class="screen sesim" id="sesim"
+     data-max-seconds="{{ max_seconds }}"
+     data-strings="{{ strings_sesim|tojson|forceescape }}">
+  <header class="sesim__head">
+    <a class="big-btn big-btn--quiet sesim__home" href="/"
+       {% if young %}data-speak="{{ _('shell.cover.home') }}"{% endif %}>
+      <span aria-hidden="true">🏠</span> {{ _('shell.cover.home') }}
+    </a>
+    <h1 class="sesim__title"><span aria-hidden="true">🎙️</span> {{ _('sesim.title') }}</h1>
+  </header>
+
+  <main class="sesim__main">
+    <button class="sesim__record" id="sesim-record" type="button"
+            aria-describedby="sesim-hint"
+            {% if young %}data-speak="{{ _('sesim.hold') }}"{% endif %}>
+      <span class="sesim__record-icon" aria-hidden="true">🎙️</span>
+      <span class="sesim__record-label" id="sesim-label">{{ _('sesim.hold') }}</span>
+      <span class="sesim__timer" id="sesim-timer" hidden></span>
+    </button>
+    <p class="sesim__hint" id="sesim-hint">{{ _('sesim.hint', seconds=max_seconds) }}</p>
+    <p class="sesim__message" id="sesim-message" role="status" hidden></p>
+
+    {% if recordings %}
+      <ul class="sesim__list" id="sesim-list">
+        {% for rec in recordings %}
+          <li class="sesim__item" data-name="{{ rec.name }}">
+            <button class="sesim__play" type="button" data-play="{{ rec.name }}"
+                    aria-label="{{ _('sesim.play') }}">▶</button>
+            <span class="sesim__when">
+              <span class="sesim__avatar" aria-hidden="true">{{ state.avatar|avatar }}</span>
+              {{ rec.made.strftime('%d.%m %H:%M') }} · {{ _('sesim.seconds', seconds=(rec.seconds|round|int)) }}
+            </span>
+            <button class="sesim__share" type="button" data-share="{{ rec.name }}"
+                    {% if young %}data-speak="{{ _('sesim.share') }}"{% endif %}>
+              <span aria-hidden="true">💌</span> {{ _('sesim.share') }}
+            </button>
+            <button class="sesim__delete" type="button" data-delete="{{ rec.name }}"
+                    aria-label="{{ _('sesim.delete') }}">🗑️</button>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="sesim__empty" {% if young %}data-speak-on-load{% endif %}>
+        <p>{{ _('sesim.empty') }}</p>
+      </div>
+    {% endif %}
+    <audio id="sesim-audio" preload="none"></audio>
+  </main>
+</div>
+<script src="/static/sesim.js?v={{ asset_version }}" defer></script>
+{% endblock %}

@@ -79,6 +79,11 @@ day queued behind three cheerful ones, or have it dropped when the queue fills.
 
 EXPRESSION_BY_EVENT: Final[dict[str, str]] = {
     "earned": "happy",
+    "break_start": "sleepy",
+    "break_end": "happy",
+    "finish_up": "happy",
+    "praise": "happy",
+    "together_start": "happy",
     "blocked": "concerned",
     "bedtime": "sleepy",
     "bedtime_10": "sleepy",

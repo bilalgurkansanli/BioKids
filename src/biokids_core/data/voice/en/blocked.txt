@@ -1,0 +1,5 @@
+# One variant per line, picked at random. Placeholders: {name}, {minutes}, {app}
+# A site that cannot open.
+This page won't open, {name}. You can ask a grown-up.
+We can't open this page. You can ask a grown-up.
+This site is closed. Shall we pick something else?

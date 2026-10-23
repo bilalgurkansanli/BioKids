@@ -76,4 +76,17 @@ def _policy_snapshot(policy: Policy) -> dict[str, Any]:
         "enabled": policy.enabled,
         "break_enabled": policy.break_enabled,
         "earn_enabled": policy.earn_enabled,
+        "finish_up_min": policy.finish_up_min,
+        "learn_first_min": policy.learn_first_min,
     }
+
+
+def _minutes_or_zero(typed: str, most: int) -> int:
+    """A number of minutes a parent may leave empty, which means none."""
+    typed = typed.strip()
+    if not typed:
+        return 0
+    try:
+        return max(0, min(int(typed), most))
+    except ValueError:
+        return 0

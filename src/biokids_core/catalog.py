@@ -56,6 +56,55 @@ def resolve_program(program: str) -> str | None:
     return shutil.which(program, path=search)
 
 
+TILE_ICONS: Final[dict[str, str]] = {
+    "blocks": "🧩",
+    "brush": "🖌️",
+    "numbers": "🔢",
+    "keyboard": "⌨️",
+    "star": "⭐",
+    "palette": "🎨",
+    "penguin": "🐧",
+    "bubble": "🫧",
+    "tiles": "🀄",
+    "document": "📝",
+    "table": "📊",
+    "folder": "📁",
+    "school": "🏫",
+    "tv": "📺",
+    "cat": "🐱",
+    "book": "📚",
+    "encyclopedia": "📖",
+    "science": "🔬",
+    "ladybug": "🐞",
+    "robot": "🤖",
+    "video": "🎬",
+    "game": "🎮",
+    "earth": "🌍",
+    "satellite": "🛰️",
+    "potato": "🥔",
+    "memory": "🧠",
+    "jigsaw": "🖼️",
+    "map": "🗺️",
+    "turtle": "🐢",
+    "fractions": "🍕",
+    "chess": "♟️",
+    "diamond": "💎",
+    "piano": "🎹",
+    "globe": "🌐",
+    "speaker": "🔊",
+    "sun": "☀️",
+    "power": "⏻",
+    "gallery": "🏞️",
+    "abc": "🔤",
+    "mic": "🎙️",
+    "letters": "✏️",
+    "app": "🟦",
+}
+"""A catalogue icon's picture, on the child's tiles and in the panel's preview
+of them (D-239). Emoji rather than an icon set: they render at any size, need no asset
+pipeline, and a five-year-old reads them faster than a line drawing."""
+
+
 def program_installed(program: str) -> bool:
     """Is `program` on PATH or in Debian's games directories?"""
     return resolve_program(program) is not None

@@ -1,0 +1,5 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}, {app}
+# Mola bitti.
+Mola bitti {name}, devam edebilirsin.
+Dinlendin mi? Haydi, kaldığın yerden devam.
+Mola bitti. Yeniden hoş geldin.

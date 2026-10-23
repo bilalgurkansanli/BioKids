@@ -12,6 +12,7 @@ Precedence is fixed by `ARCHITECTURE.md` §4 and the order is load-bearing:
     3. quota exhausted
     4. forced break due
     5. category limit exhausted
+       ... and games before today's learning (D-232)
     6. app not in the child's catalog
     7. URL blocked by filter
     8. allow
@@ -49,11 +50,14 @@ __all__ = [
     "BEDTIME_EVENT",
     "BEDTIME_LEAD_SECONDS",
     "EVENING_STARTS",
+    "FINISH_UP_OFFERED_FROM_S",
     "bedtime_in",
     "day_left_seconds",
     "evaluate",
+    "finish_up_offer",
     "general_allowance_seconds",
     "is_evening",
+    "learn_first_left",
     "no_limit_ring_seconds",
     "remaining_seconds",
 ]
@@ -174,7 +178,7 @@ def evaluate(
             reason_code=Reason.BREAK_DUE,
             speak=SpeechRequest(
                 event="break_start",
-                vars={"minutes": policy.break_rest_min},
+                vars={"name": policy.display_name, "minutes": policy.break_rest_min},
                 expression="sleepy",
             ),
             remaining_seconds=remaining,
@@ -186,6 +190,16 @@ def evaluate(
             allow=False,
             action=Action.BLOCK,
             reason_code=Reason.CATEGORY_EXHAUSTED,
+            remaining_seconds=remaining,
+        )
+
+    # 5b — games before today's learning (D-232). After the limit on games,
+    #      which says more: a child out of game time is not told to learn first.
+    if ctx.category is Category.GAMES and learn_first_left(policy, state) > 0:
+        return Decision(
+            allow=False,
+            action=Action.BLOCK,
+            reason_code=Reason.LEARN_FIRST,
             remaining_seconds=remaining,
         )
 
@@ -269,10 +283,65 @@ def general_allowance_seconds(policy: ChildPolicy, state: LedgerState) -> int:
     The quota for this kind of day, plus whatever the parent granted by hand,
     plus earned minutes when they land here rather than in Games (D-45).
     """
-    base = policy.quota_minutes(state.day) * 60 + state.granted_s
+    base = policy.quota_minutes(state.day) * 60 + state.granted_s + state.finish_up_s
     if earned_lands_in_general(policy):
         base += min(state.earned_s, policy.earn_cap_min * 60)
     return base
+
+
+FINISH_UP_OFFERED_FROM_S: Final = 120
+"""The last round is offered in the day's last two minutes (D-230): from the
+one-minute warning, which is where a child hears that the end has come, with a
+minute to spare for a launcher that missed it."""
+
+
+def finish_up_offer(
+    policy: ChildPolicy | None,
+    state: LedgerState,
+    ctx: ActivityContext,
+    now_wall: dt.datetime,
+) -> int:
+    """Seconds the last round would give right now, or 0 (D-230).
+
+    A child may ask once a day, as the day's time runs out, for the few minutes
+    a parent allowed - to finish the level or the drawing that the end would cut
+    in half, which is the moment screen time turns into a quarrel. Offered only
+    where those minutes would buy something: the day's quota is what ends the
+    day, not a closing window, a used-up kind of app or a penalty, which minutes
+    of allowance cannot move. Once taken, not again until tomorrow.
+    """
+    if policy is None or not policy.enabled or policy.finish_up_min <= 0:
+        return 0
+    if state.finish_up_s > 0 or state.penalty_remaining_s > 0:
+        return 0
+    if not policy.window_open(now_wall):
+        return 0
+    quota_left = general_allowance_seconds(policy, state) - state.general_used_s
+    if not 0 < quota_left <= FINISH_UP_OFFERED_FROM_S:
+        return 0
+    window_left = policy.seconds_until_window_closes(now_wall)
+    if window_left is not None and window_left <= quota_left:
+        return 0
+    if (
+        ctx.category is not None
+        and _category_remaining(policy, state, ctx.category) <= quota_left
+    ):
+        return 0
+    return policy.finish_up_min * 60
+
+
+def learn_first_left(policy: ChildPolicy | None, state: LedgerState) -> int:
+    """Seconds of learning still to go before games open today (D-232); 0 when
+    they are open or there is no such rule.
+
+    A rule about order, not amount: earned time (D-45) gives more minutes for
+    learning, this one only says which comes first - what a parent means by
+    "no games before homework". The minutes are the ledger's learning minutes,
+    which count while a learning app is in front (D-228).
+    """
+    if policy is None or not policy.enabled or policy.learn_first_min <= 0:
+        return 0
+    return max(0, policy.learn_first_min * 60 - state.category_used(Category.LEARNING))
 
 
 def remaining_seconds(

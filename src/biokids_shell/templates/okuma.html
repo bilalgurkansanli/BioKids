@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ _('reading.title') }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="/static/okuma.css?v={{ asset_version }}">
+{% endblock %}
+
+{#
+  Okuma köşesi (D-241), its door: the five sound groups as a path, the letters
+  the child has met lit up, and one big button for today's lesson. A child who
+  cannot read yet hears the button.
+#}
+{% block body %}
+<div class="screen okuma" data-band="{{ band }}">
+  <header class="okuma__head">
+    <a class="big-btn big-btn--quiet" href="/"
+       {% if young %}data-speak="{{ _('shell.cover.home') }}"{% endif %}>
+      <span aria-hidden="true">🏠</span> {{ _('shell.cover.home') }}
+    </a>
+    <h1 class="okuma__title"><span aria-hidden="true">✏️</span> {{ _('reading.title') }}</h1>
+  </header>
+
+  <main class="okuma__main">
+    <ol class="okuma__path" aria-label="{{ _('reading.path') }}">
+      {% for group in groups %}
+        <li class="okuma__group{% if group.slug == current %} is-current{% endif %}{% if group.done %} is-done{% endif %}">
+          {% for letter in group.letters %}
+            <span class="okuma__letter{% if letter.met %} is-met{% endif %}"
+                  {% if not letter.met %}aria-hidden="true"{% endif %}>
+              {{ letter.upper if letter.met else '·' }}
+            </span>
+          {% endfor %}
+        </li>
+      {% endfor %}
+    </ol>
+
+    {% if steps %}
+      <a class="big-btn big-btn--ok okuma__start" href="/okuma/lesson"
+         {% if young %}data-speak="{{ _('reading.start') }}"{% endif %}>
+        <span aria-hidden="true">▶</span> {{ _('reading.start') }}
+      </a>
+    {% else %}
+      <div class="okuma__done" {% if young %}data-speak-on-load{% endif %}>
+        <p>{{ _('reading.done_today') }}</p>
+      </div>
+      {% if can_practise %}
+        <a class="big-btn okuma__start" href="/okuma/lesson?more=1"
+           {% if young %}data-speak="{{ _('reading.more') }}"{% endif %}>
+          <span aria-hidden="true">📖</span> {{ _('reading.more') }}
+        </a>
+      {% endif %}
+    {% endif %}
+    <p class="okuma__summary">{{ _('reading.summary', letters=summary.letters_met, total=summary.letters_total, words=summary.words_read) }}</p>
+  </main>
+</div>
+{% endblock %}

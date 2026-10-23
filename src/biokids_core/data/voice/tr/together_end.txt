@@ -1,0 +1,5 @@
+# Her satır bir seçenek; rastgele biri seçilir. Yer tutucular: {name}, {minutes}
+# Birlikte zaman bitti; süre yine sayılıyor (D-235).
+Birlikte zaman bitti {name}. Süren yine sayılıyor.
+Birlikte vakit bitti, saat yeniden çalışıyor.
+Birlikte zamanınız bitti. Süre kaldığı yerden devam ediyor.

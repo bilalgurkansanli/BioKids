@@ -56,15 +56,22 @@ class Appearance:
     text_size: str = DEFAULT_TEXT_SIZE
     high_contrast: bool = False
     reading_font: bool = False
+    calm: bool = False
+    """A child's screen without moving shapes or celebrations (D-236)."""
 
     @classmethod
     def of(
-        cls, text_size_value: object, high_contrast: object, reading_font: object = False
+        cls,
+        text_size_value: object,
+        high_contrast: object,
+        reading_font: object = False,
+        calm: object = False,
     ) -> Appearance:
         return cls(
             text_size=text_size(text_size_value),
             high_contrast=high_contrast is True or high_contrast == 1,
             reading_font=reading_font is True or reading_font == 1,
+            calm=calm is True or calm == 1,
         )
 
     @classmethod
@@ -73,7 +80,12 @@ class Appearance:
         writes these into attributes, and only known values may reach them."""
         if not isinstance(raw, Mapping):
             return cls()
-        return cls.of(raw.get("text_size"), raw.get("high_contrast"), raw.get("reading_font"))
+        return cls.of(
+            raw.get("text_size"),
+            raw.get("high_contrast"),
+            raw.get("reading_font"),
+            raw.get("calm"),
+        )
 
     @property
     def contrast(self) -> str:
@@ -86,6 +98,11 @@ class Appearance:
         return "dyslexic" if self.reading_font else "default"
 
     @property
+    def motion(self) -> str:
+        """`data-motion` on `<html>`: `calm` stops every animation on the page."""
+        return "calm" if self.calm else "normal"
+
+    @property
     def is_default(self) -> bool:
         return self == Appearance()
 
@@ -95,6 +112,7 @@ class Appearance:
             "text_size": self.text_size,
             "high_contrast": self.high_contrast,
             "reading_font": self.reading_font,
+            "calm": self.calm,
         }
 
 

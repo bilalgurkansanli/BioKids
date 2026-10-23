@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 
 from biokids_core.clock import FakeClock
 from biokids_core.config import Config
-from biokids_core.db import Database, LedgerDay, UsageHour
+from biokids_core.db import Child, Database, LedgerDay, UsageHour
 from biokids_core.ledger import TickInput, TimeLedger, file_by_hour
 from biokids_core.policy import general_allowance_seconds
 from biokids_core.types import Category
@@ -686,3 +686,39 @@ def test_filing_seconds_by_hour(ended: dt.time, seconds: int, expected: dict[int
     file_by_hour(hours, dt.datetime.combine(day, ended), seconds)
     assert hours == {(day, hour): s for hour, s in expected.items()}
     assert sum(hours.values()) == seconds, "nothing lost, nothing invented"
+
+
+# ------------------------------------- idle learning is not learning (D-232)
+
+
+def test_a_learning_app_left_open_is_not_learning(
+    ledger: TimeLedger, clock: FakeClock, child: Child
+) -> None:
+    """Games open after the day's learning (D-232) and stickers come from it
+    (D-211): a lesson left on the screen with nobody at it must not count."""
+    from biokids_core.ledger import TickInput
+    from biokids_core.types import Category
+
+    def tick(idle: bool) -> None:
+        clock.advance(10)
+        ledger.tick(
+            [
+                TickInput(
+                    child_id=1,
+                    active=True,
+                    idle=idle,
+                    category=Category.LEARNING,
+                    app_slug="okuma",
+                    policy=make_policy(),
+                )
+            ]
+        )
+
+    tick(False)
+    for _ in range(30):
+        tick(True)
+    for _ in range(6):
+        tick(False)
+    state = ledger.state(1)
+    assert state.category_used(Category.LEARNING) <= 70, "only the minute at the machine"
+    assert state.general_used_s >= 360, "the day's time still runs while idle"

@@ -260,7 +260,12 @@ class ShellServer:
             ShellOp.REPORT_SEARCH: self._report_search,
             ShellOp.ENGLISH_STATE: self._english_state,
             ShellOp.ENGLISH_ANSWER: self._english_answer,
+            ShellOp.READING_STATE: self._reading_state,
+            ShellOp.READING_ANSWER: self._reading_answer,
             ShellOp.FIRST_RUN_DONE: self._first_run_done,
+            ShellOp.FINISH_UP: self._finish_up,
+            ShellOp.NOTE_SEEN: self._note_seen,
+            ShellOp.SHARE_RECORDING: self._share_recording,
             ShellOp.REQUEST_SHUTDOWN: self._request_shutdown,
             ShellOp.SWITCH_USER: self._switch_user,
             ShellOp.ASK_A_PARENT: self._ask_a_parent,
@@ -308,6 +313,22 @@ class ShellServer:
             id=request.id, ok=True, data=self.supervisor.english_state(caller.child_id)
         )
 
+    async def _reading_state(self, caller: ShellCaller, request: Request) -> Response:
+        return Response(
+            id=request.id, ok=True, data=self.supervisor.reading_state(caller.child_id)
+        )
+
+    async def _reading_answer(self, caller: ShellCaller, request: Request) -> Response:
+        item = str(request.args.get("item", ""))[:64]
+        right = request.args.get("right") is True
+        box = self.supervisor.reading_answer(caller.child_id, item, right)
+        return Response(
+            id=request.id,
+            ok=box is not None,
+            data={"box": box or 0},
+            error="" if box is not None else "reading.unknown_item",
+        )
+
     async def _english_answer(self, caller: ShellCaller, request: Request) -> Response:
         item = str(request.args.get("item", ""))[:64]
         right = request.args.get("right") is True
@@ -329,6 +350,27 @@ class ShellServer:
             unit=str(request.args.get("unit", "")),
         )
         return Response(id=request.id, ok=True)
+
+    async def _share_recording(self, caller: ShellCaller, request: Request) -> Response:
+        raw = request.args.get("seconds", 0)
+        seconds = (
+            float(raw) if isinstance(raw, int | float) and not isinstance(raw, bool) else 0.0
+        )
+        shared = self.supervisor.share_recording(
+            caller.child_id, str(request.args.get("audio", "")), seconds
+        )
+        return Response(id=request.id, ok=shared)
+
+    async def _note_seen(self, caller: ShellCaller, request: Request) -> Response:
+        raw = request.args.get("note_id")
+        if not isinstance(raw, int) or isinstance(raw, bool):
+            return Response.failure(request.id, "error.invalid_input")
+        seen = self.supervisor.note_seen(caller.child_id, raw)
+        return Response(id=request.id, ok=seen)
+
+    async def _finish_up(self, caller: ShellCaller, request: Request) -> Response:
+        seconds = self.supervisor.finish_up(caller.child_id)
+        return Response(id=request.id, ok=True, data={"seconds": seconds})
 
     async def _first_run_done(self, caller: ShellCaller, request: Request) -> Response:
         self.supervisor.mark_first_run_done(caller.child_id)

@@ -383,8 +383,9 @@ description_en = "Build your own games by snapping blocks together."
 
 [[app]]
 slug = "vikipedi-cocuk"
-name_tr = "Vikipedi"
-name_en = "Wikipedia"
+# Named for the internet, beside the offline one of the same name (D-190, D-236).
+name_tr = "Vikipedi (internet)"
+name_en = "Wikipedia (online)"
 exec = []
 url = "https://tr.wikipedia.org"
 package = ""
@@ -666,6 +667,40 @@ min_age = 4
 max_age = 10
 description_tr = "Çocuğunuzun Boya ve Çizim'de yaptığı resimler, büyük ve en yenisi önde. Yalnızca bu bilgisayarda, çocuğun kendi ekranında görünür; panele gelmez."
 description_en = "The pictures your child made in Paint and Draw, big and newest first. Shown only on this computer, on the child's own screen; never sent to the panel."
+
+[[app]]
+# Okuma köşesi (D-241): learning to read Turkish in the order first grade
+# teaches it - five sound groups, letters, syllables, words, a sentence. A page
+# of the launcher; minutes in it are learning minutes.
+slug = "okuma"
+name_tr = "Okuma"
+name_en = "Reading"
+exec = []
+package = ""
+kind = "builtin"
+icon = "letters"
+default_category = "learning"
+min_age = 5
+max_age = 8
+description_tr = "Okumayı birinci sınıftaki gibi öğrenir: ses grupları, harfler, heceler, kelimeler, kısa cümleler. Her gün birkaç dakika, unutmadan tekrar ederek."
+description_en = "Learning to read Turkish the way first grade teaches it: sound groups, letters, syllables, words, short sentences. A few minutes a day, reviewed before it is forgotten."
+
+[[app]]
+# Sesim (D-240): a page of the launcher where the child records a story or a
+# song and hears it back. Kept in the child's own home; one reaches the parent
+# only when the child sends it. A new tile: ticked by a parent (D-207).
+slug = "sesim"
+name_tr = "Sesim"
+name_en = "My voice"
+exec = []
+package = ""
+kind = "builtin"
+icon = "mic"
+default_category = "free"
+min_age = 4
+max_age = 10
+description_tr = "Çocuğunuz düğmeye basılı tutarak bir hikâye anlatır ya da şarkı söyler, sonra dinler. Kayıtlar bu bilgisayarda, çocuğun kendi klasöründe kalır; yalnızca çocuğun size gönderdiği kayıt panelinize gelir."
+description_en = "Your child holds the button to tell a story or sing a song, then listens back. The recordings stay on this computer, in the child's own folder; only one your child sends you reaches the panel."
 
 [[app]]
 # İngilizce (D-225): the English corner, a page of the launcher. A short lesson

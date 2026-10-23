@@ -12,9 +12,11 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
+from sqlalchemy import select
 
-from biokids_core import insights, repo
+from biokids_core import backup, health, insights, mail, notes, repo, retention, talk
 from biokids_core.clock import read_boot_id
+from biokids_core.db.models import SharedRecording, utcnow
 from biokids_core.errors import IpcError
 from biokids_core.i18n import Translator
 from biokids_core.ipc import AsyncDaemonClient, Op
@@ -42,6 +44,8 @@ def today(view: View) -> Response:
         children=children,
         daemon_up=reachable,
         specials=special_lines(view, children),
+        sent=sent_lines(view, children),
+        voices=shared_voices(view, children),
         notice=_action_notice(view.request, view.tr, children),
         # Questions the assistant refused and the parent has not seen (D-165):
         # above the cards, like a pending request, because they are why a
@@ -58,7 +62,9 @@ def today(view: View) -> Response:
             if (child := repo.get_child(view.session, child_id)) is not None
         ],
         restart_needed=restart_needed(view),
+        protection_attention=protection_attention(view, status if reachable else None),
         week=week_cards(view),
+        talk=talk_cards(view),
     )
 
 
@@ -89,6 +95,41 @@ def week_cards(view: View) -> list[dict[str, Any]]:
         log.exception("could not work out this week's highlights; Today is shown without them")
         # Only reads happened; the rollback leaves the session clean for the
         # rest of the page.
+        with contextlib.suppress(Exception):
+            view.session.rollback()
+        return []
+    return cards
+
+
+def protection_attention(view: View, status: dict[str, Any] | None) -> int:
+    """How many things in Koruma durumu need the parent (D-237): one line on Today."""
+    try:
+        found = health.checks(
+            view.ctx.config,
+            status,
+            mail_configured=mail.load_settings(view.session, view.ctx.config) is not None,
+            last_backup=backup.last_taken(view.session),
+        )
+    except Exception:
+        log.exception("could not check the protection; Today is shown without the line")
+        return 0
+    # The daemon being down already has its own banner on Today.
+    return health.needing_attention([c for c in found if c.key != "daemon"])
+
+
+def talk_cards(view: View) -> list[dict[str, Any]]:
+    """Bugün ne konuşalım? (D-234): for each child who used the computer today,
+    a few things to ask about this evening. From the database; a failure costs
+    the card and never Today."""
+    cards: list[dict[str, Any]] = []
+    try:
+        today = dt.date.today()
+        for child in repo.list_children(view.session):
+            found = talk.prompts(view.session, child, today, view.tr)
+            if found:
+                cards.append({"child": child, "prompts": found})
+    except Exception:
+        log.exception("could not work out today's talk prompts; Today is shown without them")
         with contextlib.suppress(Exception):
             view.session.rollback()
         return []
@@ -147,6 +188,8 @@ def today_cards(view: View) -> Response:
         children=children,
         daemon_up=reachable,
         specials=special_lines(view, children),
+        sent=sent_lines(view, children),
+        voices=shared_voices(view, children),
     )
 
 
@@ -168,6 +211,156 @@ def special_lines(view: View, children: Sequence[dict[str, Any]]) -> dict[int, A
         with contextlib.suppress(Exception):
             view.session.rollback()
         return {}
+
+
+def sent_lines(view: View, children: Sequence[dict[str, Any]]) -> dict[int, list[str]]:
+    """What the parents sent each child today and whether it was seen (D-233):
+    "Notunuzu okudu", "Aferininiz bekliyor". From the database; a failure costs
+    the lines, never Today."""
+    try:
+        midnight = dt.datetime.combine(dt.date.today(), dt.time())
+        start = midnight.astimezone(dt.UTC).replace(tzinfo=None)
+        found = notes.sent_today(
+            view.session, [int(child.get("child_id", 0)) for child in children], start
+        )
+    except Exception:
+        log.exception("could not read today's notes; Today is shown without them")
+        with contextlib.suppress(Exception):
+            view.session.rollback()
+        return {}
+    lines: dict[int, list[str]] = {}
+    for child_id, rows in found.items():
+        for kind in notes.KINDS:
+            of_kind = [row for row in rows if row.kind == kind]
+            if not of_kind:
+                continue
+            seen = "seen" if all(row.shown_at for row in of_kind) else "waiting"
+            lines.setdefault(child_id, []).append(view.tr(f"today.notes.{kind}_{seen}"))
+    return lines
+
+
+TOGETHER_CHOICES = (30, 60, 120)
+"""Birlikte modu's choices on the card (D-235), in minutes."""
+
+
+@router.post("/children/{child_id}/together")
+def together(
+    view: View,
+    child_id: int,
+    minutes: Annotated[int, Form()] = 60,
+    csrf_token: Annotated[str, Form()] = "",
+) -> Response:
+    """ "Birlikteyiz" (D-235): for so many minutes nothing is counted."""
+    if blocked := view.guard_form(csrf_token, "/today?error=csrf"):
+        return blocked
+    minutes = minutes if minutes in TOGETHER_CHOICES else 60
+    ok = _call_daemon(
+        view.ctx, Op.TOGETHER, child_id=child_id, minutes=minutes, actor=view.actor
+    )
+    return see_other(
+        f"/today?together={child_id}&minutes={minutes}" if ok else "/today?error=daemon"
+    )
+
+
+@router.post("/children/{child_id}/together/stop")
+def together_stop(
+    view: View, child_id: int, csrf_token: Annotated[str, Form()] = ""
+) -> Response:
+    if blocked := view.guard_form(csrf_token, "/today?error=csrf"):
+        return blocked
+    ok = _call_daemon(view.ctx, Op.TOGETHER, child_id=child_id, minutes=0, actor=view.actor)
+    return see_other(f"/today?together_stopped={child_id}" if ok else "/today?error=daemon")
+
+
+SHARED_SHOWN_FOR = retention.SHARED_RECORDING_KEPT
+"""A recording a child sent stays on their card as long as it is kept (D-240)."""
+
+
+def shared_voices(
+    view: View, children: Sequence[dict[str, Any]]
+) -> dict[int, list[dict[str, Any]]]:
+    """The recordings each child sent from Sesim (D-240), newest first."""
+    try:
+        since = utcnow() - SHARED_SHOWN_FOR
+        ids = [int(child.get("child_id", 0)) for child in children]
+        rows = view.session.execute(
+            select(
+                SharedRecording.id,
+                SharedRecording.child_id,
+                SharedRecording.seconds,
+                SharedRecording.heard_at,
+            )
+            .where(SharedRecording.child_id.in_(ids), SharedRecording.created_at >= since)
+            .order_by(SharedRecording.created_at.desc())
+        ).all()
+    except Exception:
+        log.exception("could not read the shared recordings; Today is shown without them")
+        with contextlib.suppress(Exception):
+            view.session.rollback()
+        return {}
+    found: dict[int, list[dict[str, Any]]] = {}
+    for row in rows:
+        found.setdefault(row.child_id, []).append(
+            {"id": row.id, "seconds": round(row.seconds), "heard": row.heard_at is not None}
+        )
+    return found
+
+
+@router.get("/children/{child_id}/recordings/{recording_id}.wav")
+def shared_voice(view: View, child_id: int, recording_id: int) -> Response:
+    """A recording a child sent (D-240), for the parent's own browser; heard now."""
+    if blocked := view.guard():
+        return blocked
+    row = view.session.get(SharedRecording, recording_id)
+    if row is None or row.child_id != child_id:
+        return Response(status_code=404)
+    if row.heard_at is None:
+        row.heard_at = utcnow()
+        view.session.commit()
+    return Response(
+        content=row.audio,
+        media_type="audio/wav",
+        headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+    )
+
+
+@router.post("/children/{child_id}/praise")
+def praise(view: View, child_id: int, csrf_token: Annotated[str, Form()] = "") -> Response:
+    """ "Aferin!" (D-233): one tap, from wherever the parent is."""
+    if blocked := view.guard_form(csrf_token, "/today?error=csrf"):
+        return blocked
+    ok = _send_note(view, child_id, "praise", "")
+    return see_other(f"/today?praised={child_id}" if ok else "/today?error=daemon")
+
+
+@router.post("/children/{child_id}/note")
+def note(
+    view: View,
+    child_id: int,
+    text: Annotated[str, Form()] = "",
+    csrf_token: Annotated[str, Form()] = "",
+) -> Response:
+    """One sentence for the child's screen, read out by Zio (D-233)."""
+    if blocked := view.guard_form(csrf_token, "/today?error=csrf"):
+        return blocked
+    if not notes.clean_text(text):
+        return see_other("/today?note_empty=1")
+    ok = _send_note(view, child_id, "note", text)
+    return see_other(f"/today?noted={child_id}" if ok else "/today?error=daemon")
+
+
+def _send_note(view: View, child_id: int, kind: str, text: str) -> bool:
+    parent = view.state.parent
+    return _call_daemon(
+        view.ctx,
+        Op.SEND_NOTE,
+        child_id=child_id,
+        kind=kind,
+        text=text,
+        from_name=parent.display_name if parent else "",
+        parent_id=parent.id if parent else None,
+        actor=view.actor,
+    )
 
 
 @router.get("/events")
@@ -288,11 +481,17 @@ def _action_notice(
         ("unlocked", "today.unlock.done"),
         ("special", "special.done"),
         ("special_removed", "special.removed"),
+        ("praised", "today.send.praised"),
+        ("together", "today.together.done"),
+        ("together_stopped", "today.together.stopped"),
+        ("noted", "today.send.noted"),
     ):
         raw = query.get(flag, "")
         if raw:
             return {"tone": "ok", "text": tr(key, name=name_of(raw), minutes=minutes)}
 
+    if query.get("note_empty"):
+        return {"tone": "warn", "text": tr("today.send.empty")}
     if query.get("poweroff"):
         return {"tone": "ok", "text": tr("today.poweroff.done")}
     if query.get("rebooting"):
