@@ -15,6 +15,13 @@ not drawn as vectors, so everything here is cut from that picture:
   also the desktop's icon (debian/rules): the kite on a rounded `--bg` square.
   Maskable-safe - the kite sits inside the inner 80% so a circular mask does not
   clip it.
+- `debian/parent/biokids-desktop.png` - a parent's desktop background (D-245):
+  the logo in the middle of the warm off-white, the four brand colours glowing
+  softly in the corners, as the login screen does;
+- `favicon.png` (64 px) and `favicon.ico` (16, 32 and 48 px) for the browser's
+  tab (D-245): the kite's sail alone, filling the square. At sixteen pixels the
+  string and the heart are a smudge, and the icon's square leaves the kite a
+  dot in the middle of the tab.
 
 The background is taken out by colour: every region of the background colour
 that the dark outline or the open page encloses goes, and the pixels at its edge
@@ -38,10 +45,20 @@ from scipy import ndimage
 ROOT = Path(__file__).resolve().parent.parent
 MASTER = ROOT / "assets" / "brand" / "logo.jpg"
 BRAND = ROOT / "src" / "biokids_core" / "data" / "static" / "brand"
+SAIL_SHARE = 0.5
+"""How much of the kite, from the top, is its sail: the string starts below."""
 PANEL_ICONS = ROOT / "src" / "biokids_panel" / "static" / "icons"
 SHELL_ICONS = ROOT / "src" / "biokids_shell" / "static" / "icons"
 
 TILE = (251, 247, 242)  # --bg
+DESKTOP = ROOT / "debian" / "parent" / "biokids-desktop.png"
+DESKTOP_SIZE = (1920, 1080)
+GLOWS = (  # corner, colour: --bio-coral, --bio-amber, --bio-teal, --bio-indigo
+    ((0.0, 0.0), (255, 107, 91)),
+    ((1.0, 0.0), (255, 176, 32)),
+    ((1.0, 1.0), (31, 182, 166)),
+    ((0.0, 1.0), (75, 84, 200)),
+)
 LOGO_WIDTH = 960
 KITE_HEIGHT = 512
 
@@ -160,6 +177,35 @@ def icon(kite: Image.Image, size: int) -> Image.Image:
     return tile
 
 
+def favicon(kite: Image.Image, size: int) -> Image.Image:
+    """The sail, which is the top of the kite down to where its string starts."""
+    sail = crop(kite.crop((0, 0, kite.width, round(kite.height * SAIL_SHARE))), margin=0.02)
+    side = max(sail.size)
+    square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    square.alpha_composite(sail, ((side - sail.width) // 2, (side - sail.height) // 2))
+    return square.resize((size, size), Image.Resampling.LANCZOS)
+
+
+def desktop(logo: Image.Image) -> Image.Image:
+    """The logo on the warm off-white, each corner glowing in a brand colour."""
+    width, height = DESKTOP_SIZE
+    y, x = np.mgrid[0:height, 0:width].astype(np.float32)
+    canvas = np.empty((height, width, 3), dtype=np.float32)
+    canvas[:] = TILE
+    reach = 0.42 * width
+    for (cx, cy), colour in GLOWS:
+        distance = np.hypot(x - cx * width, y - cy * height)
+        weight = (0.22 * np.clip(1 - distance / reach, 0, 1) ** 2)[..., None]
+        canvas = canvas * (1 - weight) + np.array(colour, dtype=np.float32) * weight
+    image = Image.fromarray(canvas.round().astype(np.uint8)).convert("RGBA")
+    fitted = logo.resize(
+        (round(width * 0.3), round(logo.height * width * 0.3 / logo.width)),
+        Image.Resampling.LANCZOS,
+    )
+    image.alpha_composite(fitted, ((width - fitted.width) // 2, (height - fitted.height) // 2))
+    return image.convert("RGB")
+
+
 def save(image: Image.Image, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     image.save(path, optimize=True)
@@ -186,6 +232,11 @@ def main() -> int:
     for target in (PANEL_ICONS, SHELL_ICONS):
         for size in (192, 512):
             save(icon(kite, size), target / f"icon-{size}.png")
+    save(desktop(logo), DESKTOP)
+    save(favicon(kite, 64), BRAND / "favicon.png")
+    ico = BRAND / "favicon.ico"
+    favicon(kite, 48).save(ico, sizes=[(16, 16), (32, 32), (48, 48)])
+    print(f"wrote {ico.relative_to(ROOT)} ({ico.stat().st_size // 1024} KB)")
     return 0
 
 

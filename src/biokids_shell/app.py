@@ -38,6 +38,7 @@ from urllib.parse import urlencode, urlsplit
 
 from fastapi import Depends, FastAPI, Form, Request, Response
 from fastapi.responses import (
+    FileResponse,
     HTMLResponse,
     JSONResponse,
     PlainTextResponse,
@@ -1424,6 +1425,13 @@ def register_routes(app: FastAPI) -> None:
         return JSONResponse(
             {"running": await shell.launcher.open_apps()},
             headers={"Cache-Control": "no-store"},
+        )
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon() -> FileResponse:
+        """The kite, for a browser that asks this address (D-245)."""
+        return FileResponse(
+            SHARED_STATIC_DIR / "brand" / "favicon.ico", media_type="image/x-icon"
         )
 
     @app.get("/healthz")

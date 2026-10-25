@@ -2567,3 +2567,47 @@ def test_another_site_cannot_post_the_last_round_form(
     )
     assert response.status_code == 403
     assert daemon.finish_up_calls == 0
+
+
+# --------------------------------------------- D-245 the logo, press-and-speak
+
+
+def test_the_launcher_shows_the_logo_and_its_tab_the_kite(client: TestClient) -> None:
+    page = client.get("/").text
+    assert 'class="hello__logo" src="/static/shared/brand/logo.png' in page
+    assert '<link rel="icon" href="/favicon.ico' in page
+    assert client.get("/favicon.ico").content[:4] == b"\x00\x00\x01\x00"
+
+
+def test_press_and_speak_shows_the_voice_and_the_words_to_check(
+    client: TestClient, with_english: FakeShellDaemon
+) -> None:
+    assert with_english.data is not None
+    with_english.data["assistant"] = {"enabled": True, "voice": True}
+    for path in ("/assistant", "/english/chat"):
+        page = client.get(path).text
+        assert 'id="assistant-mic"' in page, path
+        assert 'id="assistant-level"' in page and page.count("<i></i>") == 9, path
+        assert 'id="assistant-draft" hidden' in page, path
+        assert "Sesimi dinle" in page and "assistant-voice-strings" in page, path
+    with_english.data["assistant"] = {"enabled": True, "voice": False}
+    page = client.get("/assistant").text
+    assert 'id="assistant-mic"' not in page and 'id="assistant-draft"' not in page
+
+
+def test_the_microphone_is_held_with_the_pointer_and_the_words_wait_for_send() -> None:
+    script = (STATIC / "assistant.js").read_text(encoding="utf-8")
+    assert "setPointerCapture" in script, "a finger sliding off the button does not stop it"
+    assert '"pointerleave"' not in script
+    assert "if (!holding)" in script, "let go before the microphone opened: nothing records"
+    assert "input.value = heard.text" in script and "ask(heard.text)" not in script
+    assert "getFloatTimeDomainData" in script, "the bars move with the voice"
+
+
+def test_a_bubble_tapped_is_read_again_and_kapat_carries_the_kite(client: TestClient) -> None:
+    """D-245: a child who missed a sentence taps it; Kapat has the logo, as a
+    computer's own off button carries its maker's."""
+    script = (STATIC / "assistant.js").read_text(encoding="utf-8")
+    assert 'log.addEventListener("click"' in script and "is-replaying" in script
+    page = client.get("/").text
+    assert 'class="tile-small__kite" src="/static/shared/brand/kite.png' in page

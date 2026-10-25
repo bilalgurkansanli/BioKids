@@ -3716,3 +3716,69 @@ def test_press_and_speak_comes_ticked_with_the_assistant(
     assert not re.search(r'id="assistant_voice" name="assistant_voice"\s+checked', page), (
         "a parent who turned it off is not overruled"
     )
+
+
+# ---------------------------------------------------- D-245 the year at a glance
+
+
+@pytest.mark.parametrize(
+    ("seconds", "quota", "level"),
+    [
+        (0, 3600, 0),
+        (59, 3600, 0),
+        (600, 3600, 1),
+        (1500, 3600, 2),
+        (3000, 3600, 3),
+        (3600, 3600, 3),
+        (3700, 3600, 4),
+        (600, 0, 1),
+        (7300, 0, 3),
+        (99999, 0, 4),
+    ],
+)
+def test_a_day_is_shaded_by_how_much_of_its_quota_was_used(
+    seconds: int, quota: int, level: int
+) -> None:
+    from biokids_panel.routes.history import day_level
+
+    assert day_level(seconds, quota) == level
+
+
+def test_the_history_has_the_year_like_githubs_graph(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    from biokids_core.db.models import LedgerDay
+    from biokids_panel.routes.history import YEAR_WEEKS, year_map
+
+    today = dt.date.today()
+    with db.session() as session:
+        session.add(LedgerDay(child_id=1, day=today, general_s=1800))
+        session.add(LedgerDay(child_id=1, day=today - dt.timedelta(days=200), general_s=5400))
+        session.commit()
+        child = repo.get_child(session, 1)
+        assert child is not None
+        year = year_map(session, child, today)
+
+    assert len(year["weeks"]) == YEAR_WEEKS
+    assert all(len(week) == 7 for week in year["weeks"])
+    first = year["weeks"][0][0]
+    assert first is not None and first["day"].weekday() == 0, "Monday on top"
+    assert year["weeks"][-1][today.weekday()]["day"] == today
+    assert all(cell is None for cell in year["weeks"][-1][today.weekday() + 1 :])
+    assert year["total_seconds"] == 7200 and year["active_days"] == 2
+
+    login(client)
+    page = client.get("/history").text
+    assert page.count('class="year__day year__day--') >= 300
+    assert f'href="/history?child=1&day={today.isoformat()}"' in page
+    assert "Son bir yılda 2 saat, 2 gün" in page
+
+
+def test_the_tab_shows_the_kite(client: TestClient, family_ready: None) -> None:
+    """D-245: a version in the address, so a browser that kept the old one asks again."""
+    page = client.get("/login").text
+    assert '<link rel="icon" href="/favicon.ico?v=' in page
+    icon = client.get("/favicon.ico")
+    assert icon.status_code == 200
+    assert icon.headers["content-type"] == "image/x-icon"
+    assert icon.content[:4] == b"\x00\x00\x01\x00", "an ICO file"

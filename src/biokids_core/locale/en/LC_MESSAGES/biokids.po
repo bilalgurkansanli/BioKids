@@ -4092,3 +4092,84 @@ msgstr "This computer's family passphrase"
 
 msgid "backup.restore.this_passphrase.help"
 msgstr "A restore can change the rules, so like turning protection off it needs this passphrase."
+
+msgid "assistant.voice.hold"
+msgstr "Hold the button while you talk, and let go when you finish."
+
+msgid "assistant.voice.working"
+msgstr "Writing down what you said…"
+
+msgid "assistant.voice.check"
+msgstr "Is that what you said? If it is, press Send."
+
+msgid "assistant.voice.play"
+msgstr "Hear me"
+
+msgid "assistant.voice.discard"
+msgstr "Delete"
+
+msgid "assistant.voice.silent"
+msgstr "No sound came through. Is the microphone plugged in? Ask a grown-up."
+
+msgid "assistant.voice.none"
+msgstr "No microphone was found. Tell a grown-up."
+
+msgid "history.year.title"
+msgstr "{hours} hours over {days} days in the last year"
+
+msgid "history.year.label"
+msgstr "Every day of the last year for {name}"
+
+msgid "history.year.less"
+msgstr "Less"
+
+msgid "history.year.more"
+msgstr "More"
+
+msgid "history.year.over"
+msgstr "Over the limit"
+
+msgid "history.weekday.1"
+msgstr "Mon"
+
+msgid "history.weekday.3"
+msgstr "Wed"
+
+msgid "history.weekday.5"
+msgstr "Fri"
+
+msgid "history.month.1"
+msgstr "Jan"
+
+msgid "history.month.2"
+msgstr "Feb"
+
+msgid "history.month.3"
+msgstr "Mar"
+
+msgid "history.month.4"
+msgstr "Apr"
+
+msgid "history.month.5"
+msgstr "May"
+
+msgid "history.month.6"
+msgstr "Jun"
+
+msgid "history.month.7"
+msgstr "Jul"
+
+msgid "history.month.8"
+msgstr "Aug"
+
+msgid "history.month.9"
+msgstr "Sep"
+
+msgid "history.month.10"
+msgstr "Oct"
+
+msgid "history.month.11"
+msgstr "Nov"
+
+msgid "history.month.12"
+msgstr "Dec"

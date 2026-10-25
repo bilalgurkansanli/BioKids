@@ -4092,3 +4092,84 @@ msgstr "Bu bilgisayarın aile parolası"
 
 msgid "backup.restore.this_passphrase.help"
 msgstr "Geri yükleme kuralları değiştirebilir; korumayı kapatmak gibi, bu parolayla onaylanır."
+
+msgid "assistant.voice.hold"
+msgstr "Düğmeyi basılı tutarak konuş, bitince bırak."
+
+msgid "assistant.voice.working"
+msgstr "Söylediğini yazıya çeviriyorum…"
+
+msgid "assistant.voice.check"
+msgstr "Böyle mi dedin? Doğruysa Gönder'e bas."
+
+msgid "assistant.voice.play"
+msgstr "Sesimi dinle"
+
+msgid "assistant.voice.discard"
+msgstr "Sil"
+
+msgid "assistant.voice.silent"
+msgstr "Sesin gelmedi. Mikrofon takılı mı? Bir büyüğüne sor."
+
+msgid "assistant.voice.none"
+msgstr "Mikrofon bulunamadı. Bir büyüğüne söyle."
+
+msgid "history.year.title"
+msgstr "Son bir yılda {hours} saat, {days} gün"
+
+msgid "history.year.label"
+msgstr "{name} için son bir yılın her günü"
+
+msgid "history.year.less"
+msgstr "Az"
+
+msgid "history.year.more"
+msgstr "Çok"
+
+msgid "history.year.over"
+msgstr "Süreyi aştı"
+
+msgid "history.weekday.1"
+msgstr "Pzt"
+
+msgid "history.weekday.3"
+msgstr "Çar"
+
+msgid "history.weekday.5"
+msgstr "Cum"
+
+msgid "history.month.1"
+msgstr "Oca"
+
+msgid "history.month.2"
+msgstr "Şub"
+
+msgid "history.month.3"
+msgstr "Mar"
+
+msgid "history.month.4"
+msgstr "Nis"
+
+msgid "history.month.5"
+msgstr "May"
+
+msgid "history.month.6"
+msgstr "Haz"
+
+msgid "history.month.7"
+msgstr "Tem"
+
+msgid "history.month.8"
+msgstr "Ağu"
+
+msgid "history.month.9"
+msgstr "Eyl"
+
+msgid "history.month.10"
+msgstr "Eki"
+
+msgid "history.month.11"
+msgstr "Kas"
+
+msgid "history.month.12"
+msgstr "Ara"

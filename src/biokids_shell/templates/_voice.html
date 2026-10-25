@@ -1,0 +1,37 @@
+{#
+  Press-and-speak (D-166, D-245), shared by Sor Bana and English with Sio.
+
+  While the button is held the whole screen says the microphone is open, with
+  bars that move with the child's voice and the seconds left. Let go, the words
+  come into the box to be checked: the child can hear their own recording, send
+  it, or delete it. The recording lives in the page's memory only, until it is
+  sent, deleted, recorded over, or the page is left.
+#}
+<div class="listening" id="assistant-listening" hidden>
+  <span class="listening__dot" aria-hidden="true">🎤</span>
+  <span class="listening__bars" id="assistant-level" aria-hidden="true">
+    {%- for bar in range(9) %}<i></i>{% endfor -%}
+  </span>
+  <span>{{ _('assistant.listening') }}</span>
+  <span class="listening__left" id="assistant-left" aria-hidden="true"></span>
+</div>
+
+<div class="draft" id="assistant-draft" hidden>
+  <p class="draft__status" id="assistant-draft-status" role="status"></p>
+  <div class="draft__buttons">
+    <button class="big-btn big-btn--quiet" id="assistant-play" type="button">
+      <span aria-hidden="true">▶</span> {{ _('assistant.voice.play') }}
+    </button>
+    <button class="big-btn big-btn--quiet" id="assistant-discard" type="button">
+      <span aria-hidden="true">🗑</span> {{ _('assistant.voice.discard') }}
+    </button>
+  </div>
+</div>
+
+<script id="assistant-voice-strings" type="application/json">{{ {
+  'hold': _('assistant.voice.hold'),
+  'working': _('assistant.voice.working'),
+  'check': _('assistant.voice.check'),
+  'silent': _('assistant.voice.silent'),
+  'none': _('assistant.voice.none'),
+}|tojson }}</script>

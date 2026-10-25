@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Final
 
 from fastapi import APIRouter, Request, Response
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from biokids_core import repo
 from biokids_panel.common import Ctx, Db, View
@@ -26,6 +26,13 @@ SW_CACHE_NAME = '"biokids-shell-v1"'
 """The placeholder in sw.js that `service_worker` replaces."""
 
 router = APIRouter()
+
+
+@router.get("/favicon.ico", include_in_schema=False)
+def favicon() -> FileResponse:
+    """The kite in the browser's tab (D-245). Asked for at this address by every
+    browser, whatever the page names."""
+    return FileResponse(SHARED_STATIC_DIR / "brand" / "favicon.ico", media_type="image/x-icon")
 
 
 @router.get("/healthz")

@@ -17,8 +17,11 @@
   <link rel="stylesheet" href="/static/shared/tokens.css">
   <link rel="stylesheet" href="/static/panel.css">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="icon" href="/static/icons/icon-192.png" sizes="192x192">
-  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  {# D-245: the kite's sail in the tab; the address changes with every version,
+     so a browser that kept the old picture asks for the new one. #}
+  <link rel="icon" href="/favicon.ico?v={{ version }}" sizes="16x16 32x32 48x48">
+  <link rel="icon" type="image/png" href="/static/shared/brand/favicon.png?v={{ version }}" sizes="64x64">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png?v={{ version }}">
   {% block head %}{% endblock %}
 </head>
 <body>

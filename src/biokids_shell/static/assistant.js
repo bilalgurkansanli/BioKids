@@ -105,6 +105,28 @@
       });
   }
 
+  /* A child who missed something taps it and hears it again (D-245): a
+   * sentence of an answer, or the whole bubble when the tap is beside the
+   * words. What was still waiting to be said gives way to it. */
+  log.addEventListener("click", function (event) {
+    var item = event.target.closest ? event.target.closest(".bubble--zio, .bubble--sio") : null;
+    if (!item || item.classList.contains("bubble--thinking")) return;
+    var sentence = event.target.closest("span[lang], .bubble > span");
+    var parts = sentence && item.contains(sentence) ? [sentence] : item.querySelectorAll("span");
+    unsaid = [];
+    if (!parts.length) {
+      say(item.textContent);
+    } else {
+      Array.prototype.forEach.call(parts, function (part) {
+        say(part.textContent.trim(), part.getAttribute("lang") || "");
+      });
+    }
+    item.classList.add("is-replaying");
+    window.setTimeout(function () {
+      item.classList.remove("is-replaying");
+    }, 600);
+  });
+
   /* ---------------------------------------------------------------- asking */
 
   function ask(question) {
@@ -232,17 +254,46 @@
 
   /* --------------------------------------------------------- press-and-speak */
 
+  /* D-245. Held, the microphone records - at most fifteen seconds - and the
+   * screen shows it hears the child: bars that move with their voice and the
+   * seconds left. Let go, the recording is turned into words, which come into
+   * the box to be checked, the way a grown-up's dictation does: the child can
+   * hear their own recording, send the words, or delete them. A recording in
+   * which nothing was heard at all says so, and points to the microphone. */
+
   if (!mic) return;
+
+  var voice = JSON.parse(
+    (document.getElementById("assistant-voice-strings") || {}).textContent || "{}"
+  );
+  var level = document.getElementById("assistant-level");
+  var bars = level ? level.querySelectorAll("i") : [];
+  var left = document.getElementById("assistant-left");
+  var draft = document.getElementById("assistant-draft");
+  var draftStatus = document.getElementById("assistant-draft-status");
+  var play = document.getElementById("assistant-play");
+  var discard = document.getElementById("assistant-discard");
+  var SILENT_RMS = 0.01; /* the loudest moment quieter than this: nothing came in */
 
   var stream = null;
   var context = null;
   var source = null;
   var processor = null;
+  var analyser = null;
   var chunks = [];
   var limit = null;
+  var ticker = null;
+  var frame = null;
+  var holding = false;
+  var startedAt = 0;
+  var loudest = 0;
+  var recording = null; /* an object URL of the last recording, for "Sesimi dinle" */
+  var player = null;
 
   function stopTracks() {
+    if (frame) window.cancelAnimationFrame(frame);
     if (processor) processor.disconnect();
+    if (analyser) analyser.disconnect();
     if (source) source.disconnect();
     if (stream) {
       stream.getTracks().forEach(function (track) {
@@ -250,36 +301,99 @@
       });
     }
     if (context) context.close();
-    stream = context = source = processor = null;
+    stream = context = source = processor = analyser = frame = null;
+  }
+
+  function forgetRecording() {
+    if (player) player.pause();
+    if (recording) URL.revokeObjectURL(recording);
+    recording = player = null;
+  }
+
+  function showDraft(text, canPlay) {
+    if (!draft) return;
+    draftStatus.textContent = text;
+    if (play) play.hidden = !canPlay;
+    draft.hidden = false;
+  }
+
+  function closeDraft() {
+    if (draft) draft.hidden = true;
+    send.classList.remove("is-ready");
+    forgetRecording();
+  }
+
+  function drawLevel() {
+    if (!analyser) return;
+    var samples = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(samples);
+    var sum = 0;
+    for (var i = 0; i < samples.length; i += 1) sum += samples[i] * samples[i];
+    var rms = Math.sqrt(sum / samples.length);
+    loudest = Math.max(loudest, rms);
+    /* Speech is quiet as numbers go: a third of full scale fills the bars. */
+    var height = Math.min(1, rms * 3.5);
+    for (var b = 0; b < bars.length; b += 1) {
+      var shape = 1 - Math.abs(b - (bars.length - 1) / 2) / bars.length;
+      bars[b].style.transform =
+        "scaleY(" + Math.max(0.12, height * shape * (0.75 + Math.random() * 0.5)) + ")";
+    }
+    frame = window.requestAnimationFrame(drawLevel);
+  }
+
+  function showSecondsLeft() {
+    if (!left) return;
+    var remaining = Math.max(0, MAX_SECONDS - Math.floor((Date.now() - startedAt) / 1000));
+    left.textContent = remaining;
   }
 
   function startRecording() {
     if (busy || stream) return;
+    closeDraft();
     chunks = [];
+    loudest = 0;
     navigator.mediaDevices
       .getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } })
       .then(function (media) {
+        if (!holding) {
+          /* Let go before the microphone was ready: a tap, not a question. */
+          media.getTracks().forEach(function (track) {
+            track.stop();
+          });
+          showDraft(voice.hold || strings.heard_nothing, false);
+          return;
+        }
         stream = media;
         context = new AudioContext({ sampleRate: SAMPLE_RATE });
         source = context.createMediaStreamSource(stream);
+        analyser = context.createAnalyser();
+        analyser.fftSize = 1024;
         processor = context.createScriptProcessor(4096, 1, 1);
         processor.onaudioprocess = function (event) {
           chunks.push(new Float32Array(event.inputBuffer.getChannelData(0)));
         };
+        source.connect(analyser);
         source.connect(processor);
         processor.connect(context.destination);
+        startedAt = Date.now();
         listening.hidden = false;
         mic.classList.add("is-on");
+        showSecondsLeft();
+        ticker = window.setInterval(showSecondsLeft, 250);
+        drawLevel();
         limit = window.setTimeout(stopRecording, MAX_SECONDS * 1000);
       })
-      .catch(function () {
+      .catch(function (error) {
         stopTracks();
-        bubble(strings.mic_failed, speaker);
+        var missing = error && (error.name === "NotFoundError" || error.name === "NotReadableError");
+        showDraft(missing ? voice.none || strings.mic_failed : strings.mic_failed, false);
       });
   }
 
   function stopRecording() {
+    holding = false;
     window.clearTimeout(limit);
+    window.clearInterval(ticker);
     listening.hidden = true;
     mic.classList.remove("is-on");
     if (!stream) return;
@@ -288,8 +402,16 @@
     var wav = encodeWav(chunks, rate);
     chunks = [];
     if (wav.byteLength < 44 + rate * 0.3 * 2) {
-      return; // shorter than a third of a second: a tap, not a question
+      showDraft(voice.hold || strings.heard_nothing, false);
+      return;
     }
+    recording = URL.createObjectURL(new Blob([wav], { type: "audio/wav" }));
+    if (loudest < SILENT_RMS) {
+      /* Nothing at all came in: no use asking Whisper about silence. */
+      showDraft(voice.silent || strings.heard_nothing, true);
+      return;
+    }
+    showDraft(voice.working || strings.thinking, true);
     setBusy(true);
     fetch(english ? "/assistant/hear?lang=en" : "/assistant/hear", {
       method: "POST",
@@ -302,14 +424,16 @@
       .then(function (heard) {
         setBusy(false);
         if (heard.text) {
-          ask(heard.text);
+          input.value = heard.text;
+          send.classList.add("is-ready");
+          showDraft(voice.check || "", true);
         } else {
-          bubble(strings.heard_nothing, speaker);
+          showDraft(strings.heard_nothing, true);
         }
       })
       .catch(function () {
         setBusy(false);
-        bubble(strings.mic_failed, speaker);
+        showDraft(strings.mic_failed, true);
       });
   }
 
@@ -347,12 +471,42 @@
     return buffer;
   }
 
-  /* Held, not tapped: down starts, up (or leaving the button) stops. */
+  /* Held, not tapped: down starts, up stops - wherever the finger is by then,
+   * since the button keeps the pointer it was pressed with. */
   mic.addEventListener("pointerdown", function (event) {
     event.preventDefault();
+    if (mic.setPointerCapture) {
+      try {
+        mic.setPointerCapture(event.pointerId);
+      } catch (err) {
+        /* an old pointer id: the button still works without it */
+      }
+    }
+    holding = true;
     startRecording();
   });
-  ["pointerup", "pointerleave", "pointercancel"].forEach(function (name) {
+  ["pointerup", "pointercancel"].forEach(function (name) {
     mic.addEventListener(name, stopRecording);
   });
+  mic.addEventListener("contextmenu", function (event) {
+    event.preventDefault(); /* a long press on a touch screen is not a menu */
+  });
+
+  if (play) {
+    play.addEventListener("click", function () {
+      if (!recording) return;
+      if (player) player.pause();
+      player = new Audio(recording);
+      player.play().catch(function () {});
+    });
+  }
+  if (discard) {
+    discard.addEventListener("click", function () {
+      input.value = "";
+      closeDraft();
+    });
+  }
+  /* What is sent, or typed over, leaves the draft behind. */
+  form.addEventListener("submit", closeDraft);
+  window.addEventListener("pagehide", forgetRecording);
 })();

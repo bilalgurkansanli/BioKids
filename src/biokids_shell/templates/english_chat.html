@@ -36,6 +36,7 @@
         </button>
       {% endfor %}
     </div>
+    {% if state.assistant and state.assistant.voice %}{% include "_voice.html" %}{% endif %}
     <form class="assistant__form" id="assistant-form" autocomplete="off">
       {% if state.assistant and state.assistant.voice %}
         <button class="mic" id="assistant-mic" type="button"
@@ -54,10 +55,6 @@
     </p>
   </footer>
 
-  <div class="listening" id="assistant-listening" hidden>
-    <span class="listening__dot" aria-hidden="true">🎤</span>
-    <span>{{ _('assistant.listening') }}</span>
-  </div>
 </div>
 
 <script id="assistant-strings" type="application/json">{{ {

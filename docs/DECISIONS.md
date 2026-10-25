@@ -2126,3 +2126,42 @@ D-166 left unticked - and that Zio answer in Turkish or English as the child ask
   band, after a separate check of the question (D-165, D-216). Fine-tuning would need
   a training set of children's conversations and a GPU, and would ship a second 3 GB
   model to every family, for what the instructions already do and can be read.
+
+**D-245 [owner] The year at a glance; the logo in the tab, on the child's screen and the
+parent's desktop; press-and-speak you can see and check.** (2026-10-26)
+- **Geçmiş** opens with the last year drawn as GitHub draws a year of work: a cell a
+  day, a column a week, Monday on top, shaded by the share of that day's quota used
+  (a third, two thirds, all of it) and in the warm colour for a day over its limit; a
+  day with no quota is shaded by the hour. Each cell opens that day below. From the
+  minutes per day already kept for 400 days; nothing new is stored. On a phone it
+  scrolls sideways, today's end first, with the weekday names staying put.
+- **The tab**: the panel and the launcher name `/favicon.ico` - the kite's sail alone,
+  16 to 48 pixels, since the whole kite with its string is a smudge that small - with
+  the version in the address, so a browser that kept the old indigo square asks for
+  the new one.
+- **The child's screen** shows the logo, centred between the greeting and the
+  controls, and not where that room is too small. This reverses D-243's "the child's
+  launcher keeps no logo of its own", at the owner's request.
+- **A parent's desktop**: `biokids-panel` offers a background with the logo as the
+  `desktop-background` alternative, at 90, above desktop-base's themes (70 and less),
+  the way Debian's own themes offer theirs. A parent who chose another background
+  keeps it, and removing BioKids brings Debian's back. Made by `dev/make_icons.py`.
+- **Press-and-speak**, rebuilt after the owner tried it: held, the screen shows bars
+  that move with the voice and the seconds left; let go, the words come into the box
+  to be checked - "Böyle mi dedin? Doğruysa Gönder'e bas." - with "Sesimi dinle" to hear
+  the recording and "Sil" to drop it, as a grown-up's dictation works. A recording in
+  which nothing came in says to check the microphone instead of asking Whisper about
+  silence; no microphone at all says so. The button keeps the pointer it was pressed
+  with, so a finger sliding off it no longer stops the recording, and a press let go
+  before the microphone opened no longer leaves it recording for fifteen seconds
+  unseen. The recording stays in the page's memory until it is sent, deleted, recorded
+  over or the page is left; D-166 otherwise stands.
+- **Why it heard nothing on the VM**: VirtualBox had the VM's audio input off; the
+  guest had a microphone device that only ever gave silence. Not a BioKids fault, and
+  now one the screen names.
+- **Heard again**: a tap on a sentence of Zio's (or Sio's) answer says it again, and a
+  tap beside the words says the whole bubble; whatever was still waiting gives way.
+- **Kapat carries the kite**, the way a computer's own off button carries its maker's
+  logo, in place of the ⏻ sign.
+- **The brightness slider** was checked on the VM: with no backlight it fades the
+  output through `xrandr --brightness` (0.5 at half, 1.0 at full), as D-199 meant.

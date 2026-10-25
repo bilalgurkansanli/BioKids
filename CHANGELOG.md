@@ -20,6 +20,10 @@ and three empty tables (`parent_note`, `shared_recording`, `reading_item`).
 
 ### Added
 
+- **The year at a glance, the logo, and press-and-speak you can check** (D-245): Geçmiş
+  opens with a year of days like GitHub's graph; the kite in the browser's tab, on the
+  child's screen and as a parent's desktop background; holding 🎤 shows the voice as it
+  comes in, and the words wait in the box to be heard back, sent or deleted.
 - **Press-and-speak with the assistant, and answers in the question's language**
   (D-244): turning Sor Bana on brings its microphone with it; a question asked in
   English is answered and spoken in English, one in Turkish in Turkish.
@@ -81,7 +85,7 @@ and three empty tables (`parent_note`, `shared_recording`, `reading_item`).
 
 The first release of the packages, numbered by the rounds it took: 1.0 was the release
 candidate built as 0.1.0-2, and five rounds of the owner's tests followed (D-219).
-Decisions D-171 to D-242; read them in `docs/DECISIONS.md`. An upgrade from 0.1.0-1 or
+Decisions D-171 to D-245; read them in `docs/DECISIONS.md`. An upgrade from 0.1.0-1 or
 0.1.0-2 runs whichever of the migrations `3e8b51c0d2a7` (request kinds),
 `9a4f2c7e1b36` (day schedules), `c41d8e0f5a92` (the cuts), `077ca4545f23` (screen time
 per hour), `5d2f8a61c3e4` (special days) and `b7e41d2c9a63` (parents and appearance)

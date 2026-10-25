@@ -7,6 +7,9 @@
     <div class="hello">
       <span class="avatar" aria-hidden="true">{{ state.avatar|avatar }}</span>
       <span>{{ _('shell.greeting', name=state.display_name) }}</span>
+      {# D-245: the kite, in the room the greeting leaves, never over a control. #}
+      <img class="hello__logo" src="/static/shared/brand/logo.png?v={{ asset_version }}"
+           alt="BioKids" height="72" draggable="false">
     </div>
 
     {# The sticker album (D-211): a star and the number, which a child who
@@ -193,7 +196,8 @@
     </a>
     <a class="tile-small" href="/shutdown"
        {% if young %}data-speak="{{ _('shell.shutdown') }}"{% endif %}>
-      <span aria-hidden="true">⏻</span> {{ _('shell.shutdown') }}
+      <img class="tile-small__kite" src="/static/shared/brand/kite.png?v={{ asset_version }}"
+           alt="" draggable="false"> {{ _('shell.shutdown') }}
     </a>
   </footer>
   {% if album %}{% include "_cheer.html" %}{% endif %}

@@ -31,6 +31,59 @@
       </a>
     </p>
 
+    {# D-245. The year at a glance, as GitHub draws a year of work: a cell a day,
+       darker the more of that day's minutes were used, the warm colour for a day
+       over its limit. Each cell opens that day below. #}
+    <section class="card year">
+      <h2>{{ _('history.year.title', hours=(year.total_seconds // 3600), days=year.active_days) }}</h2>
+      <div class="year__scroll" id="year-scroll">
+        <div class="year__grid" style="--weeks: {{ year.weeks|length }}">
+          <span class="year__corner" aria-hidden="true"></span>
+          <span class="year__months" aria-hidden="true">
+            {% for m in year.months %}
+              <span style="grid-column: {{ m.week + 1 }}">{{ _('history.month.' ~ m.month) }}</span>
+            {% endfor %}
+          </span>
+          <span class="year__weekdays" aria-hidden="true">
+            <span>{{ _('history.weekday.1') }}</span><span></span>
+            <span>{{ _('history.weekday.3') }}</span><span></span>
+            <span>{{ _('history.weekday.5') }}</span><span></span><span></span>
+          </span>
+          <ol class="year__weeks" aria-label="{{ _('history.year.label', name=child.display_name) }}">
+            {% for week in year.weeks %}
+              <li class="year__week">
+                {% for cell in week %}
+                  {% if cell %}
+                    <a class="year__day year__day--{{ cell.level }} {% if cell.day == day %}is-selected{% endif %}"
+                       href="/history?child={{ child.id }}&day={{ cell.day.isoformat() }}"
+                       title="{{ cell.day.strftime('%d.%m.%Y') }} · {{ cell.seconds|duration(_) }}">
+                      <span class="visually-hidden">{{ cell.day.strftime('%d.%m.%Y') }}: {{ cell.seconds|duration(_) }}</span>
+                    </a>
+                  {% else %}
+                    <span class="year__day year__day--future" aria-hidden="true"></span>
+                  {% endif %}
+                {% endfor %}
+              </li>
+            {% endfor %}
+          </ol>
+        </div>
+      </div>
+      <p class="year__legend muted small">
+        <span>{{ _('history.year.less') }}</span>
+        {% for level in range(4) %}<span class="year__day year__day--{{ level }}" aria-hidden="true"></span>{% endfor %}
+        <span>{{ _('history.year.more') }}</span>
+        <span class="year__day year__day--4" aria-hidden="true"></span>
+        <span>{{ _('history.year.over') }}</span>
+      </p>
+    </section>
+    <script>
+      /* On a phone the year is wider than the screen: start at today's end. */
+      (function () {
+        var scroll = document.getElementById("year-scroll");
+        if (scroll) scroll.scrollLeft = scroll.scrollWidth;
+      })();
+    </script>
+
     <section class="card">
       <h2>{{ _('history.days', name=child.display_name) }}</h2>
       <ol class="bars" aria-label="{{ _('history.days', name=child.display_name) }}">

@@ -271,9 +271,11 @@ def test_no_tile_no_corner(config: Config) -> None:
 def test_the_parent_reads_how_far_the_child_is(
     client: TestClient, family_ready: None, db: Database
 ) -> None:
+    # Today, not TODAY: Analiz shows the week the real clock is in, and a fixed
+    # date fell out of it the Monday after.
     with db.session() as session:
         for item in ("g1/letter-e", "g1/letter-l"):
-            repo.record_reading_answer(session, 1, item, True, TODAY)
+            repo.record_reading_answer(session, 1, item, True, dt.date.today())
         session.commit()
     login(client)
     page = client.get("/insights?child=1").text

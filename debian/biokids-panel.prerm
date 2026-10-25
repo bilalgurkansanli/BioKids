@@ -13,6 +13,8 @@ case "$1" in
         if [ -d /run/systemd/system ]; then
             deb-systemd-invoke stop biokids-panel.service >/dev/null 2>&1 || true
         fi
+        # Debian's own desktop background again (D-245).
+        update-alternatives --remove desktop-background             /usr/share/backgrounds/biokids/biokids-desktop.png >/dev/null 2>&1 || true
         ;;
 
     upgrade|failed-upgrade)

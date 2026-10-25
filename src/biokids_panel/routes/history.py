@@ -29,6 +29,14 @@ router = APIRouter()
 DAYS = 14
 """How far back the bars go. Two weeks shows a pattern; a month is a chart."""
 
+YEAR_WEEKS = 53
+"""The year at a glance (D-245): a column a week, Monday at the top, the way a
+Turkish calendar is laid out; 53 so that a whole year shows whatever weekday
+today is. Minutes per day are kept for 400 days (`retention.usage_days`)."""
+
+LEVELS = 4
+"""How many shades a used day can have; 0 is a day with no minutes."""
+
 
 @router.get("/history", response_class=HTMLResponse)
 def history_view(
@@ -57,6 +65,7 @@ def history_view(
         day=selected,
         today=today,
         bars=_bars(session, chosen, today),
+        year=year_map(session, chosen, today),
         apps=_apps(session, chosen.id, selected, locale),
         visits=_visits(session, chosen.id, selected),
         requests=_requests(session, chosen.id, selected, locale),
@@ -87,6 +96,58 @@ def _bars(session: Session, child: Child, today: dt.date) -> list[dict[str, Any]
         }
         for d in days
     ]
+
+
+def day_level(seconds: int, quota_seconds: int) -> int:
+    """The shade of a day (D-245): 0 for none, then by how much of that day's
+    quota was used - a third, two thirds, all of it, more than it. A day with
+    no quota to measure by (a day off) is shaded by the hour."""
+    if seconds < 60:
+        return 0
+    if quota_seconds <= 0:
+        return min(LEVELS, 1 + seconds // 3600)
+    if seconds > quota_seconds:
+        return LEVELS
+    return min(LEVELS - 1, 1 + (3 * seconds) // (quota_seconds + 1))
+
+
+def year_map(session: Session, child: Child, today: dt.date) -> dict[str, Any]:
+    """The last year as GitHub draws a contribution graph (D-245): one cell a
+    day, a column a week, shaded by the minutes used against that day's quota.
+
+    Weeks start on Monday. The days after today in this week are left out; the
+    days before the first one kept, or before the child was added, are empty.
+    """
+    last_monday = today - dt.timedelta(days=today.weekday())
+    first = last_monday - dt.timedelta(weeks=YEAR_WEEKS - 1)
+    used = {
+        row.day: row.general_s
+        for row in session.scalars(
+            select(LedgerDay).where(LedgerDay.child_id == child.id, LedgerDay.day >= first)
+        )
+    }
+    policy = repo.load_policy(session, child, today=today)
+    weeks: list[list[dict[str, Any] | None]] = []
+    months: list[dict[str, Any]] = []
+    total = active = 0
+    for week in range(YEAR_WEEKS):
+        monday = first + dt.timedelta(weeks=week)
+        if monday.day <= 7:
+            # The week a month begins in carries its name, as GitHub's does.
+            months.append({"week": week, "month": monday.month})
+        cells: list[dict[str, Any] | None] = []
+        for offset in range(7):
+            day = monday + dt.timedelta(days=offset)
+            if day > today:
+                cells.append(None)
+                continue
+            seconds = used.get(day, 0)
+            quota = policy.quota_minutes(day) * 60 if policy else 0
+            total += seconds
+            active += seconds >= 60
+            cells.append({"day": day, "seconds": seconds, "level": day_level(seconds, quota)})
+        weeks.append(cells)
+    return {"weeks": weeks, "months": months, "total_seconds": total, "active_days": active}
 
 
 def _apps(session: Session, child_id: int, day: dt.date, locale: str) -> list[dict[str, Any]]:
