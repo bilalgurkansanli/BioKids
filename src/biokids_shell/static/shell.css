@@ -81,7 +81,46 @@ svg {
  * and gone where that room is too small for it. */
 /* "Kapat" carries the kite (D-245), the way a computer's own button for
  * switching off carries its maker's logo. */
-.tile-small__kite { height: 1.6em; width: auto; vertical-align: middle; }
+.tile-small__kite {
+  height: 1.6em;
+  width: auto;
+  vertical-align: middle;
+  transition: transform .25s ease;
+}
+
+/* Pressed, the kite lifts a little: it is about to fly (D-246). */
+.tile-small:active .tile-small__kite,
+.tile-small:hover .tile-small__kite { transform: translateY(-5px) rotate(-10deg); }
+
+/* The goodbye (D-246): the kite rises from the bottom of the screen, swaying on
+ * the wind, and is gone off the top - the computer is going to sleep. */
+.goodbye-kite {
+  position: fixed;
+  left: 50%;
+  bottom: -260px;
+  z-index: -1;
+  height: 240px;
+  width: auto;
+  pointer-events: none;
+  animation: kite-fly 7s cubic-bezier(.45, .05, .55, .95) .4s forwards;
+}
+
+/* Behind the words and Zio, in front of the screen's colour. */
+.full__inner:has(.goodbye-kite) { position: relative; z-index: 1; }
+
+@keyframes kite-fly {
+  0%   { transform: translate(-50%, 0) rotate(-6deg); }
+  20%  { transform: translate(-80%, -30vh) rotate(8deg); }
+  40%  { transform: translate(-20%, -60vh) rotate(-10deg); }
+  60%  { transform: translate(-70%, -90vh) rotate(9deg); }
+  80%  { transform: translate(-30%, -120vh) rotate(-7deg); }
+  100% { transform: translate(-50%, -160vh) rotate(4deg) scale(.6); opacity: .9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goodbye-kite { animation: none; bottom: var(--sp-5); height: 120px; transform: translateX(-50%); }
+  .tile-small:active .tile-small__kite, .tile-small:hover .tile-small__kite { transform: none; }
+}
 
 .hello__logo {
   height: 72px;

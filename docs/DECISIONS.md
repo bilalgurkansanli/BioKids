@@ -2165,3 +2165,10 @@ parent's desktop; press-and-speak you can see and check.** (2026-10-26)
   logo, in place of the ⏻ sign.
 - **The brightness slider** was checked on the VM: with no backlight it fades the
   output through `xrandr --brightness` (0.5 at half, 1.0 at full), as D-199 meant.
+
+**D-246 [owner] Switching off, the kite flies away.** (2026-10-26)
+Kapat carries the kite (D-245), so the owner asked that switching off look like it: on
+the goodbye screen after "Evet, kapat" the kite rises from the bottom, swaying, behind
+the words and Zio, and is gone off the top in seven seconds; a pressed Kapat lifts its
+kite a little. Not for "Oturumu değiştir", which is not going to sleep. Without motion
+(`prefers-reduced-motion`) the kite simply stands at the bottom.

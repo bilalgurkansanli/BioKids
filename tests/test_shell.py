@@ -2611,3 +2611,13 @@ def test_a_bubble_tapped_is_read_again_and_kapat_carries_the_kite(client: TestCl
     assert 'log.addEventListener("click"' in script and "is-replaying" in script
     page = client.get("/").text
     assert 'class="tile-small__kite" src="/static/shared/brand/kite.png' in page
+
+
+def test_switching_off_the_kite_flies_away(client: TestClient, daemon: FakeShellDaemon) -> None:
+    """D-246: the kite on Kapat flies off the goodbye screen; not on a switch of user."""
+    page = client.post("/shutdown").text
+    assert 'class="goodbye-kite"' in page
+    assert 'class="goodbye-kite"' not in client.post("/switch-user").text
+    css = (STATIC / "shell.css").read_text(encoding="utf-8")
+    assert "@keyframes kite-fly" in css and ".goodbye-kite { animation: none;" in css
+

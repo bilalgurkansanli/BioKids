@@ -11,6 +11,11 @@
      or the session not have gone after all (the daemon restarted mid-way):
      never a child left in front of "switching off" with nothing to press. #}
   <div id="goodbye" hidden data-back-after="60"></div>
+  {# D-246: switching off, the kite from the Kapat button flies away. #}
+  {% if outcome != 'switch' %}
+    <img class="goodbye-kite" src="/static/shared/brand/kite.png?v={{ asset_version }}"
+         alt="" aria-hidden="true" draggable="false">
+  {% endif %}
   {% if outcome == 'switch' %}
     {# "Oturumu değiştir" (D-227): the login screen comes next. #}
     <h1>{{ _('shell.switch.going') }}</h1>
