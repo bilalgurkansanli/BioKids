@@ -112,6 +112,7 @@ from biokids_shell.appbar import (
     stop_scope,
     time_left,
     visible_width,
+    width_to_place,
     window_extents,
 )
 
@@ -252,6 +253,8 @@ class AppBarUi:
         self._time_text: str | None = None
         self._placed_width: int | None = None
         """The bar's width, in CSS pixels, the last time it was placed."""
+        self._on_screen_width: int | None = None
+        """Its width on screen, as GTK last allocated it (D-242)."""
         self._replacing = False
         self._scopes: dict[tuple[int, int], str | None] = {}
         self._polling = False
@@ -510,7 +513,9 @@ class AppBarUi:
         width = visible_width(frame, area)
         self._set_tier(bar_tier(width, scale), width)
         _minimum, natural = self.window.get_preferred_size()
-        self._placed_width = int(natural.width)
+        self._placed_width = width_to_place(
+            int(natural.width), self._on_screen_width if self.shown else None
+        )
         origin = bar_origin(
             area, self._placed_width * scale, frame, bar_height=BUTTON_TARGET_PX * scale
         )
@@ -577,6 +582,7 @@ class AppBarUi:
         by - GTK measured the new tier only on its next frame, or when it showed
         the bar - it is placed again, once the main loop is idle. Moving the bar
         does not change its size, so this cannot repeat itself."""
+        self._on_screen_width = int(allocation.width)
         if self._replacing or int(allocation.width) == self._placed_width:
             return
         self._replacing = True

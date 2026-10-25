@@ -2419,3 +2419,21 @@ def test_systemctls_answer_is_read_one_line_per_scope() -> None:
         "biokids-app-a-1.scope"
     }
     assert launcher_module.active_scopes(scopes, "active\n") is None, "does not line up"
+
+
+# ------------------------------------------------- D-242 placed by its real width
+
+
+def test_the_bar_is_placed_by_the_width_it_has_on_screen_when_gtk_says_less() -> None:
+    """Over LearnEnglish Kids the bar was 544 wide, placed as if 424: ✕ and 🔊
+    were off the right edge of the screen."""
+    from biokids_shell.appbar import Rect, bar_origin, width_to_place
+
+    width = width_to_place(424, 544)
+    assert width == 544
+    x, _ = bar_origin(Rect(0, 0, 1600, 900), width, Rect(0, 0, 1600, 900))
+    assert x + 544 <= 1600
+    assert width_to_place(544, None) == 544, "a hidden bar is placed by GTK's measure"
+    assert width_to_place(284, 544) == 544, (
+        "too wide for a moment, placed again on its new size"
+    )

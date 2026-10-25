@@ -399,6 +399,20 @@ class Rect:
     height: int
 
 
+def width_to_place(natural: int, on_screen: int | None) -> int:
+    """The bar's width to place it by: GTK's measure, or the width it has on
+    screen when that is wider (D-242).
+
+    Right after the bar grows - the minutes arrive and their box appears -
+    GTK can still answer from its cache until its next frame. Placed by that
+    narrower width, the bar's right end, ✕ and 🔊 with it, stood off the
+    screen; and its size had already changed, so nothing placed it again. A
+    width taken from the screen that turns out too wide only leaves a gap at
+    the corner until the bar's next size, which places it again.
+    """
+    return max(natural, on_screen or 0)
+
+
 def bar_origin(
     monitor: Rect,
     bar_width: int,

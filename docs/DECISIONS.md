@@ -2074,3 +2074,12 @@ met, and a new letter's example word is written under its picture only when ever
 of it is known - otherwise the picture alone, and Zio says the word. The English corner's boxes (D-225), its own table (`reading_item`), learning
 minutes, a card in Analiz, and a line in "Bugün ne konuşalım?". Speech recognition is not
 used: reading here works on every machine, with or without the assistant.
+
+**D-242 [claude] The app bar is placed by the width it has on screen.** (2026-10-25)
+The owner on the VM: over LearnEnglish Kids the app bar's ✕ and 🔊 were off the right
+edge of the screen. The bar was 544 pixels wide and placed as if it were 424: it had
+been placed before the minutes' box appeared, GTK answered the new size from its cache
+until its next frame, and once the bar had its new size nothing placed it again. The
+bar now remembers the width GTK gave it on screen and is placed by whichever is wider,
+that or GTK's measure (`appbar.width_to_place`). Too wide for a moment, it only stands
+a little off its corner until its next size places it again.
