@@ -48,12 +48,15 @@
     </div>
 
     <div class="checkline">
+      {# Ticked with the assistant (D-244): the children it is for cannot all
+         type. Until the assistant is first turned on, the box says so. #}
+      {% set voice_on = policy.assistant_voice or not policy.assistant_enabled %}
       <input type="checkbox" id="assistant_voice" name="assistant_voice"
-             {% if policy.assistant_voice %}checked{% endif %}
+             {% if voice_on %}checked{% endif %}
              {% if not status.voice %}disabled{% endif %}>
       {# A disabled box is not sent. Without this, saving while the speech model
          is missing turned the voice off for good. #}
-      {% if not status.voice and policy.assistant_voice %}
+      {% if not status.voice and voice_on %}
         <input type="hidden" name="assistant_voice" value="on">
       {% endif %}
       <label for="assistant_voice">

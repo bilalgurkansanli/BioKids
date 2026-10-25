@@ -22,6 +22,11 @@ MAX_AUDIO_BYTES: Final = 16_000 * 2 * 16 + 1024
 #: What Whisper writes for silence, music and noise, in either language.
 _NOISE: Final = re.compile(r"\[[^\]]*\]|\([^)]*\)|\*[^*]*\*")
 
+AUTO: Final = "auto"
+"""Whisper's own guess of the language (D-244)."""
+HEARD_LANGUAGES: Final = frozenset({"tr", "turkish", "en", "english"})
+"""What whisper-server names Turkish and English, by code or by name."""
+
 Multipart = Callable[..., Awaitable[dict[str, Any]]]
 
 
@@ -34,15 +39,36 @@ class Transcriber:
         self.endpoint = endpoint
         self._post = post
 
-    async def transcribe(self, wav: bytes, locale: str) -> str:
+    async def transcribe(self, wav: bytes, locale: str, fallback: str = "tr") -> str:
+        """The words of `wav`, heard in `locale`'s language.
+
+        "auto" lets Whisper find out which (D-244). It knows a hundred
+        languages, and a child's short sentence heard as Azerbaijani comes out
+        as nonsense: anything but Turkish or English is heard again in
+        `fallback`'s.
+        """
         if not wav.startswith(b"RIFF") or len(wav) > MAX_AUDIO_BYTES:
             raise TranscriptionError("not a short WAV recording")
+        if locale == AUTO:
+            data = await self._inference(wav, AUTO, "verbose_json")
+            if heard_language(data) in HEARD_LANGUAGES:
+                return clean(str(data.get("text", "")))
+            locale = fallback
         language = "tr" if locale.startswith("tr") else "en"
+        return clean(str((await self._inference(wav, language, "json")).get("text", "")))
+
+    async def _inference(
+        self, wav: bytes, language: str, response_format: str
+    ) -> dict[str, Any]:
         try:
-            data = await self._post(
+            return await self._post(
                 self.endpoint,
                 INFERENCE_PATH,
-                {"temperature": "0.0", "response_format": "json", "language": language},
+                {
+                    "temperature": "0.0",
+                    "response_format": response_format,
+                    "language": language,
+                },
                 "file",
                 "speech.wav",
                 wav,
@@ -50,7 +76,11 @@ class Transcriber:
             )
         except HttpError as exc:
             raise TranscriptionError(str(exc)) from exc
-        return clean(str(data.get("text", "")))
+
+
+def heard_language(data: dict[str, Any]) -> str:
+    """The language whisper-server says it heard, in its own words, lower case."""
+    return str(data.get("language") or data.get("detected_language") or "").strip().lower()
 
 
 def clean(text: str) -> str:

@@ -207,8 +207,9 @@ the parent standing behind a four-year-old reads it too. The full-screen time wa
    pages (D-187).
 8. **Earned** — a brief celebration when bonus minutes arrive. Keep it to 2 seconds.
 9. **Sor Bana** (D-165), when a parent has switched it on — a big text box and a
-   send button, and with voice on (D-166) a round microphone button the child holds
-   while speaking, which says "Dinliyorum…" while it listens. Under the box, always:
+   send button, and with voice on (D-166, on with the assistant since D-244) a round
+   microphone button the child holds while speaking, which says "Dinliyorum…" while it
+   listens. Zio answers in the language of the question, Turkish or English (D-244). Under the box, always:
    "Sorduğun bazı soruları ailen görebilir." The answer appears in a bubble a sentence
    at a time, as the model writes it, and Zio reads each sentence aloud in turn, never
    two at once (D-216). A refusal is a kind fixed sentence in the same bubble, never an

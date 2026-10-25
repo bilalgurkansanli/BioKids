@@ -2083,3 +2083,28 @@ until its next frame, and once the bar had its new size nothing placed it again.
 bar now remembers the width GTK gave it on screen and is placed by whichever is wider,
 that or GTK's measure (`appbar.width_to_place`). Too wide for a moment, it only stands
 a little off its corner until its next size places it again.
+
+**D-244 [owner] Press-and-speak with the assistant; answers in the question's language.**
+(2026-10-25)
+The owner asked why Sor Bana had no microphone - it was there, behind its own box, which
+D-166 left unticked - and that Zio answer in Turkish or English as the child asks.
+- **Press-and-speak comes ticked**: on **Çocuklar → Asistan**, the "Bas-konuş açık" box
+  is ticked until the assistant is first turned on, so turning it on brings the
+  microphone with it; a parent can untick it, and one who did is not overruled.
+  Everything else of D-166 stands: only while the button is held, at most 15 seconds,
+  transcribed on the machine, never kept or sent. A family whose assistant was already
+  on keeps what it chose.
+- **The question's language**: the daemon reads which of Turkish and English a question
+  is in (`biokids_core.language`: the letters only Turkish has, then the small words of
+  each; a question that shows neither way is in the child's own language) and asks the
+  model to answer in it; the launcher has Zio say the answer in that language's voice.
+  Refusals stay in the child's language: they are sentences the catalog wrote. Spoken
+  questions are heard with Whisper's own guess of the language, and anything it hears
+  as neither Turkish nor English is heard again in the child's. Sio's English practice
+  is always English.
+- **No fine-tuning.** Asked whether the model was trained to talk with children: it is
+  not, and it need not be. Every answer is written under instructions that name the
+  child, their age and the helper they talk to, with a worked example for their age
+  band, after a separate check of the question (D-165, D-216). Fine-tuning would need
+  a training set of children's conversations and a GPU, and would ship a second 3 GB
+  model to every family, for what the instructions already do and can be read.

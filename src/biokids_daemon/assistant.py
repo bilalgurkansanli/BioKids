@@ -41,6 +41,7 @@ from biokids_core.config import Config
 from biokids_core.db.models import AiAlert
 from biokids_core.errors import IpcError
 from biokids_core.ipc import AsyncDaemonClient, EventKind, Response
+from biokids_core.language import question_language
 
 log = logging.getLogger(__name__)
 
@@ -168,6 +169,9 @@ class AssistantGate:
 
         child = repo.get_child(self.supervisor.session, child_id)
         age = child.age_on(dt.date.today()) if child is not None else 7
+        # Answered in the language it was asked in, Turkish or English (D-244);
+        # Sio's English practice is always in English.
+        language = runtime.locale if practice else question_language(question, runtime.locale)
         try:
             extra: dict[str, Any] = (
                 {
@@ -183,7 +187,7 @@ class AssistantGate:
                 "ask",
                 question=question,
                 age=age,
-                locale=runtime.locale,
+                locale=language,
                 persona="sio" if practice else "zio",
                 name=runtime.display_name,
                 **extra,
@@ -195,6 +199,7 @@ class AssistantGate:
             return refusal("assistant.refuse.unavailable", "unavailable")
 
         reply = dict(response.data)
+        reply["language"] = "en" if practice else language
         answer_id = str(reply.get("answer_id", ""))[:MAX_ANSWER_ID]
         if reply.get("done", True) or not answer_id:
             reply["done"] = True
@@ -328,7 +333,8 @@ class AssistantGate:
         """Press-and-speak: a short recording in, its words out. Nothing kept (D-166).
 
         `language` "en" hears the recording as English whatever the child's own
-        language: a word said back in the English corner (D-225). The same
+        language: a word said back in the English corner (D-225); "auto" lets
+        Whisper tell Turkish from English, for a question to Zio (D-244). The same
         switch guards it - the parent's "speak to the assistant" - because it
         is the same microphone.
         """
@@ -339,7 +345,10 @@ class AssistantGate:
             return {"ok": False, "error": "assistant.voice.too_long"}
         try:
             response = await self.client.call(
-                "transcribe", audio=audio_b64, locale=language or runtime.locale
+                "transcribe",
+                audio=audio_b64,
+                locale=language or runtime.locale,
+                fallback=runtime.locale,
             )
         except IpcError as exc:
             log.warning("the assistant service is not answering: %s", exc)

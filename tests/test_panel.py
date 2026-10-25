@@ -3698,3 +3698,21 @@ def test_a_calm_screen_is_saved_for_the_child(
     with db.session() as session:
         child = repo.get_child(session, 1)
         assert child is not None and child.calm_screen is False
+
+
+def test_press_and_speak_comes_ticked_with_the_assistant(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """D-244: the children the assistant is for cannot all type."""
+    login(client)
+    page = client.get("/children/1/assistant").text
+    assert re.search(r'id="assistant_voice" name="assistant_voice"\s+checked', page)
+    with db.session() as session:
+        policy = repo.get_or_create_policy(session, 1)
+        policy.assistant_enabled = True
+        policy.assistant_voice = False
+        session.commit()
+    page = client.get("/children/1/assistant").text
+    assert not re.search(r'id="assistant_voice" name="assistant_voice"\s+checked', page), (
+        "a parent who turned it off is not overruled"
+    )

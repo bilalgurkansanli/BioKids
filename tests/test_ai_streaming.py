@@ -799,12 +799,19 @@ def launcher(config: Config) -> tuple[TestClient, Daemon]:
 def test_the_page_gets_the_start_then_the_rest(launcher: tuple[TestClient, Daemon]) -> None:
     client, daemon = launcher
     daemon.replies = [
-        {"answer_id": "a1", "done": False, "sentences": []},
+        {"answer_id": "a1", "done": False, "sentences": [], "language": "tr"},
         {"answer_id": "a1", "done": False, "sentences": ["Çünkü ışık saçılır."]},
         {"answer_id": "a1", "done": True, "sentences": ["Bitti."], "refused": False},
     ]
     begun = client.post("/assistant/ask", json={"question": "Neden?"}, headers=SAME).json()
-    assert begun == {"id": "a1", "sentences": [], "done": False, "ending": "", "refused": False}
+    assert begun == {
+        "id": "a1",
+        "sentences": [],
+        "done": False,
+        "ending": "",
+        "refused": False,
+        "lang": "tr",
+    }
     more = client.post("/assistant/more", json={"id": "a1"}, headers=SAME).json()
     assert more["sentences"] == ["Çünkü ışık saçılır."] and more["id"] == "a1"
     last = client.post("/assistant/more", json={"id": "a1"}, headers=SAME).json()
@@ -814,6 +821,7 @@ def test_the_page_gets_the_start_then_the_rest(launcher: tuple[TestClient, Daemo
         "done": True,
         "ending": "",
         "refused": False,
+        "lang": "",
     }
     assert daemon.polled == ["a1", "a1"]
 

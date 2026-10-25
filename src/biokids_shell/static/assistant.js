@@ -81,8 +81,10 @@
   var unsaid = [];
   var saying = false;
 
-  function say(text) {
-    unsaid.push(text);
+  /* `lang`: the answer's language, Turkish or English, which Zio says it in
+   * (D-244); none for a sentence of the launcher's own, said in the child's. */
+  function say(text, lang) {
+    unsaid.push({ text: text, lang: lang || "" });
     sayNext();
   }
 
@@ -90,7 +92,9 @@
     if (saying || !unsaid.length) return;
     saying = true;
     if (character) character.classList.add("is-speaking");
-    var line = { text: unsaid.shift() };
+    var next = unsaid.shift();
+    var line = { text: next.text };
+    if (next.lang) line.lang = next.lang;
     if (english) line.mode = "english";
     post("/assistant/say", line)
       .catch(function () {})
@@ -114,24 +118,26 @@
     var said = [];
     answer.classList.add("bubble--thinking");
     var shown = 0;
+    var answerLang = ""; /* the language the answer is in (D-244) */
     var polls = 0;
     var misses = 0;
     var slow = window.setTimeout(function () {
       if (!shown) answer.textContent = strings.loading;
     }, SLOW_MS);
 
-    function add(text, aloud) {
+    function add(text, aloud, lang) {
       if (!shown) {
         answer.textContent = "";
         answer.classList.remove("bubble--thinking");
       }
       var sentence = document.createElement("span");
       sentence.textContent = (shown ? " " : "") + text;
+      if (lang) sentence.setAttribute("lang", lang);
       answer.appendChild(sentence);
       shown += 1;
       said.push(text);
       answer.scrollIntoView({ block: "end", behavior: "smooth" });
-      if (aloud) say(text);
+      if (aloud) say(text, lang);
     }
 
     function finish(ending, refused, aloud) {
@@ -151,8 +157,9 @@
     }
 
     function take(reply) {
+      if (reply.lang && !answerLang) answerLang = reply.lang;
       (reply.sentences || []).forEach(function (text) {
-        add(text, true);
+        add(text, true, answerLang);
       });
       if (reply.done || !reply.id) {
         finish(reply.ending, reply.refused, true);

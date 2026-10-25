@@ -442,7 +442,9 @@ class AssistantService:
         try:
             await self._stt.ensure()
             text = await self._transcriber.transcribe(
-                wav, str(request.args.get("locale", "tr"))
+                wav,
+                str(request.args.get("locale", "tr")),
+                str(request.args.get("fallback", "tr")),
             )
         except (ServerUnavailable, TranscriptionError) as exc:
             log.warning("speech could not be turned into text: %s", exc)

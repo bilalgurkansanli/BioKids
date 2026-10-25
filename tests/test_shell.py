@@ -2322,7 +2322,15 @@ def test_sios_sentences_are_said_in_english_in_his_voice(
     monkeypatch.setattr(client.app.state.shell, "say_and_wait", say_and_wait)  # type: ignore[attr-defined]
     _json_post(client, "/assistant/say", {"text": "A dog!", "mode": "english"})
     _json_post(client, "/assistant/say", {"text": "Gökyüzü mavidir."})
-    assert said == [("A dog!", "en", "sio"), ("Gökyüzü mavidir.", "tr", "zio")]
+    # Zio's answer to a question asked in English, in English (D-244).
+    _json_post(client, "/assistant/say", {"text": "The sky is blue.", "lang": "en"})
+    _json_post(client, "/assistant/say", {"text": "Merhaba.", "lang": "de"})
+    assert said == [
+        ("A dog!", "en", "sio"),
+        ("Gökyüzü mavidir.", "tr", "zio"),
+        ("The sky is blue.", "en", "zio"),
+        ("Merhaba.", "tr", "zio"),
+    ]
 
 
 def test_talking_with_sio_is_heard_as_english(
@@ -2332,7 +2340,8 @@ def test_talking_with_sio_is_heard_as_english(
     headers = {"origin": LAUNCHER, "content-type": "audio/wav", "sec-fetch-site": "same-origin"}
     client.post("/assistant/hear?lang=en", content=wav, headers=headers)
     client.post("/assistant/hear", content=wav, headers=headers)
-    assert with_english.heard == ["en", ""]
+    # A question to Zio: Turkish or English, whichever the child spoke (D-244).
+    assert with_english.heard == ["en", "auto"]
 
 
 # ---------------------------------------------------------- D-227 switch user

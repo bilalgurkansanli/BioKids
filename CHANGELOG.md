@@ -20,6 +20,9 @@ and three empty tables (`parent_note`, `shared_recording`, `reading_item`).
 
 ### Added
 
+- **Press-and-speak with the assistant, and answers in the question's language**
+  (D-244): turning Sor Bana on brings its microphone with it; a question asked in
+  English is answered and spoken in English, one in Turkish in Turkish.
 - **Son tur** (D-230): on the one-minute warning, once a day, "🏁 Bitireyim" gives the
   parent's minutes (3 by default) to finish a level or a drawing. Today says so.
 - **Şimdi ne yapsak?** (D-231): the time-up, good-night, between-windows and break screens

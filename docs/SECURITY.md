@@ -498,7 +498,8 @@ We do not build, and will not accept contributions for:
 - covert monitoring, hidden modes, or a "stealth" install
 - keystroke logging
 - microphone or camera capture, with one exception (D-166): push-to-talk in the
-  assistant, off by default, only while the child holds the button and for at most
+  assistant, off until a parent turns the assistant on and then on with it unless they
+  untick it (D-244), only while the child holds the button and for at most
   15 seconds, usable by the launcher alone, transcribed on the machine and never
   saved or sent. Background listening, wake words and keeping audio stay out
   of scope.

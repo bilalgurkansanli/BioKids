@@ -58,6 +58,7 @@ from biokids_core.ipc import AsyncDaemonClient
 from biokids_core.ipc import Event as IpcEvent
 from biokids_core.ipc import Request as IpcRequest
 from biokids_core.ipc import Response as IpcResponse
+from biokids_core.language import LANGUAGES
 from biokids_core.types import AgeBand, Reason
 from biokids_shell import device, pictures, recordings
 from biokids_shell.appbar import scope_unit
@@ -783,10 +784,13 @@ def register_routes(app: FastAPI) -> None:
             # Sio, in English, whatever the child's own language (D-226).
             said = await shell.say_and_wait(text, english.LANGUAGE, "sio")
         elif text:
-            data = await shell.client.state() or {}
-            said = await shell.say_and_wait(
-                text, normalise_locale(str(data.get("locale", "tr")))
-            )
+            # In the language the answer is in (D-244), which the page was told
+            # with its first sentences; otherwise the child's own.
+            asked = str((body or {}).get("lang", ""))
+            if asked not in LANGUAGES:
+                data = await shell.client.state() or {}
+                asked = normalise_locale(str(data.get("locale", "tr")))
+            said = await shell.say_and_wait(text, asked)
         return JSONResponse({"ok": said}, headers={"Cache-Control": "no-store"})
 
     @app.post("/speak-label")
@@ -829,7 +833,9 @@ def register_routes(app: FastAPI) -> None:
             return JSONResponse({"error": "too long"}, status_code=413)
         text = await shell.client.hear_assistant(
             base64.b64encode(audio).decode("ascii"),
-            english.LANGUAGE if lang == english.LANGUAGE else "",
+            # A question to Zio is heard in Turkish or English, whichever the
+            # child spoke (D-244); talking with Sio, in English.
+            english.LANGUAGE if lang == english.LANGUAGE else "auto",
         )
         del audio
         return JSONResponse(
@@ -1594,6 +1600,7 @@ async def _answer_so_far(shell: ShellState, reply: dict[str, Any]) -> Response:
         data = await shell.client.state() or {}
         tr = translator(normalise_locale(str(data.get("locale", "tr"))))
         ending = tr(str(reply.get("refusal_key") or "assistant.refuse.default"))
+    language = str(reply.get("language", ""))
     return JSONResponse(
         {
             "id": "" if done else str(reply.get("answer_id", "")),
@@ -1601,6 +1608,9 @@ async def _answer_so_far(shell: ShellState, reply: dict[str, Any]) -> Response:
             "done": done,
             "ending": ending,
             "refused": refused,
+            # The answer's language, Turkish or English (D-244): what Zio
+            # says it in. Only on the first answer to a question.
+            "lang": language if language in LANGUAGES else "",
         },
         headers={"Cache-Control": "no-store"},
     )

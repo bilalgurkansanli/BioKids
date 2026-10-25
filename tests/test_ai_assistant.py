@@ -886,3 +886,59 @@ def test_the_classifier_is_shown_worked_examples_before_the_message() -> None:
     assert verdicts <= set(prompts.CATEGORIES)
     assert {"ok", "personal_info", "beliefs"} <= verdicts
     assert messages[-1]["content"] == 'Message: "I am six"'
+
+
+# ------------------------------------------------- D-244 the question's language
+
+
+async def test_a_question_in_english_is_answered_in_english(
+    config: Config, no_db: None
+) -> None:
+    """A Turkish child asking in English gets English, said by the English voice."""
+    service = FakeService({"done": True, "refused": False, "sentences": ["Blue."]})
+    g = gate(Policy(), service, config)
+
+    english = await g.ask(1, "Why is the sky blue?")
+    turkish = await g.ask(1, "Gökyüzü neden mavi?")
+
+    assert [args["locale"] for op, args in service.calls if op == "ask"] == ["en", "tr"]
+    assert english["language"] == "en" and turkish["language"] == "tr"
+
+
+async def test_speech_is_heard_in_whichever_language_it_was_in(
+    config: Config, no_db: None
+) -> None:
+    service = FakeService()
+    await gate(Policy(assistant_voice=True), service, config).hear(1, "UklGRg==", "auto")
+    (op, args) = service.calls[0]
+    assert op == "transcribe"
+    assert args["locale"] == "auto" and args["fallback"] == "tr"
+
+
+async def test_whisper_is_asked_again_when_it_heard_neither_language() -> None:
+    """Whisper knows a hundred languages; a child's short Turkish sentence heard
+    as Azerbaijani would come out as nonsense."""
+    from biokids_ai.localhttp import Endpoint
+    from biokids_ai.stt import Transcriber
+
+    asked: list[tuple[str, str]] = []
+    answers = {
+        "auto": {"language": "azerbaijani", "text": "nonsense"},
+        "tr": {"text": "Gökyüzü neden mavi"},
+    }
+
+    async def post(
+        _endpoint: Any, _path: str, fields: dict[str, str], *_a: Any, **_k: Any
+    ) -> Any:
+        asked.append((fields["language"], fields["response_format"]))
+        return answers[fields["language"]]
+
+    stt = Transcriber(Endpoint("http://127.0.0.1:1"), post=post)
+    wav = b"RIFF" + b"\0" * 64
+    assert await stt.transcribe(wav, "auto", "tr") == "Gökyüzü neden mavi"
+    assert asked == [("auto", "verbose_json"), ("tr", "json")]
+
+    asked.clear()
+    answers["auto"] = {"language": "english", "text": "Why is the sky blue"}
+    assert await stt.transcribe(wav, "auto", "tr") == "Why is the sky blue"
+    assert asked == [("auto", "verbose_json")]

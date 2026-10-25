@@ -444,8 +444,10 @@ class ShellServer:
 
     async def _hear_assistant(self, caller: ShellCaller, request: Request) -> Response:
         audio = str(request.args.get("audio", ""))
-        # English is the only other language a child is ever heard in (D-225).
-        language = "en" if request.args.get("language") == "en" else None
+        # English is the only other language a child is ever heard in (D-225);
+        # "auto", Turkish or English, whichever they spoke (D-244).
+        asked = request.args.get("language")
+        language = str(asked) if asked in ("en", "auto") else None
         heard = await self.assistant.hear(caller.child_id, audio, language)
         return Response(
             id=request.id,
