@@ -1,0 +1,25 @@
+# What the image is (D-249). The BioKids packages and the assistant's runtime are
+# not in Debian's archive yet: `make` copies them into config/packages.chroot,
+# from which live-build installs them like any other package.
+
+# The desktop a parent uses, as a normal Debian Xfce install has it - but
+# without Firefox, which the image's hook removes (D-237): the parent's
+# browser is Chromium.
+task-xfce-desktop
+task-laptop
+task-turkish
+task-english
+network-manager-gnome
+lightdm-gtk-greeter
+chromium-l10n
+# Finds Windows, so the boot menu offers it next to BioKids (dual boot).
+os-prober
+
+# BioKids, the child's desktop and its apps (biokids-desktop recommends them).
+biokids-desktop
+# The assistant (off until a parent turns it on; the models are downloaded
+# from the panel, never shipped) and what it runs on.
+biokids-ai
+llama.cpp-tools
+whisper.cpp-tools
+kiwix-tools

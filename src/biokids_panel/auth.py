@@ -35,7 +35,6 @@ from biokids_core.db.models import AuditLog, PanelSession, Parent, utcnow
 log = logging.getLogger(__name__)
 
 SESSION_COOKIE = "biokids_session"
-CSRF_FIELD = "csrf_token"
 PASSPHRASE_GRACE_MINUTES = 5
 """How long one passphrase confirmation covers. Long enough that a single
 destructive flow does not ask three times, short enough that a phone left on a

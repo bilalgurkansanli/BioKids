@@ -184,11 +184,12 @@ async def test_an_answer_moves_the_box_and_only_for_real_items(
 ) -> None:
     await supervisor.start()
     assert supervisor.reading_answer(1, "g1/letter-e", True) == 1
-    assert supervisor.reading_answer(1, "g1/letter-e", True) == 2
+    # Met and asked in the same lesson: still the first box that day (D-250).
+    assert supervisor.reading_answer(1, "g1/letter-e", True) == 1
     assert supervisor.reading_answer(1, "../../etc", True) is None
     state = supervisor.reading_state(1)
-    assert state["items"]["g1/letter-e"][0] == 2
-    assert repo.reading_progress(session, 1)["g1/letter-e"].box == 2
+    assert state["items"]["g1/letter-e"][0] == 1
+    assert repo.reading_progress(session, 1)["g1/letter-e"].box == 1
 
 
 # ---------------------------------------------------------------------- shell
@@ -293,3 +294,16 @@ def test_a_letter_card_writes_no_letter_not_yet_met() -> None:
         assert written <= known, card
         assert card.pic
     assert any("lale" in card.say for card in cards), "the word is still heard"
+
+
+def test_a_meeting_card_writes_no_letter_still_to_come() -> None:
+    """D-250: "el" was written on e's card before l was met in the same lesson."""
+    for seed in range(40):
+        lesson = reading.plan_lesson(GROUPS, {}, TODAY, rng=random.Random(seed))
+        met: set[str] = set()
+        for step in lesson.steps:
+            if step.kind == "letter":
+                met.add(step.show)
+                if step.syllables:
+                    letters = {ch for ch in step.syllables.lower() if ch.isalpha()}
+                    assert letters <= met, (seed, step.show, step.syllables)

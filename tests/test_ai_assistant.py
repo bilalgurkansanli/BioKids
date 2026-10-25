@@ -429,12 +429,18 @@ class FakeSession:
     def __init__(self) -> None:
         self.added: list[Any] = []
         self.commits = 0
+        self.settings: dict[str, str] = {}
 
     def add(self, row: Any) -> None:
         self.added.append(row)
 
     def commit(self) -> None:
         self.commits += 1
+
+    def get(self, _model: Any, key: Any) -> Any:
+        """A stored setting, as `repo.get_setting` reads one."""
+        value = self.settings.get(key)
+        return None if value is None else type("Row", (), {"value": value})()
 
 
 class FakeSupervisor:
@@ -942,3 +948,57 @@ async def test_whisper_is_asked_again_when_it_heard_neither_language() -> None:
     answers["auto"] = {"language": "english", "text": "Why is the sky blue"}
     assert await stt.transcribe(wav, "auto", "tr") == "Why is the sky blue"
     assert asked == [("auto", "verbose_json")]
+
+
+async def test_the_family_can_answer_without_the_encyclopedia(
+    config: Config, no_db: None
+) -> None:
+    """D-247: on unless a parent turned it off, for every child."""
+    service = FakeService({"done": True, "refused": False, "sentences": ["Mavi."]})
+    g = gate(Policy(), service, config)
+    await g.ask(1, "Gökyüzü neden mavi?")
+    g.supervisor.session.settings["assistant_knowledge"] = "off"
+    await g.ask(1, "Gökyüzü neden mavi?")
+    assert [args["knowledge"] for op, args in service.calls if op == "ask"] == [True, False]
+
+
+async def test_without_the_encyclopedia_nothing_is_looked_up() -> None:
+    model = ScriptedModel()
+    shelf = Shelf("Ay, Dünya'nın etrafında döner.")
+    assistant = Assistant(model, reference=shelf)
+    await assistant.ask("Ay neyin etrafında döner?", age=6, locale="tr", look_up=False)
+    assert shelf.asked == [] and model.contexts == [""]
+    await assistant.ask("Ay neyin etrafında döner?", age=6, locale="tr")
+    assert shelf.asked, "on by default"
+
+
+# ------------------------------------------------------------ D-248 a calculator
+
+
+@pytest.mark.parametrize(
+    ("question", "worked"),
+    [
+        ("7 kere 8 kaç eder?", "7 × 8 = 56"),
+        ("Yedi kere sekiz kaç eder?", "7 × 8 = 56"),
+        ("yirmi beş artı on yedi", "25 + 17 = 42"),
+        ("İki yüz elli eksi otuz", "250 − 30 = 220"),
+        ("100 bölü 7 kaç?", "100 ÷ 7 = 14, kalan 2"),
+        ("3x4", "3 × 4 = 12"),
+        ("What is six times seven?", "6 × 7 = 42"),
+        ("7-8 yaşındakiler ne yer?", None),
+        ("Bir kere gördüm kuş", None),
+        ("on bölü sıfır", None),
+        ("Gökyüzü neden mavi?", None),
+    ],
+)
+def test_a_sum_in_the_question_is_worked_out(question: str, worked: str | None) -> None:
+    """Gemma 4 E2B answered 7 x 8 with "yedi eder... yirmi dört" on the VM."""
+    from biokids_ai.arithmetic import solve
+
+    assert solve(question, "tr") == worked
+
+
+async def test_the_model_is_given_the_worked_sum() -> None:
+    model = ScriptedModel()
+    await Assistant(model).ask("7 kere 8 kaç eder?", age=6, locale="tr")
+    assert model.contexts == ["7 × 8 = 56"]

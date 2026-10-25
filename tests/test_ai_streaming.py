@@ -616,6 +616,9 @@ class Session:
     def commit(self) -> None:
         return None
 
+    def get(self, _model: Any, _key: Any) -> None:
+        return None  # no setting stored: the defaults
+
 
 class Supervisor:
     def __init__(self) -> None:

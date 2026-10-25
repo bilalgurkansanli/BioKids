@@ -1,0 +1,2 @@
+# The login screen is LightDM's, with BioKids' large pictures (D-170).
+lightdm shared/default-x-display-manager select lightdm

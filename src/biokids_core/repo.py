@@ -150,11 +150,6 @@ def get_child_by_user(session: Session, unix_user: str) -> Child | None:
     return session.scalars(select(Child).where(Child.unix_user == unix_user)).first()
 
 
-def children_by_unix_user(session: Session) -> dict[str, Child]:
-    """The map the daemon's session watcher needs: logind knows users, not ids."""
-    return {child.unix_user: child for child in list_children(session, only_enabled=True)}
-
-
 # -------------------------------------------------------------- the policy
 
 
@@ -216,15 +211,6 @@ def load_policy(
         assistant_voice=bool(row.assistant_voice),
         enabled=True,
     )
-
-
-def load_policies(
-    session: Session, *, today: dt.date | None = None
-) -> dict[int, ChildPolicy | None]:
-    today = today or dt.date.today()
-    return {
-        child.id: load_policy(session, child, today=today) for child in list_children(session)
-    }
 
 
 def load_category_limits(session: Session, child_id: int) -> dict[Category, int]:
@@ -352,6 +338,15 @@ def apps_saved_at(session: Session, child_id: int) -> dt.datetime | None:
 # --------------------------------------------------------------- settings
 
 
+ASSISTANT_KNOWLEDGE = "assistant_knowledge"
+"""The family's setting (D-247): "off" when a parent turned off checking the
+assistant's answers against the encyclopedia on the machine. Anything else is on."""
+
+
+def assistant_checks_encyclopedia(session: Session) -> bool:
+    return get_setting(session, ASSISTANT_KNOWLEDGE, "on") != "off"
+
+
 def get_setting(session: Session, key: str, default: str = "") -> str:
     row = session.get(Setting, key)
     return row.value if row is not None else default
@@ -364,15 +359,6 @@ def set_setting(session: Session, key: str, value: str) -> None:
     else:
         row.value = value
     session.flush()
-
-
-def get_flag(session: Session, key: str, default: bool = False) -> bool:
-    raw = get_setting(session, key, "1" if default else "0")
-    return raw.strip().lower() in {"1", "true", "yes", "on"}
-
-
-def set_flag(session: Session, key: str, value: bool) -> None:
-    set_setting(session, key, "1" if value else "0")
 
 
 def search_words(session: Session) -> list[str]:

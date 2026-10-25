@@ -447,7 +447,6 @@ class ActivityContext:
     app_allowed: bool = True
     url: str | None = None
     url_blocked: bool = False
-    """101 means "no AI score can ever block", which is the default for Phase 0."""
 
     session_active: bool = True
     """False when the child has no active, unlocked session on the active seat."""

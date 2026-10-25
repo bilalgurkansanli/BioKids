@@ -90,10 +90,13 @@ image.
 
 ## 3. ISO
 
-**v1.1 only (D-185). Do not start this before v1.0 is released.**
+**Built since D-249; `iso/README.md` is the up-to-date description.** The owner moved
+the ISO forward from v1.1 (D-185) once the packages had been through their rounds.
 
-Built with Debian `live-build` under `iso/`, and installed with Debian's own installer,
-preseeded — not Calamares:
+Built with Debian `live-build` under `iso/`, and installed with Debian's own installer
+copying the live system (`--debian-installer live`), lightly preseeded - not
+Calamares. The packages go into the image from the build, so it does not need the APT
+repository to exist. The layout as planned:
 
 ```
 iso/

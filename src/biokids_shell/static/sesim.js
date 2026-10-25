@@ -64,13 +64,21 @@
     timer.textContent = seconds + " / " + MAX_SECONDS;
   }
 
+  var opening = false;
+
   function startRecording() {
-    if (busy || stream) return;
+    /* `opening`: a second press while the microphone is being opened must not
+     * open another that nothing would close (D-250). */
+    if (busy || stream || opening) return;
+    opening = true;
     chunks = [];
     say("");
+    window.clearTimeout(limit);
+    window.clearInterval(ticking);
     navigator.mediaDevices
       .getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } })
       .then(function (media) {
+        opening = false;
         if (!held) {
           media.getTracks().forEach(function (track) {
             track.stop();
@@ -96,6 +104,7 @@
         limit = window.setTimeout(stopRecording, MAX_SECONDS * 1000);
       })
       .catch(function () {
+        opening = false;
         stopTracks();
         say(strings.mic_failed, "warn");
       });

@@ -11,7 +11,7 @@
   the microphone, a play triangle, a bin, an envelope.
 #}
 {% block body %}
-<div class="screen sesim" id="sesim"
+<div class="screen sesim" id="sesim" data-band="{{ band }}"
      data-max-seconds="{{ max_seconds }}"
      data-strings="{{ strings_sesim|tojson|forceescape }}">
   <header class="sesim__head">
@@ -24,8 +24,9 @@
 
   <main class="sesim__main">
     <button class="sesim__record" id="sesim-record" type="button"
-            aria-describedby="sesim-hint"
-            {% if young %}data-speak="{{ _('sesim.hold') }}"{% endif %}>
+            aria-describedby="sesim-hint">
+      {# No data-speak (D-250): read out on the press, Zio would talk into the
+         child's own recording. The label says it to a child who reads. #}
       <span class="sesim__record-icon" aria-hidden="true">🎙️</span>
       <span class="sesim__record-label" id="sesim-label">{{ _('sesim.hold') }}</span>
       <span class="sesim__timer" id="sesim-timer" hidden></span>

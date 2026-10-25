@@ -284,7 +284,8 @@ def test_a_task_only_points_at_an_app_the_child_has() -> None:
     ]
     assert pointed, "Boya's tasks do come up"
     assert all(
-        card.app == {"slug": "tuxpaint", "name": "Boya", "icon": "brush"} for card in pointed
+        card.app == {"slug": "tuxpaint", "name": "Boya", "icon": "brush", "kind": "app"}
+        for card in pointed
     )
 
 

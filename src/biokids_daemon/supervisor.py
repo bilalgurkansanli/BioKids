@@ -251,6 +251,11 @@ class Supervisor(
                 )
             seen = self.watcher.presence(runtime.unix_user)
             presence[runtime.child_id] = seen
+            if not seen.present:
+                # Logged out: the launcher's next session numbers its apps from
+                # 1 again, and a stopped app's name may come back on another
+                # app, whose reports must count (D-250).
+                runtime.blocked_unit = ""
             inputs.append(
                 TickInput(
                     child_id=runtime.child_id,

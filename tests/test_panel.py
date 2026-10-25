@@ -3782,3 +3782,48 @@ def test_the_tab_shows_the_kite(client: TestClient, family_ready: None) -> None:
     assert icon.status_code == 200
     assert icon.headers["content-type"] == "image/x-icon"
     assert icon.content[:4] == b"\x00\x00\x01\x00", "an ICO file"
+
+
+def test_the_encyclopedia_check_is_on_until_a_parent_turns_it_off(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """D-247: one family setting, ticked by default, saved with the assistant's form."""
+    login(client)
+    page = client.get("/children/1/assistant").text
+    assert re.search(r'name="assistant_knowledge" value="on"\s+checked', page)
+    client.post(
+        "/children/1/assistant",
+        data={"csrf_token": csrf_of(client), "assistant_enabled": "on"},
+    )
+    with db.session() as session:
+        assert repo.assistant_checks_encyclopedia(session) is False
+    client.post(
+        "/children/1/assistant",
+        data={
+            "csrf_token": csrf_of(client),
+            "assistant_enabled": "on",
+            "assistant_knowledge": "on",
+        },
+    )
+    with db.session() as session:
+        assert repo.assistant_checks_encyclopedia(session) is True
+
+
+def test_a_day_with_minutes_added_is_not_over_its_limit(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """D-250: a "+10 dk" or "Bitireyim" used to paint the day "over the limit"."""
+    from biokids_core.db.models import LedgerDay
+    from biokids_panel.routes.history import year_map
+
+    today = dt.date.today()
+    with db.session() as session:
+        child = repo.get_child(session, 1)
+        assert child is not None
+        policy = repo.load_policy(session, child, today=today)
+        assert policy is not None
+        quota = policy.quota_minutes(today) * 60
+        session.add(LedgerDay(child_id=1, day=today, general_s=quota + 600, granted_s=600))
+        session.commit()
+        cell = year_map(session, child, today)["weeks"][-1][today.weekday()]
+    assert cell["level"] == 3, "all of the day's time, not more"

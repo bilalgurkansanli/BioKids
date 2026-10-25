@@ -13,6 +13,7 @@ assistant then refuses rather than answering without its checks (principle 3).
 from __future__ import annotations
 
 import asyncio
+import collections
 import contextlib
 import logging
 import time
@@ -27,6 +28,8 @@ log = logging.getLogger(__name__)
 START_TIMEOUT_S: Final = 240.0
 """A 3 GB model read from a slow laptop disk takes a while; give it four minutes."""
 POLL_S: Final = 0.5
+STDERR_LINES: Final = 20
+"""How much of a server's own error output is kept, to say why it stopped (D-248)."""
 
 Spawn = Callable[..., Awaitable[Any]]
 Health = Callable[[Endpoint], Awaitable[bool]]
@@ -61,6 +64,10 @@ class ManagedServer:
         self.last_used = 0.0
         self.starts = 0
         self._lock = asyncio.Lock()
+        self._stderr: collections.deque[str] = collections.deque(maxlen=STDERR_LINES)
+        """The server's last lines of error output. Read as they come, so a
+        server that writes a lot never fills the pipe and stops."""
+        self._stderr_task: asyncio.Task[None] | None = None
         self._idle_task: asyncio.Task[None] | None = None
 
     @property
@@ -82,6 +89,13 @@ class ManagedServer:
         if self._idle_task is None or self._idle_task.done():
             self._idle_task = asyncio.create_task(self._idle_watch(), name=f"{self.name}-idle")
 
+    async def _keep_stderr(self, stream: asyncio.StreamReader) -> None:
+        with contextlib.suppress(Exception):
+            async for line in stream:
+                text = line.decode("utf-8", "replace").strip()
+                if text:
+                    self._stderr.append(text[:300])
+
     async def _start_locked(self) -> None:
         self._clear_stale_socket()
         log.info("starting %s", self.name)
@@ -89,17 +103,25 @@ class ManagedServer:
             self.process = await self._spawn(
                 *self.argv,
                 stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE,
             )
         except OSError as exc:
             raise ServerUnavailable(f"{self.name} could not be started: {exc}") from exc
+        self._stderr.clear()
+        stream = getattr(self.process, "stderr", None)
+        if stream is not None:
+            self._stderr_task = asyncio.create_task(
+                self._keep_stderr(stream), name=f"{self.name}-stderr"
+            )
         self.starts += 1
         deadline = self._clock() + self.start_timeout
         while self._clock() < deadline:
             if not self.running:
                 code = getattr(self.process, "returncode", None)
                 self.process = None
-                raise ServerUnavailable(f"{self.name} exited while loading (code {code})")
+                await asyncio.sleep(0)  # the last lines it wrote, read
+                said = f": {self._stderr[-1]}" if self._stderr else ""
+                raise ServerUnavailable(f"{self.name} exited while loading (code {code}){said}")
             if await self._healthy(self.endpoint):
                 log.info("%s is ready", self.name)
                 return

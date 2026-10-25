@@ -65,6 +65,16 @@
       </label>
     </div>
 
+    {# D-247. On unless a parent turned it off; the same for every child. #}
+    <div class="checkline">
+      <input type="checkbox" id="assistant_knowledge" name="assistant_knowledge" value="on"
+             {% if knowledge_on %}checked{% endif %}>
+      <label for="assistant_knowledge">
+        {{ _('assistant.panel.knowledge') }}
+        <span class="help">{{ _('assistant.panel.knowledge.help') }}</span>
+      </label>
+    </div>
+
     <div class="actions">
       <button class="btn btn--primary" type="submit">{{ _('common.save') }}</button>
       <a class="btn btn--quiet" href="/children">{{ _('common.back') }}</a>
@@ -78,8 +88,10 @@
     {% elif status.ready %}
       <p>{{ _('assistant.panel.ready') }}</p>
       <p class="help">{{ _('assistant.model.' ~ status.chat) }}{% if status.stt %} · {{ _('assistant.model.' ~ status.stt) }}{% endif %}</p>
-      {% if status.knowledge %}
+      {% if status.knowledge and knowledge_on %}
         <p class="help">{{ _('assistant.knowledge.on') }}</p>
+      {% elif status.knowledge %}
+        <p class="help">{{ _('assistant.knowledge.off') }}</p>
       {% endif %}
     {% else %}
       <p>{{ _('assistant.panel.need_download') }}</p>

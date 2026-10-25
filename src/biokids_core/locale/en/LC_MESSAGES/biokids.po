@@ -187,12 +187,6 @@ msgstr "Open"
 msgid "shell.no_apps"
 msgstr "You do not have any apps yet. Tell a grown-up."
 
-msgid "shell.clock"
-msgstr "Time"
-
-msgid "shell.my_time"
-msgstr "My time"
-
 msgid "shell.blocked.title"
 msgstr "This is not for you"
 
@@ -343,26 +337,11 @@ msgstr "Skip for now"
 msgid "common.finish"
 msgstr "Finish"
 
-msgid "common.delete"
-msgstr "Delete"
-
 msgid "common.add"
 msgstr "Add"
 
 msgid "common.edit"
 msgstr "Edit"
-
-msgid "common.yes"
-msgstr "Yes"
-
-msgid "common.no"
-msgstr "No"
-
-msgid "common.on"
-msgstr "On"
-
-msgid "common.off"
-msgstr "Off"
 
 msgid "common.advanced"
 msgstr "Advanced"
@@ -373,20 +352,11 @@ msgstr "Saved"
 msgid "common.minutes"
 msgstr "minutes"
 
-msgid "common.hours"
-msgstr "hours"
-
-msgid "common.none"
-msgstr "None"
-
 msgid "common.all"
 msgstr "All"
 
 msgid "common.search"
 msgstr "Search"
-
-msgid "common.loading"
-msgstr "Loading"
 
 msgid "settings.per_child.title"
 msgstr "Each child's own settings"
@@ -443,9 +413,6 @@ msgstr "This action affects protection, so your passphrase is required."
 
 msgid "auth.passphrase.wrong"
 msgstr "That passphrase is not right."
-
-msgid "auth.session_expired"
-msgstr "Your session timed out. Please sign in again."
 
 # --- more than one parent (D-218), appearance (D-217) ---
 
@@ -631,9 +598,6 @@ msgstr "not signed in"
 msgid "today.online"
 msgstr "on"
 
-msgid "today.grant_10"
-msgstr "+10 min"
-
 msgid "today.lock"
 msgstr "Lock"
 
@@ -801,12 +765,6 @@ msgstr "The account shown on the login screen. Lower-case letters and digits onl
 msgid "child.locale"
 msgstr "Language"
 
-msgid "child.age_band"
-msgstr "Age group"
-
-msgid "child.age_band.help"
-msgstr "Sets how large the interface is. Chosen automatically from the age."
-
 msgid "apps.title"
 msgstr "Apps and sites"
 
@@ -876,12 +834,6 @@ msgstr "Choose both the start and the end of each time range."
 
 msgid "time.end_action"
 msgstr "When time runs out"
-
-msgid "time.warnings"
-msgstr "Warning times"
-
-msgid "time.warnings.help"
-msgstr "How many minutes before the end they are warned."
 
 msgid "time.break_enabled"
 msgstr "Forced break"
@@ -1134,9 +1086,6 @@ msgstr "Access from your phone"
 msgid "wizard.remote.help"
 msgstr "To open the panel on your phone, away from home too, we use the free Tailscale app. Tailscale makes a private, encrypted link between your phone and this computer that only you can use; nothing is opened to the internet. The four steps below take about five minutes. You can skip this for now and do it later in Settings."
 
-msgid "wizard.email.title"
-msgstr "Email notifications"
-
 msgid "wizard.extras.title"
 msgstr "Voices and AI"
 
@@ -1145,9 +1094,6 @@ msgstr "Ready"
 
 msgid "wizard.done.help"
 msgstr "Setup is done! Three small things are left:"
-
-msgid "wizard.done.try"
-msgstr "Try it now"
 
 msgid "wizard.done.go_panel"
 msgstr "Go to the panel"
@@ -1277,9 +1223,6 @@ msgstr "Passphrase changed"
 
 msgid "audit.action.protection_enabled"
 msgstr "Protection turned on"
-
-msgid "wizard.passphrase.required"
-msgstr "You need to set a passphrase before continuing."
 
 msgid "assistant.tile"
 msgstr "Ask Me"
@@ -4173,3 +4116,13 @@ msgstr "Nov"
 
 msgid "history.month.12"
 msgstr "Dec"
+
+msgid "assistant.panel.knowledge"
+msgstr "Check answers against Wikipedia"
+
+msgid "assistant.panel.knowledge.help"
+msgstr "Recommended. A small model is sometimes wrong; Zio first looks at the Wikipedia summaries on this computer and answers by them. It does not go online. It applies to every child."
+
+msgid "assistant.knowledge.off"
+msgstr "Wikipedia is on this computer, but checking answers against it is turned off."
+

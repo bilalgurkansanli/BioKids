@@ -156,7 +156,8 @@ catalogue. `biokids` alone installs BioKids on a desktop you already have. The
 assistant is a separate package, `biokids-ai`, never installed by default. `biokids`
 recommends `biokids-archive-keyring`, the package that ships the same key file.
 
-A bootable ISO with everything preinstalled is v1.1 ([`iso/README.md`](iso/README.md)).
+A bootable image - Debian 13 with BioKids, its apps and the assistant's runtime,
+which installs itself beside Windows if you want - is built from [`iso/`](iso/README.md).
 
 ## First steps
 
@@ -288,7 +289,7 @@ step by step.
 | [`CLAUDE.md`](CLAUDE.md) | project constitution and conventions |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | components, time engine, policy engine, data model |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | every design decision and why |
-| [`docs/ROADMAP.md`](docs/ROADMAP.md) | v1.0, v1.1, and what was cut |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | what was built, what was cut, what comes next |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | threat model, privileges, filtering internals |
 | [`docs/UX.md`](docs/UX.md) | design tokens and interface rules |
 | [`docs/VOICE.md`](docs/VOICE.md) | Zio and Sio |

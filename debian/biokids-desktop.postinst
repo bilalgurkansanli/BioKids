@@ -14,8 +14,9 @@ case "$1" in
     configure)
         if [ -d /boot/grub ] && command -v update-grub >/dev/null 2>&1; then
             mkdir -p /etc/default/grub.d
-            if [ ! -e "$LINK" ] || [ -L "$LINK" ]; then
-                ln -sf /usr/share/biokids/grub/biokids.cfg "$LINK"
+            # Once: an upgrade that finds the link in place leaves GRUB alone.
+            if [ ! -e "$LINK" ] && [ ! -L "$LINK" ]; then
+                ln -s /usr/share/biokids/grub/biokids.cfg "$LINK"
                 update-grub >/dev/null 2>&1 || echo "biokids-desktop: update-grub failed; the boot menu is unchanged" >&2
             fi
         fi

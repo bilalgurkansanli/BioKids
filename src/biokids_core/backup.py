@@ -31,6 +31,7 @@ import gzip
 import json
 import logging
 import os
+import re
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any, Final
@@ -57,6 +58,7 @@ from biokids_core.db.models import (
     birthday_value,
     utcnow,
 )
+from biokids_core.special_days import MAX_RANGE_DAYS
 from biokids_core.types import AgeBand, Category, EndAction, FilterMode
 
 log = logging.getLogger(__name__)
@@ -453,8 +455,10 @@ def _restore_child(
             link.position = int(app.get("position", 0))
 
     for rule in entry.get("filter_rules") or []:
-        kind, pattern = str(rule.get("kind", "")), str(rule.get("pattern", ""))[:255]
-        if kind not in ("allow", "block") or not pattern:
+        kind, pattern = str(rule.get("kind", "")), str(rule.get("pattern", "")).lower()
+        # Only a site's name, as the panel makes them (D-250): a pattern like
+        # "*" in the allow list would undo "selected sites only" in Chromium.
+        if kind not in ("allow", "block") or not HOST.fullmatch(pattern):
             continue
         exists = session.scalar(
             select(FilterRule).where(
@@ -474,18 +478,19 @@ def _restore_child(
             )
 
     for special in entry.get("special_days") or []:
-        session.add(
-            DayOverride(
-                child_id=child.id,
-                start_day=dt.date.fromisoformat(special["start_day"]),
-                end_day=dt.date.fromisoformat(special["end_day"]),
-                extra_minutes=int(special.get("extra_minutes", 0)),
-                quota_minutes=special.get("quota_minutes"),
-                no_limit=bool(special.get("no_limit", False)),
-                weekend_rules=bool(special.get("weekend_rules", False)),
-                label=str(special.get("label", ""))[:40],
+        values = _special_values(special)
+        if values is None:
+            continue
+        # The same file restored twice must not add the same day twice: the
+        # extra minutes of two "+60 today" add up (D-250).
+        same_day = session.scalar(
+            select(DayOverride).where(
+                DayOverride.child_id == child.id,
+                *(getattr(DayOverride, name) == value for name, value in values.items()),
             )
         )
+        if same_day is None:
+            session.add(DayOverride(child_id=child.id, **values))
 
     for item in entry.get("english") or []:
         known = session.get(EnglishItem, {"child_id": child.id, "item": str(item["item"])})
@@ -515,9 +520,15 @@ def _restore_child(
         learning.right = int(item.get("right", 0))
         learning.wrong = int(item.get("wrong", 0))
 
+    # A day this machine already counted keeps its own numbers: its minutes
+    # and its minutes per app together, never one of them from the file (D-250).
+    counted = set(session.scalars(select(LedgerDay.day).where(LedgerDay.child_id == child.id)))
     for day in entry.get("days") or []:
         when = dt.date.fromisoformat(day["day"])
-        if session.get(LedgerDay, {"child_id": child.id, "day": when}) is None:
+        if (
+            when not in counted
+            and session.get(LedgerDay, {"child_id": child.id, "day": when}) is None
+        ):
             session.add(
                 LedgerDay(
                     child_id=child.id,
@@ -535,9 +546,44 @@ def _restore_child(
             "category": str(usage["category"]),
             "app_slug": str(usage.get("app_slug", "")),
         }
-        if session.get(UsageTick, key) is None:
+        if key["day"] not in counted and session.get(UsageTick, key) is None:
             session.add(UsageTick(**key, seconds=int(usage.get("seconds", 0))))
     session.flush()
+
+
+HOST: Final = re.compile(r"(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}")
+"""A site's name, as an allow or block rule holds it: no wildcard, no path."""
+
+
+def _special_values(special: Mapping[str, Any]) -> dict[str, Any] | None:
+    """A special day from a file, as the panel would have made it, or None
+    (`special_days`: at most 100 days, minutes within a day, a day without a
+    limit only a single day)."""
+    try:
+        start = dt.date.fromisoformat(str(special["start_day"]))
+        end = dt.date.fromisoformat(str(special["end_day"]))
+    except (KeyError, ValueError):
+        return None
+    extra = _int_in(special.get("extra_minutes", 0), 0, 24 * 60)
+    quota = special.get("quota_minutes")
+    no_limit = special.get("no_limit", False) is True
+    if (
+        end < start
+        or (end - start).days + 1 > MAX_RANGE_DAYS
+        or extra is None
+        or (quota is not None and _int_in(quota, 0, 24 * 60) is None)
+        or (no_limit and end != start)
+    ):
+        return None
+    return {
+        "start_day": start,
+        "end_day": end,
+        "extra_minutes": extra,
+        "quota_minutes": quota,
+        "no_limit": no_limit,
+        "weekend_rules": special.get("weekend_rules", False) is True,
+        "label": " ".join(str(special.get("label", "")).split())[:40],
+    }
 
 
 CATEGORIES: Final = frozenset(category.value for category in Category)
@@ -587,6 +633,22 @@ def _child_values(fields: Mapping[str, Any], avatars: set[str] | None) -> dict[s
         with contextlib.suppress(ValueError):
             out["birthday"] = birthday_value(int(birthday[:2]), int(birthday[3:]))
     return out
+
+
+def _policy_reads(blob: str, value: str, reads_as: str) -> bool:
+    """Whether a policy holding `value` can be read back - and the windows
+    each a time range (D-250). `{"weekday": 5}` used to be restored, and then
+    neither the daemon nor the panel's time page could load the policy."""
+    try:
+        read = getattr(Policy(**{blob: value}), reads_as)
+    except (TypeError, ValueError, AttributeError):
+        return False
+    if reads_as == "windows":
+        return all(WINDOW.fullmatch(window) for windows in read.values() for window in windows)
+    return True
+
+
+WINDOW: Final = re.compile(r"(?:[01]\d|2[0-3]):[0-5]\d-(?:[01]\d|2[0-4]):[0-5]\d")
 
 
 def _json_object(value: object) -> str | None:
@@ -641,9 +703,13 @@ def _policy_values(raw: Mapping[str, Any]) -> dict[str, Any]:
         out["end_action"] = raw["end_action"]
     if raw.get("filter_mode") in {mode.value for mode in FilterMode}:
         out["filter_mode"] = raw["filter_mode"]
-    for blob in ("windows_json", "schedule_json", "voice_events_json"):
+    for blob, reads_as in (
+        ("windows_json", "windows"),
+        ("schedule_json", "schedule"),
+        ("voice_events_json", "voice_events"),
+    ):
         cleaned = _json_object(raw.get(blob))
-        if cleaned is not None:
+        if cleaned is not None and _policy_reads(blob, cleaned, reads_as):
             out[blob] = cleaned
     if raw.get("enabled") is True:
         out["enabled"] = True

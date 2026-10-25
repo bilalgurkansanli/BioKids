@@ -22,6 +22,11 @@ case " $(id -nG 2>/dev/null) " in
     *" biokids-child "*) exit 0 ;;
 esac
 
+# Nothing in a live session started from the BioKids stick (D-249): what is set
+# up there is lost at the next boot, and the installer copies the stick, not
+# the session.
+[ -e /run/live/medium ] && exit 0
+
 # --------------------------------------------------------- desktop shortcut
 
 ENTRY=/usr/share/applications/biokids-panel.desktop
@@ -54,7 +59,9 @@ import sys
 import time
 import urllib.request
 
-for _ in range(30):
+# The daemon may take a few minutes on a slow first boot (it renders the DNS
+# blocklist before it says it is ready, and the panel waits for it).
+for _ in range(90):
     try:
         with urllib.request.urlopen("http://127.0.0.1:7878/at-login", timeout=3) as answer:
             wanted = str(json.load(answer).get("open", ""))

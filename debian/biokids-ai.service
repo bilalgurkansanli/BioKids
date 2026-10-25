@@ -48,7 +48,13 @@ RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes
 LockPersonality=yes
-RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+# AF_NETLINK: kiwix-serve, which this service starts for the encyclopedia
+# (D-178), lists the addresses (getifaddrs) before it binds and exits without
+# it - "IP address is not available on this system". biokids-wiki.service had
+# this since D-190; the assistant's copy never did, so no answer was ever
+# checked against the encyclopedia (D-248). PrivateNetwork=yes leaves netlink
+# nothing but this service's own loopback.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
 SystemCallFilter=@system-service
 SystemCallArchitectures=native
 CapabilityBoundingSet=

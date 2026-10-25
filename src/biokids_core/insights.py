@@ -581,10 +581,6 @@ class Insights:
             or bool(self.sites)
         )
 
-    @property
-    def requests_total(self) -> int:
-        return sum(line.asked for line in self.requests)
-
 
 def summarize(facts: Facts, period: Period, span: Span, today: dt.date) -> Insights:
     """Turn the facts into the numbers. Pure: no database, no clock, no locale."""

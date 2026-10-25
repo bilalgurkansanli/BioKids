@@ -3124,3 +3124,32 @@ def test_lightdms_seats_are_read_from_busctl(answer: str, seats: list[str]) -> N
     from biokids_daemon.enforcer import seats_from
 
     assert seats_from(answer) == seats
+
+
+async def test_a_stopped_apps_name_is_forgotten_when_the_child_logs_out(
+    supervisor: Supervisor,
+    session: Session,
+    clock: FakeClock,
+    source: FakeSessionSource,
+    runner: RecordingRunner,
+) -> None:
+    """D-250: the launcher numbers its apps from 1 in every session, so after a
+    logout the stopped game's name can belong to another app, whose reports
+    were then dropped - its time not counted, its limit not kept."""
+    set_quota(session, 1, 60)
+    games_limit(session, 3)
+    give_app(session, 1, "supertux", Category.GAMES)
+    await supervisor.start()
+    source.log_in("elif")
+    await run_in_front(supervisor, clock, 300, "supertux", unit=SUPERTUX)
+    runtime = supervisor.children[1]
+    assert runtime.blocked_unit == SUPERTUX
+
+    source.log_out("elif")
+    await supervisor.watcher.refresh()
+    await supervisor.tick()
+    assert runtime.blocked_unit == ""
+
+    source.log_in("elif")
+    supervisor.report_activity(1, "supertux", unit=SUPERTUX)
+    assert runtime.app_unit == SUPERTUX, "a report under that name counts again"

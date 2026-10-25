@@ -27,7 +27,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-import os
 import socket
 import struct
 from collections.abc import Awaitable, Callable
@@ -473,8 +472,3 @@ def username_for_uid(uid: int) -> str | None:
         return str(getpwuid(uid).pw_name)
     except KeyError:
         return None
-
-
-def current_uid() -> int:
-    getuid = getattr(os, "getuid", None)
-    return int(getuid()) if getuid is not None else -1  # pragma: no cover

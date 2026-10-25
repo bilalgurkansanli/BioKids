@@ -21,6 +21,8 @@ from sqlalchemy.orm import Session
 
 from biokids_core import repo
 from biokids_core.db.models import AccessRequest, App, Child, LedgerDay, UsageEvent, UsageTick
+from biokids_core.policy import general_allowance_seconds
+from biokids_core.types import ChildPolicy, LedgerState
 from biokids_panel.common import View
 from biokids_panel.routes.audit import _utc_bounds_of_local_day
 
@@ -76,15 +78,16 @@ def history_view(
 def _bars(session: Session, child: Child, today: dt.date) -> list[dict[str, Any]]:
     """Minutes used on each of the last DAYS days, against that day's quota."""
     first = today - dt.timedelta(days=DAYS - 1)
-    used = {
-        row.day: row.general_s
+    rows = {
+        row.day: row
         for row in session.scalars(
             select(LedgerDay).where(LedgerDay.child_id == child.id, LedgerDay.day >= first)
         )
     }
+    used = {day: row.general_s for day, row in rows.items()}
     policy = repo.load_policy(session, child, today=today)
     days = [first + dt.timedelta(days=n) for n in range(DAYS)]
-    quotas = {d: (policy.quota_minutes(d) * 60 if policy else 0) for d in days}
+    quotas = {d: allowance(policy, child.id, d, rows.get(d)) for d in days}
     top = max([*used.values(), *quotas.values(), 60])
     return [
         {
@@ -96,6 +99,26 @@ def _bars(session: Session, child: Child, today: dt.date) -> list[dict[str, Any]
         }
         for d in days
     ]
+
+
+def allowance(
+    policy: ChildPolicy | None, child_id: int, day: dt.date, row: LedgerDay | None
+) -> int:
+    """The day's time as the engine gave it, in seconds: its quota and what was
+    added to it that day - a parent's "+10 dk", earned minutes, "Bitireyim".
+    Measured by the quota alone, every day a parent added minutes to looked
+    over its limit (D-250)."""
+    if policy is None:
+        return 0
+    state = LedgerState(
+        child_id=child_id,
+        day=day,
+        general_used_s=row.general_s if row is not None else 0,
+        earned_s=row.earned_s if row is not None else 0,
+        granted_s=row.granted_s if row is not None else 0,
+        finish_up_s=(row.finish_up_s or 0) if row is not None else 0,
+    )
+    return general_allowance_seconds(policy, state)
 
 
 def day_level(seconds: int, quota_seconds: int) -> int:
@@ -120,8 +143,8 @@ def year_map(session: Session, child: Child, today: dt.date) -> dict[str, Any]:
     """
     last_monday = today - dt.timedelta(days=today.weekday())
     first = last_monday - dt.timedelta(weeks=YEAR_WEEKS - 1)
-    used = {
-        row.day: row.general_s
+    rows = {
+        row.day: row
         for row in session.scalars(
             select(LedgerDay).where(LedgerDay.child_id == child.id, LedgerDay.day >= first)
         )
@@ -141,8 +164,9 @@ def year_map(session: Session, child: Child, today: dt.date) -> dict[str, Any]:
             if day > today:
                 cells.append(None)
                 continue
-            seconds = used.get(day, 0)
-            quota = policy.quota_minutes(day) * 60 if policy else 0
+            row = rows.get(day)
+            seconds = row.general_s if row is not None else 0
+            quota = allowance(policy, child.id, day, row)
             total += seconds
             active += seconds >= 60
             cells.append({"day": day, "seconds": seconds, "level": day_level(seconds, quota)})

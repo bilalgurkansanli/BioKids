@@ -285,6 +285,9 @@
   var ticker = null;
   var frame = null;
   var holding = false;
+  /* Asked for, not yet given: a second press then must not open a second
+   * microphone that nothing would ever close (D-250). */
+  var opening = false;
   var startedAt = 0;
   var loudest = 0;
   var recording = null; /* an object URL of the last recording, for "Sesimi dinle" */
@@ -348,13 +351,17 @@
   }
 
   function startRecording() {
-    if (busy || stream) return;
+    if (busy || stream || opening) return;
+    opening = true;
     closeDraft();
     chunks = [];
     loudest = 0;
+    window.clearTimeout(limit);
+    window.clearInterval(ticker);
     navigator.mediaDevices
       .getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } })
       .then(function (media) {
+        opening = false;
         if (!holding) {
           /* Let go before the microphone was ready: a tap, not a question. */
           media.getTracks().forEach(function (track) {
@@ -384,6 +391,7 @@
         limit = window.setTimeout(stopRecording, MAX_SECONDS * 1000);
       })
       .catch(function (error) {
+        opening = false;
         stopTracks();
         var missing = error && (error.name === "NotFoundError" || error.name === "NotReadableError");
         showDraft(missing ? voice.none || strings.mic_failed : strings.mic_failed, false);

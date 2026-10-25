@@ -188,6 +188,8 @@ class AssistantGate:
                 question=question,
                 age=age,
                 locale=language,
+                # Checked against the encyclopedia unless the family said no (D-247).
+                knowledge=repo.assistant_checks_encyclopedia(self.supervisor.session),
                 persona="sio" if practice else "zio",
                 name=runtime.display_name,
                 **extra,

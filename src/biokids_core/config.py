@@ -185,10 +185,6 @@ class Config:
     retention: RetentionConfig = field(default_factory=RetentionConfig)
     i18n: I18nConfig = field(default_factory=I18nConfig)
 
-    @property
-    def database_url(self) -> str:
-        return f"sqlite:///{self.paths.db_path}"
-
     # -------------------------------------------------------------- loading
 
     @classmethod

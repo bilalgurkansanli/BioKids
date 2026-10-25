@@ -27,7 +27,7 @@ TURKISH_WORDS: Final = frozenset(
     | {"icin", "için", "gibi", "cok", "çok", "ama", "fakat", "de", "da", "ki", "bu"}
     | {"su", "şu", "ben", "sen", "biz", "siz", "onlar", "benim", "senin", "var"}
     | {"yok", "merhaba", "selam", "evet", "hayir", "hayır", "tamam", "lutfen"}
-    | {"lütfen", "tesekkurler", "teşekkürler", "bir", "iki", "hep", "her", "olur"}
+    | {"lütfen", "tesekkurler", "teşekkürler", "bir", "iki", "hep", "olur"}
     | {"olmaz", "neyi", "neye", "yapar", "yapilir", "yer", "olan", "olmak"}
 )
 

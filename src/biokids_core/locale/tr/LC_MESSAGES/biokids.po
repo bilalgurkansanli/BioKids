@@ -187,12 +187,6 @@ msgstr "Açık"
 msgid "shell.no_apps"
 msgstr "Henüz hiç uygulaman yok. Bir büyüğüne söyle."
 
-msgid "shell.clock"
-msgstr "Saat"
-
-msgid "shell.my_time"
-msgstr "Sürem"
-
 msgid "shell.blocked.title"
 msgstr "Burası senin için değil"
 
@@ -343,26 +337,11 @@ msgstr "Şimdilik geç"
 msgid "common.finish"
 msgstr "Bitir"
 
-msgid "common.delete"
-msgstr "Sil"
-
 msgid "common.add"
 msgstr "Ekle"
 
 msgid "common.edit"
 msgstr "Düzenle"
-
-msgid "common.yes"
-msgstr "Evet"
-
-msgid "common.no"
-msgstr "Hayır"
-
-msgid "common.on"
-msgstr "Açık"
-
-msgid "common.off"
-msgstr "Kapalı"
 
 msgid "common.advanced"
 msgstr "Gelişmiş"
@@ -373,20 +352,11 @@ msgstr "Kaydedildi"
 msgid "common.minutes"
 msgstr "dakika"
 
-msgid "common.hours"
-msgstr "saat"
-
-msgid "common.none"
-msgstr "Yok"
-
 msgid "common.all"
 msgstr "Hepsi"
 
 msgid "common.search"
 msgstr "Ara"
-
-msgid "common.loading"
-msgstr "Yükleniyor"
 
 msgid "settings.per_child.title"
 msgstr "Her çocuğun kendi ayarları"
@@ -443,9 +413,6 @@ msgstr "Bu işlem korumayı etkilediği için parolanız gerekiyor."
 
 msgid "auth.passphrase.wrong"
 msgstr "Parola doğru değil."
-
-msgid "auth.session_expired"
-msgstr "Oturumunuz zaman aşımına uğradı. Tekrar giriş yapın."
 
 # --- birden çok ebeveyn (D-218), görünüm (D-217) ---
 
@@ -631,9 +598,6 @@ msgstr "oturum açık değil"
 msgid "today.online"
 msgstr "açık"
 
-msgid "today.grant_10"
-msgstr "+10 dk"
-
 msgid "today.lock"
 msgstr "Kilitle"
 
@@ -801,12 +765,6 @@ msgstr "Giriş ekranında görünecek hesap. Sadece küçük harf ve rakam."
 msgid "child.locale"
 msgstr "Dili"
 
-msgid "child.age_band"
-msgstr "Yaş grubu"
-
-msgid "child.age_band.help"
-msgstr "Arayüzün büyüklüğünü belirler. Yaşa göre otomatik seçilir."
-
 msgid "apps.title"
 msgstr "Uygulamalar ve siteler"
 
@@ -876,12 +834,6 @@ msgstr "Her saat aralığı için hem başlangıcı hem bitişi seçin."
 
 msgid "time.end_action"
 msgstr "Süre bitince"
-
-msgid "time.warnings"
-msgstr "Uyarı zamanları"
-
-msgid "time.warnings.help"
-msgstr "Süre bitmeden önce kaçıncı dakikalarda uyarılsın."
 
 msgid "time.break_enabled"
 msgstr "Zorunlu mola"
@@ -1134,9 +1086,6 @@ msgstr "Telefondan erişim"
 msgid "wizard.remote.help"
 msgstr "Paneli evin dışından, telefonunuzdan da açabilmek için ücretsiz Tailscale uygulamasını kullanıyoruz. Tailscale, telefonunuzla bu bilgisayar arasında yalnızca sizin kullanabildiğiniz şifreli bir bağlantı kurar; internete hiçbir kapı açılmaz. Aşağıdaki dört adım yaklaşık beş dakika sürer. İsterseniz şimdilik geçip sonra Ayarlar'dan yapabilirsiniz."
 
-msgid "wizard.email.title"
-msgstr "E-posta bildirimleri"
-
 msgid "wizard.extras.title"
 msgstr "Sesler ve yapay zekâ"
 
@@ -1145,9 +1094,6 @@ msgstr "Hazır"
 
 msgid "wizard.done.help"
 msgstr "Kurulum tamam! Geriye üç küçük şey kaldı:"
-
-msgid "wizard.done.try"
-msgstr "Şimdi dene"
 
 msgid "wizard.done.go_panel"
 msgstr "Panele git"
@@ -1277,9 +1223,6 @@ msgstr "Parola değiştirildi"
 
 msgid "audit.action.protection_enabled"
 msgstr "Koruma açıldı"
-
-msgid "wizard.passphrase.required"
-msgstr "Devam etmek için bir parola belirlemeniz gerekiyor."
 
 msgid "assistant.tile"
 msgstr "Sor Bana"
@@ -4173,3 +4116,13 @@ msgstr "Kas"
 
 msgid "history.month.12"
 msgstr "Ara"
+
+msgid "assistant.panel.knowledge"
+msgstr "Cevapları Vikipedi ile kontrol et"
+
+msgid "assistant.panel.knowledge.help"
+msgstr "Önerilir. Küçük bir model bazen yanılır; Zio önce bu bilgisayardaki Vikipedi özetlerine bakar ve cevabını onlara göre verir. İnternete bağlanmaz. Bütün çocuklar için geçerlidir."
+
+msgid "assistant.knowledge.off"
+msgstr "Vikipedi bu bilgisayarda var, ama cevapları onunla kontrol etmek kapalı."
+

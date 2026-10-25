@@ -235,10 +235,13 @@ def answered(state: ItemState | None, right: bool, today: dt.date) -> ItemState:
     """The item after one answer: up a box when right, back to the first when not.
 
     A new item goes to the first box whichever way: meeting a word is not
-    knowing it, and getting it wrong the first time is not a failure.
+    knowing it, and getting it wrong the first time is not a failure. Nor does
+    it move up on the day it was met (D-250): a lesson meets a letter and asks
+    it straight away, and two answers in a minute put it in the second box.
     """
     state = state or ItemState()
-    box = 1 if state.box == 0 or not right else min(state.box + 1, MAX_BOX)
+    first_day = state.box == 0 or state.first_day == today
+    box = 1 if first_day or not right else min(state.box + 1, MAX_BOX)
     return ItemState(
         box=box,
         due=today + dt.timedelta(days=BOX_DAYS[box]),

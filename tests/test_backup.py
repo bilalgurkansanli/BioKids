@@ -417,3 +417,68 @@ def test_a_file_does_not_choose_how_hard_the_panel_works() -> None:
     with pytest.raises(backup.BackupError) as raised:
         backup.open_sealed(forged, PASS)
     assert raised.value.key == "backup.error.not_ours"
+
+
+# ------------------------------------------------- D-250 a file is checked
+
+
+def _restore(session: Session, contents: dict[str, Any]) -> None:
+    backup.restore(
+        session,
+        contents,
+        create_child=lambda *_: None,
+        known_apps=set(),
+        known_avatars={"fox", "owl"},
+    )
+    session.commit()
+
+
+def test_restoring_twice_adds_no_minutes(session: Session, child: Child) -> None:
+    """Every section skipped what it had; special days did not, and two "+60
+    today" made 120 extra minutes, then 180."""
+    from biokids_core.db.models import DayOverride
+
+    contents = backup.export(session, today=TODAY)
+    contents["children"][0]["special_days"] = [
+        {"start_day": TODAY.isoformat(), "end_day": TODAY.isoformat(), "extra_minutes": 60}
+    ]
+    _restore(session, contents)
+    _restore(session, contents)
+    rows = session.scalars(select(DayOverride).where(DayOverride.child_id == child.id)).all()
+    assert [row.extra_minutes for row in rows] == [60]
+
+
+def test_a_file_cannot_open_every_site_or_break_the_day(session: Session, child: Child) -> None:
+    """An allow pattern "*" overrode "selected sites only"; {"weekday": 5} left a
+    policy neither the daemon nor the panel could read."""
+    from biokids_core.db.models import DayOverride, FilterRule
+
+    contents = backup.export(session, today=TODAY)
+    entry = contents["children"][0]
+    entry["filter_rules"] = [
+        {"kind": "allow", "pattern": "*"},
+        {"kind": "allow", "pattern": "*.com"},
+        {"kind": "allow", "pattern": "example.com/path"},
+        {"kind": "allow", "pattern": "Kids.Example.org"},
+    ]
+    entry["policy"]["windows_json"] = '{"weekday": 5}'
+    entry["special_days"] = [
+        {"start_day": TODAY.isoformat(), "end_day": "2027-12-31", "no_limit": True},
+        {"start_day": TODAY.isoformat(), "end_day": TODAY.isoformat(), "extra_minutes": 99999},
+        {"start_day": "2026-12-01", "end_day": "2026-11-01"},
+    ]
+    before = session.get(Policy, child.id)
+    assert before is not None
+    windows = before.windows_json
+
+    _restore(session, contents)
+
+    patterns = session.scalars(
+        select(FilterRule.pattern).where(FilterRule.child_id == child.id)
+    ).all()
+    assert list(patterns) == ["kids.example.org"]
+    assert before.windows_json == windows
+    assert before.windows is not None
+    assert (
+        session.scalars(select(DayOverride).where(DayOverride.child_id == child.id)).all() == []
+    )

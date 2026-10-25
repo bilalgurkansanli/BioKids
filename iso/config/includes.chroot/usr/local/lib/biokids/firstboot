@@ -1,0 +1,15 @@
+#!/bin/sh
+# biokids-firstboot.service (D-249): this computer's own keys, made the way the
+# packages' postinsts make them on a machine they are installed on.
+set -e
+
+if [ ! -e /etc/biokids/secret.key ]; then
+    python3 -c 'import sys
+from pathlib import Path
+from biokids_core.security import load_or_create_key
+load_or_create_key(Path(sys.argv[1]))' /etc/biokids/secret.key
+fi
+
+# Its own extension key and id; the daemon, starting after this, writes the id
+# into the children's browser policy.
+biokids-admin pack-extension || echo "biokids-firstboot: the browser extension could not be packed" >&2

@@ -1,0 +1,10 @@
+#!/bin/sh
+# live-config, in the live session only (D-249): the stick is for trying and
+# installing, so the console stays reachable there. The installed computer
+# keeps BioKids' guards (SECURITY.md section 6), because the installer copies
+# the image, not this session. The same file names, so that these win.
+
+echo -n " biokids"
+
+rm -f /etc/systemd/logind.conf.d/biokids.conf
+rm -f /etc/X11/xorg.conf.d/50-biokids-no-vt-switch.conf

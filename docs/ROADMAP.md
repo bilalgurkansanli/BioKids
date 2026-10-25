@@ -98,8 +98,8 @@ documentation.
   claimed (D-17)
 - hosted on archive.org, mirrored on GitHub Releases when under 2 GB (D-28)
 
-Do not start before v1.0 is released: the APT repository is what the image installs
-from, and every `lb build` is 20–40 minutes (`iso/README.md`).
+Started with D-249: the image carries the .debs itself, so it does not wait for the
+APT repository; every `lb build` is 30–60 minutes (`iso/README.md`).
 
 *Estimate: 10–15 sessions, most of it on real hardware.*
 

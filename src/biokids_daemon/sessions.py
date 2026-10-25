@@ -220,28 +220,6 @@ class SessionWatcher:
                 locked += 1
         return locked
 
-    async def unlock_user(self, unix_user: str) -> int:
-        """Undo a lock this daemon applied.
-
-        `loginctl unlock-session` only emits logind's Unlock signal, which
-        xfce4-screensaver and light-locker honour and some lockers do not. So
-        this is a repair path, not a mechanism to rely on: a break pauses the
-        child through the launcher rather than by locking the session, exactly
-        so that getting back in never depends on this working.
-        """
-        unlocked = 0
-        for session_id in self.presence(unix_user).lockable_session_ids:
-            if await self._source.unlock(session_id):
-                unlocked += 1
-        return unlocked
-
-    async def terminate_user(self, unix_user: str) -> int:
-        ended = 0
-        for session_id in self.presence(unix_user).lockable_session_ids:
-            if await self._source.terminate(session_id):
-                ended += 1
-        return ended
-
 
 # --------------------------------------------------------------------- logind
 

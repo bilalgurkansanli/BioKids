@@ -362,6 +362,9 @@ def card_for(
             "slug": item.app,
             "name": str(tile.get("name", item.app)),
             "icon": str(tile.get("icon", "app")),
+            # What a second tap may do (D-250): ask again for an app, never
+            # open a second window of a site.
+            "kind": str(tile.get("kind", "app")),
         }
     return DailyCard(
         day=day.isoformat(),

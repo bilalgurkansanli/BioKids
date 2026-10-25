@@ -539,13 +539,6 @@ class TimeLedger:
         self._mark_dirty(child_id)
         self.persist()
 
-    def start_break(self, child_id: int, seconds: int, day: dt.date | None = None) -> None:
-        day = day or self._clock.read().wall.date()
-        row = self._day_row(child_id, day)
-        row.break_remaining_s = seconds
-        self._mark_dirty(child_id)
-        self.persist()
-
     def end_break(self, child_id: int, day: dt.date | None = None) -> None:
         day = day or self._clock.read().wall.date()
         row = self._day_row(child_id, day)
@@ -582,11 +575,6 @@ class TimeLedger:
     def mark_warned(self, child_id: int, day: dt.date, threshold: int) -> None:
         row = self._day_row(child_id, day)
         row.warned = row.warned | {threshold}
-        self._mark_dirty(child_id)
-
-    def clear_warnings(self, child_id: int, day: dt.date) -> None:
-        row = self._day_row(child_id, day)
-        row.warned = set()
         self._mark_dirty(child_id)
 
     def rearm_warnings(self, child_id: int, day: dt.date, remaining_s: int) -> set[int]:

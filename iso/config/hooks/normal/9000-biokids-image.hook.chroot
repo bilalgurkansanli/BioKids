@@ -1,0 +1,33 @@
+#!/bin/sh
+# The BioKids image (D-249): what must differ from computer to computer is not
+# shipped, and nothing BioKids does not manage is left beside it.
+set -e
+
+# No browser BioKids does not manage: Firefox would reach a child through any
+# app's help link with none of the protections (D-237). The parent's browser
+# is Chromium, with the panel allowed in its policy.
+# No autoremove after it: a task metapackage that went with Firefox would take
+# the whole desktop it pulled in.
+apt-get purge -y 'firefox-esr*' || true
+
+# The keys the packages made in this chroot. biokids-firstboot.service makes
+# each computer's own before the daemon and the panel start.
+rm -f /etc/biokids/secret.key /var/lib/biokids/extension-key.pem
+find /var/lib/biokids-ext -mindepth 1 -delete 2>/dev/null || true
+rm -rf /var/lib/biokids/backups
+rm -f /var/lib/biokids/biokids.db-wal /var/lib/biokids/biokids.db-shm
+systemctl enable biokids-firstboot.service
+
+# The database is the schema and the app catalogue, never a family.
+python3 - <<'PY'
+import sqlite3
+
+db = sqlite3.connect("/var/lib/biokids/biokids.db")
+for table in ("parent", "child", "audit_log", "panel_session"):
+    count = db.execute(f"select count(*) from {table}").fetchone()[0]
+    assert count == 0, f"{table} has {count} rows in the image"
+PY
+
+# Each installed computer makes its own machine id at its first boot.
+: > /etc/machine-id
+rm -f /var/lib/dbus/machine-id

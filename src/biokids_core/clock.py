@@ -281,7 +281,3 @@ class GuardedClock:
     def take_corrections(self) -> list[WallCorrection]:
         taken, self.corrections = self.corrections, []
         return taken
-
-    @property
-    def offset_seconds(self) -> float:
-        return self._offset.total_seconds()

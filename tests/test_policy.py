@@ -673,3 +673,12 @@ def test_no_rule_no_wait() -> None:
         make_policy(), state(), ActivityContext(category=Category.GAMES), AFTERNOON
     )
     assert decision.allow is True
+
+
+def test_learning_first_never_asks_for_more_than_its_limit() -> None:
+    """D-250: learn first 20 with learning limited to 15 kept games shut all day."""
+    policy = make_policy(learn_first_min=20, category_limits_min={Category.LEARNING: 15})
+    done = state(category_used_s={Category.LEARNING: 15 * 60})
+    assert learn_first_left(policy, done) == 0
+    decision = evaluate(policy, done, ActivityContext(category=Category.GAMES), AFTERNOON)
+    assert decision.allow is True

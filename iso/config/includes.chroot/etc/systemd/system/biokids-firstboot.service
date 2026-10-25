@@ -1,0 +1,20 @@
+# The first boot of a computer installed from the BioKids image (D-249).
+#
+# The packages make two keys when they are installed: the one that encrypts the
+# family's mail password and the one that signs the browser extension. In an
+# image they were made once, for every computer, so the image ships without
+# them and each computer makes its own here, before the daemon and the panel
+# start. Masked in the live session (the image's boot options).
+[Unit]
+Description=BioKids: this computer's own keys
+ConditionPathExists=!/etc/biokids/secret.key
+After=local-fs.target
+Before=biokids-daemon.service biokids-panel.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/biokids/firstboot
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target

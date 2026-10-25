@@ -1,30 +1,39 @@
-# `biokids-ai`
+# `biokids-ai`: Sor Bana
 
-**Phase 2b. Nothing here yet, and that is the design.**
+The child's local assistant (D-165), and English with Sio (D-226). An optional
+package, off until a parent turns it on for a child, and nothing else in BioKids
+imports it. It runs as `biokids-ai.service`: the `biokids-ai` user, no network
+(`PrivateNetwork=yes`), answering the daemon on `/run/biokids-ai/assistant.sock`.
+The models are downloaded once, from the panel, by `biokids-ai-setup.service`,
+each file pinned by SHA-256 (`models.py`); none is ever shipped in a package.
 
-`docs/AI-LAYER.md` is the full specification. The thing to understand before writing
-any of it is the constraint it operates under (D-82):
+## A question, from the screen to the answer
 
-> Optional package, default off, `Suggests:` never `Depends:`. Everything in BioKids
-> works without it. If this component is absent, broken, or disabled, the rest of the
-> system behaves exactly as if it had never existed.
+1. **The word list** (`safety.py`, `data/lexicon.toml`): Turkish and English, folded
+   for spelling tricks. A hit is refused at once, with a sentence people wrote.
+2. **The classifier** (`prompts.CLASSIFY_SYSTEM`, `llm.py`): the same model, asked
+   only whether a kind teacher would answer this for a child of this age, as JSON
+   with a fixed set of categories and worked examples (few-shot). Unsure means no.
+3. **What it can be given as fact** (retrieval, D-178 and D-248): the opening
+   paragraphs of the encyclopedia's articles on the subject (`knowledge.py`,
+   `kiwix-serve` over Kiwix's Wikipedia packs, unless the family turned that off,
+   D-247), and the worked answer of a sum in the question (`arithmetic.py`):
+   a small model guesses at arithmetic.
+4. **The answer** (`prompts.ANSWER_SYSTEM`): instructions that name the helper, the
+   child and their age, the length for the age band, one worked example, and the
+   facts from step 3. Streamed a sentence at a time (`sentences.py`), and every
+   sentence passes the word list again before the child sees it (D-216).
+5. **The language**: the answer is in the language of the question, Turkish or
+   English (`biokids_core.language`, D-244); speech is heard with Whisper
+   (`stt.py`), which guesses the language and is asked again in the child's own
+   when it hears neither.
 
-That is already true: nothing in `biokids_core`, `biokids_daemon`, `biokids_panel` or
-`biokids_shell` imports this package, and the policy engine's AI branch is inert unless
-a score arrives with a threshold to compare it against.
+No fine-tuning: the model is Google's Gemma as published, steered by the
+instructions, the examples and the facts it is given (D-244). `dev/assistant_eval.py`
+asks a real model a test set and scores the answers (D-248).
 
-## The shape it has to fit
+## The servers
 
-The daemon emits triggers; this worker subscribes and never polls (D-70, D-77). It
-answers with a 0–100 risk score, a category and a short reason (D-78). **It never
-enforces anything** — the policy engine decides what a score means for a child of that
-age, and `docs/AI-LAYER.md` §7's bands say the middle band informs and does not punish.
-
-## Before writing any of it
-
-Verify the CUDA toolchain first. `docs/AI-LAYER.md` §5: the development machine has an
-RTX 5050 (Blackwell, `sm_120`), which needs CUDA 12.8 or newer and a llama.cpp build
-that knows about it. If that fights back, develop against Moondream2 on CPU and revisit
-— a toolchain problem must not stall the rest of the phase. VirtualBox has no GPU
-passthrough, so this component cannot be meaningfully tested in the development VM at
-all.
+`runtime.ManagedServer` starts `llama-server`, `whisper-server` and `kiwix-serve`
+when they are first needed and stops them after ten idle minutes; their last lines
+of error output are kept to say why one stopped.

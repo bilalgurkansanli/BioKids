@@ -89,8 +89,20 @@ def test_right_goes_up_a_box_and_wrong_goes_back_to_the_first() -> None:
     assert up.first_day == state.first_day, "the day it was first met stays"
     down = english.answered(up, False, TODAY)
     assert down.box == 1 and down.due == TODAY + dt.timedelta(days=1)
-    top = english.answered(ItemState(english.MAX_BOX, TODAY, TODAY), True, TODAY)
+    earlier = TODAY - dt.timedelta(days=40)
+    top = english.answered(ItemState(english.MAX_BOX, TODAY, earlier), True, TODAY)
     assert top.box == english.MAX_BOX
+
+
+def test_nothing_moves_up_on_the_day_it_was_met() -> None:
+    """D-250: a lesson meets an item and asks it straight away; two answers in
+    a minute are not two days of knowing it."""
+    met = english.answered(None, True, TODAY)
+    assert met.box == 1
+    again = english.answered(met, True, TODAY)
+    assert again.box == 1
+    tomorrow = english.answered(again, True, TODAY + dt.timedelta(days=1))
+    assert tomorrow.box == 2
 
 
 # ---------------------------------------------------------------- the lesson

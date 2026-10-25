@@ -310,8 +310,13 @@
     window.addEventListener("focus", function () {
       var focusedAt = Date.now();
       window.setTimeout(function () {
-        /* The window manager gives the focus first and the tap follows. */
-        if (pressedAt < focusedAt - COVER_TAP_MS) hideCover();
+        /* The window manager gives the focus first and the tap follows. Back
+         * without a tap, the app was closed or sent away: a later blur - a
+         * browser window that does not fill the screen - is not about it. */
+        if (pressedAt < focusedAt - COVER_TAP_MS) {
+          hideCover();
+          lastApp = null;
+        }
       }, COVER_TAP_MS);
     });
     cover.addEventListener("click", function (event) {

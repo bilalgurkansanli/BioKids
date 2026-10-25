@@ -1,0 +1,20 @@
+# What live-build makes; only the configuration under config/ is the source.
+.build/
+cache/
+chroot/
+binary/
+chroot.*
+binary.*
+*.iso
+*.contents
+*.files
+*.packages
+*.zsync
+SHA256SUMS
+build.log
+config/packages.chroot/
+config/binary
+config/bootstrap
+config/chroot
+config/common
+config/source

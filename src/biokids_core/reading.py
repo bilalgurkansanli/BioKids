@@ -407,10 +407,16 @@ def plan_lesson(
             if not _state(progress, group.letter_id(letter)).met
         ][: min(NEW_LETTERS_PER_LESSON, budget)]
         if fresh_letters:
-            # Each letter met, then asked for straight away.
+            # Each letter met, then asked for straight away. A meeting card
+            # writes its word only with the letters met so far, this one
+            # included - not one still to come in this lesson (D-250).
             known = met | {letter.char for letter in fresh_letters}
+            so_far = set(met)
             for letter in fresh_letters:
-                shown = _step(group, group.letter_id(letter), groups, known, rng, meeting=True)
+                so_far.add(letter.char)
+                shown = _step(
+                    group, group.letter_id(letter), groups, set(so_far), rng, meeting=True
+                )
                 if shown is not None:
                     steps.append(shown)
             for letter in fresh_letters:

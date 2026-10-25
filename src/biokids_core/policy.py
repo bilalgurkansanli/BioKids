@@ -341,7 +341,14 @@ def learn_first_left(policy: ChildPolicy | None, state: LedgerState) -> int:
     """
     if policy is None or not policy.enabled or policy.learn_first_min <= 0:
         return 0
-    return max(0, policy.learn_first_min * 60 - state.category_used(Category.LEARNING))
+    needed = policy.learn_first_min * 60
+    # Never more learning than its own limit allows (D-250): learn first 20 with
+    # learning limited to 15 kept games closed all day, and the calm screen
+    # sent the child to learning apps that were themselves used up.
+    learning_limit = policy.category_limits_min.get(Category.LEARNING)
+    if learning_limit is not None:
+        needed = min(needed, learning_limit * 60)
+    return max(0, needed - state.category_used(Category.LEARNING))
 
 
 def remaining_seconds(

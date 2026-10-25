@@ -15,6 +15,9 @@ set -e
 
 open_setup_in_open_sessions() {
     [ -d /run/systemd/system ] || return 0
+    # An image built in a chroot that shares the host's /run must not open the
+    # wizard on the build machine (D-249).
+    if command -v ischroot >/dev/null 2>&1 && ischroot; then return 0; fi
     command -v loginctl >/dev/null 2>&1 || return 0
     command -v systemd-run >/dev/null 2>&1 || return 0
     for session in $(loginctl list-sessions --no-legend 2>/dev/null | awk '{print $1}'); do
@@ -23,12 +26,13 @@ open_setup_in_open_sessions() {
             x11|wayland) ;;
             *) continue ;;
         esac
-        user=$(loginctl show-session "$session" -p Name --value 2>/dev/null)
+        # A session can close between the list and this: never fatal (set -e).
+        user=$(loginctl show-session "$session" -p Name --value 2>/dev/null) || continue
         [ -n "$user" ] || continue
         # The display, in case the session never told its manager (Debian's
         # Xsession usually does).
-        display=$(loginctl show-session "$session" -p Display --value 2>/dev/null)
-        home=$(getent passwd "$user" | cut -d: -f6)
+        display=$(loginctl show-session "$session" -p Display --value 2>/dev/null) || true
+        home=$(getent passwd "$user" | cut -d: -f6) || true
         set -- --setenv=DISPLAY="${display:-:0}"
         if [ -n "$home" ] && [ -f "$home/.Xauthority" ]; then
             set -- "$@" --setenv=XAUTHORITY="$home/.Xauthority"

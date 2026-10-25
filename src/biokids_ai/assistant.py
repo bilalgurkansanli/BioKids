@@ -33,7 +33,7 @@ from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import dataclass, replace
 from typing import Final, Protocol
 
-from biokids_ai import prompts
+from biokids_ai import arithmetic, prompts
 from biokids_ai.llm import ModelError
 from biokids_ai.safety import Lexicon, fold, tokens
 from biokids_ai.sentences import SentenceSplitter
@@ -253,8 +253,12 @@ class Assistant:
         on_answering: Callable[[], object] | None = None,
         on_sentence: SentenceSink | None = None,
         conversation: Conversation | None = None,
+        look_up: bool = True,
     ) -> Reply:
         """Check `question`, then answer it a sentence at a time.
+
+        `look_up` False answers without the encyclopedia, when the family turned
+        that off (D-247).
 
         `on_answering` is called once both checks have passed and the model is
         about to write; `on_sentence` with each sentence as it is released. The
@@ -300,7 +304,12 @@ class Assistant:
             )
             context = ""
         else:
-            context = await self._look_up(question, locale)
+            context = await self._look_up(question, locale) if look_up else ""
+            # A sum in the question is worked out, not guessed (D-248), and
+            # given to the model with the encyclopedia's facts.
+            worked = arithmetic.solve(question, locale)
+            if worked is not None:
+                context = "\n".join(part for part in (worked, context) if part)
         return await self._answer(
             question, age, locale, persona, name, context, on_sentence or _ignore, conversation
         )

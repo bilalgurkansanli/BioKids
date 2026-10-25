@@ -336,6 +336,7 @@ class AssistantService:
                     on_answering=answer.decided.set,
                     on_sentence=answer.sentences.append,
                     conversation=conversation_from(args),
+                    look_up=args.get("knowledge", True) is not False,
                 )
                 answer.finish(reply)
         except asyncio.CancelledError:

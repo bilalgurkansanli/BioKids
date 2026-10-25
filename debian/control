@@ -101,9 +101,9 @@ Description: parental controls for Debian - enforcement daemon
  child's session is locked rather than left unsupervised: a parental control
  that fails open is worse than none at all.
  .
- This package also brings in dnsmasq and nftables, which the filtering work
- in a later release configures. Neither is touched until a parent turns
- filtering on.
+ It also runs the children's DNS filter, with dnsmasq-base and nftables: the
+ worst of the internet - pornography, gambling, malware - is closed for every
+ child, and a parent can narrow it to chosen sites only.
  .
  BioKids is built for a curious child aged 4 to 10 working alone at one
  computer. It does not defend against a booted USB stick, an edited kernel
@@ -127,9 +127,10 @@ Recommends: xdg-utils
 Suggests: biokids-ai
 Description: parental controls for Debian - parent panel
  The panel is how a parent sets everything up and sees what happened today:
- a setup wizard, a daily quota per child, time windows, the audit log, and
- three buttons that reach the daemon directly - grant fifteen minutes, lock
- the session now, and shut the computer down.
+ a setup wizard, a daily quota per child, time windows, the apps and sites a
+ child may use, a history of each day and a year, the audit log, and the
+ buttons that reach the daemon directly - ten more minutes, lock the session
+ now, and shut the computer down. From a phone too, over Tailscale.
  .
  It listens on 127.0.0.1:7878 only. There is no port to forward and no
  account to create; reaching it from a phone is done over the family's own
@@ -209,10 +210,10 @@ Description: parental controls for Debian - Zio and Sio, the voice companions
  speaks Turkish. It also sounds like a 1990s robot, which is the honest trade
  against a child being shown a card they may not be able to read yet.
  .
- Piper sounds far better and is used instead whenever it is installed, but it
- is not in Debian and its remaining Turkish voice may not be redistributed, so
- it cannot be the default. A parent can download both with one button in the
- parent panel, from their authors, for the family's own non-commercial use;
+ Piper sounds far better and is used instead whenever it is installed. It is
+ not in Debian and its Turkish voice may not be redistributed, so it is not in
+ this package: the setup wizard offers to download it (ticked for a Turkish
+ family), from its authors, for the family's own non-commercial use;
  every file is checked against a pinned checksum, and nothing else in this
  package uses the network. Where mbrola-tr1 and mbrola-tr2 are installed,
  Zio and Sio speak with those recorded Turkish voices instead, which sounds far

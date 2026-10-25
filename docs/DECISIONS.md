@@ -2172,3 +2172,62 @@ the goodbye screen after "Evet, kapat" the kite rises from the bottom, swaying, 
 the words and Zio, and is gone off the top in seven seconds; a pressed Kapat lifts its
 kite a little. Not for "Oturumu değiştir", which is not going to sleep. Without motion
 (`prefers-reduced-motion`) the kite simply stands at the bottom.
+
+**D-247 [owner] Answers checked against Wikipedia unless the family says no.** (2026-10-26)
+The Wikipedia packs come with the assistant's download (D-178) and were always used once
+there; now it is a choice, on by default: **Çocuklar → Asistan → "Cevapları Vikipedi ile
+kontrol et"**, one setting for the family (`setting.assistant_knowledge`). Off, the
+daemon asks the service to answer without looking anything up.
+
+**D-249 [owner] The ISO now, for installing beside Windows.** (2026-10-26)
+The owner moved the image forward from v1.1 (D-185) once the packages had been through
+their rounds. `iso/` builds it with live-build: Debian 13, Xfce as a normal install has
+it, `biokids-desktop` and its apps, `biokids-ai` with its runtime; no model. The .debs
+go in from the build, so it does not wait for the APT repository.
+- **Installed by copying the live system** (`--debian-installer live`): no network
+  needed to install. Partitioning stays the installer's question, so on a computer
+  with Windows it offers to shrink it and install beside it; `os-prober` and
+  `GRUB_DISABLE_OS_PROBER=false` keep Windows in the boot menu after kernel updates.
+  The preseed answers only what a family would never want to be asked: no root
+  password (the parent's account gets sudo), no package survey, Istanbul's time zone.
+- **What differs between computers is not in the image** (found by the review): the
+  key that encrypts the mail password and the extension's signing key were made at
+  install time and would have been the same on every computer, readable from the
+  public ISO. The image's hook deletes them, the machine id and any database rows a
+  family could have; `biokids-firstboot.service` makes each computer's own before the
+  daemon and the panel start.
+- **The live session is for trying and installing**: BioKids' services are masked on
+  its kernel command line, the login script opens no wizard there
+  (`/run/live/medium`), and the console stays reachable. The installed computer has
+  none of these options.
+- **No Firefox** (D-237): the parent's browser is Chromium, with the panel allowed.
+
+**D-250 [claude] What the end-to-end review fixed before release.** (2026-10-26)
+Three read-only reviews - the latest changes, unused code and drifted documents, and
+the packaging seen from an image - and a test set run against the real model (D-248).
+- **The assistant never used the encyclopedia.** `biokids-ai.service` did not allow
+  AF_NETLINK, which `kiwix-serve` needs before it binds; `biokids-wiki.service` had it
+  since D-190. Every lookup failed with "exited while loading (code 1)", and the
+  model answered from memory. The servers' last lines of error output are now kept.
+- **Sums are worked out, not guessed** (`biokids_ai/arithmetic.py`): "7 kere 8" was
+  answered "yirmi dört".
+- **A second press while the microphone was opening** opened a second one nothing
+  closed (Sor Bana and Sesim).
+- **A restored backup** could stack special days on every restore, put "*" in the
+  allow list, or leave a policy that neither the daemon nor the panel could read;
+  each section is now checked as the panel's forms check it.
+- **Learn first** asks for no more than the learning limit; **the year map** measures a
+  day against what the engine allowed (grants, earned time, "Bitireyim"); **a stopped
+  app's name** is forgotten at logout, when the launcher numbers its apps from 1 again;
+  **reading** writes no letter still to come on a meeting card, and nothing moves up a
+  box on the day it was met (English too); **Sesim** knows the young band and no longer
+  speaks into its own recording; **the preview** shows the one-minute warning, the one
+  "Bitireyim" comes with; **the cover** forgets an app the launcher came back from.
+- **Maintainer scripts**: the panel's postinst no longer aborts when a session closes
+  mid-loop and opens nothing from a build chroot; `biokids-desktop` runs `update-grub`
+  only when its link is new; three packaging files had Windows line endings.
+- **Removed**: 17 functions, classes and constants nothing used, 19 catalog keys, an
+  unused animation; stale notes on the cut screen watcher, `biokids-harden` and the
+  log directory; the package descriptions, `CLAUDE.md`, the README and the ISO notes
+  brought up to date. Left for the owner: the timeout (penalty) feature, whose only
+  trigger was the cut watcher (D-81): give it a button or remove it.

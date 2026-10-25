@@ -30,6 +30,9 @@ OTHER_BROWSERS: Final = (
     Path("/usr/bin/firefox"),
     Path("/usr/bin/epiphany-browser"),
     Path("/usr/bin/falkon"),
+    Path("/usr/bin/google-chrome"),
+    Path("/usr/bin/google-chrome-stable"),
+    Path("/usr/bin/brave-browser"),
 )
 """Browsers BioKids does not manage. Any app's help link may open one (D-237)."""
 

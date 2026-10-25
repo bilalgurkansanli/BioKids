@@ -586,9 +586,6 @@ class AppLauncher:
 
         return f"http://{self.config.shell.host}:{launcher_port(self.config)}/start"
 
-    def kiosk_profile(self) -> Path:
-        return Path.home() / ".config" / "biokids" / "kiosk"
-
 
 ACCEPT_LANGUAGES = {"tr": "tr-TR,tr,en-US,en", "en": "en-US,en"}
 """What a child's browser asks websites for, by the family's language. A profile

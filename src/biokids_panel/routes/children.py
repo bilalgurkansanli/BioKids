@@ -313,6 +313,13 @@ def preview(view: View, child_id: int) -> Response:
     ]
     band = child.band(today).value
     end_action = policy.end_action.value if policy else ""
+    try:
+        cards = [
+            c.as_dict(view.tr.locale) for c in offscreen.choose("end", band, today, child.id)
+        ]
+    except ConfigError:
+        # A broken card file is the launcher's to report; the preview goes on.
+        cards = []
     return view.render(
         "child_preview.html",
         child=child,
@@ -323,16 +330,15 @@ def preview(view: View, child_id: int) -> Response:
         daily=daily.card_for(
             today, child_id=child.id, band=band, locale=view.tr.locale, tiles=tiles
         ),
-        warning_line=view.tr("quota.warning", minutes=5),
+        # The one-minute warning: the one "Bitireyim" comes with (D-230, D-250).
+        warning_line=view.tr("quota.warning", minutes=1),
         finish_up=policy.finish_up_min if policy else 0,
         end_line=view.tr(
             f"shell.timeup.body.{end_action}"
             if end_action in ("poweroff", "lock", "logout")
             else "shell.timeup.body"
         ),
-        offscreen=[
-            c.as_dict(view.tr.locale) for c in offscreen.choose("end", band, today, child.id)
-        ],
+        offscreen=cards,
     )
 
 
@@ -691,6 +697,7 @@ def assistant_form(view: View, child_id: int) -> Response:
         policy=repo.get_or_create_policy(view.session, child_id),
         status=_assistant_status(view.ctx),
         alerts=repo.assistant_alerts(view.session, child_id),
+        knowledge_on=repo.assistant_checks_encyclopedia(view.session),
     )
 
 
@@ -700,6 +707,7 @@ def assistant_save(
     child_id: int,
     assistant_enabled: Annotated[str, Form()] = "",
     assistant_voice: Annotated[str, Form()] = "",
+    assistant_knowledge: Annotated[str, Form()] = "",
     csrf_token: Annotated[str, Form()] = "",
 ) -> Response:
     if blocked := view.guard_form(csrf_token, f"/children/{child_id}/assistant?error=csrf"):
@@ -713,6 +721,11 @@ def assistant_save(
     # The microphone only ever with the assistant itself (D-166).
     policy.assistant_voice = policy.assistant_enabled and assistant_voice == "on"
     after = {"enabled": policy.assistant_enabled, "voice": policy.assistant_voice}
+    # The family's, not this child's: one encyclopedia, one choice (D-247).
+    knowledge = "on" if assistant_knowledge == "on" else "off"
+    if repo.get_setting(session, repo.ASSISTANT_KNOWLEDGE, "on") != knowledge:
+        repo.set_setting(session, repo.ASSISTANT_KNOWLEDGE, knowledge)
+        after["knowledge"] = knowledge == "on"
     repo.audit(
         session,
         actor=view.actor,

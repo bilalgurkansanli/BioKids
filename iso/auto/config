@@ -1,0 +1,33 @@
+#!/bin/sh
+# The BioKids image (D-249): Debian 13 with Xfce, BioKids and its apps, as a live
+# system that installs itself - the Debian installer copies the live root
+# filesystem to the disk ("live" installer), so an install needs no network
+# and gives the same system that was tried from the stick. In the live session
+# BioKids' services are masked on the kernel's command line: the stick is for
+# trying and installing, and the installed computer's boot menu does not carry
+# these options.
+set -e
+
+lb config noauto \
+    --mode debian \
+    --distribution trixie \
+    --architectures amd64 \
+    --archive-areas "main contrib non-free-firmware" \
+    --mirror-bootstrap http://deb.debian.org/debian/ \
+    --mirror-binary http://deb.debian.org/debian/ \
+    --security true \
+    --updates true \
+    --linux-packages linux-image \
+    --firmware-chroot true \
+    --firmware-binary true \
+    --debian-installer live \
+    --debian-installer-gui true \
+    --debian-installer-distribution trixie \
+    --bootappend-live "boot=live components locales=tr_TR.UTF-8 keyboard-layouts=tr timezone=Europe/Istanbul hostname=biokids quiet systemd.mask=biokids-daemon.service systemd.mask=biokids-dns.service systemd.mask=biokids-lockdown.service systemd.mask=biokids-panel.service systemd.mask=biokids-ai.service systemd.mask=biokids-wiki.path systemd.mask=biokids-wiki.service systemd.mask=biokids-firstboot.service" \
+    --iso-application "BioKids" \
+    --iso-publisher "BioStudio - https://github.com/bilalgurkansanli/BioKids" \
+    --iso-volume "BioKids 1.5.0" \
+    --image-name biokids-1.5.0 \
+    --apt-recommends true \
+    --cache true \
+    "${@}"

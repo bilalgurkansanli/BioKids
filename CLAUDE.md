@@ -8,8 +8,9 @@
 ## 1. What this is
 
 **BioKids** is a Debian-based Linux system for children aged **4–10**, with parental
-controls, a child-friendly launcher, optional on-device AI supervision, and two
-text-to-speech companions named **Zio** (mother voice) and **Sio** (father voice).
+controls, a child-friendly launcher, an optional on-device assistant ("Sor Bana"),
+and two text-to-speech companions named **Zio** (mother voice) and **Sio** (father
+voice).
 
 Two deliverables, in this order:
 
@@ -33,11 +34,12 @@ These override any other instruction in this repo. If a task conflicts with one 
 them, stop and ask.
 
 1. **Nothing leaves the device.** No telemetry, no analytics, no cloud inference, no
-   crash reporting, no "anonymous usage stats". Screenshots of a child's screen are
-   processed in RAM on the local GPU and discarded. The only outbound network calls
-   BioKids itself makes are: APT updates, blocklist downloads, DNS, and the parent's
-   own SMTP server. Every one of those is listed in `docs/SECURITY.md` and must stay
-   listed there.
+   crash reporting, no "anonymous usage stats". No screen is ever captured, and what
+   the assistant hears is turned into text in memory and dropped. The only outbound
+   network calls BioKids itself makes are APT updates, DNS, the parent's own SMTP
+   server, Tailscale once a parent sets up phone access, and the downloads a parent
+   starts (the assistant's models, the natural voice, the Wikipedia packs). Every one
+   of those is listed in `docs/SECURITY.md` §4 and must stay listed there.
 2. **The child knows.** Supervision is visible to the child by default. No hidden
    screenshotting, no silent keylogging. A parent may reduce the indicator, but the
    feature is never covert by design.
@@ -69,8 +71,8 @@ Do not re-litigate these. Full rationale in `docs/DECISIONS.md`.
 | Frontend | Jinja2 + vanilla CSS, plain forms, `EventSource` for live counters. **No build step, no npm, no CDN, no framework** (D-32, revised in D-129) |
 | Time enforcement | Own implementation on systemd-logind + `CLOCK_BOOTTIME`. Not timekpr |
 | Filtering | Local `dnsmasq` + `nftables` + a managed Chromium extension. **No MITM proxy** |
-| AI | Local VLM via `llama.cpp`, event-triggered, optional package, default OFF |
-| TTS | Piper for stock voices; OpenVoice V2 for cloning. Both MIT-compatible |
+| AI | A local assistant (Gemma via `llama.cpp`, Whisper, an offline Wikipedia), optional package, off until a parent turns it on for a child. No screen watcher (D-180) |
+| TTS | Piper's natural voice, downloaded on the parent's request (D-196, D-223); espeak-ng otherwise; a parent's own recordings (D-174). No voice cloning (D-181) |
 | Remote access | Tailscale (`tailscale serve`). No port forwarding, ever |
 | Auth | 6-digit PIN, argon2 hashed, rate-limited |
 | Languages | UI in Turkish + English. **Code, comments, commits, docs in English** |
@@ -89,9 +91,9 @@ biokids/
 │   ├── biokids_core/          # config, db models, policy engine, i18n
 │   ├── biokids_daemon/        # time accounting + enforcement (root)
 │   ├── biokids_panel/         # FastAPI parent panel (root, 127.0.0.1:7878)
-│   ├── biokids_shell/         # child launcher server (child user, 127.0.0.1:7879)
+│   ├── biokids_shell/         # child launcher server (child user, 127.0.0.1:7879+uid%100)
 │   ├── biokids_voice/         # Zio & Sio TTS service
-│   └── biokids_ai/            # optional VLM watcher
+│   └── biokids_ai/            # optional local assistant (Sor Bana, English with Sio)
 ├── extension/                 # Chromium managed extension (URL reporting)
 ├── debian/                    # single source package -> multiple binary packages
 ├── iso/                       # live-build config (Phase 3 only)
@@ -101,8 +103,9 @@ biokids/
 ```
 
 **One Debian source package, several binary packages:**
-`biokids-core`, `biokids-daemon`, `biokids-panel`, `biokids-shell`, `biokids-voice`,
-`biokids-desktop` (metapackage), `biokids-ai` (Suggests, never Depends).
+`biokids` (metapackage), `biokids-core`, `biokids-daemon`, `biokids-panel`,
+`biokids-shell`, `biokids-voice`, `biokids-desktop` (metapackage), `biokids-ai`
+(Suggests, never Depends), `biokids-archive-keyring`.
 
 ---
 
@@ -112,8 +115,7 @@ biokids/
 |---|---|
 | `/etc/biokids/config.toml` | machine-level config (ports, paths, feature flags) |
 | `/var/lib/biokids/biokids.db` | SQLite, mode 0600, root-owned |
-| `/var/lib/biokids/evidence/` | flagged screenshots, 0700, auto-pruned |
-| `/var/log/biokids/` | logs, rotated |
+| `/var/lib/biokids-ai/models/` | the assistant's models and Wikipedia packs, downloaded from the panel |
 | `/run/biokids/daemon.sock` | Unix socket, daemon IPC |
 | `/usr/share/biokids/` | static assets, app catalog, blocklists |
 
@@ -121,7 +123,7 @@ biokids/
 |---|---|---|
 | `biokids-daemon.service` | root | unix socket only |
 | `biokids-panel.service` | root | `127.0.0.1:7878` |
-| `biokids-shell.service` | child (user unit) | `127.0.0.1:7879` |
+| `biokids-shell.service` | child (user unit) | `127.0.0.1:7879 + uid % 100` (D-188) |
 | `biokids-voice.service` | child (user unit) | unix socket |
 | `biokids-ai.service` | dedicated `biokids-ai` user | unix socket |
 
@@ -164,30 +166,18 @@ Take a snapshot before anything that touches boot, PAM, nftables, or GRUB.
 
 ## 7. Current phase
 
-**Phase 0 — BioGuard MVP.** See `docs/TASKS-PHASE0.md`.
-Definition of done: on a Debian 13 VM, a parent installs the `.deb`, completes the
-setup wizard, reaches the panel from their phone over Tailscale, sets a daily quota,
-and the child session enforces it with spoken warnings.
+**Release: 1.5.0 (D-219), and its first ISO (D-249).** The packages are built, tested
+on the Debian 13 VM and in the owner's own rounds of testing (D-219 to D-250); the
+decisions are in `docs/DECISIONS.md`, newest last.
 
-T0–T8 are written and tested; `tests/test_acceptance.py` runs the exit criterion end
-to end in one process. **T9 is not done**, and what is left is §7 of
-`docs/VM-RUNBOOK.md`. Sections 0–6 have passed on a Debian 13 VM: the packages build,
-pass lintian and install; the wizard completes; a child logs in by their picture;
-the parent reached the panel from a phone over Tailscale; upgrade, remove and purge
-behave (T8.5); the VT guards hold (T5.7). Getting there took D-153 to D-159.
-Still ahead: the spoken warnings, and §7's run on a fresh VM — the 20-minute quota
-set from the phone, reboot, clock, and the recording.
+What is left before publishing:
+1. The ISO (`iso/`, D-249): built with live-build on the VM, tried in VirtualBox
+   (BIOS, then UEFI), then installed beside Windows on a real computer by the owner.
+2. The owner's release key: the owner makes it, and only the public key and its
+   fingerprint come into the repository (`biokids-archive-keyring`). The APT
+   repository is published with it, and the ISO and the .debs go to a GitHub Release
+   (the ISO to archive.org when it is over 2 GB, D-28).
+3. Open source: the repository is already MIT; the site and the announcement follow.
 
-The voice question is closed (D-137): there is no Turkish Piper voice anyone may
-redistribute and `piper-tts` is not in Debian 13, so espeak-ng speaks the warnings and
-Piper is used only where a family installs it themselves.
-
-**v1.0 release candidate (0.1.0-2).** On 2026-10-07 the owner cut v1 to what is built
-(D-180 to D-186: no screen watcher, no voice cloning, no wizard stubs, no
-/var/log/biokids, no biokids-harden, ISO moved to v1.1) and the rest was finished:
-the browser extension (D-187), one launcher port per child (D-188), retention (D-189),
-offline Wikipedia (D-190), editing and removing a child (D-191), history (D-192),
-limits per kind of app (D-193). What remains before release is the owner's own test,
-the §7 recording, and publishing the APT repository with the release key.
-
-Nothing about the ISO belongs in v1.0.
+The assistant is measured with `dev/assistant_eval.py` against a real model (D-248):
+run it after any change to `src/biokids_ai/prompts.py`.

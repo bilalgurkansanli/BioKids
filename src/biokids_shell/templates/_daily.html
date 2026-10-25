@@ -31,6 +31,7 @@
   {% endif %}
   {% if daily.app %}
     <a class="daily__pill daily__go" href="/launch/{{ daily.app.slug }}"
+       data-kind="{{ daily.app.kind|default('app') }}"
        aria-label="{{ _('daily.challenge.open', app=daily.app.name) }}"
        {% if young %}data-speak="{{ daily.app.name }}"{% endif %}>
       <span class="daily__go-icon" aria-hidden="true">{{ daily.app.icon|icon }}</span>

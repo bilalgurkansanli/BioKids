@@ -2620,4 +2620,3 @@ def test_switching_off_the_kite_flies_away(client: TestClient, daemon: FakeShell
     assert 'class="goodbye-kite"' not in client.post("/switch-user").text
     css = (STATIC / "shell.css").read_text(encoding="utf-8")
     assert "@keyframes kite-fly" in css and ".goodbye-kite { animation: none;" in css
-

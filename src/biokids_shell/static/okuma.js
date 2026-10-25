@@ -129,6 +129,9 @@
     row.appendChild(hearButton(step.say));
     row.appendChild(
       button("big-btn big-btn--ok okuma__next", (strings.next || "") + " ▶", function () {
+        /* Once: a double tap skipped the next letter's introduction (D-250). */
+        if (step.passed) return;
+        step.passed = true;
         answer(step, true);
         next();
       }),

@@ -88,8 +88,6 @@ if [ -n "$PREFIX" ]; then
 fi
 
 DATA_DIR="$PREFIX/var/lib/biokids"
-EVIDENCE_DIR="$PREFIX/var/lib/biokids/evidence"
-LOG_DIR="$PREFIX/var/log/biokids"
 RUN_DIR="$PREFIX/run/biokids"
 ALEMBIC_INI="$PREFIX/usr/share/biokids/alembic.ini"
 UNITS="biokids-daemon.service biokids-panel.service"
@@ -120,7 +118,7 @@ unit_exists() {
     command -v systemctl >/dev/null 2>&1 && systemctl cat "$1" >/dev/null 2>&1
 }
 
-for target in "$DATA_DIR" "$LOG_DIR" "$RUN_DIR"; do
+for target in "$DATA_DIR" "$RUN_DIR"; do
     guard_path "$target"
 done
 
@@ -130,7 +128,6 @@ else
     printf 'BioKids reset — BIOKIDS_PREFIX=%s\n' "$PREFIX"
 fi
 describe "$DATA_DIR"
-describe "$LOG_DIR"
 describe "$RUN_DIR"
 printf '  keep    %s/etc/biokids  (config and secret key)\n' "$PREFIX"
 
@@ -161,19 +158,15 @@ else
     printf '  units   not touched (no systemd units in a prefix tree)\n'
 fi
 
-rm -rf -- "$DATA_DIR" "$LOG_DIR" "$RUN_DIR"
+rm -rf -- "$DATA_DIR" "$RUN_DIR"
 
-# Recreated straight away, with the modes biokids-core.postinst asserts, so that
-# a reset tree and a freshly installed one are the same tree. The daemon runs as
-# root, but /var/lib/biokids holds a child's usage history and never becomes
-# world-readable; the log directory is group-readable so an admin can read it.
-mkdir -p -- "$DATA_DIR" "$EVIDENCE_DIR" "$LOG_DIR" "$RUN_DIR"
-chmod 700 "$DATA_DIR" "$EVIDENCE_DIR"
-chmod 750 "$LOG_DIR"
+# Recreated straight away, with the modes biokids-core.postinst gives them, so
+# that a reset tree and a freshly installed one are the same tree. The daemon
+# runs as root, but /var/lib/biokids holds a child's usage history and never
+# becomes world-readable. Everything logs to the journal (D-183).
+mkdir -p -- "$DATA_DIR" "$RUN_DIR"
+chmod 700 "$DATA_DIR"
 chmod 755 "$RUN_DIR"
-if [ "$SYSTEM" -eq 1 ] && getent group adm >/dev/null 2>&1; then
-    chgrp adm "$LOG_DIR"
-fi
 
 # The schema, and only then the units. Deleting the database deleted every table
 # with it, and neither the daemon nor the panel creates one — that has always
