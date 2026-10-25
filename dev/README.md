@@ -11,7 +11,8 @@ testing BioKids and waiting for BioKids.
 | [`check_i18n.py`](check_i18n.py) | Fail when the two catalogues have drifted apart |
 | [`check_licenses.py`](check_licenses.py) | Fail when a dependency's licence is not permissive (D-30) |
 | [`compile_i18n.py`](compile_i18n.py) | Compile the `.po` files to `.mo`, in pure Python |
-| [`make_icons.py`](make_icons.py) | Regenerate the PWA icons |
+| [`make_icons.py`](make_icons.py) | Cut the logo files and the app icons from `assets/brand/logo.jpg` |
+| [`make_fonts.py`](make_fonts.py) | Make the two Fredoka weights, with the Turkish letters it lacks |
 | [`screenshots.py`](screenshots.py) | Capture the README's screenshots from a running panel |
 
 ## The one you will use most

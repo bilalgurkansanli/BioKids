@@ -23,6 +23,10 @@ and three empty tables (`parent_note`, `shared_recording`, `reading_item`).
 - **Press-and-speak with the assistant, and answers in the question's language**
   (D-244): turning Sor Bana on brings its microphone with it; a question asked in
   English is answered and spoken in English, one in Turkish in Turkish.
+- **The logo** (D-243): the kite whose string ends in a heart, on the app icons, the
+  desktop icon, the login screen, the panel's top bar and the pages before signing in.
+- **Fredoka on every screen** (D-243), vendored at last, in Regular and Medium - no
+  bold anywhere - with the ğ, Ğ, ş, Ş and İ the font lacked.
 - **Son tur** (D-230): on the one-minute warning, once a day, "🏁 Bitireyim" gives the
   parent's minutes (3 by default) to finish a level or a drawing. Today says so.
 - **Şimdi ne yapsak?** (D-231): the time-up, good-night, between-windows and break screens

@@ -44,8 +44,10 @@
   --shadow-1: 0 2px 6px rgba(34, 30, 28, .08);
   --shadow-2: 0 8px 24px rgba(34, 30, 28, .12);
 
-  --font-ui: "Inter", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-kid: "Fredoka", "Baloo 2", "Comic Neue", var(--font-ui);
+  /* Fredoka, the logo's typeface, on every screen (D-243). The two names are
+   * kept so that a screen can still ask for the child's font or the parent's. */
+  --font-ui: "Fredoka", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-kid: var(--font-ui);
   /* For a picture that is an emoji. Named first: left to fallback, a few code
    * points (the cat, U+1F431) came from a black-and-white font installed for
    * text, and a tile showed an outline where the others were in colour. */
@@ -61,33 +63,28 @@
   --target-older: 44px;
 }
 
-/* Fonts are vendored as WOFF2 in assets/fonts/ and served from /static/fonts/.
+/* Fredoka, vendored as WOFF2 in fonts/ beside this file (dev/make_fonts.py).
  * Never loaded from Google Fonts: offline is a hard requirement, and a font
  * request is a tracking request.
  *
- * Each @font-face is declared with `font-display: swap` and a full system
- * fallback stack above, so a machine where the vendored files are missing gets
- * a readable page rather than invisible text. */
+ * Two weights and no bold (D-243): the logo is bold, the screens are not.
+ * Regular is the text; Medium answers every heavier weight a stylesheet asks
+ * for - its range runs to 900 - so a heading or a <strong> is a little firmer
+ * than the text around it, never bold, and the browser has no reason to
+ * thicken a face itself. `font-display: swap` and the system fallbacks above
+ * keep a page readable if the files are missing. */
 @font-face {
-  font-family: "Inter";
-  src: url("/static/fonts/Inter-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Inter";
-  src: url("/static/fonts/Inter-SemiBold.woff2") format("woff2");
-  font-weight: 600;
+  font-family: "Fredoka";
+  src: url("fonts/Fredoka-Regular.woff2") format("woff2");
+  font-weight: 100 450;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
   font-family: "Fredoka";
-  src: url("/static/fonts/Fredoka-SemiBold.woff2") format("woff2");
-  font-weight: 600;
+  src: url("fonts/Fredoka-Medium.woff2") format("woff2");
+  font-weight: 451 900;
   font-style: normal;
   font-display: swap;
 }
@@ -109,8 +106,8 @@ html[data-text-size="x-large"] { --font-scale: 1.5; }
  * than `"OpenDyslexic", var(--font-ui)`, which names itself and is no value at
  * all - the page would fall back to the browser's serif. */
 html[data-font="dyslexic"] {
-  --font-ui: "OpenDyslexic", "Inter", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-kid: "OpenDyslexic", "Fredoka", "Baloo 2", "Comic Neue", "Inter", "Noto Sans", system-ui, sans-serif;
+  --font-ui: "OpenDyslexic", "Fredoka", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-kid: "OpenDyslexic", "Fredoka", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 /* High contrast. Colour is never the only signal anywhere in BioKids, so this

@@ -12,7 +12,7 @@ coral square with a white cross, always in the same place, the top right corner
 of the screen (the launcher maximises every app window). 64 x 64 is the
 smallest target UX.md section 2.4 allows for a four-year-old.
 
-Same tiny PNG writer as `make_icons.py`, with an alpha channel. The output is
+A tiny pure-Python PNG writer with an alpha channel. The output is
 committed; a build does not run this.
 """
 

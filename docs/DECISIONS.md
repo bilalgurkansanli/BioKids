@@ -2084,6 +2084,24 @@ bar now remembers the width GTK gave it on screen and is placed by whichever is 
 that or GTK's measure (`appbar.width_to_place`). Too wide for a moment, it only stands
 a little off its corner until its next size places it again.
 
+**D-243 [owner] The kite logo, and Fredoka without bold.** (2026-10-25)
+The owner chose the logo: a kite whose string ends in a heart - the child flies, a
+parent holds the string - beside "BioKids" in a rounded typeface, in the four brand
+colours. It was made with an image model, so `assets/brand/logo.jpg` is the master and
+`dev/make_icons.py` cuts from it the transparent logo, the kite alone and the app icons;
+it replaces the indigo square with Zio's and Sio's dots everywhere that was drawn - the
+icons (and through them the desktop's), the login screen's background, the panel's top
+bar, and the pages a parent sees before signing in. The child's launcher keeps no logo of
+its own: the child's screen is theirs.
+The logo's typeface is Fredoka, and the owner asked for it on every screen but not in
+bold: the logo is bold, the rest is not. So Fredoka replaces Inter for the parent too,
+in Regular and Medium only, and Medium answers every heavier weight a stylesheet asks
+for, so no stylesheet had to change and nothing is drawn bold. Fredoka 2.001 lacks ğ, Ğ,
+ş, Ş and İ - a Turkish word would have been drawn in two fonts - and `dev/make_fonts.py`
+adds them from the font's own letters and marks. OFL-1.1 with no Reserved Font Name, so
+the modified copy keeps the name. The fonts were never vendored before this: the screens
+had fallen back to the system's.
+
 **D-244 [owner] Press-and-speak with the assistant; answers in the question's language.**
 (2026-10-25)
 The owner asked why Sor Bana had no microphone - it was there, behind its own box, which

@@ -37,12 +37,14 @@ One `tokens.css`, shared. Never hardcode a colour or a size anywhere else.
   --shadow-1: 0 2px 6px rgba(34,30,28,.08);
   --shadow-2: 0 8px 24px rgba(34,30,28,.12);
 
-  --font-ui: "Inter", "Noto Sans", system-ui, sans-serif;
-  --font-kid: "Fredoka", "Baloo 2", "Comic Neue", var(--font-ui);
+  --font-ui: "Fredoka", "Noto Sans", system-ui, sans-serif;
+  --font-kid: var(--font-ui);
 }
 ```
 
-Fonts are **vendored** as WOFF2 in `assets/fonts/`, never loaded from Google Fonts.
+Every screen is set in **Fredoka**, the logo's typeface, in Regular and Medium only:
+the logo is bold, the screens are not (D-243). Fonts are **vendored** as WOFF2 in
+`src/biokids_core/data/static/fonts/` (`assets/brand/README.md`), never loaded from Google Fonts.
 Offline is a hard requirement and a font request is a tracking request.
 
 Art direction: warm, rounded, high contrast, generous whitespace. Deliberately not the
@@ -583,8 +585,8 @@ The parent never has to find the panel (D-170, D-195): installing the package op
 the wizard at once in the desktop that is open, and until setup is complete it opens
 again at every login; a "BioKids Ebeveyn Paneli" shortcut is put on the parent's
 desktop once, and the panel is in the applications menu. On the login screen each
-child is their own picture and name, over Zio and Sio, never the operating system's
-logo. The parent's own account is shown by the name they gave the wizard, with a
+child is their own picture and name, over Zio and Sio under the BioKids logo (D-243),
+never the operating system's logo. The parent's own account is shown by the name they gave the wizard, with a
 house (D-221), not by its user name beside a grey silhouette; a name or a picture the
 parent chose themselves is kept.
 

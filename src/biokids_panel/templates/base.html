@@ -27,6 +27,7 @@
   {% if auth.authenticated %}
   <header class="topbar">
     <a class="brand" href="/today">
+      <img class="brand__kite" src="/static/shared/brand/kite.png" alt="" width="18" height="30">
       {{ _('panel.title') }} <small>{{ _('panel.subtitle') }}</small>
     </a>
     <div class="row">
@@ -68,6 +69,12 @@
       <span class="icon" aria-hidden="true">⚙️</span>{{ _('nav.settings') }}
     </a>
   </nav>
+  {% else %}
+  {# Before a parent is in - the login, the setup wizard, recovery, help -
+     the whole logo stands over the page (D-243). #}
+  <header class="brand-hero">
+    <img src="/static/shared/brand/logo.png" alt="{{ _('panel.title') }}" width="200" height="142">
+  </header>
   {% endif %}
 
   <main class="page" id="main">

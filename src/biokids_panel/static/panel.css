@@ -84,6 +84,24 @@ a {
   color: var(--ink);
 }
 
+.brand__kite {
+  align-self: center;
+  height: 1.9rem;
+  width: auto;
+}
+
+/* The logo over the pages a parent sees before signing in (D-243). */
+.brand-hero {
+  display: flex;
+  justify-content: center;
+  padding: var(--sp-4) var(--sp-3) 0;
+}
+
+.brand-hero img {
+  width: 12.5rem;
+  height: auto;
+}
+
 .brand small {
   font-weight: 400;
   font-size: .8rem;

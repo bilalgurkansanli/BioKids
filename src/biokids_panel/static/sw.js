@@ -16,6 +16,10 @@ const CACHE = "biokids-shell-v1";
 
 const SHELL = [
   "/static/shared/tokens.css",
+  "/static/shared/fonts/Fredoka-Regular.woff2",
+  "/static/shared/fonts/Fredoka-Medium.woff2",
+  "/static/shared/brand/logo.png",
+  "/static/shared/brand/kite.png",
   "/static/panel.css",
   "/static/live.js",
   "/static/icons/icon-192.png",

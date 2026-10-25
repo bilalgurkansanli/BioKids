@@ -1,3 +1,5 @@
+<p align="center"><img src="src/biokids_core/data/static/brand/logo.png" alt="BioKids" width="320"></p>
+
 # BioKids
 
 **Parental controls for Debian, for children aged 4–10, that run entirely on your own

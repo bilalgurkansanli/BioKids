@@ -6,7 +6,7 @@
 
 `background` writes `assets/greeter/background.png` (1920x1080; LightDM's GTK
 greeter scales it to the screen): Zio and Sio from `assets/characters`, happy,
-under the BioKids mark, drawn as HTML and photographed by a headless
+under the BioKids logo, drawn as HTML and photographed by a headless
 Chromium-family browser. Not on a BioKids machine: the children's managed
 browser policy is machine-wide, and under it headless Chromium loads nothing.
 Edge or Chrome on the Windows workstation does it.
@@ -62,13 +62,8 @@ PARENT = ("parent", "🏡")
 """The parent's own account (D-221): a house, which is not among the children's
 animals, so the grown-up's login never looks like a child's."""
 
-MARK = f"""<svg viewBox="0 0 100 100" width="96" height="96" aria-hidden="true">
-  <rect x="4" y="4" width="92" height="92" rx="22" fill="{INDIGO}"/>
-  <path d="M30 68 A20 20 0 0 0 70 68 Z" fill="{AMBER}"/>
-  <circle cx="38" cy="44" r="17" fill="{CORAL}"/>
-  <circle cx="62" cy="44" r="17" fill="{TEAL}"/>
-</svg>"""
-"""The PWA icon (dev/make_icons.py) as vectors."""
+LOGO = ROOT / "src" / "biokids_core" / "data" / "static" / "brand" / "logo.png"
+"""The logo with its background taken out (dev/make_icons.py, D-243)."""
 
 
 def character(name: str) -> str:
@@ -82,9 +77,9 @@ def background_html() -> str:
     return f"""<!doctype html><html><head><meta charset="utf-8"><style>
 html, body {{ margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: {BG}; }}
 body {{ position: relative; font-family: "Noto Sans", "DejaVu Sans", sans-serif; }}
-.brand {{ position: absolute; top: 96px; left: 0; right: 0; display: flex;
-          align-items: center; justify-content: center; gap: 24px; }}
-.brand span {{ font-size: 72px; font-weight: 800; color: {INDIGO}; letter-spacing: -1px; }}
+.brand {{ position: absolute; top: 56px; left: 0; right: 0; display: flex;
+          justify-content: center; }}
+.brand img {{ width: 400px; height: auto; }}
 .char {{ position: absolute; bottom: 70px; width: 380px; height: 380px; }}
 .char svg {{ width: 100%; height: 100%; }}
 </style></head><body>
@@ -96,7 +91,7 @@ body {{ position: relative; font-family: "Noto Sans", "DejaVu Sans", sans-serif;
             background:radial-gradient(circle, {AMBER}2e 0%, {AMBER}00 70%);"></div>
 <div style="{blob}width:700px;height:700px;left:-260px;bottom:-380px;
             background:radial-gradient(circle, {INDIGO}1f 0%, {INDIGO}00 70%);"></div>
-<div class="brand">{MARK}<span>BioKids</span></div>
+<div class="brand"><img src="{LOGO.as_uri()}" alt=""></div>
 <div class="char" style="left:170px">{character("zio")}</div>
 <div class="char" style="right:170px">{character("sio")}</div>
 </body></html>"""

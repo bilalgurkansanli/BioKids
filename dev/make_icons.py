@@ -1,133 +1,191 @@
 #!/usr/bin/env python3
-"""Generate the PWA icons.
+"""Make the logo files and the app icons from the logo (D-243).
 
-A tiny pure-Python PNG writer rather than Pillow: the icons are two flat shapes
-on a rounded square, they change roughly never, and adding an image library to
-the build for this would be silly. The output is committed, so a build does not
-need to run this — it is here so the mark can be regenerated rather than being a
-binary nobody can edit.
+    python3 dev/make_icons.py
 
-The mark: an indigo rounded square, with Zio's coral dot and Sio's teal dot
-overlapping the way the two characters stand together. Maskable-safe — every
-shape sits inside the inner 80% so a circular mask does not clip it.
+The logo is `assets/brand/logo.jpg`: the kite, its string ending in a heart, and
+"BioKids" beside it, on the warm off-white of `--bg`. It was made as a picture,
+not drawn as vectors, so everything here is cut from that picture:
+
+- `src/biokids_core/data/static/brand/logo.png` - the whole logo on a
+  transparent background, for the panel's top bar, its login and setup pages,
+  the login screen's background and the README;
+- `src/biokids_core/data/static/brand/kite.png` - the kite alone, the same way;
+- `icon-192.png` and `icon-512.png` for the panel and the launcher, which are
+  also the desktop's icon (debian/rules): the kite on a rounded `--bg` square.
+  Maskable-safe - the kite sits inside the inner 80% so a circular mask does not
+  clip it.
+
+The background is taken out by colour: every region of the background colour
+that the dark outline or the open page encloses goes, and the pixels at its edge
+are un-mixed from it, so the logo keeps a soft edge on any surface. The cream
+spars across the kite are the background's colour too, but they lie between the
+kite's coloured panels, and stay.
+
+The output is committed; a build does not run this. Needs NumPy, SciPy and
+Pillow, which are not BioKids dependencies: run it in a throwaway virtualenv.
 """
 
 from __future__ import annotations
 
-import struct
 import sys
-import zlib
 from pathlib import Path
 
+import numpy as np
+from PIL import Image, ImageDraw
+from scipy import ndimage
+
 ROOT = Path(__file__).resolve().parent.parent
+MASTER = ROOT / "assets" / "brand" / "logo.jpg"
+BRAND = ROOT / "src" / "biokids_core" / "data" / "static" / "brand"
 PANEL_ICONS = ROOT / "src" / "biokids_panel" / "static" / "icons"
 SHELL_ICONS = ROOT / "src" / "biokids_shell" / "static" / "icons"
 
-BG = (75, 84, 200)  # --bio-indigo
-CORAL = (255, 107, 91)  # --bio-coral, Zio
-TEAL = (31, 182, 166)  # --bio-teal, Sio
-AMBER = (255, 176, 32)  # --bio-amber
+TILE = (251, 247, 242)  # --bg
+LOGO_WIDTH = 960
+KITE_HEIGHT = 512
 
-Pixel = tuple[int, int, int]
+BACKGROUND_TOLERANCE = 18
+"""How far, in the largest channel, a pixel may be from the background colour
+and still be background. The picture is a JPEG: its flat background is not."""
+
+SPECK = 1500
+"""An enclosed region smaller than this is noise inside a spar, not a counter
+of a letter or the inside of the heart, which are all far larger."""
+
+EDGE = 3
+"""How many pixels into the drawing from the background are un-mixed from it."""
 
 
-def write_png(path: Path, size: int, pixels: list[list[Pixel]]) -> None:
-    raw = bytearray()
-    for row in pixels:
-        raw.append(0)  # filter type 0 (None) for every scanline
-        for r, g, b in row:
-            raw += bytes((r, g, b))
+def transparent(rgb: np.ndarray) -> np.ndarray:
+    """The picture as RGBA, its background taken out."""
+    height, width, _ = rgb.shape
+    pixels = rgb.astype(np.float64)
+    corners = np.concatenate(
+        [rgb[:16, :16], rgb[:16, -16:], rgb[-16:, :16], rgb[-16:, -16:]]
+    ).reshape(-1, 3)
+    background = np.median(corners, axis=0)
 
-    def chunk(tag: bytes, data: bytes) -> bytes:
-        return (
-            struct.pack(">I", len(data))
-            + tag
-            + data
-            + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
-        )
+    near = np.abs(pixels - background).max(axis=2) <= BACKGROUND_TOLERANCE
+    # JPEG noise breaks a spar into specks; closing joins them back up.
+    # Padded first: closing erodes from the border of the array, and would leave
+    # a frame of "not background" around the picture.
+    near = ndimage.binary_closing(np.pad(near, 4, constant_values=True), iterations=2)[
+        4:-4, 4:-4
+    ]
+    regions, count = ndimage.label(near)
 
-    header = struct.pack(">IIBBBBB", size, size, 8, 2, 0, 0, 0)  # 8-bit truecolour
-    png = (
-        b"\x89PNG\r\n\x1a\n"
-        + chunk(b"IHDR", header)
-        + chunk(b"IDAT", zlib.compress(bytes(raw), 9))
-        + chunk(b"IEND", b"")
+    # A region of background colour bordered by colour is a spar; one that
+    # touches the edge of the picture, or is bordered by the dark outline and
+    # the letters, is background.
+    saturation = pixels.max(axis=2) - pixels.min(axis=2)
+    coloured = saturation > 60
+    clear = np.zeros(count + 1, dtype=bool)
+    edge_regions = np.unique(
+        np.concatenate([regions[0], regions[-1], regions[:, 0], regions[:, -1]])
     )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(png)
+    clear[edge_regions] = True
+    for index, box in enumerate(ndimage.find_objects(regions), start=1):
+        if clear[index] or box is None:
+            continue
+        box = tuple(slice(max(s.start - 4, 0), s.stop + 4) for s in box)
+        own = regions[box] == index
+        if own.sum() < SPECK:
+            continue
+        ring = ndimage.binary_dilation(own, iterations=3) & ~own
+        clear[index] = coloured[box][ring].mean() < 0.25
+    clear[0] = False
+    gone = clear[regions]
+
+    alpha = np.ones((height, width))
+    alpha[gone] = 0.0
+    band = ndimage.binary_dilation(gone, iterations=EDGE) & ~gone
+    # Un-mix each edge pixel from the background: the least opacity at which
+    # some colour, laid over the background, gives exactly this pixel.
+    over = np.where(
+        pixels > background,
+        (pixels - background) / np.maximum(255.0 - background, 1.0),
+        (background - pixels) / np.maximum(background, 1.0),
+    ).max(axis=2)
+    alpha[band] = np.clip(over[band] * 1.6, 0.0, 1.0)
+
+    out = pixels.copy()
+    safe = np.maximum(alpha, 1e-3)[..., None]
+    unmixed = (pixels - (1.0 - alpha[..., None]) * background) / safe
+    out[band] = np.clip(unmixed[band], 0, 255)
+    rgba = np.dstack([out, alpha * 255.0]).round().astype(np.uint8)
+    rgba[gone] = 0
+    return rgba
 
 
-SUPERSAMPLE = 4
-"""Rendered at this multiple and averaged down. Circles drawn a pixel at a time
-have visibly jagged edges at 192px, and the icon is the first thing anyone sees."""
+def crop(image: Image.Image, margin: float = 0.03) -> Image.Image:
+    left, top, right, bottom = image.getbbox() or (0, 0, *image.size)
+    pad = round(max(right - left, bottom - top) * margin)
+    return image.crop((left - pad, top - pad, right + pad, bottom + pad))
 
 
-def render(size: int) -> list[list[Pixel]]:
-    """Supersample, then average each block back down to one pixel."""
-    big = _render_flat(size * SUPERSAMPLE)
-    out: list[list[Pixel]] = []
-    for y in range(size):
-        row: list[Pixel] = []
-        for x in range(size):
-            totals = [0, 0, 0]
-            for dy in range(SUPERSAMPLE):
-                source = big[y * SUPERSAMPLE + dy]
-                for dx in range(SUPERSAMPLE):
-                    pixel = source[x * SUPERSAMPLE + dx]
-                    totals[0] += pixel[0]
-                    totals[1] += pixel[1]
-                    totals[2] += pixel[2]
-            count = SUPERSAMPLE * SUPERSAMPLE
-            row.append((totals[0] // count, totals[1] // count, totals[2] // count))
-        out.append(row)
+def kite_only(rgba: np.ndarray) -> np.ndarray:
+    """The kite, its string and its bows, without the word or the small kite."""
+    shapes, count = ndimage.label(rgba[..., 3] > 128, structure=np.ones((3, 3)))
+    word_starts = rgba.shape[1] * 0.34
+    keep = np.zeros(count + 1, dtype=bool)
+    for index, centre in enumerate(
+        ndimage.center_of_mass(np.ones(shapes.shape), shapes, range(1, count + 1)), start=1
+    ):
+        keep[index] = centre[1] < word_starts
+    # The soft edge of each shape belongs to the shape next to it.
+    nearest = ndimage.distance_transform_edt(
+        shapes == 0, return_distances=False, return_indices=True
+    )
+    owner = shapes[nearest[0], nearest[1]]
+    out = rgba.copy()
+    out[~keep[owner]] = 0
     return out
 
 
-def _render_flat(size: int) -> list[list[Pixel]]:
-    radius = size * 0.22  # the rounded-square corner
-    zio = (size * 0.38, size * 0.44, size * 0.17)
-    sio = (size * 0.62, size * 0.44, size * 0.17)
-    smile = (size * 0.5, size * 0.68, size * 0.20)
-
-    rows: list[list[Pixel]] = []
-    for y in range(size):
-        row: list[Pixel] = []
-        for x in range(size):
-            colour: Pixel = (251, 247, 242)  # --bg, outside the rounded square
-            if _inside_rounded_square(x, y, size, radius):
-                colour = BG
-                if _inside_circle(x, y, *smile) and y > smile[1] - 2:
-                    colour = AMBER
-                if _inside_circle(x, y, *zio):
-                    colour = CORAL
-                if _inside_circle(x, y, *sio):
-                    colour = TEAL
-            row.append(colour)
-        rows.append(row)
-    return rows
+def icon(kite: Image.Image, size: int) -> Image.Image:
+    scale = 4
+    big = size * scale
+    tile = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    ImageDraw.Draw(tile).rounded_rectangle(
+        (big * 0.04, big * 0.04, big * 0.96, big * 0.96), radius=big * 0.22, fill=(*TILE, 255)
+    )
+    tile = tile.resize((size, size), Image.Resampling.LANCZOS)
+    inner = round(size * 0.66)
+    fitted = kite.copy()
+    fitted.thumbnail((inner, inner), Image.Resampling.LANCZOS)
+    x = (size - fitted.width) // 2
+    y = (size - fitted.height) // 2
+    tile.alpha_composite(fitted, (x, y))
+    return tile
 
 
-def _inside_rounded_square(x: int, y: int, size: int, radius: float) -> bool:
-    margin = size * 0.04
-    left, top = margin, margin
-    right, bottom = size - margin, size - margin
-    if not (left <= x <= right and top <= y <= bottom):
-        return False
-    cx = min(max(x, left + radius), right - radius)
-    cy = min(max(y, top + radius), bottom - radius)
-    return (x - cx) ** 2 + (y - cy) ** 2 <= radius**2
-
-
-def _inside_circle(x: int, y: int, cx: float, cy: float, r: float) -> bool:
-    return (x - cx) ** 2 + (y - cy) ** 2 <= r**2
+def save(image: Image.Image, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    image.save(path, optimize=True)
+    print(f"wrote {path.relative_to(ROOT)} ({path.stat().st_size // 1024} KB)")
 
 
 def main() -> int:
+    rgba = transparent(np.asarray(Image.open(MASTER).convert("RGB")))
+    logo = crop(Image.fromarray(rgba))
+    kite = crop(Image.fromarray(kite_only(rgba)))
+
+    width = LOGO_WIDTH
+    save(
+        logo.resize((width, round(logo.height * width / logo.width)), Image.Resampling.LANCZOS),
+        BRAND / "logo.png",
+    )
+    height = KITE_HEIGHT
+    save(
+        kite.resize(
+            (round(kite.width * height / kite.height), height), Image.Resampling.LANCZOS
+        ),
+        BRAND / "kite.png",
+    )
     for target in (PANEL_ICONS, SHELL_ICONS):
         for size in (192, 512):
-            path = target / f"icon-{size}.png"
-            write_png(path, size, render(size))
-            print(f"wrote {path.relative_to(ROOT)} ({path.stat().st_size} bytes)")
+            save(icon(kite, size), target / f"icon-{size}.png")
     return 0
 
 
