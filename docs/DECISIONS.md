@@ -2298,4 +2298,9 @@ installed on its empty disk.
   nothing has taken one since D-180.
 - Checked on the installed system: the computer made its own keys and its own
   extension at first boot, every service started, the BioKids login screen showed,
-  and the parent's first login opened the wizard.
+  and the parent's first login opened the wizard. Then on a third install from the
+  rebuilt image: the boot menus (BIOS and UEFI) and the start-up screen show the
+  logo, the installer asks no host name, the desktop and Chromium are in Turkish,
+  `apt-get update` reads Debian's mirror and security archive, the parent's desktop
+  has the logo, and the boot menu is hidden with BioKids alone and shown for five
+  seconds once a Windows boot manager is on the EFI partition.
