@@ -1,0 +1,24 @@
+[Plymouth Theme]
+Name=BioKids
+Description=The BioKids kite while the computer starts (D-251)
+ModuleName=two-step
+
+[two-step]
+Font=Cantarell 12
+TitleFont=Cantarell Light 30
+# The spinner's own animation, copied here by the image's hook beside our
+# watermark: two-step finds every picture in ImageDir.
+ImageDir=/usr/share/plymouth/themes/biokids
+DialogHorizontalAlignment=.5
+DialogVerticalAlignment=.382
+TitleHorizontalAlignment=.5
+TitleVerticalAlignment=.382
+HorizontalAlignment=.5
+VerticalAlignment=.72
+WatermarkHorizontalAlignment=.5
+WatermarkVerticalAlignment=.42
+Transition=none
+TransitionDuration=0.0
+# --bg, the warm off-white of every BioKids screen.
+BackgroundStartColor=0xfbf7f2
+BackgroundEndColor=0xfbf7f2

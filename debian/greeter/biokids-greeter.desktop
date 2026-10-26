@@ -1,0 +1,7 @@
+[Desktop Entry]
+# The BioKids login screen (D-251); /usr/share/lightdm/lightdm.conf.d/50-biokids.conf
+# names it. Falls back to lightdm-gtk-greeter by itself.
+Name=BioKids
+Comment=The family's pictures: a child taps theirs
+Exec=/usr/lib/biokids/biokids-greeter
+Type=Application

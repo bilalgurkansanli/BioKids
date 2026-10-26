@@ -17,6 +17,9 @@ debian/pam/biokids-lightdm etc/pam.d/
 debian/pam/50-biokids.conf usr/share/lightdm/lightdm.conf.d/
 # The login screen's look (D-170).
 debian/greeter/50-biokids.conf usr/share/lightdm/lightdm-gtk-greeter.conf.d/
+# The BioKids login screen (D-251), which LightDM runs as its greeter.
+debian/greeter/biokids-greeter.desktop usr/share/xgreeters/
+usr/lib/biokids/biokids-greeter
 usr/share/biokids/greeter
 usr/share/biokids/extension
 usr/lib/biokids/biokids-child-login

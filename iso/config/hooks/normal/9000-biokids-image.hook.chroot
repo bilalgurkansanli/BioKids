@@ -28,6 +28,12 @@ for table in ("parent", "child", "audit_log", "panel_session"):
     assert count == 0, f"{table} has {count} rows in the image"
 PY
 
+# The kite while the computer starts (D-251): the spinner's animation beside
+# the logo, and the initramfs that shows it rebuilt.
+cp -n /usr/share/plymouth/themes/spinner/*.png /usr/share/plymouth/themes/biokids/ || true
+plymouth-set-default-theme biokids
+update-initramfs -u -k all
+
 # Each installed computer makes its own machine id at its first boot.
 : > /etc/machine-id
 rm -f /var/lib/dbus/machine-id

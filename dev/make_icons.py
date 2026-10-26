@@ -15,6 +15,8 @@ not drawn as vectors, so everything here is cut from that picture:
   also the desktop's icon (debian/rules): the kite on a rounded `--bg` square.
   Maskable-safe - the kite sits inside the inner 80% so a circular mask does not
   clip it.
+- `iso/config/includes.chroot/usr/share/plymouth/themes/biokids/watermark.png` -
+  the logo while the image's computer starts (D-251);
 - `debian/parent/biokids-desktop.png` - a parent's desktop background (D-245):
   the logo in the middle of the warm off-white, the four brand colours glowing
   softly in the corners, as the login screen does;
@@ -52,6 +54,8 @@ SHELL_ICONS = ROOT / "src" / "biokids_shell" / "static" / "icons"
 
 TILE = (251, 247, 242)  # --bg
 DESKTOP = ROOT / "debian" / "parent" / "biokids-desktop.png"
+SPLASH = ROOT / "iso" / "config" / "includes.chroot" / "usr" / "share" / "plymouth" / "themes"
+SPLASH_WIDTH = 420
 DESKTOP_SIZE = (1920, 1080)
 GLOWS = (  # corner, colour: --bio-coral, --bio-amber, --bio-teal, --bio-indigo
     ((0.0, 0.0), (255, 107, 91)),
@@ -233,6 +237,13 @@ def main() -> int:
         for size in (192, 512):
             save(icon(kite, size), target / f"icon-{size}.png")
     save(desktop(logo), DESKTOP)
+    save(
+        logo.resize(
+            (SPLASH_WIDTH, round(logo.height * SPLASH_WIDTH / logo.width)),
+            Image.Resampling.LANCZOS,
+        ),
+        SPLASH / "biokids" / "watermark.png",
+    )
     save(favicon(kite, 64), BRAND / "favicon.png")
     ico = BRAND / "favicon.ico"
     favicon(kite, 48).save(ico, sizes=[(16, 16), (32, 32), (48, 48)])

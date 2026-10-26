@@ -122,6 +122,8 @@ override_dh_auto_install:
 	# it must be executable, and a checkout made on Windows cannot promise the
 	# mode bit.
 	install -d debian/tmp/usr/lib/biokids
+	install -m 0755 debian/greeter/biokids-greeter \
+		debian/tmp/usr/lib/biokids/biokids-greeter
 	install -m 0755 debian/pam/biokids-child-login \
 		debian/tmp/usr/lib/biokids/biokids-child-login
 	install -m 0755 debian/parent/biokids-open-setup \

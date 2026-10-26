@@ -4126,3 +4126,35 @@ msgstr "Recommended. A small model is sometimes wrong; Zio first looks at the Wi
 msgid "assistant.knowledge.off"
 msgstr "Wikipedia is on this computer, but checking answers against it is turned off."
 
+msgid "greeter.touch"
+msgstr "Tap your picture"
+
+msgid "greeter.opening"
+msgstr "Opening…"
+
+msgid "greeter.password"
+msgstr "Your password"
+
+msgid "greeter.name"
+msgstr "User name"
+
+msgid "greeter.go"
+msgstr "Log in"
+
+msgid "greeter.back"
+msgstr "Back"
+
+msgid "greeter.other"
+msgstr "Another account"
+
+msgid "greeter.shutdown"
+msgstr "Shut down"
+
+msgid "greeter.wrong"
+msgstr "That did not work. Try again?"
+
+msgid "greeter.failed"
+msgstr "It did not open just now. Try again?"
+
+msgid "greeter.child_open"
+msgstr "Your session is open already. A grown-up can open it."

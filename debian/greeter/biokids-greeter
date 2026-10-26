@@ -1,0 +1,15 @@
+#!/bin/sh
+# LightDM's greeter on a BioKids machine (D-251): the family's pictures.
+#
+# Started by LightDM (/usr/share/xgreeters/biokids-greeter.desktop). Whenever
+# the BioKids screen stops with an error - it could not start, or it broke -
+# Debian's own GTK greeter takes its place, so a parent is never left without a
+# way in (principle 4). A greeter stopped by LightDM, as a session starts, ends
+# by a signal and is not replaced.
+/usr/bin/python3 -m biokids_shell.greeter
+status=$?
+if [ "$status" -ne 0 ] && [ "$status" -lt 128 ] && [ -x /usr/sbin/lightdm-gtk-greeter ]; then
+    echo "biokids-greeter: stopped with $status; Debian's greeter instead" >&2
+    exec /usr/sbin/lightdm-gtk-greeter
+fi
+exit "$status"

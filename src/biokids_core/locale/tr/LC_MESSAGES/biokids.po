@@ -4126,3 +4126,35 @@ msgstr "Önerilir. Küçük bir model bazen yanılır; Zio önce bu bilgisayarda
 msgid "assistant.knowledge.off"
 msgstr "Vikipedi bu bilgisayarda var, ama cevapları onunla kontrol etmek kapalı."
 
+msgid "greeter.touch"
+msgstr "Resmine dokun"
+
+msgid "greeter.opening"
+msgstr "Açılıyor…"
+
+msgid "greeter.password"
+msgstr "Parolan"
+
+msgid "greeter.name"
+msgstr "Kullanıcı adı"
+
+msgid "greeter.go"
+msgstr "Giriş"
+
+msgid "greeter.back"
+msgstr "Geri"
+
+msgid "greeter.other"
+msgstr "Başka bir hesap"
+
+msgid "greeter.shutdown"
+msgstr "Kapat"
+
+msgid "greeter.wrong"
+msgstr "Olmadı. Bir daha dener misin?"
+
+msgid "greeter.failed"
+msgstr "Şu an açılamadı. Bir daha dener misin?"
+
+msgid "greeter.child_open"
+msgstr "Oturumun zaten açık. Bir büyüğün açabilir."

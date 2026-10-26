@@ -7,7 +7,8 @@
 # build is 30-60 minutes; `sudo make clean` before building with changed config.
 
 DEBS ?= ../dist/1.5.0-1
-AI_DEBS ?= ../dist/ai
+# Rebuilt for Trixie (dist/ai, not in git): from the shared folder on the build VM.
+AI_DEBS ?= /media/sf_BioKids/dist/ai
 
 .PHONY: iso clean
 

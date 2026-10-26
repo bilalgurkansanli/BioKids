@@ -23,7 +23,7 @@ lb config noauto \
     --debian-installer live \
     --debian-installer-gui true \
     --debian-installer-distribution trixie \
-    --bootappend-live "boot=live components locales=tr_TR.UTF-8 keyboard-layouts=tr timezone=Europe/Istanbul hostname=biokids quiet systemd.mask=biokids-daemon.service systemd.mask=biokids-dns.service systemd.mask=biokids-lockdown.service systemd.mask=biokids-panel.service systemd.mask=biokids-ai.service systemd.mask=biokids-wiki.path systemd.mask=biokids-wiki.service systemd.mask=biokids-firstboot.service" \
+    --bootappend-live "boot=live components locales=tr_TR.UTF-8 keyboard-layouts=tr timezone=Europe/Istanbul hostname=biokids quiet splash systemd.mask=biokids-daemon.service systemd.mask=biokids-dns.service systemd.mask=biokids-lockdown.service systemd.mask=biokids-panel.service systemd.mask=biokids-ai.service systemd.mask=biokids-wiki.path systemd.mask=biokids-wiki.service systemd.mask=biokids-firstboot.service" \
     --iso-application "BioKids" \
     --iso-publisher "BioStudio - https://github.com/bilalgurkansanli/BioKids" \
     --iso-volume "BioKids 1.5.0" \

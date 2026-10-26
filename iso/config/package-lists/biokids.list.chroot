@@ -14,6 +14,9 @@ lightdm-gtk-greeter
 chromium-l10n
 # Finds Windows, so the boot menu offers it next to BioKids (dual boot).
 os-prober
+# The kite while the computer starts (D-251).
+plymouth
+plymouth-themes
 
 # BioKids, the child's desktop and its apps (biokids-desktop recommends them).
 biokids-desktop
