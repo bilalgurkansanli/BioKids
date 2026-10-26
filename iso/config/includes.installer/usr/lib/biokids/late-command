@@ -1,0 +1,33 @@
+#!/bin/sh
+# What the live installer leaves undone (D-252), run by preseed/late_command at
+# the very end of an install, in the installer's own shell. A file rather than
+# the command itself: the preseed file's parser took the backslash of "\n" and
+# the command failed on its quotes.
+#
+#  - The language chosen at the start becomes the computer's: localechooser
+#    generates it, but the image's /etc/default/locale (C.UTF-8) stays.
+#  - Debian's mirror, its updates and its security updates: apt-setup's mirror
+#    step is not on the stick, so it wrote only the stick itself, and nothing
+#    would ever have been updated. The stick's line is commented out.
+set -e
+
+locale=$(debconf-get debian-installer/locale || true)
+if [ -n "$locale" ]; then
+    in-target update-locale "LANG=$locale"
+fi
+
+cat > /target/etc/apt/sources.list.d/debian.sources <<'EOF'
+Types: deb
+URIs: http://deb.debian.org/debian/
+Suites: trixie trixie-updates
+Components: main contrib non-free-firmware
+
+Types: deb
+URIs: http://security.debian.org/debian-security/
+Suites: trixie-security
+Components: main contrib non-free-firmware
+EOF
+
+if [ -f /target/etc/apt/sources.list ]; then
+    sed -i 's/^deb cdrom:/# deb cdrom:/' /target/etc/apt/sources.list
+fi

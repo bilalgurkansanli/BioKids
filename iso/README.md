@@ -40,8 +40,9 @@ clean` before building again with changed configuration: live-build caches.
 - `config/includes.installer/preseed.cfg`: only what a family would never want to be
   asked (no root password, no package survey, the time zone, the host name); the
   language, the keyboard, the parent's account and the disk stay the installer's
-  questions. Its `late_command` writes Debian's mirror and security updates, which
-  the live installer leaves out, and makes the chosen language the computer's.
+  questions. Its `late_command` runs `includes.installer/usr/lib/biokids/late-command`,
+  which writes Debian's mirror and security updates, left out by the live
+  installer, and makes the chosen language the computer's.
 - `auto/config`: the live session masks BioKids' services on its kernel command
   line - the stick is for trying and installing; the installed computer is the one
   that is supervised.

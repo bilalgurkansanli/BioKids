@@ -2285,8 +2285,10 @@ installed on its empty disk.
   menu until its first upgrade hid it.
 - **An installed computer could never be updated.** The live installer's apt-setup
   wrote only the stick (`deb cdrom:`): the mirror step is not on the stick, and the
-  security step failed without it. The preseed's `late_command` writes Debian's
-  mirror, `trixie-updates` and `trixie-security`, and comments the stick out.
+  security step failed without it. A script the preseed's `late_command` runs
+  (`/usr/lib/biokids/late-command` in the installer) writes Debian's mirror,
+  `trixie-updates` and `trixie-security`, and comments the stick out. Written into
+  the preseed file itself it failed: the file's parser took the backslash of "\n".
 - **The language chosen in the installer was not the computer's.** It generated
   `tr_TR.UTF-8` but left the image's `C.UTF-8` in `/etc/default/locale`: the desktop
   and Chromium were in English. `late_command` sets the chosen one.
