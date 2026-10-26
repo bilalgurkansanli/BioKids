@@ -20,6 +20,10 @@ not drawn as vectors, so everything here is cut from that picture:
   `throbber-0030.png` beside it: the four brand colours going round under the
   logo (D-252). Debian's spinner is white, made for a black screen, and all but
   vanished on the warm off-white;
+- `iso/config/includes.binary/boot/grub/splash.png` (800 x 600, UEFI) and
+  `iso/config/includes.binary/isolinux/splash.png` (640 x 480, BIOS) - the
+  stick's boot menu (D-252): the logo high on a deep indigo, its dark ink made
+  light, so that live-build's white menu items stay readable below it;
 - `debian/parent/biokids-desktop.png` - a parent's desktop background (D-245):
   the logo in the middle of the warm off-white, the four brand colours glowing
   softly in the corners, as the login screen does;
@@ -66,6 +70,18 @@ GLOWS = (  # corner, colour: --bio-coral, --bio-amber, --bio-teal, --bio-indigo
     ((1.0, 0.0), (255, 176, 32)),
     ((1.0, 1.0), (31, 182, 166)),
     ((0.0, 1.0), (75, 84, 200)),
+)
+NIGHT = (31, 34, 77)
+"""The stick's boot menu ground: live-build draws its items in white."""
+INK_LEVEL = 110
+INK_SATURATION = 45
+"""A pixel darker than INK_LEVEL in every channel, and greyer than
+INK_SATURATION, is the logo's dark ink, which the boot menu turns light. The
+kite's indigo panel is far brighter in blue."""
+BOOT = ROOT / "iso" / "config" / "includes.binary"
+BOOT_MENUS = (  # where, size, the logo's share of the width, its top
+    (BOOT / "boot" / "grub" / "splash.png", (800, 600), 0.42, 0.07),
+    (BOOT / "isolinux" / "splash.png", (640, 480), 0.36, 0.03),
 )
 THROBBER_SIZE = 44
 THROBBER_FRAMES = 30
@@ -198,23 +214,49 @@ def favicon(kite: Image.Image, size: int) -> Image.Image:
     return square.resize((size, size), Image.Resampling.LANCZOS)
 
 
+def glowing(
+    size: tuple[int, int], ground: tuple[int, int, int], strength: float, reach: float
+) -> Image.Image:
+    """A ground colour with each corner glowing softly in a brand colour."""
+    width, height = size
+    y, x = np.mgrid[0:height, 0:width].astype(np.float32)
+    canvas = np.empty((height, width, 3), dtype=np.float32)
+    canvas[:] = ground
+    for (cx, cy), colour in GLOWS:
+        distance = np.hypot(x - cx * width, y - cy * height)
+        weight = (strength * np.clip(1 - distance / (reach * width), 0, 1) ** 2)[..., None]
+        canvas = canvas * (1 - weight) + np.array(colour, dtype=np.float32) * weight
+    return Image.fromarray(canvas.round().astype(np.uint8)).convert("RGBA")
+
+
+def fit(logo: Image.Image, width: int) -> Image.Image:
+    return logo.resize(
+        (width, round(logo.height * width / logo.width)), Image.Resampling.LANCZOS
+    )
+
+
 def desktop(logo: Image.Image) -> Image.Image:
     """The logo on the warm off-white, each corner glowing in a brand colour."""
     width, height = DESKTOP_SIZE
-    y, x = np.mgrid[0:height, 0:width].astype(np.float32)
-    canvas = np.empty((height, width, 3), dtype=np.float32)
-    canvas[:] = TILE
-    reach = 0.42 * width
-    for (cx, cy), colour in GLOWS:
-        distance = np.hypot(x - cx * width, y - cy * height)
-        weight = (0.22 * np.clip(1 - distance / reach, 0, 1) ** 2)[..., None]
-        canvas = canvas * (1 - weight) + np.array(colour, dtype=np.float32) * weight
-    image = Image.fromarray(canvas.round().astype(np.uint8)).convert("RGBA")
-    fitted = logo.resize(
-        (round(width * 0.3), round(logo.height * width * 0.3 / logo.width)),
-        Image.Resampling.LANCZOS,
-    )
+    image = glowing(DESKTOP_SIZE, TILE, 0.22, 0.42)
+    fitted = fit(logo, round(width * 0.3))
     image.alpha_composite(fitted, ((width - fitted.width) // 2, (height - fitted.height) // 2))
+    return image.convert("RGB")
+
+
+def boot_menu(
+    logo: Image.Image, size: tuple[int, int], share: float, top: float
+) -> Image.Image:
+    """The stick's boot menu behind live-build's white items (D-252): the logo,
+    its dark ink turned to the off-white, high on a deep indigo night."""
+    width, height = size
+    image = glowing(size, NIGHT, 0.3, 0.5)
+    rgba = np.asarray(logo).copy()
+    rgb = rgba[..., :3].astype(np.int16)
+    ink = (rgb.max(axis=2) < INK_LEVEL) & (rgb.max(axis=2) - rgb.min(axis=2) < INK_SATURATION)
+    rgba[ink, :3] = TILE
+    fitted = fit(Image.fromarray(rgba), round(width * share))
+    image.alpha_composite(fitted, ((width - fitted.width) // 2, round(height * top)))
     return image.convert("RGB")
 
 
@@ -272,6 +314,8 @@ def main() -> int:
     )
     for frame in range(THROBBER_FRAMES):
         save(throbber(frame), SPLASH / "biokids" / f"throbber-{frame + 1:04d}.png")
+    for path, size, share, top in BOOT_MENUS:
+        save(boot_menu(logo, size, share, top), path)
     save(favicon(kite, 64), BRAND / "favicon.png")
     ico = BRAND / "favicon.ico"
     favicon(kite, 48).save(ico, sizes=[(16, 16), (32, 32), (48, 48)])

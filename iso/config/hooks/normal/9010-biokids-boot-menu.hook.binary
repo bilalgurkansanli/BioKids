@@ -1,0 +1,11 @@
+#!/bin/sh
+# The stick's boot menu (D-252). Its pictures come from includes.binary, which
+# live-build copies before it would draw Debian's; but GRUB's theme keeps the
+# title "Live Boot Menu with GRUB" over any picture but Debian's own, and ours
+# has the logo there. Runs in binary/.
+set -e
+
+THEME=boot/grub/live-theme/theme.txt
+if [ -f "$THEME" ]; then
+    sed -i 's|^title-text:.*|title-text: ""|' "$THEME"
+fi

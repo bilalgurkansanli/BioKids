@@ -35,6 +35,8 @@ clean` before building again with changed configuration: live-build caches.
   (`os-prober`); the kite while the computer starts (Plymouth), with an initramfs
   hook that keeps Debian's logo out of it (D-252); a live-config script that keeps
   the console reachable on the stick.
+- `config/includes.binary` and `9010-biokids-boot-menu.hook.binary`: the stick's
+  boot menu, BIOS and UEFI, with the logo instead of Debian's (D-252).
 - `config/includes.installer/preseed.cfg`: only what a family would never want to be
   asked (no root password, no package survey, the time zone, the host name); the
   language, the keyboard, the parent's account and the disk stay the installer's

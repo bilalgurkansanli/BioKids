@@ -2265,7 +2265,9 @@ installed on its empty disk.
   `/etc/initramfs-tools/hooks/biokids-plymouth` in the image, which mkinitramfs runs
   after Debian's, puts the kite back, at every kernel update too. Debian's spinner,
   white for a black screen, all but vanished on the warm off-white; the theme draws
-  its own, four dots in the brand colours going round (`dev/make_icons.py`).
+  its own, four dots in the brand colours going round (`dev/make_icons.py`). The
+  stick's boot menu, Debian's helmet and "Debian GNU/Linux 13" until now, shows the
+  logo on a deep indigo under which live-build's white items stay readable.
 - **A parent's desktop showed Xfce's mouse.** Xfce 4.20 keeps a background per screen
   name and workspace and never reads Debian's `desktop-background` alternative, which
   the image had not even registered (desktop-base was configured after the panel).
