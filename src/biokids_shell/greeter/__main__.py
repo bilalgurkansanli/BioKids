@@ -34,7 +34,6 @@ PICTURE_PX = 168
 
 CSS = b"""
 window { background-color: #FBF7F2; }
-.title { font-size: 30px; font-weight: bold; color: #2B2B3A; }
 .face {
   background-image: none;
   background-color: #FFFFFF;
@@ -139,6 +138,8 @@ class LoginScreen:
         self.window.move(area.x, area.y)
         self.window.set_default_size(self.width, self.height)
 
+        self.window.connect("key-press-event", self._on_key)
+
         overlay = Gtk.Overlay()
         overlay.add(self._background())
         overlay.add_overlay(self._middle())
@@ -175,26 +176,28 @@ class LoginScreen:
 
         column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
         column.set_halign(Gtk.Align.CENTER)
-        column.set_valign(Gtk.Align.CENTER)
-        column.set_margin_top(round(self.height * 0.16))
+        # From a fixed height under the logo, so that the password question
+        # opens downwards rather than pushing the pictures up into it.
+        column.set_valign(Gtk.Align.START)
+        column.set_margin_top(round(self.height * 0.36))
 
-        title = Gtk.Label(label=f"👆 {self.tr('greeter.touch')}")
-        title.get_style_context().add_class("title")
-        column.pack_start(title, False, False, 0)
-
-        row = Gtk.FlowBox()
-        row.set_selection_mode(Gtk.SelectionMode.NONE)
-        row.set_max_children_per_line(6)
-        row.set_column_spacing(22)
-        row.set_row_spacing(22)
-        row.set_homogeneous(True)
-        row.set_halign(Gtk.Align.CENTER)
         users = []
         if not self.greeter.get_hide_users_hint():
             users = self.LightDM.UserList.get_instance().get_users()
-        for face in faces(users, child_accounts()):
-            row.add(self._face(face))
-        column.pack_start(row, False, False, 0)
+        shown = faces(users, child_accounts())
+        # One centred row, as many as fit; a family with more people than that
+        # wraps onto rows of the same width.
+        per_row = max(1, min(len(shown), (self.width - 120) // 250))
+        rows = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=22)
+        rows.set_halign(Gtk.Align.CENTER)
+        for start in range(0, len(shown), per_row):
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=22)
+            row.set_halign(Gtk.Align.CENTER)
+            row.set_homogeneous(True)
+            for face in shown[start : start + per_row]:
+                row.pack_start(self._face(face), False, False, 0)
+            rows.pack_start(row, False, False, 0)
+        column.pack_start(rows, False, False, 0)
 
         self.message = Gtk.Label()
         self.message.get_style_context().add_class("message")
@@ -352,6 +355,12 @@ class LoginScreen:
         self.message.set_text("")
         for button in self.buttons.values():
             button.get_style_context().remove_class("is-chosen")
+
+    def _on_key(self, _window: Any, event: Any) -> bool:
+        if event.keyval == self.Gdk.KEY_Escape:
+            self._start_over()
+            return True
+        return False
 
     def _shutdown(self, _button: Any) -> None:
         from gi.repository import GLib

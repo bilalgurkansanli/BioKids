@@ -4126,9 +4126,6 @@ msgstr "Recommended. A small model is sometimes wrong; Zio first looks at the Wi
 msgid "assistant.knowledge.off"
 msgstr "Wikipedia is on this computer, but checking answers against it is turned off."
 
-msgid "greeter.touch"
-msgstr "Tap your picture"
-
 msgid "greeter.opening"
 msgstr "Opening…"
 

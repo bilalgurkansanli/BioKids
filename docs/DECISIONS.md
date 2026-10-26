@@ -2231,3 +2231,28 @@ the packaging seen from an image - and a test set run against the real model (D-
   log directory; the package descriptions, `CLAUDE.md`, the README and the ISO notes
   brought up to date. Left for the owner: the timeout (penalty) feature, whose only
   trigger was the cut watcher (D-81): give it a button or remove it.
+
+**D-248 [claude] The assistant is measured against a test set.** (2026-10-26)
+`dev/assistant_eval.toml` holds 40 questions - facts in Turkish and English, talk, what
+must be refused (the word list's, the classifier's, tricks to drop the rules) and three
+judgement calls - with what each answer must contain; `dev/assistant_eval.py` asks them
+through a child's own launcher, the path a tapped question takes, pausing between them
+so as not to meet the rate limit, and scores them. The first run on the VM: every one
+of the refusals right, the self-harm answer with 183 and 112, but facts the model made
+up (penguins without wings, chlorophyll as food, 7 x 8 = 24). That led to the two
+fixes in D-250: the encyclopedia had never been reached, and sums are now worked out.
+Run it after any change to the prompts; a quiet host matters, since a busy one turns
+two-minute answers into timeouts.
+
+**D-251 [owner] The login screen is the family's pictures.** (2026-10-26)
+The owner asked whether a child could open the login screen alone; with LightDM's GTK
+greeter a child who cannot read had to find their name in a list. `biokids-greeter`
+(GTK, LightDM's own library through GObject introspection) draws every child as a big
+picture, first, then the grown-ups with the house, under the logo; a child's tap logs
+them in by the existing PAM rule, a grown-up's opens a password box below the pictures,
+"Başka bir hesap" asks for a name too, and a child whose session is open behind the
+screen is told a grown-up can open it (D-155). It changes nothing about who may log in.
+`/usr/lib/biokids/biokids-greeter` runs Debian's lightdm-gtk-greeter whenever it stops
+with an error, so a parent is never locked out. The image also shows the logo while the
+computer starts (Plymouth). Checked on the VM: the child in by a tap, the open session
+refused, the parent's password asked and a wrong one asked again.

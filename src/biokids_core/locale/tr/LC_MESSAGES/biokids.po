@@ -4126,9 +4126,6 @@ msgstr "Önerilir. Küçük bir model bazen yanılır; Zio önce bu bilgisayarda
 msgid "assistant.knowledge.off"
 msgstr "Vikipedi bu bilgisayarda var, ama cevapları onunla kontrol etmek kapalı."
 
-msgid "greeter.touch"
-msgstr "Resmine dokun"
-
 msgid "greeter.opening"
 msgstr "Açılıyor…"
 
