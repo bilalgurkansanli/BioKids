@@ -28,16 +28,35 @@ clean` before building again with changed configuration: live-build caches.
   No model is in the image: a parent downloads them from the panel.
 - `config/hooks/normal/9000-biokids-image.hook.chroot`: removes Firefox (D-237) and
   what must differ between computers - the key that encrypts the mail password, the
-  extension's signing key, the machine id - and checks the database holds no family.
+  extension's signing key, the machine id - and checks the database holds no family;
+  links D-200's boot menu file and sets the start-up theme.
 - `config/includes.chroot`: `biokids-firstboot.service`, which makes each installed
   computer's own keys before the daemon starts; GRUB told to look for Windows
-  (`os-prober`); a live-config script that keeps the console reachable on the stick.
+  (`os-prober`); the kite while the computer starts (Plymouth), with an initramfs
+  hook that keeps Debian's logo out of it (D-252); a live-config script that keeps
+  the console reachable on the stick.
 - `config/includes.installer/preseed.cfg`: only what a family would never want to be
-  asked (no root password, no package survey, the time zone); the language, the
-  keyboard, the parent's account and the disk stay the installer's questions.
+  asked (no root password, no package survey, the time zone, the host name); the
+  language, the keyboard, the parent's account and the disk stay the installer's
+  questions. Its `late_command` writes Debian's mirror and security updates, which
+  the live installer leaves out, and makes the chosen language the computer's.
 - `auto/config`: the live session masks BioKids' services on its kernel command
   line - the stick is for trying and installing; the installed computer is the one
   that is supervised.
+
+## Beside Windows
+
+1. In Windows: back up what matters; if the disk uses BitLocker, write down its
+   recovery key or suspend it; turn off Fast Startup (Control Panel, Power Options),
+   which leaves the Windows partition half-mounted; in Disk Management shrink the
+   Windows partition, leaving at least 40 GB unallocated.
+2. Boot the stick from the firmware's boot menu (often F12, F11, F9 or Esc). Secure
+   Boot may stay on: Debian's shim is signed.
+3. "Start installer", then in partitioning "Guided - use the largest continuous free
+   space". Nothing outside that space is touched.
+4. The boot menu then shows BioKids and Windows for five seconds at every start
+   (D-252). BioKids does not supervise Windows: give its account a password the
+   child does not know.
 
 ## Test order
 

@@ -1,0 +1,19 @@
+#!/bin/sh
+# The kite while the computer starts (D-251, D-252). Debian's plymouth hook
+# gives every two-step theme Debian's logo as its watermark.png; mkinitramfs
+# runs /etc's hooks after /usr/share's, so this puts the kite back after it,
+# at every kernel update too.
+set -e
+
+PREREQ=""
+case "$1" in
+    prereqs)
+        echo "$PREREQ"
+        exit 0
+        ;;
+esac
+
+THEME=/usr/share/plymouth/themes/biokids
+if [ -f "$THEME/watermark.png" ] && [ -d "$DESTDIR$THEME" ]; then
+    cp "$THEME/watermark.png" "$DESTDIR$THEME/watermark.png"
+fi

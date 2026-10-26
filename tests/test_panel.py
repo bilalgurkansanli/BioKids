@@ -3492,6 +3492,60 @@ def test_the_login_script_opens_only_a_path_on_the_panel() -> None:
     assert 'not wanted.startswith("/wizard")' in script, "--setup-only opens the wizard only"
 
 
+def test_a_parents_desktop_gets_the_logo_once_and_a_chosen_one_stays(tmp_path: Any) -> None:
+    import os
+    import subprocess
+    from pathlib import Path
+
+    if os.name != "posix":
+        pytest.skip("runs the login script's shell")
+    script = (
+        Path(__file__).resolve().parent.parent / "debian" / "parent" / "biokids-open-setup"
+    ).read_text(encoding="utf-8")
+    image = "/usr/share/backgrounds/biokids/biokids-desktop.png"
+    start, end = script.index("BACKGROUND="), script.index("# Nothing else in a live session")
+    block = script[start:end]
+    background = tmp_path / "biokids-desktop.png"
+    background.write_bytes(b"png")
+    block = block.replace(image, str(background))
+
+    tools = tmp_path / "bin"
+    tools.mkdir()
+    chosen = tmp_path / "chosen"
+    calls = tmp_path / "calls"
+    (tools / "xrandr").write_text(
+        "#!/bin/sh\necho 'Monitors: 2'\n"
+        "echo ' 0: +*eDP-1 1920/344x1080/194+0+0  eDP-1'\n"
+        "echo ' 1: +HDMI-1 1920/530x1080/300+1920+0  HDMI-1'\n"
+    )
+    (tools / "xfconf-query").write_text(
+        f'#!/bin/sh\nif [ "$3" = -l ]; then cat "{chosen}" 2>/dev/null; exit 0; fi\n'
+        f'echo "$@" >> "{calls}"\n'
+    )
+    for tool in tools.iterdir():
+        tool.chmod(0o755)
+    env = {
+        "PATH": f"{tools}:/usr/bin:/bin",
+        "HOME": str(tmp_path),
+        "XDG_CONFIG_HOME": str(tmp_path / "config"),
+    }
+
+    def login() -> list[str]:
+        calls.unlink(missing_ok=True)
+        subprocess.run(["sh", "-c", block], env=env, check=True)
+        return calls.read_text().splitlines() if calls.exists() else []
+
+    first = login()
+    laptop = "/backdrop/screen0/monitoreDP-1/workspace0"
+    assert f"-c xfce4-desktop -p {laptop}/last-image -n -t string -s {background}" in first
+    assert any("monitorHDMI-1/workspace3/image-style" in call for call in first), "all screens"
+    assert login() == [], "once: a background the parent changes afterwards stays"
+
+    (tmp_path / "config" / "biokids" / "desktop-background").unlink()
+    chosen.write_text("/backdrop/screen0/monitoreDP-1/workspace0/last-image\n")
+    assert login() == [], "a background the parent chose before BioKids stays"
+
+
 # ------------------------------------------- a parent's notes (D-233)
 
 

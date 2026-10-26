@@ -2256,3 +2256,42 @@ screen is told a grown-up can open it (D-155). It changes nothing about who may 
 with an error, so a parent is never locked out. The image also shows the logo while the
 computer starts (Plymouth). Checked on the VM: the child in by a tap, the open session
 refused, the parent's password asked and a wrong one asked again.
+
+**D-252 [claude] What the first try of the ISO found.** (2026-10-26)
+The image was started in a new UEFI VirtualBox machine, as a live system and then
+installed on its empty disk.
+- **Debian's logo, not the kite, while it started.** Debian's plymouth initramfs hook
+  copies desktop-base's logo over the watermark of every two-step theme.
+  `/etc/initramfs-tools/hooks/biokids-plymouth` in the image, which mkinitramfs runs
+  after Debian's, puts the kite back, at every kernel update too. Debian's spinner,
+  white for a black screen, all but vanished on the warm off-white; the theme draws
+  its own, four dots in the brand colours going round (`dev/make_icons.py`).
+- **A parent's desktop showed Xfce's mouse.** Xfce 4.20 keeps a background per screen
+  name and workspace and never reads Debian's `desktop-background` alternative, which
+  the image had not even registered (desktop-base was configured after the panel).
+  The alternative is gone (D-245's mechanism); `biokids-open-setup` sets the logo on
+  every screen at a parent's first login, unless they already chose a background, and
+  never again. The live session gets it too.
+- **Beside Windows the boot menu shows for five seconds.** D-200 hides it for a second,
+  and Debian's os-prober script does not undo that as Ubuntu's does (`quick_boot` is
+  0): the family would have had to press Esc within that second to reach Windows.
+  When Windows' boot manager is on the EFI partition, the menu now shows for five
+  seconds; a computer with BioKids alone is unchanged. BioKids does not protect
+  Windows: its own account needs a password the child does not know. The image now
+  links D-200's file itself: the desktop package's postinst skips it where
+  `/boot/grub` does not exist, as in a build chroot, so an installed image showed the
+  menu until its first upgrade hid it.
+- **An installed computer could never be updated.** The live installer's apt-setup
+  wrote only the stick (`deb cdrom:`): the mirror step is not on the stick, and the
+  security step failed without it. The preseed's `late_command` writes Debian's
+  mirror, `trixie-updates` and `trixie-security`, and comments the stick out.
+- **The language chosen in the installer was not the computer's.** It generated
+  `tr_TR.UTF-8` but left the image's `C.UTF-8` in `/etc/default/locale`: the desktop
+  and Chromium were in English. `late_command` sets the chosen one.
+- **The installer asked a family for a host name and a domain.** Both are answered
+  (`biokids`, none).
+- The wizard's first page still promised that "screenshots" stay on the computer;
+  nothing has taken one since D-180.
+- Checked on the installed system: the computer made its own keys and its own
+  extension at first boot, every service started, the BioKids login screen showed,
+  and the parent's first login opened the wizard.

@@ -46,21 +46,8 @@ open_setup_in_open_sessions() {
     done
 }
 
-# A parent's desktop background (D-245): the logo, offered the way Debian's own
-# themes offer theirs, above them (desktop-base's are 70 and less). A parent
-# who chose a background of their own keeps it; "update-alternatives --config
-# desktop-background" chooses another for everyone, and removing BioKids
-# brings Debian's back.
-DESKTOP_BACKGROUND=/usr/share/backgrounds/biokids/biokids-desktop.png
-offer_desktop_background() {
-    if [ -e /usr/share/images/desktop-base/desktop-background ] ||         update-alternatives --query desktop-background >/dev/null 2>&1; then
-        update-alternatives --install /usr/share/images/desktop-base/desktop-background             desktop-background "$DESKTOP_BACKGROUND" 90 || true
-    fi
-}
-
 case "$1" in
     configure)
-        offer_desktop_background
         open_setup_in_open_sessions
         if [ -z "$2" ]; then
             cat <<'EOF'

@@ -20,6 +20,13 @@ and three empty tables (`parent_note`, `shared_recording`, `reading_item`).
 
 ### Added
 
+- **The ISO** (D-249): Debian 13 with BioKids and the assistant's programs, to try from a
+  USB stick and install beside Windows; each computer makes its own keys at its first
+  boot.
+- **The family's pictures on the login screen** (D-251): a child taps their picture; a
+  grown-up's opens a password box. Debian's greeter takes over if it ever fails.
+- **The encyclopedia is on with the assistant** (D-247), and a parent can turn it off; a
+  40-question test set measures the assistant against the real model (D-248).
 - **The year at a glance, the logo, and press-and-speak you can check** (D-245): Geçmiş
   opens with a year of days like GitHub's graph; the kite in the browser's tab, on the
   child's screen and as a parent's desktop background; holding 🎤 shows the voice as it
@@ -68,6 +75,16 @@ and three empty tables (`parent_note`, `shared_recording`, `reading_item`).
 - **Zio says the lines the daemon asked for** (D-229): earned minutes, a break beginning
   and ending, and a closed app were silent, for want of a line file; `break_start` was
   never even asked for.
+- **The assistant reaches the encyclopedia and works sums out** (D-250): the service
+  forbade a socket family `kiwix-serve` needs, so every answer came from the model's
+  memory; "7 kere 8" was "yirmi dört".
+- **The kite while the computer starts, the logo on a parent's desktop, Windows in the
+  boot menu** (D-252): Debian's logo replaced the kite in the start-up screen; Xfce
+  4.20 never read the background BioKids offered; beside Windows the boot menu now
+  shows for five seconds instead of hiding for one.
+- **A computer installed from the ISO gets Debian's updates and speaks the language
+  chosen in the installer** (D-252): it had only the stick as its package source,
+  and English menus.
 - The brightness slider starts where the screen is, not at full (D-236); switch-user and
   shut-down read themselves aloud for the young band; the first-run screen says that a
   refused search's words reach the family.

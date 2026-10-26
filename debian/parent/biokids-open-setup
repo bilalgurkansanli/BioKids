@@ -6,6 +6,7 @@
 # installed or upgraded. It does nothing for a child (their session is the
 # launcher). For anyone else it:
 #
+#   * puts the BioKids background on their desktop, once (D-252);
 #   * puts a "BioKids Parent Panel" shortcut on their desktop, once - deleted,
 #     it stays deleted;
 #   * opens in their browser what the panel's /at-login says: the setup wizard
@@ -22,9 +23,42 @@ case " $(id -nG 2>/dev/null) " in
     *" biokids-child "*) exit 0 ;;
 esac
 
-# Nothing in a live session started from the BioKids stick (D-249): what is set
-# up there is lost at the next boot, and the installer copies the stick, not
-# the session.
+# ------------------------------------------------------- desktop background
+
+# The logo on a parent's desktop (D-245, D-252), once, on every screen. Xfce
+# 4.20 keeps a background per screen name and workspace and never looks at
+# Debian's desktop-background. A parent who already chose one for any screen
+# keeps theirs; changed afterwards, it stays changed. In the live session too:
+# it is how the stick looks.
+BACKGROUND=/usr/share/backgrounds/biokids/biokids-desktop.png
+BACKGROUND_MARKER="${XDG_CONFIG_HOME:-$HOME/.config}/biokids/desktop-background"
+
+if [ -r "$BACKGROUND" ] && [ ! -e "$BACKGROUND_MARKER" ] \
+        && command -v xfconf-query >/dev/null 2>&1 && command -v xrandr >/dev/null 2>&1; then
+    settled=
+    if xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -q '/workspace[0-9]*/last-image$'; then
+        settled=1
+    else
+        for monitor in $(xrandr --listmonitors 2>/dev/null | awk 'NR > 1 {print $NF}'); do
+            for workspace in 0 1 2 3; do
+                property=/backdrop/screen0/monitor$monitor/workspace$workspace
+                xfconf-query -c xfce4-desktop -p "$property/last-image" -n -t string \
+                    -s "$BACKGROUND" 2>/dev/null || continue
+                xfconf-query -c xfce4-desktop -p "$property/image-style" -n -t int \
+                    -s 5 2>/dev/null || true
+                settled=1
+            done
+        done
+    fi
+    # No screen found (no display yet): the next login tries again.
+    if [ -n "$settled" ]; then
+        mkdir -p "$(dirname "$BACKGROUND_MARKER")" && : > "$BACKGROUND_MARKER"
+    fi
+fi
+
+# Nothing else in a live session started from the BioKids stick (D-249): what
+# is set up there is lost at the next boot, and the installer copies the stick,
+# not the session.
 [ -e /run/live/medium ] && exit 0
 
 # --------------------------------------------------------- desktop shortcut

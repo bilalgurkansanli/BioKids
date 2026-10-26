@@ -16,7 +16,10 @@ not drawn as vectors, so everything here is cut from that picture:
   Maskable-safe - the kite sits inside the inner 80% so a circular mask does not
   clip it.
 - `iso/config/includes.chroot/usr/share/plymouth/themes/biokids/watermark.png` -
-  the logo while the image's computer starts (D-251);
+  the logo while the image's computer starts (D-251), and `throbber-0001.png` to
+  `throbber-0030.png` beside it: the four brand colours going round under the
+  logo (D-252). Debian's spinner is white, made for a black screen, and all but
+  vanished on the warm off-white;
 - `debian/parent/biokids-desktop.png` - a parent's desktop background (D-245):
   the logo in the middle of the warm off-white, the four brand colours glowing
   softly in the corners, as the login screen does;
@@ -37,6 +40,7 @@ Pillow, which are not BioKids dependencies: run it in a throwaway virtualenv.
 
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
@@ -63,6 +67,10 @@ GLOWS = (  # corner, colour: --bio-coral, --bio-amber, --bio-teal, --bio-indigo
     ((1.0, 1.0), (31, 182, 166)),
     ((0.0, 1.0), (75, 84, 200)),
 )
+THROBBER_SIZE = 44
+THROBBER_FRAMES = 30
+"""Plymouth's two-step theme shows its throbber at 30 frames a second: one
+turn a second."""
 LOGO_WIDTH = 960
 KITE_HEIGHT = 512
 
@@ -210,6 +218,24 @@ def desktop(logo: Image.Image) -> Image.Image:
     return image.convert("RGB")
 
 
+def throbber(frame: int) -> Image.Image:
+    """One frame of four dots in the brand colours going round, drawn at four
+    times the size and scaled down for a smooth edge."""
+    scale = 4
+    side = THROBBER_SIZE * scale
+    image = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    radius = side * 0.36
+    dot = side * 0.12
+    turn = 2 * math.pi * frame / THROBBER_FRAMES
+    for index, (_, colour) in enumerate(GLOWS):
+        angle = turn + index * math.pi / 2
+        x = side / 2 + radius * math.cos(angle)
+        y = side / 2 + radius * math.sin(angle)
+        draw.ellipse((x - dot, y - dot, x + dot, y + dot), fill=(*colour, 255))
+    return image.resize((THROBBER_SIZE, THROBBER_SIZE), Image.Resampling.LANCZOS)
+
+
 def save(image: Image.Image, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     image.save(path, optimize=True)
@@ -244,6 +270,8 @@ def main() -> int:
         ),
         SPLASH / "biokids" / "watermark.png",
     )
+    for frame in range(THROBBER_FRAMES):
+        save(throbber(frame), SPLASH / "biokids" / f"throbber-{frame + 1:04d}.png")
     save(favicon(kite, 64), BRAND / "favicon.png")
     ico = BRAND / "favicon.ico"
     favicon(kite, 48).save(ico, sizes=[(16, 16), (32, 32), (48, 48)])

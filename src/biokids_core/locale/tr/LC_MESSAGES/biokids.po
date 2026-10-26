@@ -1186,7 +1186,7 @@ msgid "privacy.headline"
 msgstr "Hiçbir şey cihazınızdan çıkmaz"
 
 msgid "privacy.body"
-msgstr "Kullanım geçmişi, ekran görüntüleri ve ses kayıtları bu bilgisayarda kalır. Hiçbir sunucuya gönderilmez."
+msgstr "Kullanım geçmişi ve ses kayıtları bu bilgisayarda kalır. Hiçbir sunucuya gönderilmez."
 
 msgid "disclaimer.headline"
 msgstr "BioKids bir yardımcıdır, garanti değil"

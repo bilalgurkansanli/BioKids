@@ -18,6 +18,12 @@ rm -rf /var/lib/biokids/backups
 rm -f /var/lib/biokids/biokids.db-wal /var/lib/biokids/biokids.db-shm
 systemctl enable biokids-firstboot.service
 
+# The boot menu as on any computer BioKids is installed on (D-200, D-252):
+# hidden, and shown for five seconds beside Windows. biokids-desktop's postinst
+# links this only where /boot/grub exists, which a build chroot has not.
+mkdir -p /etc/default/grub.d
+ln -sf /usr/share/biokids/grub/biokids.cfg /etc/default/grub.d/90-biokids.cfg
+
 # The database is the schema and the app catalogue, never a family.
 python3 - <<'PY'
 import sqlite3
@@ -28,8 +34,11 @@ for table in ("parent", "child", "audit_log", "panel_session"):
     assert count == 0, f"{table} has {count} rows in the image"
 PY
 
-# The kite while the computer starts (D-251): the spinner's animation beside
-# the logo, and the initramfs that shows it rebuilt.
+# The kite while the computer starts (D-251, D-252): the theme's own logo and
+# throbber, and the spinner's other pictures beside them (the password box of
+# an encrypted disk, the end animation); -n keeps ours. The initramfs that
+# shows it is rebuilt; /etc/initramfs-tools/hooks/biokids-plymouth keeps
+# Debian's logo out of it.
 cp -n /usr/share/plymouth/themes/spinner/*.png /usr/share/plymouth/themes/biokids/ || true
 plymouth-set-default-theme biokids
 update-initramfs -u -k all

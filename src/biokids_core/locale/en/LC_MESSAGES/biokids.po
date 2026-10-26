@@ -1186,7 +1186,7 @@ msgid "privacy.headline"
 msgstr "Nothing leaves your device"
 
 msgid "privacy.body"
-msgstr "Usage history, screenshots and voice recordings stay on this computer. Nothing is sent to any server."
+msgstr "Usage history and voice recordings stay on this computer. Nothing is sent to any server."
 
 msgid "disclaimer.headline"
 msgstr "BioKids is an aid, not a guarantee"
