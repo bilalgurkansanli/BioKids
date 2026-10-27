@@ -2277,7 +2277,8 @@ installed on its empty disk.
 - **Beside Windows the boot menu shows for five seconds.** D-200 hides it for a second,
   and Debian's os-prober script does not undo that as Ubuntu's does (`quick_boot` is
   0): the family would have had to press Esc within that second to reach Windows.
-  When Windows' boot manager is on the EFI partition, the menu now shows for five
+  When Windows' boot manager is on the EFI partition, or os-prober finds a Windows
+  installed the old BIOS way (the owner's test computer), the menu now shows for five
   seconds; a computer with BioKids alone is unchanged. BioKids does not protect
   Windows: its own account needs a password the child does not know. The image now
   links D-200's file itself: the desktop package's postinst skips it where

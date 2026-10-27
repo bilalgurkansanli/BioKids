@@ -53,8 +53,9 @@ clean` before building again with changed configuration: live-build caches.
    recovery key or suspend it; turn off Fast Startup (Control Panel, Power Options),
    which leaves the Windows partition half-mounted; in Disk Management shrink the
    Windows partition, leaving at least 40 GB unallocated.
-2. Boot the stick from the firmware's boot menu (often F12, F11, F9 or Esc). Secure
-   Boot may stay on: Debian's shim is signed.
+2. Boot the stick from the firmware's boot menu (often F12, F11, F9 or Esc), in the
+   mode Windows uses (System Information, "BIOS Mode"): UEFI, or Legacy for the
+   stick's entry without "UEFI:". Secure Boot may stay on: Debian's shim is signed.
 3. "Start installer", then in partitioning "Guided - use the largest continuous free
    space". Nothing outside that space is touched.
 4. The boot menu then shows BioKids and Windows for five seconds at every start
