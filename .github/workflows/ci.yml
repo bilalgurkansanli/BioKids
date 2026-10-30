@@ -119,7 +119,7 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends \
             build-essential devscripts debhelper dh-python gnupg \
-            po-debconf pybuild-plugin-pyproject python3-all \
+            grub-common po-debconf pybuild-plugin-pyproject python3-all \
             python3-setuptools lintian
         env:
           DEBIAN_FRONTEND: noninteractive

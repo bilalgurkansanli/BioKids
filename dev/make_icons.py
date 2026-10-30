@@ -24,6 +24,16 @@ not drawn as vectors, so everything here is cut from that picture:
   `iso/config/includes.binary/isolinux/splash.png` (640 x 480, BIOS) - the
   stick's boot menu (D-252): the logo high on a deep indigo, its dark ink made
   light, so that live-build's white menu items stay readable below it;
+- `debian/grub/theme/` - the installed computer's boot menu (D-255), as the
+  stick's: `background.png` (1920 x 1080), the logo high on the deep indigo;
+  `ground.png`, the same ground without the logo, which GRUB stretches behind
+  "Loading Linux" and the hidden menu's second; and `select_w.png`,
+  `select_c.png`, `select_e.png`, the selected item's amber pill in the three
+  pieces GRUB stretches to the item's width;
+- `iso/config/includes.installer/usr/share/graphics/logo_debian.png` and
+  `logo_debian_dark.png` (800 x 75) - the Debian installer's banner (D-255): the
+  kite's sail beside the logo's "BioKids" on the deep indigo, which the
+  installer widens by repeating its edge columns;
 - `debian/parent/biokids-desktop.png` - a parent's desktop background (D-245):
   the logo in the middle of the warm off-white, the four brand colours glowing
   softly in the corners, as the login screen does;
@@ -83,6 +93,23 @@ BOOT_MENUS = (  # where, size, the logo's share of the width, its top
     (BOOT / "boot" / "grub" / "splash.png", (800, 600), 0.42, 0.07),
     (BOOT / "isolinux" / "splash.png", (640, 480), 0.36, 0.03),
 )
+GRUB_THEME = ROOT / "debian" / "grub" / "theme"
+GRUB_SIZE = (1920, 1080)
+GRUB_LOGO = (0.19, 0.06)
+"""The logo's share of the width and its top on the installed computer's boot
+menu (D-255). GRUB crops the picture to the screen's shape around its middle,
+so on any screen up to 16:9 the logo keeps its share of the height, and
+theme.txt places the menu in percentages of the height below it."""
+GRUB_GROUND_SIZE = (640, 360)
+"""GRUB stretches the ground to the screen: a smooth ground needs no more."""
+GRUB_ITEM_HEIGHT = 48
+"""A menu item's height in debian/grub/theme/theme.txt. The selection's round
+ends are drawn at it: GRUB stretches them to the item's height."""
+SELECTION = (255, 176, 32)  # --bio-amber: the menu's dark text reads on it
+INSTALLER = ROOT / "iso" / "config" / "includes.installer" / "usr" / "share" / "graphics"
+BANNER_SIZE = (800, 75)
+"""The size of Debian 13's installer banner. The installer does not scale it;
+it repeats the left- and right-most columns to the window's width."""
 THROBBER_SIZE = 44
 THROBBER_FRAMES = 30
 """Plymouth's two-step theme shows its throbber at 30 frames a second: one
@@ -169,15 +196,16 @@ def crop(image: Image.Image, margin: float = 0.03) -> Image.Image:
     return image.crop((left - pad, top - pad, right + pad, bottom + pad))
 
 
-def kite_only(rgba: np.ndarray) -> np.ndarray:
-    """The kite, its string and its bows, without the word or the small kite."""
+def kite_only(rgba: np.ndarray, word: bool = False) -> np.ndarray:
+    """The kite, its string and its bows, without the word or the small kite;
+    or, with `word`, the word and the small kite alone."""
     shapes, count = ndimage.label(rgba[..., 3] > 128, structure=np.ones((3, 3)))
     word_starts = rgba.shape[1] * 0.34
     keep = np.zeros(count + 1, dtype=bool)
     for index, centre in enumerate(
         ndimage.center_of_mass(np.ones(shapes.shape), shapes, range(1, count + 1)), start=1
     ):
-        keep[index] = centre[1] < word_starts
+        keep[index] = (centre[1] >= word_starts) if word else (centre[1] < word_starts)
     # The soft edge of each shape belongs to the shape next to it.
     nearest = ndimage.distance_transform_edt(
         shapes == 0, return_distances=False, return_indices=True
@@ -205,9 +233,14 @@ def icon(kite: Image.Image, size: int) -> Image.Image:
     return tile
 
 
-def favicon(kite: Image.Image, size: int) -> Image.Image:
+def sail_of(kite: Image.Image) -> Image.Image:
     """The sail, which is the top of the kite down to where its string starts."""
-    sail = crop(kite.crop((0, 0, kite.width, round(kite.height * SAIL_SHARE))), margin=0.02)
+    return crop(kite.crop((0, 0, kite.width, round(kite.height * SAIL_SHARE))), margin=0.02)
+
+
+def favicon(kite: Image.Image, size: int) -> Image.Image:
+    """The sail alone, filling the square."""
+    sail = sail_of(kite)
     side = max(sail.size)
     square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
     square.alpha_composite(sail, ((side - sail.width) // 2, (side - sail.height) // 2))
@@ -244,6 +277,15 @@ def desktop(logo: Image.Image) -> Image.Image:
     return image.convert("RGB")
 
 
+def light_ink(logo: Image.Image) -> Image.Image:
+    """The logo's dark ink turned to the off-white, for a dark ground."""
+    rgba = np.asarray(logo).copy()
+    rgb = rgba[..., :3].astype(np.int16)
+    ink = (rgb.max(axis=2) < INK_LEVEL) & (rgb.max(axis=2) - rgb.min(axis=2) < INK_SATURATION)
+    rgba[ink, :3] = TILE
+    return Image.fromarray(rgba)
+
+
 def boot_menu(
     logo: Image.Image, size: tuple[int, int], share: float, top: float
 ) -> Image.Image:
@@ -251,12 +293,70 @@ def boot_menu(
     its dark ink turned to the off-white, high on a deep indigo night."""
     width, height = size
     image = glowing(size, NIGHT, 0.3, 0.5)
-    rgba = np.asarray(logo).copy()
-    rgb = rgba[..., :3].astype(np.int16)
-    ink = (rgb.max(axis=2) < INK_LEVEL) & (rgb.max(axis=2) - rgb.min(axis=2) < INK_SATURATION)
-    rgba[ink, :3] = TILE
-    fitted = fit(Image.fromarray(rgba), round(width * share))
+    fitted = fit(light_ink(logo), round(width * share))
     image.alpha_composite(fitted, ((width - fitted.width) // 2, round(height * top)))
+    return image.convert("RGB")
+
+
+def selection(height: int) -> dict[str, Image.Image]:
+    """The selected menu item's pill in GRUB's pieces (D-255): its round ends,
+    `select_w` and `select_e`, and a slice of its middle, `select_c`, which GRUB
+    stretches to the item's width. Drawn at four times the size and scaled down
+    for a smooth edge."""
+    scale = 4
+    big = height * scale
+    pill = Image.new("RGBA", (big * 3, big), (0, 0, 0, 0))
+    ImageDraw.Draw(pill).rounded_rectangle(
+        (0, 0, big * 3 - 1, big - 1), radius=big // 2, fill=(*SELECTION, 255)
+    )
+    pill = pill.resize((height * 3, height), Image.Resampling.LANCZOS)
+    end = height // 2
+    return {
+        "select_w.png": pill.crop((0, 0, end, height)),
+        "select_c.png": pill.crop((height + end - 2, 0, height + end + 2, height)),
+        "select_e.png": pill.crop((height * 3 - end, 0, height * 3, height)),
+    }
+
+
+def grub_theme(logo: Image.Image) -> dict[str, Image.Image]:
+    """The installed computer's boot menu (D-255), by its file name in
+    debian/grub/theme: the stick's look, with the menu theme.txt draws."""
+    pieces = {
+        "background.png": boot_menu(logo, GRUB_SIZE, *GRUB_LOGO),
+        "ground.png": glowing(GRUB_GROUND_SIZE, NIGHT, 0.3, 0.5).convert("RGB"),
+    }
+    pieces.update(selection(GRUB_ITEM_HEIGHT))
+    return pieces
+
+
+def installer_banner(sail: Image.Image, word: Image.Image) -> Image.Image:
+    """The Debian installer's banner (D-255): the kite's sail beside the logo's
+    "BioKids", their ink made light, on the deep indigo with a soft coral and
+    teal light behind them. The edge columns are the plain indigo, so the
+    installer's widening of the banner to the window shows no seam."""
+    width, height = BANNER_SIZE
+    sail = light_ink(sail)
+    sail = sail.resize(
+        (round(sail.width * (height - 14) / sail.height), height - 14), Image.Resampling.LANCZOS
+    )
+    word = light_ink(word)
+    word = word.resize(
+        (round(word.width * (height - 22) / word.height), height - 22), Image.Resampling.LANCZOS
+    )
+    gap = round(height * 0.2)
+    left = (width - sail.width - gap - word.width) // 2
+    y, x = np.mgrid[0:height, 0:width].astype(np.float32)
+    canvas = np.empty((height, width, 3), dtype=np.float32)
+    canvas[:] = NIGHT
+    for centre, colour in ((left, GLOWS[0][1]), (width - left, GLOWS[2][1])):
+        distance = np.hypot(x - centre, (y - height / 2) * 2.5)
+        weight = (0.28 * np.clip(1 - distance / (width * 0.3), 0, 1) ** 2)[..., None]
+        canvas = canvas * (1 - weight) + np.array(colour, dtype=np.float32) * weight
+    image = Image.fromarray(canvas.round().astype(np.uint8)).convert("RGBA")
+    image.alpha_composite(sail, (left, (height - sail.height) // 2))
+    image.alpha_composite(
+        word, (left + sail.width + gap, (height - word.height) // 2 + round(height * 0.04))
+    )
     return image.convert("RGB")
 
 
@@ -316,6 +416,11 @@ def main() -> int:
         save(throbber(frame), SPLASH / "biokids" / f"throbber-{frame + 1:04d}.png")
     for path, size, share, top in BOOT_MENUS:
         save(boot_menu(logo, size, share, top), path)
+    for name, image in grub_theme(logo).items():
+        save(image, GRUB_THEME / name)
+    banner = installer_banner(sail_of(kite), crop(Image.fromarray(kite_only(rgba, word=True))))
+    for name in ("logo_debian.png", "logo_debian_dark.png"):
+        save(banner, INSTALLER / name)
     save(favicon(kite, 64), BRAND / "favicon.png")
     ico = BRAND / "favicon.ico"
     favicon(kite, 48).save(ico, sizes=[(16, 16), (32, 32), (48, 48)])

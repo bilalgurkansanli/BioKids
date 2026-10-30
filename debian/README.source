@@ -16,7 +16,7 @@ On a Debian 13 (trixie) machine or container, from the top of the source tree:
 
     sudo apt install build-essential devscripts debhelper dh-python \
         python3-all python3-setuptools pybuild-plugin-pyproject \
-        po-debconf gnupg lintian
+        po-debconf gnupg grub-common lintian
     dpkg-buildpackage -us -uc -b
     lintian --fail-on error \
         --suppress-tags bad-distribution-in-changes-file \

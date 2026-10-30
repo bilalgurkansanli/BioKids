@@ -196,7 +196,7 @@ copy the results onto the host:
 
 ```bash
 git clone /media/sf_BioKids ~/src/BioKids && cd ~/src/BioKids
-sudo apt-get install -y --no-install-recommends build-essential devscripts debhelper dh-python gnupg po-debconf pybuild-plugin-pyproject python3-all python3-setuptools lintian
+sudo apt-get install -y --no-install-recommends build-essential devscripts debhelper dh-python gnupg grub-common po-debconf pybuild-plugin-pyproject python3-all python3-setuptools lintian
 chmod +x debian/rules && dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring
 V1=$(dpkg-parsechangelog -SVersion)     # 0.1.0-2, the top of debian/changelog
 mkdir -p "$D/v1" && cp ../biokids*_${V1}_* "$D/v1/"

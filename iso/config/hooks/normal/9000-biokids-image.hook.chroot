@@ -10,6 +10,11 @@ set -e
 # the whole desktop it pulled in.
 apt-get purge -y 'firefox-esr*' || true
 
+# desktop-base gives every new account Debian's logo as its picture (D-255): the
+# parent's, made by the installer, and each child's. BioKids draws its own. A
+# deleted conffile stays deleted on upgrades.
+rm -f /etc/skel/.face /etc/skel/.face.icon
+
 # The keys the packages made in this chroot. biokids-firstboot.service makes
 # each computer's own before the daemon and the panel start.
 rm -f /etc/biokids/secret.key /var/lib/biokids/extension-key.pem
@@ -18,11 +23,15 @@ rm -rf /var/lib/biokids/backups
 rm -f /var/lib/biokids/biokids.db-wal /var/lib/biokids/biokids.db-shm
 systemctl enable biokids-firstboot.service
 
-# The boot menu as on any computer BioKids is installed on (D-200, D-252):
-# hidden, and shown for five seconds beside Windows. biokids-desktop's postinst
-# links this only where /boot/grub exists, which a build chroot has not.
+# The boot menu as on any computer BioKids is installed on (D-200, D-252,
+# D-255): hidden, shown for five seconds beside Windows, in BioKids' look.
+# biokids-desktop's postinst links the file and copies the theme to /boot only
+# where /boot/grub and update-grub exist, which a build chroot has not; the
+# installer's update-grub, on the installed disk, finds both here.
 mkdir -p /etc/default/grub.d
 ln -sf /usr/share/biokids/grub/biokids.cfg /etc/default/grub.d/90-biokids.cfg
+mkdir -p /boot/grub/themes/biokids
+cp /usr/share/biokids/grub/theme/* /boot/grub/themes/biokids/
 
 # The database is the schema and the app catalogue, never a family.
 python3 - <<'PY'

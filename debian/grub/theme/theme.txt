@@ -1,0 +1,77 @@
+# BioKids' boot menu on an installed computer (D-255), as the stick's (D-252):
+# the logo high on the deep indigo, the menu in the logo's typeface, Fredoka,
+# and the selected item on an amber pill. biokids-desktop copies this folder to
+# /boot/grub/themes/biokids, where GRUB reads it before any disk is unlocked.
+#
+# GRUB crops background.png to the screen's shape around its middle, so on any
+# screen up to 16:9 the logo keeps its share of the height, and the menu is
+# placed in shares of the height below it. GRUB's fonts are bitmaps and do not
+# scale: debian/rules makes Fredoka at 18 and 24 pixels, named
+# "<name> Regular <size>", and the pill's round ends are drawn for an item
+# 48 pixels high (dev/make_icons.py).
+#
+# The words are GRUB's own, translated into the language update-grub ran in:
+# @KEYMAP_SHORT@ ("enter: boot, `e': options, `c': cmd-line") and the
+# countdown, @TIMEOUT_NOTIFICATION_MIDDLE@ ("%ds remaining."), which shows
+# only while the menu counts down - beside Windows (D-252).
+
+title-text: ""
+desktop-image: "background.png"
+desktop-image-scale-method: "crop"
+desktop-image-h-align: "center"
+desktop-image-v-align: "center"
+desktop-color: "#1f224d"
+message-font: "Fredoka Regular 18"
+message-color: "#fbf7f2"
+# Editing an entry ("e") and the command line ("c") keep GRUB's own
+# fixed-width font, which Debian's grub.cfg loads before the theme's.
+terminal-font: "Unifont Regular 16"
+
+# The menu: the off-white of every BioKids screen on the indigo, the selected
+# item in the indigo on amber. No icons, and no scroll bar: a computer beside
+# Windows has four entries, and the list scrolls with the arrow keys anyway.
++ boot_menu {
+    left = 30%-75
+    width = 40%+150
+    top = 36%
+    height = 64%-150
+    item_font = "Fredoka Regular 24"
+    item_color = "#fbf7f2"
+    selected_item_font = "Fredoka Medium Regular 24"
+    selected_item_color = "#1f224d"
+    selected_item_pixmap_style = "select_*.png"
+    item_height = 48
+    item_padding = 0
+    item_spacing = 8
+    icon_width = 0
+    icon_height = 0
+    item_icon_space = 12
+    scrollbar = false
+}
+
+# The countdown, filling in --bio-indigo; GRUB draws it only while it runs.
++ progress_bar {
+    id = "__timeout__"
+    left = 50%-170
+    width = 340
+    top = 100%-118
+    height = 32
+    font = "Fredoka Regular 18"
+    text = "@TIMEOUT_NOTIFICATION_MIDDLE@"
+    text_color = "#fbf7f2"
+    fg_color = "#4b54c8"
+    bg_color = "#2e3270"
+    border_color = "#2e3270"
+}
+
+# The keys, in a quieter lavender.
++ label {
+    left = 0
+    width = 100%
+    top = 100%-62
+    height = 28
+    align = "center"
+    font = "Fredoka Regular 18"
+    color = "#a9acd8"
+    text = "@KEYMAP_SHORT@"
+}

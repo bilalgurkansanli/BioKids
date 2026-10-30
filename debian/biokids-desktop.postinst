@@ -1,22 +1,68 @@
 #!/bin/sh
-# biokids-desktop postinst: hide the boot menu (D-200).
+# biokids-desktop postinst: the boot menu - hidden (D-200), and in BioKids'
+# look when it shows (D-255).
 #
 # A link, not a conffile: grub reads only /etc/default/grub.d, and a conffile
-# would stay behind after "apt remove". Esc at boot still shows the menu and its
-# recovery mode (principle 4). Never fatal: a machine without GRUB (another
-# bootloader, a container) simply keeps what it has.
+# would stay behind after "apt remove". The theme is copied to /boot, which
+# GRUB can read before any disk is unlocked (/usr may be on an encrypted one);
+# dpkg does not own the copy, and the postrm removes it. Esc at boot still
+# shows the menu and its recovery mode (principle 4). Never fatal: a machine
+# without GRUB (another bootloader, a container) simply keeps what it has, and
+# a theme that could not be copied leaves Debian's look, since
+# /usr/share/biokids/grub/biokids.cfg asks for the theme only where it is.
 
 set -e
 
 LINK=/etc/default/grub.d/90-biokids.cfg
+THEME=/usr/share/biokids/grub/theme
+BOOT_THEME=/boot/grub/themes/biokids
+
+# Brings the copy in /boot up to the package's own. Succeeds when it changed
+# anything, so that GRUB's configuration is made again: a font added or gone
+# changes what grub.cfg loads.
+copy_theme() {
+    copied=1
+    mkdir -p "$BOOT_THEME" || return 1
+    for file in "$THEME"/*; do
+        [ -f "$file" ] || continue
+        target="$BOOT_THEME/${file##*/}"
+        if ! cmp -s "$file" "$target"; then
+            if ! { cp "$file" "$target.new" && mv "$target.new" "$target"; }; then
+                # Half a theme is no theme: Debian's look stays.
+                rm -rf "$BOOT_THEME" || true
+                echo "biokids-desktop: the boot menu's theme could not be copied to /boot; Debian's look stays" >&2
+                return 0
+            fi
+            copied=0
+        fi
+    done
+    # What an earlier version shipped and this one does not.
+    for file in "$BOOT_THEME"/*; do
+        [ -e "$file" ] || continue
+        if [ ! -e "$THEME/${file##*/}" ]; then
+            rm -f "$file" || true
+            copied=0
+        fi
+    done
+    return $copied
+}
 
 case "$1" in
     configure)
         if [ -d /boot/grub ] && command -v update-grub >/dev/null 2>&1; then
+            regenerate=
             mkdir -p /etc/default/grub.d
-            # Once: an upgrade that finds the link in place leaves GRUB alone.
+            # Once: an upgrade that finds the link in place leaves it alone.
             if [ ! -e "$LINK" ] && [ ! -L "$LINK" ]; then
                 ln -s /usr/share/biokids/grub/biokids.cfg "$LINK"
+                regenerate=1
+            fi
+            if copy_theme; then
+                regenerate=1
+            fi
+            # Only when something changed (D-250): update-grub looks for
+            # other systems on every disk.
+            if [ -n "$regenerate" ]; then
                 update-grub >/dev/null 2>&1 || echo "biokids-desktop: update-grub failed; the boot menu is unchanged" >&2
             fi
         fi

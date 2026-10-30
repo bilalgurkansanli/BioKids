@@ -1,2 +1,5 @@
 # The hidden boot menu (D-200), linked into /etc/default/grub.d by the postinst.
 debian/grub/biokids.cfg usr/share/biokids/grub/
+# Its BioKids look (D-255): pictures and fonts placed by debian/rules, copied to
+# /boot/grub/themes/biokids by the postinst.
+usr/share/biokids/grub/theme

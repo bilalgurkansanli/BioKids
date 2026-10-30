@@ -1,16 +1,31 @@
 #!/bin/sh
-# biokids-desktop postrm: give the boot menu back (D-200).
+# biokids-desktop postrm: give Debian's boot menu back - shown (D-200), in
+# Debian's look (D-255).
 
 set -e
 
 LINK=/etc/default/grub.d/90-biokids.cfg
+BOOT_THEME=/boot/grub/themes/biokids
 
 case "$1" in
     remove|purge)
+        regenerate=
         if [ -L "$LINK" ]; then
             rm -f "$LINK"
-            if command -v update-grub >/dev/null 2>&1; then
-                update-grub >/dev/null 2>&1 || true
+            regenerate=1
+        fi
+        if [ -d "$BOOT_THEME" ]; then
+            regenerate=1
+        fi
+        if [ -n "$regenerate" ]; then
+            if command -v update-grub >/dev/null 2>&1 && ! update-grub >/dev/null 2>&1; then
+                # The grub.cfg GRUB still has loads the theme, so the theme
+                # stays; a purge removes it once update-grub works.
+                echo "biokids-desktop: update-grub failed; the boot menu is unchanged" >&2
+            else
+                # The postinst's copy, which dpkg does not know about.
+                rm -rf "$BOOT_THEME" || true
+                rmdir /boot/grub/themes 2>/dev/null || true
             fi
         fi
         ;;

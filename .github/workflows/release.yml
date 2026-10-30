@@ -41,7 +41,7 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends \
             build-essential ca-certificates devscripts debhelper dh-python \
-            git gnupg lintian po-debconf pybuild-plugin-pyproject \
+            git gnupg grub-common lintian po-debconf pybuild-plugin-pyproject \
             python3-all python3-setuptools
 
       - uses: actions/checkout@v4
