@@ -29,6 +29,7 @@ from biokids_shell.client import ShellClient
 from biokids_shell.dimmer import BedtimeDimmer
 from biokids_shell.focus import FocusReporter
 from biokids_shell.kiosk import KioskSupervisor, keep_fullscreen, launcher_port
+from biokids_shell.live import LiveSender
 from biokids_shell.relay import SessionRelay, WindowRaiser, voice_socket_path
 from biokids_shell.windows import (
     RULES_SUBDIR,
@@ -112,6 +113,8 @@ async def main_async(args: argparse.Namespace) -> int:
         raiser=None if args.no_kiosk else WindowRaiser(),
         on_spoken=shell.remember_spoken,
         dimmer=dimmer,
+        # The screen for a parent watching it (D-253); not a developer's own.
+        live=None if args.no_kiosk else LiveSender(shell.client.live_frame),
     )
     tasks = [
         asyncio.create_task(server.serve(), name="launcher"),

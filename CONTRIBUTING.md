@@ -232,11 +232,12 @@ specification; here is what each item costs and why it stays out.
   machine and thrown away. Background listening, wake words and keeping audio are not
   part of that exception.
 
-- **Live screen mirroring of a child's session.** Continuous remote shoulder-surfing
-  changes the relationship between parent and child into monitoring, which is the thing
-  this project is explicitly not for. The panel reports what happened — time used, what
-  was requested, an alert with a reason — which is the level of detail a parent needs in
-  order to start a conversation, and no more.
+- **Hidden or recorded viewing of a child's screen.** The owner added one live view
+  (D-253): a parent presses "Canlı izle" in the panel, the child's screen says who is
+  watching for as long as it lasts, about one small picture a second goes from the
+  child's own session to the panel's page, and none is kept anywhere. A view the child
+  is not shown, a recording, a history of screens, or a view that runs without a
+  parent's page asking for it, will not be accepted.
 
 - **Location tracking.** BioKids protects one computer in one house (`docs/SECURITY.md`
   §1). A location answers no question inside that scope, and a child's location is the

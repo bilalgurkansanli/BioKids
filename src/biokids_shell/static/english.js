@@ -32,13 +32,25 @@
 
   /* One line said, then the promise settles: English by the English voice,
    * anything else in the child's own language. */
+  /* Each line said holds one of the page's six connections until it has
+   * been spoken (D-254): a 🔊 tapped again while one still plays is let go,
+   * or the taps after it - "home" too - would wait for a free one. */
+  var saying = 0;
+  var SAYING_MAX = 2;
+
   function say(text, english) {
-    return post("/english/say", { text: text, lang: english ? "en" : "ui" });
+    saying += 1;
+    return post("/english/say", { text: text, lang: english ? "en" : "ui" }).then(
+      function (result) {
+        saying -= 1;
+        return result;
+      }
+    );
   }
 
   document.addEventListener("click", function (event) {
     var button = event.target.closest("[data-say-en]");
-    if (button && !button.closest("#lesson")) {
+    if (button && !button.closest("#lesson") && saying < SAYING_MAX) {
       say(button.getAttribute("data-say-en"), true);
     }
   });
@@ -311,7 +323,7 @@
 
   function listenButton(text) {
     return button("🔊 " + strings.again, "big-btn--quiet", function () {
-      hold(say(text, true));
+      if (saying < SAYING_MAX) hold(say(text, true));
     });
   }
 

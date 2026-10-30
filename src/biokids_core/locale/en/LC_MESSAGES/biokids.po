@@ -1270,7 +1270,7 @@ msgid "assistant.refuse.self_harm"
 msgstr "I'm so sorry you feel this way. Please tell someone in your family or a grown-up you trust right now. They want to listen and help you. If no one is with you, call your local emergency number."
 
 msgid "assistant.refuse.personal_info"
-msgstr "Don't type your address, phone number or password to anyone, not even me. Keeping them secret keeps you safe."
+msgstr "Don't type your address, phone number or password to anyone, not even me. Keeping them secret keeps you safe. If someone asks you for them or for your photo, tell a grown-up in your family."
 
 msgid "assistant.refuse.rude"
 msgstr "Let's not use those words. Would you like to ask something else?"
@@ -1369,7 +1369,7 @@ msgid "assistant.panel.download.help"
 msgstr "1.5–4 GB depending on this computer's memory; it can take a few minutes. No internet is needed after that."
 
 msgid "assistant.panel.download.started"
-msgstr "The download has started. Reload this page in a few minutes."
+msgstr "The download has started and the assistant is on for this child. \"Ask Me\" appears on the child's screen once the models are here."
 
 msgid "assistant.panel.banner"
 msgstr "{name} asked the assistant {count} question(s) it would not answer."
@@ -2322,7 +2322,7 @@ msgid "remote.guide.3.title"
 msgstr "Install Tailscale on your phone"
 
 msgid "remote.guide.3.body"
-msgstr "Scan your store's code with your phone's camera, install the Tailscale app, and sign in with the same account you used on the computer."
+msgstr "Scan your store's code with your phone's camera and install the Tailscale app. Open it, sign in with the same account you used on the computer, then tap Connect in the app: it should say \"Connected\" at the top."
 
 msgid "remote.guide.3.vpn"
 msgstr "Your phone asks to \"add a VPN connection\": allow it. It is only Tailscale's own link; the rest of your internet use does not change."
@@ -2334,7 +2334,7 @@ msgid "remote.guide.4.title"
 msgstr "Open the panel on your phone"
 
 msgid "remote.guide.4.body"
-msgstr "Scan this code with your phone's camera and enter your PIN. Choose \"Add to Home Screen\" in the browser's menu and BioKids sits on your phone like an app."
+msgstr "Scan this code with your phone's camera and enter your PIN. Choose \"Add to Home Screen\" in the browser's menu and BioKids sits on your phone like an app. If the panel ever does not open, first open the Tailscale app on the phone and check that it says Connected."
 
 msgid "remote.guide.4.waiting"
 msgstr "When the steps above are done, the panel's phone address and its code appear here."
@@ -2439,7 +2439,7 @@ msgid "help.remove.a"
 msgstr "Type the line below in a terminal. Your family's records stay on the computer unless you choose to delete them."
 
 msgid "help.more"
-msgstr "More detail: github.com/bilalgurkansanli/BioKids"
+msgstr "Source code: github.com/bilalgurkansanli/BioKids"
 
 # Phone access from the settings (D-195)
 msgid "remote.intro"
@@ -2929,10 +2929,10 @@ msgid "guide.phone.step.2"
 msgstr "On the Tailscale page that opens, sign in with your Google, Apple or Microsoft account; if you have none, one is free. If Tailscale asks for an approval, press the button the panel shows and approve."
 
 msgid "guide.phone.step.3"
-msgstr "Install the Tailscale app on your phone from the App Store or Google Play and sign in with the same account. When the phone asks to add a VPN connection, allow it."
+msgstr "Install the Tailscale app on your phone from the App Store or Google Play, open it and sign in with the same account. When the phone asks to add a VPN connection, allow it, then tap Connect in the app: it should say \"Connected\" at the top."
 
 msgid "guide.phone.step.4"
-msgstr "Scan the QR code the panel shows with your phone's camera, and enter your PIN."
+msgstr "Scan the QR code the panel shows with your phone's camera, and enter your PIN. If the panel does not open, first check that the Tailscale app on the phone is connected."
 
 msgid "guide.phone.step.5"
 msgstr "If you like, choose \"Add to Home screen\" in the browser's menu: BioKids then sits on your phone like an app."
@@ -4155,3 +4155,72 @@ msgstr "It did not open just now. Try again?"
 
 msgid "greeter.child_open"
 msgstr "Your session is open already. A grown-up can open it."
+
+msgid "switch.confirm"
+msgstr "Switch user? The login screen opens; your open windows stay as they are."
+
+msgid "site.link"
+msgstr "Guides and support"
+
+msgid "site.title"
+msgstr "Guides and support"
+
+msgid "site.body"
+msgstr "BioKids' site has step-by-step guides, how to install it, and a support page for your questions."
+
+msgid "site.open"
+msgstr "Open biokids.bilalgurkansanli.com"
+
+msgid "assistant.download.title"
+msgstr "Downloading the assistant"
+
+msgid "assistant.download.starting"
+msgstr "Starting…"
+
+msgid "assistant.download.keep_on"
+msgstr "The download runs in the background and goes on if you leave this page. Keep the computer on and connected to the internet until it ends. This page reloads itself when it is done."
+
+msgid "assistant.download.failed"
+msgstr "The download stopped part-way. Check the internet connection and press \"Download the models\" again; it carries on where it stopped."
+
+msgid "appbar.grow"
+msgstr "Fill the screen"
+
+msgid "assistant.refuse.hurt"
+msgstr "You are very brave to tell me this. Nobody is allowed to hurt you, and it is not your fault. Tell a grown-up you trust, like your teacher, straight away. You can call 183; if it is an emergency, call 112."
+
+msgid "assistant.category.hurt"
+msgstr "Telling that someone hurts them"
+
+msgid "shell.watched"
+msgstr "{name} can see your screen now"
+
+msgid "shell.watched_nameless"
+msgstr "A grown-up can see your screen now"
+
+msgid "appbar.watched"
+msgstr "{name} can see your screen"
+
+msgid "preview.live.title"
+msgstr "Live screen"
+
+msgid "preview.live.help"
+msgstr "You see {name}'s screen as it is now, about one picture a second. While you watch, {name} sees \"👁 {parent} can see your screen now\" on it. Nothing is recorded; leaving this page ends it."
+
+msgid "preview.live.start"
+msgstr "Watch live"
+
+msgid "preview.live.stop"
+msgstr "Stop"
+
+msgid "preview.live.waiting"
+msgstr "Waiting for the screen…"
+
+msgid "preview.live.offline"
+msgstr "{name} is not at the computer right now. The screen appears here once they log in."
+
+msgid "preview.live.alt"
+msgstr "{name}'s screen"
+
+msgid "audit.action.live_view_started"
+msgstr "A parent watched the child's screen live"

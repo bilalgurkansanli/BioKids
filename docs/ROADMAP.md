@@ -9,7 +9,9 @@ There is no deadline. The effort estimates assume roughly one focused day per we
 Two releases, decided by the owner on 2026-10-07 (D-185): **the packages**, installed
 from the project's APT repository on an existing Debian 13, published as **1.5.0**
 (D-219: 1.0 was the release candidate, and five rounds of tests followed); then **the
-ISO**. What did not make v1 is listed under *Cut from v1*, with its decision.
+ISO**. Both are released together as **2.0.0**, after the owner installed the ISO
+beside Windows on a real computer (D-249 to D-255). What did not make v1 is listed
+under *Cut from v1*, with its decision.
 
 ---
 
@@ -62,7 +64,7 @@ and install, the wizard completes, a child logs in by their picture, the panel o
 a phone over Tailscale, upgrade, remove and purge behave, and the virtual-terminal
 guards hold.
 
-**What is left before v1.5.0 is tagged:**
+**What is left before v2.0.0 is tagged:**
 
 1. `docs/VM-RUNBOOK.md` §7 — the criterion on a fresh VM, recorded — and §8, the
    checks for what the release adds.
@@ -72,8 +74,8 @@ guards hold.
    the APT repository.
 
 The contact address is set (`SECURITY.md`, `CODE_OF_CONDUCT.md`), and the version is
-1.5.0 everywhere `release.yml` compares it: `debian/changelog` (1.5.0-1),
-`pyproject.toml` and `biokids_core.__version__`; the tag is `v1.5.0`.
+2.0.0 everywhere `release.yml` compares it: `debian/changelog` (2.0.0-1),
+`pyproject.toml` and `biokids_core.__version__`; the tag is `v2.0.0`.
 
 The voice question is closed (D-137): no Turkish Piper voice may be redistributed and
 `piper-tts` is not in Debian 13, so espeak-ng speaks and Piper is used wherever a family
@@ -154,7 +156,7 @@ Do not start these. They are recorded so they stop being distractions.
 
 ## Milestones worth announcing publicly
 
-1. v1.5.0 on the APT repository — a post with the screen recording of
+1. v2.0.0 on the APT repository — a post with the screen recording of
    `docs/VM-RUNBOOK.md` §7.5
 2. The first ISO — a Reddit r/linux post and a DistroWatch submission
 

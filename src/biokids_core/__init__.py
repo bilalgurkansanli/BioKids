@@ -6,6 +6,6 @@ the part of BioKids that can be reasoned about and tested on any machine.
 
 from __future__ import annotations
 
-__version__ = "1.5.0"
+__version__ = "2.0.0"
 
 __all__ = ["__version__"]

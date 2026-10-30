@@ -222,11 +222,16 @@ instead of breaking the line with a pale box (D-201)."""
 BAR_NAME: Final = "biokids-appbar"
 
 HOME_GLYPH: Final = "🏠"
+GROW_GLYPH: Final = "⛶"
+"""Make this window fill the screen (D-254): shown only over a window that does
+not - one an app keeps small, such as a game with a fixed size."""
 QUIETER_GLYPH: Final = "🔉"
 LOUDER_GLYPH: Final = "🔊"
 CLOSE_GLYPH: Final = "✕"
 """Text, not an emoji: white on the close button's red, as the title bar's was."""
 TIME_GLYPH: Final = "⏳"
+WATCHED_GLYPH: Final = "👁"
+"""In place of ⏳ while a parent watches this screen (D-253)."""
 
 BAR_BACKGROUND: Final = "#FBF7F2"  # --bg, the title bar's own colour
 BAR_LINE: Final = "#E7DED5"  # --line, the title bar's bottom line
@@ -296,6 +301,9 @@ BAR_CSS: Final = f"""
 #{BAR_NAME} button.home {{ background-color: #E4E6FA; }}
 #{BAR_NAME} button.home:hover {{ background-color: #D5D8F6; }}
 #{BAR_NAME} button.home:active {{ background-color: #C3C7F1; }}
+#{BAR_NAME} button.grow {{ background-color: #FFF0CC; }}
+#{BAR_NAME} button.grow:hover {{ background-color: #FFE6A6; }}
+#{BAR_NAME} button.grow:active {{ background-color: #FFDB80; }}
 #{BAR_NAME} button.volume {{ background-color: #D2F2EE; }}
 #{BAR_NAME} button.volume:hover {{ background-color: #BCEBE5; }}
 #{BAR_NAME} button.volume:active {{ background-color: #A5E3DB; }}
@@ -1168,8 +1176,9 @@ def set_volume(
 
 # -------------------------------------------------------- time and clock
 
-TIME_POLL_S: Final = 15
-"""How often the bar asks the launcher for the minutes left."""
+TIME_POLL_S: Final = 5
+"""How often the bar asks the launcher for the minutes left - and whether a
+parent is watching the screen, which the child sees within it (D-253)."""
 CLOCK_TICK_S: Final = 5
 WARN_BELOW_S: Final = 5 * 60
 """Orange, as the launcher's ring and banners are, in the last five minutes."""
@@ -1361,3 +1370,20 @@ def stop_scope(scope: str, run: Runner | None = None) -> bool:
     if run is None:
         return run_command(argv, timeout=STOP_TIMEOUT_S) is not None
     return run(argv) is not None
+
+
+def offers_grow(*, maximized: bool, fullscreen: bool) -> bool:
+    """Whether the bar shows ⛶ over this window (D-254): only over one that does
+    not fill the screen. The bar maximises a new window that can be; what is
+    left small is an app that keeps its own size, and the button asks the window
+    manager for the whole screen instead."""
+    return not (maximized or fullscreen)
+
+
+def watched_by(state: Mapping[str, Any] | None) -> str | None:
+    """Who is watching this screen, from the launcher's /state (D-253): their
+    name, "" when the name is not known, None when nobody is."""
+    if not state:
+        return None
+    name = state.get("watched_by")
+    return str(name) if isinstance(name, str) and name else None

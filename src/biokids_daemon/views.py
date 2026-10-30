@@ -163,6 +163,8 @@ class ViewsMixin(AccessRequestsMixin, FilteringMixin):
             "managed": policy is not None,
             "supervision_indicator": child.supervision_indicator if child else "badge",
             "first_run_done": bool(child.first_run_done) if child else True,
+            # A parent watching this screen (D-253): the sign the child sees.
+            "watched_by": watch.by if (watch := self.live.watching(child_id)) else "",
             # Text size, contrast and the reading font a parent chose for this
             # child's screen (D-217); the launcher puts them on <html>.
             "appearance": (

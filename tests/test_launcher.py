@@ -597,3 +597,25 @@ def test_the_catalog_asks_for_it_for_tux_paint() -> None:
 
     (paint,) = [entry for entry in load_catalog().entries if entry.slug == "tuxpaint"]
     assert paint.exec_argv == ("tuxpaint", "--windowed", "--{window}")
+
+
+async def test_the_open_sites_are_in_the_footer_while_the_browser_runs(
+    config: Config,
+) -> None:
+    """D-254: back home from YouTube Kids, the footer lists it with the apps; a
+    tap on it goes to its tab again instead of starting it over."""
+    launcher = AppLauncher(config)
+    launcher._remember("tuxpaint", "biokids-app-tuxpaint-1")
+    launcher._remember_browser("youtube-kids", "biokids-app-youtube-kids-2")
+    launcher._remember_browser("trt-cocuk", "biokids-app-trt-cocuk-3")
+    alive = {"biokids-app-tuxpaint-1.scope", "biokids-app-youtube-kids-2.scope"}
+
+    async def active_units(units: Any) -> set[str]:
+        return {f"{u}" if u.endswith(".scope") else f"{u}.scope" for u in units} & alive
+
+    launcher.active_units = active_units  # type: ignore[method-assign]
+    assert await launcher.open_apps() == ["tuxpaint", "youtube-kids", "trt-cocuk"]
+
+    alive.clear()
+    assert await launcher.open_apps() == []
+    assert launcher.web_open == {}, "the browser closed, and its sites with it"

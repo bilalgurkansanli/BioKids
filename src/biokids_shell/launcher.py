@@ -164,6 +164,10 @@ class AppLauncher:
     last_web: str = ""
     """The web tile tapped last: what a browser window in front is taken to be,
     since every web tile's window is one Chromium's."""
+    web_open: dict[str, None] = field(default_factory=dict)
+    """The web tiles opened while the child's browser has been running, oldest
+    first (D-254): the footer lists them with the apps, and a tap on one goes
+    back to its tab, which the extension brings back rather than open twice."""
     appbar_socket: Path | None = None
     """Where the running app bar listens (D-208); its usual place when None."""
     _watches: set[asyncio.Task[None]] = field(default_factory=set)
@@ -314,6 +318,8 @@ class AppLauncher:
 
     def _remember_browser(self, slug: str, unit: str) -> None:
         self.last_web = slug
+        self.web_open.pop(slug, None)
+        self.web_open[slug] = None
         self.browser_scopes[scope_unit(unit)] = None
         while len(self.browser_scopes) > BROWSER_SCOPES_KEPT:
             # Never the oldest: that is the one the browser most likely runs in.
@@ -354,11 +360,12 @@ class AppLauncher:
         launcher started, unchecked.
         """
         apps = dict(self.running)
-        if not apps:
+        browser = list(self.browser_scopes) if self.web_open else []
+        if not apps and not browser:
             return []
-        active = await self.active_units(list(apps.values()))
+        active = await self.active_units([*apps.values(), *browser])
         if active is None:
-            return list(apps)
+            return [*apps, *self.web_open]
         open_now: list[str] = []
         for slug, unit in apps.items():
             if scope_unit(unit) in active:
@@ -367,6 +374,13 @@ class AppLauncher:
                 # Not one started again while systemctl was answering: that
                 # one is the tile's app now, and `_forget` leaves it be.
                 self._forget(slug, unit)
+        # The sites opened since the browser started, while it still runs
+        # (D-254). One whose tab was closed is listed until the browser is,
+        # and a tap on it opens it again: never a dead entry.
+        if browser and active.intersection(browser):
+            open_now.extend(slug for slug in self.web_open if slug not in open_now)
+        elif browser:
+            self.web_open.clear()
         return open_now
 
     async def active_units(self, units: Sequence[str]) -> set[str] | None:

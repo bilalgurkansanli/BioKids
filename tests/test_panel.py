@@ -3881,3 +3881,79 @@ def test_a_day_with_minutes_added_is_not_over_its_limit(
         session.commit()
         cell = year_map(session, child, today)["weeks"][-1][today.weekday()]
     assert cell["level"] == 3, "all of the day's time, not more"
+
+
+# ------------------------------------------- the assistant's download (D-254)
+
+
+def test_downloading_the_assistant_turns_it_on_for_that_child(
+    client: TestClient, family_ready: None, db: Database, daemon: FakeDaemon
+) -> None:
+    login(client)
+    response = client.post(
+        "/children/1/assistant/download",
+        data={"csrf_token": csrf_of(client)},
+        follow_redirects=False,
+    )
+    assert response.headers["location"] == "/children/1/assistant?saved=download"
+    assert daemon.ran("assistant_setup")
+    assert daemon.ran("reload"), "the daemon knows before the models arrive"
+    with db.session() as session:
+        policy = repo.get_or_create_policy(session, 1)
+        assert policy.assistant_enabled and policy.assistant_voice
+
+
+def test_the_download_bar_follows_the_daemon(
+    client: TestClient, family_ready: None, daemon: FakeDaemon
+) -> None:
+    progress = {"state": "running", "percent": 42, "file": "Gemma"}
+
+    def call(op: str, **args: Any) -> Response:
+        daemon.calls.append((str(op), args))
+        if str(op) == "assistant_status":
+            return Response(
+                ok=True, data={"running": True, "ready": False, "download": progress}
+            )
+        return Response(ok=True, data={"children": [], "ticks": 0})
+
+    daemon.call = call  # type: ignore[method-assign]
+    assert client.get("/assistant/download", follow_redirects=False).status_code == 303
+    login(client)
+    assert client.get("/assistant/download").json() == {"state": "running", "percent": 42}
+    page = client.get("/children/1/assistant").text
+    assert 'id="download-bar"' in page and 'value="42"' in page
+    assert "/children/1/assistant/download" not in page, "no second download while one runs"
+
+
+# ------------------------------------------------------- live screen (D-253)
+
+
+def test_the_live_screen_asks_the_daemon_and_logs_who_watched(
+    client: TestClient, family_ready: None, db: Database, daemon: FakeDaemon
+) -> None:
+    def call(op: str, **args: Any) -> Response:
+        daemon.calls.append((str(op), args))
+        if str(op) == "live_view":
+            return Response(
+                ok=True, data={"started": True, "frame": "AAAA", "online": True, "age": 0.5}
+            )
+        return Response(ok=True, data={"children": [], "ticks": 0})
+
+    import sqlalchemy
+
+    daemon.call = call  # type: ignore[method-assign]
+    assert client.get("/children/1/live", follow_redirects=False).status_code == 303
+    login(client)
+    page = client.get("/children/1/preview").text
+    assert 'id="live-start"' in page and "/children/1/live" not in page.split("<script")[0]
+    answer = client.get("/children/1/live").json()
+    assert answer == {"ok": True, "frame": "AAAA", "online": True, "age": 0.5}
+    (_op, args) = next((o, a) for o, a in daemon.calls if o == "live_view")
+    assert args["child_id"] == 1 and args["by"] == "Anne"
+    with db.session() as session:
+        assert session.scalar(
+            sqlalchemy.select(AuditLog).where(AuditLog.action == "live_view_started")
+        ), "the family can see that a screen was watched"
+    stopped = client.post("/children/1/live/stop", data={"csrf_token": csrf_of(client)})
+    assert stopped.json() == {"ok": True}
+    assert any(o == "live_view" and a.get("stop") for o, a in daemon.calls)

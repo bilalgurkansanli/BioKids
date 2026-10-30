@@ -2382,11 +2382,13 @@ async def test_the_launcher_lists_the_apps_still_open(
 
     async def stdout(argv: list[str], _within: float) -> str | None:
         asked.append(argv)
-        return "active\ninactive\n"
+        return "active\ninactive\nactive\n"
 
     monkeypatch.setattr(launcher_module, "_stdout", stdout)
 
-    assert await launcher.open_apps() == ["frozen-bubble"]
+    # D-254: a site opened while the child's browser runs is listed after the
+    # apps; a tap on it goes back to its tab.
+    assert await launcher.open_apps() == ["frozen-bubble", "eba"]
     assert asked == [
         [
             "systemctl",
@@ -2394,8 +2396,9 @@ async def test_the_launcher_lists_the_apps_still_open(
             "is-active",
             "biokids-app-frozen-bubble-1.scope",
             "biokids-app-tuxpaint-2.scope",
+            "biokids-app-eba-3.scope",
         ]
-    ], "web tiles open a window each time and are not listed"
+    ]
     assert "tuxpaint" not in launcher.running
 
 
@@ -2437,3 +2440,13 @@ def test_the_bar_is_placed_by_the_width_it_has_on_screen_when_gtk_says_less() ->
     assert width_to_place(284, 544) == 544, (
         "too wide for a moment, placed again on its new size"
     )
+
+
+def test_the_bar_says_who_is_watching_the_screen() -> None:
+    """D-253: over an app too, the child sees that a parent is watching."""
+    from biokids_shell.appbar import WATCHED_GLYPH, watched_by
+
+    assert watched_by({"watched_by": "Anne"}) == "Anne"
+    assert watched_by({"watched_by": ""}) is None
+    assert watched_by({}) is None and watched_by(None) is None
+    assert WATCHED_GLYPH == "👁"

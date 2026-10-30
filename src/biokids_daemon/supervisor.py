@@ -225,6 +225,10 @@ class Supervisor(
         await self.watcher.refresh()
         reading = self.clock.read()
         self.ticks += 1
+        # A watch nobody asked about lately ends, and the child's sign with it
+        # (D-253): its launcher stops taking pictures at its next one.
+        for child_id in self.live.expire():
+            self.bus.publish(EventKind.LIVE_VIEW, child_id=child_id, watching=False, by="")
 
         inputs: list[TickInput] = []
         presence: dict[int, UserPresence] = {}

@@ -38,6 +38,13 @@
     </details>
   {% endfor %}
 
+  {# D-254: guides, installing, and a way to reach us, on BioKids' own site. #}
+  <section class="card">
+    <h2>{{ _('site.title') }}</h2>
+    <p>{{ _('site.body') }}</p>
+    <p><a class="btn btn--primary" href="{{ site_url }}" target="_blank" rel="noopener">{{ _('site.open') }}</a></p>
+  </section>
+
   <p class="muted small">{{ _('help.more') }}</p>
   <p>
     {% if auth.authenticated %}

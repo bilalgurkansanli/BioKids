@@ -14,6 +14,7 @@ than a launcher that will not start.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import re
 import shutil
@@ -105,21 +106,59 @@ async def _output(argv: Sequence[str]) -> str | None:
     return out.decode("utf-8", "replace")
 
 
+_brightness_lock = asyncio.Lock()
+_brightness_wanted: int | None = None
+_brightness_method: str = ""
+"""`backlight` or `xrandr` once one has worked, so the other is not tried again."""
+_brightness_output: str | None = None
+
+
 async def set_brightness(percent: int) -> bool:
     """A laptop backlight if there is one, otherwise a software gamma ramp.
 
     `xrandr --brightness` does not touch the backlight; it fades the output,
     which on a desktop monitor is the only thing available and is exactly what a
     child means by "too bright".
+
+    One change at a time, and only the latest (D-254). A slider dragged on a
+    real desktop sent a dozen changes a second; each ran xrandr, and an xrandr
+    that probes the monitors (without `--current`) holds the whole X server -
+    taps and drawing - for tens to hundreds of milliseconds. The taps then came
+    late, all at once. Requests that wait here while another is applied are
+    answered by it: the level they asked for is already behind the latest one.
     """
-    percent = clamp(percent, low=20)
-    if await _run(["brightnessctl", "--quiet", "set", f"{percent}%"]):
-        return True
-    output = await _primary_output()
-    if output and await _run(
-        ["xrandr", "--output", output, "--brightness", f"{percent / 100:.2f}"]
+    global _brightness_wanted
+    _brightness_wanted = clamp(percent, low=20)
+    async with _brightness_lock:
+        if _brightness_wanted is None:
+            return True
+        level, _brightness_wanted = _brightness_wanted, None
+        return await _apply_brightness(level)
+
+
+async def _apply_brightness(percent: int) -> bool:
+    global _brightness_method, _brightness_output
+    if _brightness_method != "xrandr" and await _run(
+        ["brightnessctl", "--quiet", "set", f"{percent}%"]
     ):
+        _brightness_method = "backlight"
         return True
+    for attempt in range(2):
+        if _brightness_output is None or attempt:
+            # A monitor plugged in or out since: ask again, once.
+            _brightness_output = await _primary_output()
+        if _brightness_output and await _run(
+            [
+                "xrandr",
+                "--current",
+                "--output",
+                _brightness_output,
+                "--brightness",
+                f"{percent / 100:.2f}",
+            ]
+        ):
+            _brightness_method = "xrandr"
+            return True
     log.info("no brightness control available on this machine")
     return False
 
@@ -154,8 +193,11 @@ async def _primary_output() -> str | None:
     if shutil.which("xrandr") is None:
         return None
     try:
+        # --current: the outputs as X knows them, without probing every
+        # connector again, which stalls the X server (D-254).
         process = await asyncio.create_subprocess_exec(
             "xrandr",
+            "--current",
             "--listactivemonitors",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,
@@ -168,3 +210,41 @@ async def _primary_output() -> str | None:
         if parts and parts[0].rstrip(":").isdigit():
             return parts[-1]
     return None
+
+
+LEVELS_WAIT = 1.0
+"""The longest the home screen waits for the first reading of the levels."""
+
+
+class Levels:
+    """The sound and the light as the home screen shows them (D-254).
+
+    Every "back home" read both with a few subprocesses, one after the other,
+    each allowed two seconds: on a real machine a sound tool slow to answer
+    held the home screen with it, and the tap that asked for it seemed lost.
+    Now the last level seen or set is shown at once and read again behind the
+    page for the next time; only the first home screen of a session waits, and
+    not for long.
+    """
+
+    def __init__(self) -> None:
+        self.known: dict[str, int] = {}
+        self._reading: asyncio.Task[None] | None = None
+
+    async def _read(self) -> None:
+        volume, brightness = await asyncio.gather(get_volume(), get_brightness())
+        if volume is not None:
+            self.known["volume"] = volume
+        if brightness is not None:
+            self.known["brightness"] = brightness
+
+    async def read(self) -> tuple[int | None, int | None]:
+        if self._reading is None or self._reading.done():
+            self._reading = asyncio.create_task(self._read())
+        if not self.known:
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(asyncio.shield(self._reading), LEVELS_WAIT)
+        return self.known.get("volume"), self.known.get("brightness")
+
+    def set(self, name: str, value: int) -> None:
+        self.known[name] = value

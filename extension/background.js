@@ -596,3 +596,89 @@ chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
     enqueue(() => reportRefusedSearch(details.url));
   }
 }, WEB_ONLY);
+
+// ------------------------------------------------ one tab per site (D-254)
+
+// A web tile tapped again opened its site in a new tab: YouTube Kids started
+// again from the beginning while the tab where the child had paused it waited,
+// unseen, behind. Now a tab the launcher opens - it has no opener, unlike one a
+// page opens - for a site already open in another tab is closed again, and
+// that tab, and its window, come back instead. Which site each tab shows is
+// kept from the navigations this file already sees (the host only, as for the
+// visit report), in chrome.storage.session; no "tabs" permission, nothing read
+// from a page.
+const STORAGE_TAB_HOSTS = "tabHosts";
+// Tabs opened without an opener, until their first navigation: the launcher's.
+const freshTabs = new Map();
+const FRESH_TAB_MS = 10 * 1000;
+
+async function tabHosts() {
+  const stored = await chrome.storage.session.get(STORAGE_TAB_HOSTS);
+  return stored[STORAGE_TAB_HOSTS] || {};
+}
+
+function rememberTabHost(tabId, host) {
+  enqueue(async () => {
+    const hosts = await tabHosts();
+    if (host) {
+      hosts[tabId] = host;
+    } else {
+      delete hosts[tabId];
+    }
+    await chrome.storage.session.set({ [STORAGE_TAB_HOSTS]: hosts });
+  });
+}
+
+chrome.tabs.onCreated.addListener((tab) => {
+  if (tab.id !== undefined && tab.openerTabId === undefined) {
+    freshTabs.set(tab.id, Date.now());
+  }
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  freshTabs.delete(tabId);
+  rememberTabHost(tabId, "");
+});
+
+chrome.webNavigation.onCommitted.addListener((details) => {
+  if (details.frameId === 0 && details.tabId >= 0) {
+    rememberTabHost(details.tabId, webHost(details.url));
+  }
+}, WEB_ONLY);
+
+chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
+  if (details.frameId !== 0) {
+    return;
+  }
+  const created = freshTabs.get(details.tabId);
+  freshTabs.delete(details.tabId);
+  const host = webHost(details.url);
+  if (created === undefined || Date.now() - created > FRESH_TAB_MS || !host) {
+    return;
+  }
+  const hosts = await tabHosts();
+  for (const [id, seen] of Object.entries(hosts)) {
+    const other = Number(id);
+    if (other === details.tabId || seen !== host) {
+      continue;
+    }
+    let tab;
+    try {
+      tab = await chrome.tabs.get(other);
+    } catch {
+      continue; // closed since
+    }
+    try {
+      await chrome.tabs.update(other, { active: true });
+      const window = await chrome.windows.get(tab.windowId);
+      await chrome.windows.update(tab.windowId, {
+        focused: true,
+        ...(window.state === "minimized" ? { state: "maximized" } : {}),
+      });
+      await chrome.tabs.remove(details.tabId);
+    } catch (error) {
+      console.warn("BioKids: the open tab could not be brought back:", error);
+    }
+    return;
+  }
+}, WEB_ONLY);

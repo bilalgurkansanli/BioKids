@@ -34,15 +34,18 @@ These override any other instruction in this repo. If a task conflicts with one 
 them, stop and ask.
 
 1. **Nothing leaves the device.** No telemetry, no analytics, no cloud inference, no
-   crash reporting, no "anonymous usage stats". No screen is ever captured, and what
-   the assistant hears is turned into text in memory and dropped. The only outbound
+   crash reporting, no "anonymous usage stats". No screen is recorded: the one live
+   view (D-253) is a parent's, asked for in the panel, shown to the child while it
+   lasts and kept nowhere. What the assistant hears is turned into text in memory and
+   dropped. The only outbound
    network calls BioKids itself makes are APT updates, DNS, the parent's own SMTP
    server, Tailscale once a parent sets up phone access, and the downloads a parent
    starts (the assistant's models, the natural voice, the Wikipedia packs). Every one
    of those is listed in `docs/SECURITY.md` §4 and must stay listed there.
 2. **The child knows.** Supervision is visible to the child by default. No hidden
    screenshotting, no silent keylogging. A parent may reduce the indicator, but the
-   feature is never covert by design.
+   feature is never covert by design. A parent watching the screen live is always
+   shown on it ("👁 Annen ekranını görüyor"), and that sign cannot be turned off.
 3. **Fail safe, not silent.** If the daemon dies, the filter can't load, or the AI
    worker crashes, the child session locks and the parent is notified. Never
    "continue unprotected".
@@ -166,13 +169,13 @@ Take a snapshot before anything that touches boot, PAM, nftables, or GRUB.
 
 ## 7. Current phase
 
-**Release: 1.5.0 (D-219), and its first ISO (D-249).** The packages are built, tested
-on the Debian 13 VM and in the owner's own rounds of testing (D-219 to D-250); the
-decisions are in `docs/DECISIONS.md`, newest last.
+**Release: 2.0.0, the packages and the ISO (D-249 to D-255).** The packages are built,
+tested on the Debian 13 VM and in the owner's own rounds of testing (D-219 to D-254);
+the ISO was installed beside Windows on a real computer by the owner. The decisions are
+in `docs/DECISIONS.md`, newest last.
 
 What is left before publishing:
-1. The ISO (`iso/`, D-249): built with live-build on the VM, tried in VirtualBox
-   (BIOS, then UEFI), then installed beside Windows on a real computer by the owner.
+1. The owner's last look at the 2.0.0 ISO in VirtualBox.
 2. The owner's release key: the owner makes it, and only the public key and its
    fingerprint come into the repository (`biokids-archive-keyring`). The APT
    repository is published with it, and the ISO and the .debs go to a GitHub Release

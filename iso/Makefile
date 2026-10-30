@@ -1,12 +1,12 @@
 # The BioKids image (D-249), on a Debian 13 machine with live-build:
 #
 #     sudo apt install live-build
-#     sudo make DEBS=../dist/1.5.0-1-iso      # the .debs dpkg-buildpackage made
+#     sudo make DEBS=../dist/2.0.0-1          # the .debs dpkg-buildpackage made
 #
-# The result is biokids-1.5.0-amd64.hybrid.iso, for a USB stick or a DVD. Every
+# The result is biokids-2.0.0-amd64.hybrid.iso, for a USB stick or a DVD. Every
 # build is 30-60 minutes; `sudo make clean` before building with changed config.
 
-DEBS ?= ../dist/1.5.0-1
+DEBS ?= ../dist/2.0.0-1
 # Rebuilt for Trixie (dist/ai, not in git): from the shared folder on the build VM.
 AI_DEBS ?= /media/sf_BioKids/dist/ai
 

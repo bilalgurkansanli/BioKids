@@ -2620,3 +2620,64 @@ def test_switching_off_the_kite_flies_away(client: TestClient, daemon: FakeShell
     assert 'class="goodbye-kite"' not in client.post("/switch-user").text
     css = (STATIC / "shell.css").read_text(encoding="utf-8")
     assert "@keyframes kite-fly" in css and ".goodbye-kite { animation: none;" in css
+
+
+def test_a_kiosk_on_two_monitors_is_fitted_once_not_every_check(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D-254: the X screen spans both monitors and the fullscreen kiosk one."""
+    from biokids_shell import kiosk
+
+    monkeypatch.setattr(kiosk, "FIT_CHECK_SECONDS", 0.001)
+    ran: list[tuple[str, ...]] = []
+    stop = asyncio.Event()
+    checks = [0]
+
+    async def fake(*args: str) -> str | None:
+        ran.append(args)
+        if args[0] == "getdisplaygeometry":
+            return "3840 1080\n"
+        if args[0] == "search":
+            return "9\n"
+        if args[0] == "getwindowgeometry":
+            checks[0] += 1
+            if checks[0] == 5:
+                stop.set()
+            return "Window 9\n  Position: 0,0 (screen: 0)\n  Geometry: 1920x1080\n"
+        return ""
+
+    asyncio.run(kiosk.keep_fullscreen(stop, fake))
+    assert sum(call[0] == "windowsize" for call in ran) == 1
+
+
+def test_a_brightness_drag_is_applied_one_at_a_time_and_the_last_wins(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D-254: a dozen xrandr runs a second held the X server, and every tap."""
+    from biokids_shell import device
+
+    applied: list[list[str]] = []
+
+    async def run(argv: list[str]) -> bool:
+        if argv[0] == "brightnessctl":
+            return False  # a desktop: no backlight
+        applied.append(argv)
+        await asyncio.sleep(0.01)
+        return True
+
+    async def output() -> str:
+        return "HDMI-1"
+
+    monkeypatch.setattr(device, "_run", run)
+    monkeypatch.setattr(device, "_primary_output", output)
+    monkeypatch.setattr(device, "_brightness_method", "")
+    monkeypatch.setattr(device, "_brightness_output", None)
+
+    async def drag() -> list[bool]:
+        return await asyncio.gather(*(device.set_brightness(v) for v in range(20, 101, 5)))
+
+    assert all(asyncio.run(drag()))
+    levels = [argv[-1] for argv in applied]
+    assert levels[0] == "0.20" and levels[-1] == "1.00"
+    assert len(levels) <= 2, f"one change at a time, the latest: {levels}"
+    assert all("--current" in argv for argv in applied), "never a probe of the monitors"

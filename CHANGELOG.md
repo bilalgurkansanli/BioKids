@@ -13,13 +13,23 @@ Debian version, because that is what `apt policy biokids` shows.
 
 ## [Unreleased]
 
-An upgrade runs migration `4f6a2b9c1d7e`, after `biokids-admin backup-db` has copied the
-database: new columns with defaults that change nothing (`policy.finish_up_min` 3,
+## [2.0.0-1] - 2026-10-30
+
+The packages and the ISO together, after the owner installed the image beside Windows
+on a real computer (D-249 to D-255). An upgrade runs migration `4f6a2b9c1d7e`, after
+`biokids-admin backup-db` has copied the database: new columns with defaults that change nothing (`policy.finish_up_min` 3,
 `policy.learn_first_min` 0, `ledger_day.finish_up_s`, `child.calm_screen`, `child.birthday`)
 and three empty tables (`parent_note`, `shared_recording`, `reading_item`).
 
 ### Added
 
+- **The child's screen, live, in the panel and on the phone** (D-253): "Canlı izle" on
+  the preview page; the child's screen says who is watching for as long as it lasts,
+  and no picture is kept.
+- **⛶ on the app bar** (D-254) over an app that keeps a small window, and the open sites
+  in the footer's "Açık": a site tapped again comes back where the child left it.
+- **The kite while a child's screen opens** (D-254), instead of a black screen.
+- **BioKids' own boot menu and installer banner** (D-255).
 - **The ISO** (D-249): Debian 13 with BioKids and the assistant's programs, to try from a
   USB stick and install beside Windows; each computer makes its own keys at its first
   boot.
@@ -85,6 +95,14 @@ and three empty tables (`parent_note`, `shared_recording`, `reading_item`).
 - **A computer installed from the ISO gets Debian's updates and speaks the language
   chosen in the installer** (D-252): it had only the stick as its package source,
   and English menus.
+- **Taps that came late** (D-254): the brightness slider held the X server with every
+  step on a real monitor; the home screen waited for the sound and light tools; the
+  read-aloud buttons could take every connection the page had.
+- **The panel on a phone** (D-254) no longer scrolled sideways on every page; switching
+  user asks first; the assistant's download shows its percent and turns the assistant
+  on for that child.
+- **The assistant** (D-254) says who made it, and a child who says someone hurts them
+  hears 183 and 112 and to tell a trusted adult.
 - The brightness slider starts where the screen is, not at full (D-236); switch-user and
   shut-down read themselves aloud for the young band; the first-run screen says that a
   refused search's words reach the family.

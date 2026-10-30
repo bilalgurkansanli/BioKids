@@ -274,13 +274,13 @@ Voice always has a visual companion (D-93).
 ```python
 # unix socket: /run/user/<uid>/biokids-voice.sock
 {
-  "op": "speak",
-  "event": "warn_10",
-  "persona": "auto",              # auto | zio | sio
-  "vars": {"name": "Elif", "minutes": 10},
-  "locale": "tr",
-  "priority": "normal",           # normal | high
-  "expression": "neutral"
+    "op": "speak",
+    "event": "warn_10",
+    "persona": "auto",  # auto | zio | sio
+    "vars": {"name": "Elif", "minutes": 10},
+    "locale": "tr",
+    "priority": "normal",  # normal | high
+    "expression": "neutral",
 }
 ```
 

@@ -33,6 +33,15 @@
 <body>
   {% block body %}{% endblock %}
 
+  {# D-253: while a parent watches this screen, the child sees that they do -
+     on every launcher page, and on the app bar over an app. #}
+  {% set watched_by = (state or {}).get('watched_by', '') if state is mapping else '' %}
+  <div class="watched" id="watched" role="status" aria-live="polite"
+       {% if not watched_by %}hidden{% endif %}>
+    <span class="watched__eye" aria-hidden="true">👁</span>
+    <span id="watched-text">{{ _('shell.watched', name=watched_by) if watched_by else '' }}</span>
+  </div>
+
   <div class="banner" id="banner" data-level="info" role="status" aria-live="polite">
     <span class="banner__icon" aria-hidden="true">⏳</span>
     <span id="banner-text"></span>

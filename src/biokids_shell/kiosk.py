@@ -277,14 +277,22 @@ async def keep_fullscreen(stop_event: asyncio.Event, run: object = None) -> None
     and the launcher sat in an 800x600 box in the middle of it. A projector or a
     second monitor does the same on real hardware. Leaving fullscreen and
     entering it again makes the window manager size it to the screen it has now.
+
+    Once per window and screen size (D-254). With two monitors the X screen is
+    both of them and the fullscreen kiosk one: they never matched, and the
+    kiosk left fullscreen and came back every two seconds, stalling every tap.
     """
     xdotool = run if callable(run) else _xdotool
+    fitted: dict[str, tuple[int, int]] = {}
     while not stop_event.is_set():
         screen = _size(await xdotool("getdisplaygeometry"))
         found = await xdotool("search", "--class", KIOSK_WINDOW_CLASS)
         for window in (found or "").split():
             geometry = _size(await xdotool("getwindowgeometry", window))
             if screen and geometry and geometry != screen and geometry[0] > 1:
+                if fitted.get(window) == screen:
+                    continue
+                fitted[window] = screen
                 log.info("the screen is now %sx%s; fitting the kiosk to it", *screen)
                 await xdotool("windowstate", "--remove", "FULLSCREEN", window)
                 await xdotool("windowsize", window, str(screen[0]), str(screen[1]))

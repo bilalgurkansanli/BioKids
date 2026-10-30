@@ -44,6 +44,7 @@ from biokids_core.ipc import AsyncDaemonClient, Event, EventKind
 from biokids_shell.client import ShellClient
 from biokids_shell.dimmer import BedtimeDimmer
 from biokids_shell.kiosk import KIOSK_WINDOW_CLASS
+from biokids_shell.live import LiveSender
 
 log = logging.getLogger(__name__)
 
@@ -145,6 +146,7 @@ class SessionRelay:
         notice_seconds: float = NOTICE_SECONDS,
         on_spoken: Callable[[dict[str, Any]], None] | None = None,
         dimmer: BedtimeDimmer | None = None,
+        live: LiveSender | None = None,
     ) -> None:
         self.client = client
         self.voice = voice
@@ -152,6 +154,7 @@ class SessionRelay:
         self.notice_seconds = notice_seconds
         self.on_spoken = on_spoken
         self.dimmer = dimmer
+        self.live = live
         self._pause: asyncio.Task[None] | None = None
 
     async def run(self, stop: asyncio.Event) -> None:
@@ -181,6 +184,12 @@ class SessionRelay:
                 self._pause = asyncio.create_task(self.pause(), name="warning-pause")
         elif event.kind == EventKind.SPEAK:
             await self.speak(event.payload)
+        elif event.kind == EventKind.LIVE_VIEW and self.live is not None:
+            # A parent watching this screen (D-253): pictures while they do.
+            if event.payload.get("watching"):
+                self.live.start()
+            else:
+                self.live.stop()
         elif event.kind == EventKind.TICK and self.dimmer is not None:
             # The evening's last ten minutes dim the screen (D-214). A failure
             # costs the dimming, never the relay: the next warning matters more.

@@ -3153,3 +3153,29 @@ async def test_a_stopped_apps_name_is_forgotten_when_the_child_logs_out(
     source.log_in("elif")
     supervisor.report_activity(1, "supertux", unit=SUPERTUX)
     assert runtime.app_unit == SUPERTUX, "a report under that name counts again"
+
+
+# ------------------------------------------- the assistant's download (D-254)
+
+
+def test_the_download_progress_reads_what_the_setup_wrote(tmp_path: Any) -> None:
+    import os
+
+    from biokids_daemon.server import AI_PROGRESS_STALE_S, download_progress
+
+    assert download_progress(tmp_path) == {}
+    assert download_progress(tmp_path, started=100.0)["state"] == "starting"
+
+    path = tmp_path / "download.json"
+    path.write_text(json.dumps({"state": "running", "done": 250, "total": 1000, "file": "x"}))
+    os.utime(path, (1000.0, 1000.0))
+    assert download_progress(tmp_path, now=1001.0) == {
+        "state": "running",
+        "percent": 25,
+        "file": "x",
+    }
+    assert download_progress(tmp_path, started=2000.0, now=2001.0)["state"] == "starting", (
+        "progress from before the button was pressed belongs to an earlier download"
+    )
+    stale = download_progress(tmp_path, now=1000.0 + AI_PROGRESS_STALE_S + 1)
+    assert stale["state"] == "failed", "a download that stopped moving has stopped"

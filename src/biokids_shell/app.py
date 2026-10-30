@@ -137,6 +137,7 @@ class ShellState:
         self.config = config
         self.client = ShellClient(config.paths.shell_socket)
         self.launcher = AppLauncher(config)
+        self.levels = device.Levels()
         self.env = Environment(
             loader=FileSystemLoader(str(TEMPLATE_DIR)),
             autoescape=select_autoescape(["html", "xml"]),
@@ -457,8 +458,8 @@ def register_routes(app: FastAPI) -> None:
             # Şimdi ne yapsak? (D-231): something to do away from the screen.
             cards = offscreen.for_screen(screen, data, dt.date.today())
             return await render(shell, request, screen, data, offscreen=cards)
-        volume = await device.get_volume()
-        brightness = await device.get_brightness()
+        # Never waited for (D-254): see device.Levels.
+        volume, brightness = await shell.levels.read()
         found = album.from_state(data)
         return await render(
             shell,
@@ -1516,12 +1517,18 @@ def register_routes(app: FastAPI) -> None:
     # ------------------------------------------------------------- device
 
     @app.post("/device/volume")
-    async def set_volume(value: int = 70) -> JSONResponse:
-        return JSONResponse({"ok": await device.set_volume(value)})
+    async def set_volume(shell: Shell, value: int = 70) -> JSONResponse:
+        ok = await device.set_volume(value)
+        if ok:
+            shell.levels.set("volume", device.clamp(value))
+        return JSONResponse({"ok": ok})
 
     @app.post("/device/brightness")
-    async def set_brightness(value: int = 100) -> JSONResponse:
-        return JSONResponse({"ok": await device.set_brightness(value)})
+    async def set_brightness(shell: Shell, value: int = 100) -> JSONResponse:
+        ok = await device.set_brightness(value)
+        if ok:
+            shell.levels.set("brightness", device.clamp(value, low=20))
+        return JSONResponse({"ok": ok})
 
 
 # ------------------------------------------------------------------ helpers
@@ -1776,6 +1783,9 @@ def _browser_strings(tr: Translator) -> dict[str, str]:
         "finishup_granted": tr("shell.finishup.granted_minutes", minutes="{minutes}"),
         # Over a tapped tile until its app's window is in front (D-208).
         "opening": tr("shell.opening"),
+        # A parent watching this screen (D-253). {name} is theirs.
+        "watched": tr("shell.watched", name="{name}"),
+        "watched_nameless": tr("shell.watched_nameless"),
         # What a screen reader says for the ring, kept in step with the number.
         "remaining": tr("shell.remaining_label")
         + ": "

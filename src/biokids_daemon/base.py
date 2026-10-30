@@ -25,6 +25,7 @@ from biokids_core.types import Action, Category, ChildPolicy, Decision, Reason, 
 from biokids_daemon.bus import EventBus
 from biokids_daemon.dnsfilter import DnsFilter, FilterHealth
 from biokids_daemon.enforcer import LOCK_ATTEMPTS_BEFORE_LOGOUT, Enforcer
+from biokids_daemon.live import LiveView
 from biokids_daemon.notifier import Notifier
 from biokids_daemon.sessions import SessionWatcher, UserPresence
 
@@ -148,6 +149,8 @@ class SupervisorBase:
     downloaded) and `voice` (speech recognition too). Empty when it is not
     installed or did not answer, and then the launcher shows no "Sor Bana"
     tile: a tile that can only say "I'm resting" is a broken toy (D-198)."""
+    live: LiveView = field(default_factory=LiveView)
+    """Who is watching which child's screen, and the latest picture (D-253)."""
     _afterwards: set[asyncio.Task[None]] = field(default_factory=set)
     """Work answered for before it was done (D-209): switching off, restarting,
     ending a child's session. Held here so a task is not collected half-way, and

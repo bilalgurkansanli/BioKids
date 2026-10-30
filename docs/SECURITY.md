@@ -503,7 +503,9 @@ We do not build, and will not accept contributions for:
   15 seconds, usable by the launcher alone, transcribed on the machine and never
   saved or sent. Background listening, wake words and keeping audio stay out
   of scope.
-- live screen mirroring of a child's session
+- viewing a child's screen without the child being shown it, or keeping any picture of
+  it: the live view (D-253) is a parent's page asking about once a second, the child's
+  screen says who is watching, and the latest picture lives only in the daemon's memory
 - a record of the pages a child reads: the extension reports a site's host name,
   never its path, query, title or contents, and the child is told on their first
   run (D-187)

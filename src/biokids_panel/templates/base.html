@@ -37,7 +37,9 @@
       <a class="btn btn--quiet" href="/help">{{ _('help.title') }}</a>
       {# D-227: on the computer itself, the login screen for whoever is next. #}
       {% if at_the_machine %}
-        <form method="post" action="/system/switch-user">
+        <form method="post" action="/system/switch-user"
+              data-confirm="{{ _('switch.confirm') }}"
+              onsubmit="return confirm(this.dataset.confirm)">
           <input type="hidden" name="csrf_token" value="{{ csrf }}">
           <button class="btn btn--quiet" type="submit" title="{{ _('switch.help') }}">
             <span aria-hidden="true">👥</span> {{ _('switch.button') }}
@@ -100,7 +102,8 @@
   <footer class="legal">
     <p><strong>{{ _('privacy.headline') }}</strong> — {{ _('privacy.body') }}</p>
     <p>{{ _('disclaimer.headline') }}: {{ _('disclaimer.body') }}</p>
-    <p class="small">BioKids {{ version }}</p>
+    <p class="small">BioKids {{ version }} ·
+      <a href="{{ site_url }}" target="_blank" rel="noopener">{{ _('site.link') }}</a></p>
   </footer>
 
   {% block scripts %}{% endblock %}

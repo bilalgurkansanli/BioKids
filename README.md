@@ -7,6 +7,8 @@ machine.**
 
 *Çocuklar için, tamamen kendi bilgisayarınızda çalışan ebeveyn denetimi.*
 
+Guides, installation and support: **[biokids.bilalgurkansanli.com](https://biokids.bilalgurkansanli.com)**
+
 BioKids turns a Debian 13 computer into one a young child can use on their own: they
 log in by choosing their picture, land in a launcher of big tiles instead of a desktop,
 and are told — out loud — when their time is nearly up. The parent sets the rules from
@@ -15,12 +17,10 @@ clock cannot cheat, harmful sites are closed for the children's accounts only, a
 nothing about the family leaves the machine. It ships as Debian packages; the control
 part is called BioGuard in the documentation.
 
-> **BioKids 1.5.0.** The packages build, pass lintian, install,
-> upgrade and purge on a Debian 13 VM, and the setup wizard, login by picture and phone
-> access have been run there. The full exit criterion — a 20-minute quota set from a
-> phone, spoken warnings, shutdown, reboot and a moved clock — is the last run before
-> the release ([`docs/ROADMAP.md`](docs/ROADMAP.md)). The APT repository is not
-> published yet; see [Install](#install).
+> **BioKids 2.0.0.** The packages build, pass lintian, install, upgrade and purge on
+> Debian 13, and the ISO installs beside Windows: it was tried in VirtualBox (BIOS and
+> UEFI) and on the owner's own computer. The APT repository is not published yet; see
+> [Install](#install) and [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ---
 
@@ -135,7 +135,7 @@ clock moved. Nothing edits an entry; entries older than a year are deleted.
 > `https://apt.biokids.bilalgurkansanli.com`, built by the release workflow and signed
 > with a key that exists only in GitHub Secrets. That key has not been generated yet,
 > so there is no repository to add and no fingerprint to check; both arrive with the
-> v1.0 release, and the fingerprint will be printed here. Until then the packages are
+> v2.0.0 release, and the fingerprint will be printed here. Until then the packages are
 > built from this repository: [`docs/VM-RUNBOOK.md`](docs/VM-RUNBOOK.md) §1.
 
 Once it is published, on an existing Debian 13 system:
@@ -157,7 +157,9 @@ assistant is a separate package, `biokids-ai`, never installed by default. `biok
 recommends `biokids-archive-keyring`, the package that ships the same key file.
 
 A bootable image - Debian 13 with BioKids, its apps and the assistant's runtime,
-which installs itself beside Windows if you want - is built from [`iso/`](iso/README.md).
+which installs itself beside Windows if you want - is built from [`iso/`](iso/README.md),
+and published with each release; [`iso/README.md`](iso/README.md) has the steps for a
+computer that has Windows.
 
 ## First steps
 
@@ -300,7 +302,8 @@ step by step.
 
 Contributions are welcome. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) first — it
 includes the list of features this project will **not** accept, such as covert
-monitoring, keystroke logging, and live screen mirroring of a child's session.
+monitoring, keystroke logging, and any view of a child's screen the child is not shown
+or that is kept.
 
 ---
 

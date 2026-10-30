@@ -2305,3 +2305,92 @@ installed on its empty disk.
   `apt-get update` reads Debian's mirror and security archive, the parent's desktop
   has the logo, and the boot menu is hidden with BioKids alone and shown for five
   seconds once a Windows boot manager is on the EFI partition.
+
+**D-253 [owner] A parent can watch the child's screen live, and the child sees it.**
+(2026-10-30) The owner asked for the screen preview to show the child's screen as it
+is, from the panel and the phone. CLAUDE.md principle 1 said "no screen is ever
+captured" and D-180 had removed the screen watcher for that reason; asked, the owner
+chose a visible live view and the principles were changed with it.
+- **Only while a parent's page asks.** "Canlı izle" on the preview page asks the panel
+  for a picture about once a second; the daemon keeps a watch going for ten seconds
+  after the last ask (`biokids_daemon/live.py`), so a closed page or a phone put away
+  ends it, and "Durdur" ends it at once.
+- **Taken in the child's own session**, by the launcher (`biokids_shell/live.py`,
+  Pillow's `ImageGrab`), only after the daemon announced the watch, at most 960 pixels
+  across as a JPEG. The daemon never connects to the child's display.
+- **Kept nowhere.** The latest picture lives in the daemon's memory until the next one
+  replaces it or the watch ends. No file, no database row.
+- **The child knows.** "👁 Annen şu an ekranını görüyor" on every launcher page and 👁
+  in place of ⏳ on the app bar over an app, for as long as the watch lasts; the bar
+  now asks every five seconds instead of fifteen. The sign cannot be turned off. The
+  audit log has a row for each watch that starts.
+- New: `Op.LIVE_VIEW`, `ShellOp.LIVE_FRAME`, `EventKind.LIVE_VIEW`, `watched_by` in the
+  launcher's state. biokids-shell depends on python3-pil.
+
+**D-254 [claude] What the owner's real computer found, and a review behind it.**
+(2026-10-30) The owner installed the ISO beside Windows on a real computer and listed
+what was wrong; each was traced to its cause.
+- **Taps that came late, a slider that lagged.** The brightness slider sent a request
+  for every step it passed, and each ran `xrandr` without `--current`: X probed every
+  connector again, holding the whole server - taps and drawing - for tens to hundreds
+  of milliseconds on a real monitor (nothing in the VM). Now one change at a time and
+  only the latest (`device.set_brightness`), `--current` everywhere, and the page sends
+  at most every 150 ms. Also: the home screen no longer waits for the sound and light
+  tools (`device.Levels`, the last level shown at once and read again behind it); the
+  🔊 buttons in Okuma and the English corner leave the page's connections free (two
+  lines in flight at most); the kiosk is fitted to a changed screen once, not every two
+  seconds on two monitors; the voice service runs at a lower priority (Nice=5).
+- **Back to YouTube Kids where it was.** A web tile opened its site in a new tab at every
+  tap. The extension (1.4.0) now closes a tab the launcher opens for a site already open
+  in another tab and brings that one back; the footer's "Açık" lists the sites opened
+  while the browser runs, so the child goes back from there too. A link a page opens
+  in a new tab is the page's.
+- **⛶ on the app bar** over a window that does not fill the screen: maximised when the
+  app allows it, full screen when it keeps its own size.
+- **No black screen at a child's login.** The greeter paints the root window in the
+  launcher's colour as the session starts, and in a child's session
+  `/etc/X11/Xsession.d/45biokids-splash` shows the login screen's picture with a
+  spinner until the launcher's window is there (`biokids_shell/splash.py`).
+- **The panel:** "Oturumu değiştir" asks first; the assistant's download shows its
+  percent, says that leaving the page does not stop it but switching off does, and
+  turns the assistant on for the child it was downloaded for; the history page no
+  longer made every phone page as wide as the year map (visually hidden words escaped
+  its scrolling box, and the bottom bar grew with the page); the phone guide says to
+  open the Tailscale app and tap Connect; BioKids' site, biokids.bilalgurkansanli.com,
+  under "Rehberler ve destek" and at the foot of every page.
+- **The assistant** answers who made it from code, not the model (`identity.py`, "Sor
+  Bana", "BioKids'i Bilal Gürkan Şanlı yaptı"); a child who says someone hurts them gets
+  their own answer with 183 and 112 and a trusted adult such as a teacher, not "ask
+  your family" (a `hurt` category); the refusal for personal information adds "tell a
+  grown-up if someone asks for your photo"; 26 more questions in the test set.
+- **Beside a Windows installed the BIOS way** the boot menu shows too (os-prober).
+
+**D-255 [claude] The boot menu and the installer in BioKids' look.** (2026-10-30)
+The owner asked for the installed computer's boot menu in BioKids' own look, as Pardus
+has its own: `update-grub` still found desktop-base's picture.
+- **A GRUB theme in `biokids-desktop`**, the stick's look (D-252): the logo high on the
+  deep indigo, the menu in the logo's typeface, the selected item on an amber pill, and
+  a countdown while the menu counts down beside Windows. Its key help and countdown are
+  GRUB's own words, translated by GRUB. The pictures are in `debian/grub/theme/`
+  (`dev/make_icons.py`, 1920 x 1080, cropped around the middle to any screen). Fredoka
+  is made into GRUB's bitmap fonts at build time with `grub-mkfont`, at 18 and 24 px,
+  covering Latin-1 and Latin Extended-A and so every Turkish letter. New Build-Depends:
+  `grub-common`.
+- **Where GRUB can read it:** the postinst copies the theme to `/boot/grub/themes/biokids`
+  (`/usr` may be on an encrypted disk). D-200's file asks for it only where it is.
+  `update-grub` runs only when the link is new or a theme file changed; an upgrade from
+  1.5 takes the theme once. The postrm deletes the copy after `update-grub` worked, so
+  `apt remove` brings Debian's menu back. The image's hook copies it as it links D-200's
+  file.
+- **Debian's picture outside the menu:** `05_debian_theme` ignores `GRUB_THEME` and still
+  put desktop-base's picture behind the hidden menu's second and "Loading Linux".
+  `GRUB_BACKGROUND` now names the theme's ground, which it then uses and nothing else.
+- `GRUB_DISTRIBUTOR` stays Debian's (D-249): the entries keep Debian's name.
+  `GRUB_GFXMODE` stays `auto`.
+- **The graphical installer's banner:** "debian 13" gives way to the kite's sail and
+  "BioKids" on the indigo: `logo_debian.png` and `logo_debian_dark.png` (800 x 75;
+  `logo_installer*.png` link to them) in `iso/config/includes.installer/usr/share/graphics/`.
+- **Every new account's picture** was desktop-base's Debian logo (`/etc/skel/.face`);
+  the image removes it.
+- Left as Debian's: the installer's own words and colours, the firmware's "debian" boot
+  entry and the console's `/etc/issue`.

@@ -128,6 +128,16 @@ class ShellClient:
             return False
         return response.ok
 
+    async def live_frame(self, frame_b64: str) -> bool:
+        """A picture of this screen for the parent watching it (D-253). False
+        when nobody watches any more, or the daemon cannot be reached."""
+        try:
+            response = await self._client.call(ShellOp.LIVE_FRAME, frame=frame_b64)
+        except (IpcError, OSError) as exc:
+            log.debug("could not send the screen: %s", exc)
+            return False
+        return response.ok and bool(response.data.get("watching"))
+
     async def note_seen(self, note_id: int) -> bool:
         """The screen showed a parent's note (D-233); the panel says "okundu"."""
         try:

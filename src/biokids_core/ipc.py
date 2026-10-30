@@ -83,6 +83,9 @@ class Op(StrEnum):
     SEND_NOTE = "send_note"
     """A parent's "Aferin" or one sentence to a child (D-233): stored, and shown on
     the child's screen at once or the next time it opens."""
+    LIVE_VIEW = "live_view"
+    """A parent's panel watching a child's screen (D-253): starts the watch or
+    keeps it going, and answers the latest picture; `stop` ends it."""
     DAY_CHANGED = "day_changed"
     """A parent made today special or took it back (D-215): re-read the rules,
     and let a child whose day just got longer back in."""
@@ -143,6 +146,9 @@ class ShellOp(StrEnum):
     corner (D-225)."""
     WARM_ASSISTANT = "warm_assistant"
     """The child opened the assistant: load the model now, not at the question."""
+    LIVE_FRAME = "live_frame"
+    """A picture of the calling child's screen, while a parent watches it
+    (D-253). The answer says whether anyone still is."""
     SUBSCRIBE_EVENTS = "subscribe_events"
 
 
@@ -174,6 +180,9 @@ class EventKind(StrEnum):
     """A parent sent the child a "well done" or a note (D-233)."""
     ASSISTANT_ALERT = "assistant_alert"
     """The assistant refused a question a parent should know about (D-165)."""
+    LIVE_VIEW = "live_view"
+    """A parent started or stopped watching this child's screen (D-253):
+    `watching`, and `by`, the parent's name, for the sign the child sees."""
 
 
 # ------------------------------------------------------------------- frames

@@ -16,7 +16,7 @@ a Windows working tree, whose line endings and file modes the image would carry:
     cd iso
     sudo make DEBS=../..                                      # 30-60 minutes
 
-The result is `biokids-1.5.0-amd64.hybrid.iso` and its `SHA256SUMS`. `sudo make
+The result is `biokids-2.0.0-amd64.hybrid.iso` and its `SHA256SUMS`. `sudo make
 clean` before building again with changed configuration: live-build caches.
 
 ## What is in it
@@ -29,7 +29,9 @@ clean` before building again with changed configuration: live-build caches.
 - `config/hooks/normal/9000-biokids-image.hook.chroot`: removes Firefox (D-237) and
   what must differ between computers - the key that encrypts the mail password, the
   extension's signing key, the machine id - and checks the database holds no family;
-  links D-200's boot menu file and sets the start-up theme.
+  links D-200's boot menu file, copies BioKids' GRUB theme to `/boot/grub/themes`
+  (D-255) - both of which `biokids-desktop`'s postinst leaves to a computer that
+  already has GRUB - and sets the start-up theme.
 - `config/includes.chroot`: `biokids-firstboot.service`, which makes each installed
   computer's own keys before the daemon starts; GRUB told to look for Windows
   (`os-prober`); the kite while the computer starts (Plymouth), with an initramfs
@@ -37,6 +39,10 @@ clean` before building again with changed configuration: live-build caches.
   the console reachable on the stick.
 - `config/includes.binary` and `9010-biokids-boot-menu.hook.binary`: the stick's
   boot menu, BIOS and UEFI, with the logo instead of Debian's (D-252).
+- `config/includes.installer/usr/share/graphics/`: the graphical installer's banner,
+  `logo_debian.png` and `logo_debian_dark.png` (800 x 75, the names and size Debian
+  13's installer uses; `logo_installer*.png` link to them), drawn by
+  `dev/make_icons.py`: the kite's sail and "BioKids" instead of "debian 13" (D-255).
 - `config/includes.installer/preseed.cfg`: only what a family would never want to be
   asked (no root password, no package survey, the time zone, the host name); the
   language, the keyboard, the parent's account and the disk stay the installer's
@@ -59,8 +65,9 @@ clean` before building again with changed configuration: live-build caches.
 3. "Start installer", then in partitioning "Guided - use the largest continuous free
    space". Nothing outside that space is touched.
 4. The boot menu then shows BioKids and Windows for five seconds at every start
-   (D-252). BioKids does not supervise Windows: give its account a password the
-   child does not know.
+   (D-252), in BioKids' look (D-255); the entries keep Debian's name, which also
+   names the EFI folder Secure Boot's shim starts from (D-249). BioKids does not
+   supervise Windows: give its account a password the child does not know.
 
 ## Test order
 

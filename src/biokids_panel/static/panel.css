@@ -584,6 +584,7 @@ details.advanced > summary {
 /* ------------------------------------------------------------------- tables */
 
 .table-wrap {
+  position: relative;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -841,7 +842,11 @@ td.num { white-space: nowrap; font-variant-numeric: tabular-nums; }
   --cell: 11px;
 }
 
+/* Positioned, so that each day's visually hidden words (position: absolute)
+ * stay inside the scrolling box: otherwise they reached past it, made every
+ * phone page as wide as the year, and the bottom bar with it (D-254). */
 .year__scroll {
+  position: relative;
   container-type: inline-size;
   overflow-x: auto;
   padding-bottom: var(--sp-2);
@@ -1647,3 +1652,44 @@ a.year__day:hover, a.year__day:focus-visible { outline: 2px solid var(--ink); ou
 /* D-241: the letters a child has met; the well-known ones bold. */
 .english-words__word.is-known { font-weight: 800; background: color-mix(in srgb, var(--ok) 18%, var(--surface)); }
 
+
+/* ------------------------------------------------------ download progress */
+/* D-254: the assistant's models on their way, as a bar with its percent. */
+.download-bar {
+  width: 100%;
+  height: .9rem;
+  accent-color: var(--bio-indigo);
+  border-radius: var(--r-pill);
+}
+
+.download-percent {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------ live screen (D-253) */
+.live__screen {
+  margin: var(--sp-3) 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: #111;
+  aspect-ratio: 16 / 10;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.live__screen img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.live__note {
+  color: #ddd;
+  padding: var(--sp-3);
+  text-align: center;
+}

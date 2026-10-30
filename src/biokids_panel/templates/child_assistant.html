@@ -81,6 +81,25 @@
     </div>
   </form>
 
+  {% set download = status.download or {} %}
+  {% if download.state in ('starting', 'running') %}
+    {# D-254: the download runs in its own unit and goes on whatever this page
+       does; the bar follows it, and the page reloads itself when it ends. #}
+    <section class="card" id="assistant-download" aria-live="polite">
+      <h2>{{ _('assistant.download.title') }}</h2>
+      <progress class="download-bar" id="download-bar" max="100" value="{{ download.percent }}">{{ download.percent }}%</progress>
+      <p class="download-percent"><strong id="download-percent">{{ download.percent }}%</strong>
+        <span class="muted small" id="download-file">{{ _('assistant.download.starting') if download.state == 'starting' else '' }}</span></p>
+      <div class="notice notice--warn">
+        <p class="small">{{ _('assistant.download.keep_on') }}</p>
+      </div>
+    </section>
+  {% elif download.state == 'failed' %}
+    <div class="notice notice--danger" role="alert">
+      <div class="notice__title">{{ _('assistant.download.failed') }}</div>
+    </div>
+  {% endif %}
+
   <section class="card">
     <h2>{{ _('assistant.panel.models') }}</h2>
     {% if not status.running %}
@@ -96,7 +115,7 @@
     {% else %}
       <p>{{ _('assistant.panel.need_download') }}</p>
     {% endif %}
-    {% if status.running and (not status.ready or not status.voice) %}
+    {% if status.running and (not status.ready or not status.voice) and download.state not in ('starting', 'running') %}
       <form method="post" action="/children/{{ child.id }}/assistant/download">
         <input type="hidden" name="csrf_token" value="{{ csrf }}">
         <button class="btn" type="submit">{{ _('assistant.panel.download') }}</button>
@@ -104,4 +123,36 @@
       </form>
     {% endif %}
   </section>
+{% endblock %}
+
+{% block scripts %}
+  {% if (status.download or {}).state in ('starting', 'running') %}
+  <script>
+    /* D-254: the bar follows the download every two seconds, and the page
+       reloads once it has ended, to show the models or what went wrong. */
+    (function () {
+      var bar = document.getElementById("download-bar");
+      var label = document.getElementById("download-percent");
+      var note = document.getElementById("download-file");
+      function poll() {
+        fetch("/assistant/download", { cache: "no-store", credentials: "same-origin" })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) {
+            if (!d) { return; }
+            if (d.state === "done" || d.state === "failed" || d.state === "") {
+              location.replace(location.pathname);
+              return;
+            }
+            bar.value = d.percent;
+            bar.textContent = d.percent + "%";
+            label.textContent = d.percent + "%";
+            if (d.state === "running") { note.textContent = ""; }
+          })
+          .catch(function () {})
+          .then(function () { setTimeout(poll, 2000); });
+      }
+      setTimeout(poll, 2000);
+    })();
+  </script>
+  {% endif %}
 {% endblock %}

@@ -1270,7 +1270,7 @@ msgid "assistant.refuse.self_harm"
 msgstr "Bunu duyduğuma çok üzüldüm. Lütfen hemen ailenden birine ya da güvendiğin bir büyüğe anlat. Seni dinlemek ve sana yardım etmek isterler. Yanında kimse yoksa 183'ü arayabilirsin; acil bir durumsa 112'yi ara."
 
 msgid "assistant.refuse.personal_info"
-msgstr "Adresini, telefonunu ya da şifreni kimseye yazma, bana bile. Bunlar seni korumak için sır kalmalı."
+msgstr "Adresini, telefonunu ya da şifreni kimseye yazma, bana bile. Bunlar seni korumak için sır kalmalı. Biri senden bunları ya da fotoğrafını isterse ailenden bir büyüğe söyle."
 
 msgid "assistant.refuse.rude"
 msgstr "Bu kelimeleri kullanmayalım. Başka bir şey sormak ister misin?"
@@ -1369,7 +1369,7 @@ msgid "assistant.panel.download.help"
 msgstr "Bilgisayarın belleğine göre 1,5–4 GB indirilir ve birkaç dakika sürebilir. Sonrasında internet gerekmez."
 
 msgid "assistant.panel.download.started"
-msgstr "İndirme başladı. Birkaç dakika sonra bu sayfayı yenileyin."
+msgstr "İndirme başladı ve asistan bu çocuk için açıldı. Modeller inince \"Sor Bana\" çocuğun ekranında görünür."
 
 msgid "assistant.panel.banner"
 msgstr "{name} asistana {count} uygunsuz soru sordu."
@@ -2322,7 +2322,7 @@ msgid "remote.guide.3.title"
 msgstr "Telefonunuza Tailscale'i kurun"
 
 msgid "remote.guide.3.body"
-msgstr "Telefonunuzun kamerasıyla kendi mağazanızın kodunu okutun, Tailscale uygulamasını kurun ve bilgisayarda kullandığınız hesapla giriş yapın."
+msgstr "Telefonunuzun kamerasıyla kendi mağazanızın kodunu okutun ve Tailscale uygulamasını kurun. Uygulamayı açıp bilgisayarda kullandığınız hesapla giriş yapın, sonra uygulamadaki Bağlan (Connect) düğmesine basın: üstte \"Connected\" yazmalı."
 
 msgid "remote.guide.3.vpn"
 msgstr "Telefon \"VPN bağlantısı ekle\" izni ister; izin verin. Bu yalnızca Tailscale'in kendi bağlantısıdır, diğer internet kullanımınız değişmez."
@@ -2334,7 +2334,7 @@ msgid "remote.guide.4.title"
 msgstr "Paneli telefonda açın"
 
 msgid "remote.guide.4.body"
-msgstr "Telefonunuzun kamerasıyla bu kodu okutun ve PIN'inizi girin. Tarayıcının menüsünden \"Ana ekrana ekle\"yi seçerseniz BioKids telefonunuzda bir uygulama gibi durur."
+msgstr "Telefonunuzun kamerasıyla bu kodu okutun ve PIN'inizi girin. Tarayıcının menüsünden \"Ana ekrana ekle\"yi seçerseniz BioKids telefonunuzda bir uygulama gibi durur. Panel bir gün açılmazsa önce telefondaki Tailscale uygulamasını açıp bağlı (Connected) olduğuna bakın."
 
 msgid "remote.guide.4.waiting"
 msgstr "Önceki adımlar bitince panelin telefon adresi ve kodu burada görünecek."
@@ -2439,7 +2439,7 @@ msgid "help.remove.a"
 msgstr "Bir uçbirimde aşağıdakini yazın. Ailenizin kayıtları, siz silinmesini seçmedikçe bilgisayarda kalır."
 
 msgid "help.more"
-msgstr "Daha ayrıntılı bilgi: github.com/bilalgurkansanli/BioKids"
+msgstr "Kaynak kodu: github.com/bilalgurkansanli/BioKids"
 
 # Phone access from the settings (D-195)
 msgid "remote.intro"
@@ -2929,10 +2929,10 @@ msgid "guide.phone.step.2"
 msgstr "Açılan Tailscale sayfasında Google, Apple ya da Microsoft hesabınızla giriş yapın; hesabınız yoksa ücretsiz açılır. Tailscale bir onay isterse panelde çıkan düğmeye basıp onaylayın."
 
 msgid "guide.phone.step.3"
-msgstr "Telefonunuza App Store'dan ya da Google Play'den Tailscale uygulamasını kurun ve aynı hesapla giriş yapın. Telefon \"VPN bağlantısı ekle\" iznini sorduğunda izin verin."
+msgstr "Telefonunuza App Store'dan ya da Google Play'den Tailscale uygulamasını kurun, açın ve aynı hesapla giriş yapın. Telefon \"VPN bağlantısı ekle\" iznini sorduğunda izin verin, sonra uygulamadaki Bağlan (Connect) düğmesine basın: üstte \"Connected\" yazmalı."
 
 msgid "guide.phone.step.4"
-msgstr "Panelde çıkan karekodu telefonunuzun kamerasıyla okutun ve PIN'inizi girin."
+msgstr "Panelde çıkan karekodu telefonunuzun kamerasıyla okutun ve PIN'inizi girin. Panel açılmazsa önce telefondaki Tailscale uygulamasının bağlı olduğuna bakın."
 
 msgid "guide.phone.step.5"
 msgstr "İsterseniz tarayıcının menüsünden \"Ana ekrana ekle\"yi seçin: BioKids telefonunuzda bir uygulama gibi durur."
@@ -4155,3 +4155,72 @@ msgstr "Şu an açılamadı. Bir daha dener misin?"
 
 msgid "greeter.child_open"
 msgstr "Oturumun zaten açık. Bir büyüğün açabilir."
+
+msgid "switch.confirm"
+msgstr "Oturum değiştirilsin mi? Giriş ekranı açılır; sizin açık pencereleriniz olduğu gibi kalır."
+
+msgid "site.link"
+msgstr "Rehberler ve destek"
+
+msgid "site.title"
+msgstr "Rehberler ve destek"
+
+msgid "site.body"
+msgstr "BioKids'in sitesinde adım adım rehberler, kurulum anlatımları ve sorularınız için destek sayfası var."
+
+msgid "site.open"
+msgstr "biokids.bilalgurkansanli.com'u aç"
+
+msgid "assistant.download.title"
+msgstr "Asistan indiriliyor"
+
+msgid "assistant.download.starting"
+msgstr "Başlıyor…"
+
+msgid "assistant.download.keep_on"
+msgstr "İndirme arka planda sürüyor; bu sayfadan ayrılsanız da durmaz. Bitene kadar bilgisayarı kapatmayın ve internete bağlı tutun. Bitince bu sayfa kendiliğinden yenilenir."
+
+msgid "assistant.download.failed"
+msgstr "İndirme yarıda kaldı. İnternet bağlantısını kontrol edip \"Modelleri indir\"e tekrar basın; kaldığı yerden devam eder."
+
+msgid "appbar.grow"
+msgstr "Ekranı kaplasın"
+
+msgid "assistant.refuse.hurt"
+msgstr "Bunu bana anlattığın için çok cesursun. Kimsenin sana zarar vermeye hakkı yok ve bu senin suçun değil. Güvendiğin bir büyüğe, örneğin öğretmenine hemen anlat. 183'ü arayabilirsin; acil bir durumsa 112'yi ara."
+
+msgid "assistant.category.hurt"
+msgstr "Birinin ona zarar verdiğini anlatma"
+
+msgid "shell.watched"
+msgstr "{name} şu an ekranını görüyor"
+
+msgid "shell.watched_nameless"
+msgstr "Bir büyüğün şu an ekranını görüyor"
+
+msgid "appbar.watched"
+msgstr "{name} ekranını görüyor"
+
+msgid "preview.live.title"
+msgstr "Canlı ekran"
+
+msgid "preview.live.help"
+msgstr "Ekranı şu an olduğu gibi görürsünüz, saniyede bir kare. İzlediğiniz sürece {name} ekranında \"👁 {parent} şu an ekranını görüyor\" yazısını görür. Hiçbir görüntü kaydedilmez; sayfadan ayrılınca izleme biter."
+
+msgid "preview.live.start"
+msgstr "Canlı izle"
+
+msgid "preview.live.stop"
+msgstr "Durdur"
+
+msgid "preview.live.waiting"
+msgstr "Ekran bekleniyor…"
+
+msgid "preview.live.offline"
+msgstr "{name} şu an bilgisayarda değil. Oturum açınca ekran burada görünür."
+
+msgid "preview.live.alt"
+msgstr "Ekran: {name}"
+
+msgid "audit.action.live_view_started"
+msgstr "Ebeveyn çocuğun ekranını canlı izledi"

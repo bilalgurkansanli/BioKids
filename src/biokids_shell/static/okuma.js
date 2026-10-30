@@ -45,9 +45,19 @@
       });
   }
 
+  /* Each line said holds one of the page's six connections until it has
+   * been spoken (D-254). A 🔊 tapped again and again while Zio still talks
+   * would take them all, and the next tap - "home" too - would wait. */
+  var saying = 0;
+  var SAYING_MAX = 2;
+
   function say(text) {
     if (!text) return Promise.resolve({});
-    return post("/okuma/say", { text: text });
+    saying += 1;
+    return post("/okuma/say", { text: text }).then(function (result) {
+      saying -= 1;
+      return result;
+    });
   }
 
   function praise() {
@@ -111,7 +121,7 @@
 
   function hearButton(text) {
     return button("okuma__hear", "🔊", function () {
-      say(text);
+      if (saying < SAYING_MAX) say(text);
     });
   }
 

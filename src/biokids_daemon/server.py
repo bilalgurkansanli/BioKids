@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
 import os
+import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -23,7 +25,7 @@ from typing import TYPE_CHECKING, Any, cast
 from biokids_core import natural_voice
 from biokids_core.config import Config, get_config
 from biokids_core.errors import IpcError
-from biokids_core.ipc import Event, Op, Request, Response, decode_frame
+from biokids_core.ipc import Event, EventKind, Op, Request, Response, decode_frame
 from biokids_daemon.bus import EventBus
 from biokids_daemon.supervisor import Supervisor
 
@@ -83,6 +85,9 @@ class DaemonServer:
         self.config = config or get_config()
         self._server: asyncio.AbstractServer | None = None
         self._connections: set[asyncio.Task[None]] = set()
+        # When a parent last pressed the assistant's "Download": progress
+        # written before it belongs to an earlier download (D-254).
+        self._ai_setup_started = 0.0
 
     @property
     def socket_path(self) -> Path:
@@ -246,6 +251,7 @@ class DaemonServer:
             Op.REPORT_ACTIVITY: self._report_activity,
             Op.REQUEST_LAUNCH: self._request_launch,
             Op.ASSISTANT_STATUS: self._assistant_status,
+            Op.LIVE_VIEW: self._live_view,
             Op.ASSISTANT_SETUP: self._assistant_setup,
             Op.REMOTE_SETUP: self._remote_setup,
             Op.VOICE_SETUP: self._voice_setup,
@@ -384,7 +390,46 @@ class DaemonServer:
         from biokids_daemon.assistant import AssistantGate
 
         gate = AssistantGate(self.supervisor, self.bus, self.config)
-        return Response(id=request.id, ok=True, data=await gate.status())
+        data = await gate.status()
+        data["download"] = download_progress(
+            self.config.paths.ai_models_dir, started=self._ai_setup_started
+        )
+        return Response(id=request.id, ok=True, data=data)
+
+    async def _live_view(self, request: Request) -> Response:
+        """A parent's panel watching a child's screen (D-253).
+
+        Each ask keeps the watch going and answers the latest picture; the
+        child's launcher is told to take them when the watch starts, and again
+        if it has been quiet. `stop` ends it at once.
+        """
+        child_id = _int_arg(request, "child_id")
+        if child_id not in self.supervisor.children:
+            return Response.failure(request.id, "error.not_found")
+        live = self.supervisor.live
+        if request.args.get("stop"):
+            if live.stop(child_id):
+                self.bus.publish(EventKind.LIVE_VIEW, child_id=child_id, watching=False, by="")
+            return Response(id=request.id, ok=True, data={"watching": False})
+        watch, announce = live.ask(child_id, str(request.args.get("by", ""))[:40])
+        if announce:
+            self.bus.publish(EventKind.LIVE_VIEW, child_id=child_id, watching=True, by=watch.by)
+        online = any(
+            child["child_id"] == child_id and child.get("online")
+            for child in self.supervisor.status()["children"]
+        )
+        age = live.age(watch)
+        return Response(
+            id=request.id,
+            ok=True,
+            data={
+                "watching": True,
+                "started": announce and watch.at == 0.0,
+                "frame": watch.frame,
+                "age": None if age is None else round(age, 1),
+                "online": online,
+            },
+        )
 
     async def _assistant_setup(self, request: Request) -> Response:
         """Start the model download as its own unit, with the network the
@@ -392,6 +437,8 @@ class DaemonServer:
         the panel shows its progress from the assistant's status.
         """
         ok = await run_systemctl("start", "--no-block", AI_SETUP_UNIT)
+        if ok:
+            self._ai_setup_started = time.time()
         return Response(id=request.id, ok=ok, error="" if ok else "assistant.setup.failed")
 
     async def _remote_setup(self, request: Request) -> Response:
@@ -466,6 +513,44 @@ __all__ = ["DaemonServer", "decode_frame"]
 
 
 AI_SETUP_UNIT = "biokids-ai-setup.service"
+AI_PROGRESS_FILE = "download.json"
+"""Written by biokids-ai-setup as it downloads (biokids_ai.setup.PROGRESS_FILE)."""
+AI_PROGRESS_STALE_S = 15 * 60
+"""A download whose progress has not moved for this long has stopped."""
+
+
+def download_progress(
+    models_dir: Path, *, started: float = 0.0, now: float | None = None
+) -> dict[str, Any]:
+    """The assistant's model download as the panel shows it (D-254).
+
+    `state` is `starting` from the press of the button until the download unit
+    writes, then `running`, `done` or `failed`; {} when none was ever started.
+    Read here rather than through the assistant service, which may not be
+    running while its models are still on their way.
+    """
+    path = models_dir / AI_PROGRESS_FILE
+    now = time.time() if now is None else now
+    try:
+        written = path.stat().st_mtime
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"state": "starting", "percent": 0, "file": ""} if started else {}
+    if not isinstance(raw, dict):
+        return {}
+    if started and written < started:
+        return {"state": "starting", "percent": 0, "file": ""}
+    state = str(raw.get("state", ""))
+    if state == "running" and now - written > AI_PROGRESS_STALE_S:
+        state = "failed"
+    try:
+        done, total = int(raw.get("done") or 0), int(raw.get("total") or 0)
+    except (TypeError, ValueError):
+        done, total = 0, 0
+    percent = min(100, done * 100 // total) if total > 0 else 0
+    return {"state": state, "percent": percent, "file": str(raw.get("file", ""))}
+
+
 REMOTE_SETUP_UNIT = "biokids-remote-setup.service"
 VOICE_SETUP_UNIT = natural_voice.SETUP_UNIT
 

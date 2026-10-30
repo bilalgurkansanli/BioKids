@@ -23,3 +23,6 @@ usr/lib/biokids/biokids-greeter
 usr/share/biokids/greeter
 usr/share/biokids/extension
 usr/lib/biokids/biokids-child-login
+# The kite while a child's screen opens (D-254): sourced by Xsession, a no-op
+# in any session that is not a child's.
+debian/xsession/45biokids-splash etc/X11/Xsession.d/

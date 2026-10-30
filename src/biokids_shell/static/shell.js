@@ -895,6 +895,23 @@
       queueNote(data && data.note, true);
     });
 
+    /* A parent watching this screen, or no longer (D-253): the child sees it. */
+    source.addEventListener("live_view", function (event) {
+      var data = parse(event);
+      var pill = document.getElementById("watched");
+      var text = document.getElementById("watched-text");
+      if (!pill || !text || !data) return;
+      var strings = window.BIOKIDS_STRINGS || {};
+      if (data.watching) {
+        text.textContent = data.by
+          ? (strings.watched || "").replace("{name}", data.by)
+          : strings.watched_nameless || "";
+        pill.hidden = false;
+      } else {
+        pill.hidden = true;
+      }
+    });
+
     /* A parent answered (D-173). The banner always; Zio or Sio says it too
      * when the voices are on, through the ordinary speak event. A yes to more
      * time also arrives as a tick, which moves the ring. */
@@ -1112,11 +1129,35 @@
     });
   }
 
+  /* The screen's light, as the sound (D-254): a drag fired a request for every
+   * step, and each one could hold the X server - and with it every tap - for a
+   * moment on a real monitor. One request at a time now, at most every
+   * LIGHT_MS while the finger moves, and the level where it lifts. */
   var brightness = document.getElementById("brightness");
   if (brightness) {
+    var LIGHT_MS = 150;
+    var lightSent = brightness.value;
+    var lightBusy = false;
+    var lightTimer = null;
+
+    var sendLight = function () {
+      window.clearTimeout(lightTimer);
+      lightTimer = null;
+      if (lightBusy || brightness.value === lightSent) return;
+      lightSent = brightness.value;
+      lightBusy = true;
+      fetch("/device/brightness?value=" + lightSent, { method: "POST" })
+        .catch(function () {})
+        .then(function () {
+          lightBusy = false;
+          if (brightness.value !== lightSent) sendLight();
+        });
+    };
+
     brightness.addEventListener("input", function () {
-      fetch("/device/brightness?value=" + brightness.value, { method: "POST" }).catch(function () {});
+      if (lightTimer === null) lightTimer = window.setTimeout(sendLight, LIGHT_MS);
     });
+    brightness.addEventListener("change", sendLight);
   }
 
   connect();

@@ -1447,3 +1447,29 @@ svg {
   transition: none !important;
 }
 
+
+/* -------------------------------------------------------- watched (D-253) */
+/* While a parent watches this screen: a pill at the top, over everything,
+ * never in the way of a tap. */
+.watched {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: var(--bio-indigo, #4b54c8);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(34, 30, 28, .2);
+  pointer-events: none;
+}
+
+.watched[hidden] { display: none; }
+
+.watched__eye { font-size: 1.2rem; }

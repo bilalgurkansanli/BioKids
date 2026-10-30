@@ -1,0 +1,18 @@
+# BioKids (D-254): a child's screen opens on the kite, not on black.
+#
+# Sourced by /etc/X11/Xsession for every session; it does something only in a
+# child's, which has no desktop to draw a background while the launcher, a
+# browser, starts. The root window takes the launcher's colour at once, and
+# biokids_shell.splash shows the login screen's picture until the launcher's
+# window is there. Nothing here may stop the session: every step may fail.
+
+case " $(id -nG 2>/dev/null) " in
+    *" biokids-child "*)
+        if command -v xsetroot >/dev/null 2>&1; then
+            xsetroot -solid '#FBF7F2' >/dev/null 2>&1 || true
+        fi
+        if [ -x /usr/bin/python3 ]; then
+            /usr/bin/python3 -m biokids_shell.splash >/dev/null 2>&1 &
+        fi
+        ;;
+esac

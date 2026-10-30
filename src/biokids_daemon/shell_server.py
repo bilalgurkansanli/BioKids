@@ -272,6 +272,7 @@ class ShellServer:
             ShellOp.ASSISTANT_MORE: self._assistant_more,
             ShellOp.HEAR_ASSISTANT: self._hear_assistant,
             ShellOp.WARM_ASSISTANT: self._warm_assistant,
+            ShellOp.LIVE_FRAME: self._live_frame,
         }
 
     async def _ping(self, _caller: ShellCaller, request: Request) -> Response:
@@ -349,6 +350,12 @@ class ShellServer:
             unit=str(request.args.get("unit", "")),
         )
         return Response(id=request.id, ok=True)
+
+    async def _live_frame(self, caller: ShellCaller, request: Request) -> Response:
+        """A picture of the caller's own screen, while a parent watches it (D-253)."""
+        frame = str(request.args.get("frame", ""))
+        watching = self.supervisor.live.push(caller.child_id, frame)
+        return Response(id=request.id, ok=True, data={"watching": watching})
 
     async def _share_recording(self, caller: ShellCaller, request: Request) -> Response:
         raw = request.args.get("seconds", 0)

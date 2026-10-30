@@ -19,6 +19,10 @@ ExecStart=/usr/bin/biokids-voice
 Restart=always
 RestartSec=2s
 Environment=PYTHONUNBUFFERED=1
+# Piper uses every core while it makes a line it has not made before (D-254).
+# The launcher and the app the child is touching come first: a line a moment
+# later is better than a screen that stops answering while it is made.
+Nice=5
 
 # As in biokids-shell.service: a user unit gets what a user manager can
 # actually apply. PrivateTmp= is left out on purpose - the PipeWire and

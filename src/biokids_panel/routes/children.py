@@ -9,7 +9,7 @@ from collections.abc import Mapping, Sequence
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Form, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
@@ -280,6 +280,59 @@ def child_delete(
 
 
 # ------------------------------------------------------------ preview (D-239)
+
+
+@router.get("/children/{child_id}/live")
+def live_frame(view: View, child_id: int) -> Response:
+    """The child's screen as it is now, for the live view's script (D-253).
+
+    Each call keeps the watch going for a few seconds and answers the latest
+    picture; the child's screen says who is watching for as long as it lasts.
+    The first call of a watch is in the audit log, so the family can see that
+    and when a screen was watched; the pictures are kept nowhere.
+    """
+    if blocked := view.guard():
+        return blocked
+    child = repo.get_child(view.session, child_id)
+    if child is None:
+        return view.not_found()
+    parent = view.state.parent
+    try:
+        response = view.ctx.client.call(
+            Op.LIVE_VIEW,
+            child_id=child_id,
+            by=parent.display_name if parent is not None else "",
+        )
+    except (IpcError, OSError) as exc:
+        log.warning("the daemon did not answer live_view: %s", exc)
+        return JSONResponse({"ok": False}, status_code=503)
+    data = dict(response.data) if response.ok else {}
+    if data.get("started"):
+        repo.audit(
+            view.session,
+            actor=view.actor,
+            action="live_view_started",
+            target=f"child:{child_id}",
+        )
+        view.session.commit()
+    return JSONResponse(
+        {
+            "ok": response.ok,
+            "frame": str(data.get("frame", "")),
+            "online": bool(data.get("online")),
+            "age": data.get("age"),
+        },
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@router.post("/children/{child_id}/live/stop")
+def live_stop(view: View, child_id: int, csrf_token: Annotated[str, Form()] = "") -> Response:
+    """The parent pressed "stop": the child's sign goes at once (D-253)."""
+    if blocked := view.guard_form(csrf_token, f"/children/{child_id}/preview"):
+        return blocked
+    _call_daemon(view.ctx, Op.LIVE_VIEW, child_id=child_id, stop=True)
+    return JSONResponse({"ok": True})
 
 
 @router.get("/children/{child_id}/preview", response_class=HTMLResponse)
@@ -741,19 +794,50 @@ def assistant_save(
 def assistant_download(
     view: View, child_id: int, csrf_token: Annotated[str, Form()] = ""
 ) -> Response:
-    """The one-time model download (D-165), run by the daemon as its own unit."""
+    """The one-time model download (D-165), run by the daemon as its own unit.
+
+    A parent who downloads the assistant from a child's page wants it for that
+    child (D-254): it is turned on, with its microphone, and works as soon as
+    the models are here. Before, the box stayed empty and nothing happened.
+    """
     if blocked := view.guard_form(csrf_token, f"/children/{child_id}/assistant?error=csrf"):
         return blocked
+    session = view.session
+    if repo.get_child(session, child_id) is None:
+        return see_other("/children?error=1")
+    policy = repo.get_or_create_policy(session, child_id)
+    turned_on = not policy.assistant_enabled
+    if turned_on:
+        policy.assistant_enabled = True
+        policy.assistant_voice = True
     repo.audit(
-        view.session,
+        session,
         actor=view.actor,
         action="assistant_download",
         target=f"child:{child_id}",
+        detail={"turned_on": turned_on},
     )
-    view.session.commit()
+    session.commit()
+    if turned_on:
+        _call_daemon(view.ctx, Op.RELOAD)
     if not _call_daemon(view.ctx, Op.ASSISTANT_SETUP):
         return see_other(f"/children/{child_id}/assistant?error=daemon")
     return see_other(f"/children/{child_id}/assistant?saved=download")
+
+
+@router.get("/assistant/download")
+def assistant_download_progress(view: View) -> Response:
+    """How far the models are, for the progress bar's script (D-254)."""
+    if blocked := view.guard():
+        return blocked
+    download = _assistant_status(view.ctx).get("download") or {}
+    return JSONResponse(
+        {
+            "state": str(download.get("state", "")),
+            "percent": int(download.get("percent", 0)),
+        },
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.post("/alerts/{alert_id}/dismiss")

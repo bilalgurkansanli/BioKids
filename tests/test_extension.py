@@ -565,3 +565,18 @@ def test_the_default_search_words_are_in_the_package_itself(tmp_path: Path) -> N
     assert allow.match("http://127.0.0.1:7978/")
     assert not allow.match("http://127.0.0.1:7979/")
     assert not allow.match("http://127.0.0.1:7877/search?pattern=x"), "Vikipedi stays filtered"
+
+
+# ------------------------------------------------ one tab per site (D-254)
+
+
+def test_a_site_tapped_again_brings_its_tab_back() -> None:
+    """A web tile opens its site in a new tab; one already open comes back instead,
+    so YouTube Kids carries on where the child paused it. Only for a tab the
+    launcher opened (no opener): a link a page opens in a new tab is the page's."""
+    source = BACKGROUND_JS.read_text(encoding="utf-8")
+    assert "tab.openerTabId === undefined" in source
+    assert "chrome.tabs.remove(details.tabId)" in source
+    assert "chrome.tabs.update(other, { active: true })" in source
+    version = extension_pack.read_version(EXTENSION_DIR)
+    assert tuple(int(part) for part in version.split(".")) >= (1, 4, 0)

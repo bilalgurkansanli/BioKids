@@ -206,6 +206,8 @@ by hours. `CLOCK_BOOTTIME` is monotonic and includes time spent suspended, so:
 
 ```python
 import time
+
+
 def now_boot() -> float:
     return time.clock_gettime(time.CLOCK_BOOTTIME)
 ```
@@ -369,17 +371,16 @@ Pure, side-effect-free, exhaustively tested.
 @dataclass(frozen=True)
 class Decision:
     allow: bool
-    action: Literal["none","warn","lock","logout","poweroff","timeout","block"]
-    reason_code: str          # i18n key, never a human sentence
+    action: Literal["none", "warn", "lock", "logout", "poweroff", "timeout", "block"]
+    reason_code: str  # i18n key, never a human sentence
     speak: SpeechRequest | None
     remaining_seconds: int
 ```
 
 ```python
-def evaluate(policy: ChildPolicy,
-             state: LedgerState,
-             ctx: ActivityContext,
-             now_wall: datetime) -> Decision: ...
+def evaluate(
+    policy: ChildPolicy, state: LedgerState, ctx: ActivityContext, now_wall: datetime
+) -> Decision: ...
 ```
 
 Precedence, highest first:

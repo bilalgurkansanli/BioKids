@@ -188,6 +188,7 @@ def base_context(
         "pending_requests": pending,
         "avatars": AVATARS,
         "version": _version(),
+        "site_url": SITE_URL,
         "flash": flash_for(request, tr),
         "at_the_machine": at_the_machine(request),
     }
@@ -270,6 +271,11 @@ def request_locale(request: Request, session: Session) -> str:
 
 def request_translator(request: Request, session: Session) -> Translator:
     return translator(request_locale(request, session))
+
+
+#: BioKids' own site (D-254): guides, how to install, and the address for
+#: support. A link the parent follows; the panel never fetches anything there.
+SITE_URL = "https://biokids.bilalgurkansanli.com"
 
 
 def _version() -> str:

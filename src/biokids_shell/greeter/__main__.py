@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import logging
 import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -74,6 +76,26 @@ entry { font-size: 22px; min-height: 46px; min-width: 320px; }
 }
 .message { font-size: 20px; font-weight: bold; color: #B4320F; }
 """
+
+
+ROOT_COLOUR = "#FBF7F2"
+"""The launcher's background, for the root window while a session starts."""
+
+
+def paint_root() -> None:
+    """The root window in the launcher's colour; nothing when xsetroot is missing."""
+    if shutil.which("xsetroot") is None:
+        return
+    try:
+        subprocess.run(
+            ["xsetroot", "-solid", ROOT_COLOUR],
+            timeout=3,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except (OSError, subprocess.SubprocessError):
+        log.debug("xsetroot failed", exc_info=True)
 
 
 def main() -> int:
@@ -330,6 +352,9 @@ class LoginScreen:
 
         if greeter.get_is_authenticated():
             self.message.set_text(self.tr("greeter.opening"))
+            # The screen between this and the session's own is the root window:
+            # the launcher's colour rather than X's black (D-254).
+            paint_root()
             try:
                 greeter.start_session_sync(None)
             except GLib.Error as error:

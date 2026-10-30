@@ -61,6 +61,7 @@ from biokids_shell.appbar import (
     CLOSE_GLYPH,
     EXIT_NOT_FOUND,
     EXIT_UNAVAILABLE,
+    GROW_GLYPH,
     GTK_FRAME_EXTENTS,
     HOME_GLYPH,
     INFO_PX,
@@ -77,6 +78,7 @@ from biokids_shell.appbar import (
     TRACK_PX,
     VOLUME_MAX,
     VOLUME_STEP,
+    WATCHED_GLYPH,
     AppTarget,
     AudioState,
     BarTier,
@@ -104,6 +106,7 @@ from biokids_shell.appbar import (
     is_kiosk,
     level_at,
     lost_maximize,
+    offers_grow,
     read_audio,
     scope_of_pid,
     set_volume,
@@ -112,6 +115,7 @@ from biokids_shell.appbar import (
     stop_scope,
     time_left,
     visible_width,
+    watched_by,
     width_to_place,
     window_extents,
 )
@@ -310,6 +314,7 @@ class AppBarUi:
         window.connect("size-allocate", self._allocated)
 
         self.home = self._button(HOME_GLYPH, "home", "appbar.home", self._on_home)
+        self.grow = self._button(GROW_GLYPH, "grow", "appbar.grow", self._on_grow)
         self.info = self._build_info()
         self.quieter = self._button(
             QUIETER_GLYPH, "volume", "appbar.quieter", lambda _b: self._on_volume(louder=False)
@@ -326,6 +331,7 @@ class AppBarUi:
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         for widget in (
             self.home,
+            self.grow,
             self.info,
             self.quieter,
             self.slider_box,
@@ -348,6 +354,8 @@ class AppBarUi:
         self.time_label.hide()
         self.clock_label.hide()
         self.info.set_visible(False)
+        self.grow.set_visible(False)
+        self._grow_shown = False
         self._show_audio(NO_SOUND)
         return window
 
@@ -430,6 +438,7 @@ class AppBarUi:
             self._show_audio(NO_SOUND)
         now = self.now()
         self._fill(active, info, now)
+        self._show_grow(active)
         if self.follower.hiding(info.xid, now):
             # Being moved or resized: the bar comes back where it stops.
             self._hide()
@@ -551,6 +560,7 @@ class AppBarUi:
         # then would give its old size from its cache. Measured afresh instead.
         for widget in (
             self.home,
+            self.grow,
             self.info,
             self.time_label,
             self.clock_label,
@@ -786,6 +796,38 @@ class AppBarUi:
             kiosk.activate(stamp)
         self._hide()
 
+    # ---------------------------------------------------------------- grow
+
+    def _show_grow(self, active: Any) -> None:
+        """⛶ over a window that does not fill the screen, and only there (D-254)."""
+        try:
+            wanted = offers_grow(
+                maximized=bool(active.is_maximized()), fullscreen=bool(active.is_fullscreen())
+            )
+        except (AttributeError, TypeError, ValueError):
+            wanted = False
+        if getattr(self, "_grow_shown", False) != wanted:
+            self._grow_shown = wanted
+            self.grow.set_visible(wanted)
+            # As for a new tier: measured afresh, and the bar placed by its new width.
+            self.window.resize(1, 1)
+
+    def _on_grow(self, _button: Any) -> None:
+        """Let the window in front fill the screen: maximised when it can be,
+        full screen when the app keeps its own size (D-254). The bar goes, and
+        comes back on the window's new frame."""
+        active = self.screen.get_active_window()
+        if active is None or not is_app_window(window_info(active)):
+            return
+        if self._can_maximize(active):
+            log.info("window %#x maximised from the bar", active.get_xid())
+            active.maximize()
+        else:
+            log.info("window %#x made full screen from the bar", active.get_xid())
+            active.set_fullscreen(True)
+        self._hide()
+        self._settle_later(SETTLE_MS)
+
     # --------------------------------------------------------------- sound
 
     def _on_volume(self, *, louder: bool) -> None:
@@ -932,7 +974,8 @@ class AppBarUi:
             self.time_label.hide()
         else:
             minutes = self.tr("shell.remaining_minutes", minutes=left.minutes)
-            text = f"{TIME_GLYPH} {minutes}"
+            watcher = watched_by(state)
+            text = f"{TIME_GLYPH if watcher is None else WATCHED_GLYPH} {minutes}"
             if text != self._time_text:
                 self._time_text = text
                 self.time_label.set_text(text)
@@ -940,8 +983,12 @@ class AppBarUi:
                 # the bar may get narrower, which a GTK 3 window does not by
                 # itself.
                 resized = True
-            self.time_label.get_accessible().set_name(
-                f"{self.tr('shell.remaining_label')}: {minutes}"
+            spoken = f"{self.tr('shell.remaining_label')}: {minutes}"
+            if watcher is not None:
+                spoken += ". " + self.tr("appbar.watched", name=watcher)
+            self.time_label.get_accessible().set_name(spoken)
+            self.time_label.set_tooltip_text(
+                None if watcher is None else self.tr("appbar.watched", name=watcher)
             )
             if left.tone is not TimeTone.OK:
                 context.add_class(left.tone.value)

@@ -1,3 +1,24 @@
+biokids (2.0.0-1) trixie; urgency=medium
+
+  * BioKids 2.0.0: the packages and the ISO, after the owner installed the
+    image beside Windows on a real computer (D-249 to D-255).
+  * A parent can watch the child's screen live from the panel or the phone;
+    the child's screen says who is watching for as long as it lasts, and no
+    picture is kept (D-253). biokids-shell depends on python3-pil.
+  * Taps no longer come late: brightness is set one change at a time
+    without probing the monitors, the home screen never waits for the sound
+    and light tools, and the read-aloud buttons leave the page's connections
+    free (D-254).
+  * A site tapped again comes back where the child left it (extension
+    1.4.0), and the footer lists the open sites; ⛶ on the app bar; the
+    kite instead of a black screen as a child's session starts (D-254).
+  * The assistant answers who made it, gives 183 and 112 to a child who says
+    someone hurts them, and shows its download's progress (D-254).
+  * BioKids' own look in the boot menu and the installer (D-255); the boot
+    menu shows beside a Windows installed for BIOS too (D-254).
+
+ -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Fri, 30 Oct 2026 12:00:00 +0300
+
 biokids (1.5.0-1) trixie; urgency=medium
 
   * BioKids 1.5.0: the packages, from the project's own APT repository.
