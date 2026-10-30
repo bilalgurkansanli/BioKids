@@ -315,6 +315,62 @@ def test_an_interrupted_download_resumes(tmp_path: Path) -> None:
     assert (tmp_path / "test.gguf").read_bytes() == data
 
 
+def test_the_download_writes_its_progress_for_the_panel(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    chat_data, stt_data = b"c" * (3 << 22), b"s" * 100
+    chat = replace(_model(chat_data), key="chat-test", role="chat", filename="chat.gguf")
+    stt = replace(_model(stt_data), key="stt-test", role="stt", filename="stt.bin")
+    payloads = {chat.url: chat_data, stt.url: stt_data}
+    written: list[dict[str, Any]] = []
+    real_write = setup.write_progress
+
+    def spy(models_dir: Path, **progress: object) -> None:
+        written.append(dict(progress))
+        real_write(models_dir, **progress)
+
+    monkeypatch.setattr(setup, "recommend", lambda _ram: {"chat": chat, "stt": stt})
+    monkeypatch.setattr(setup, "physical_ram_gb", lambda: 16.0)
+    monkeypatch.setattr(setup, "write_progress", spy)
+    real_download = setup.download
+
+    def offline_download(model: models.ModelFile, models_dir: Path, **kwargs: Any) -> Path:
+        opener = lambda request: FakeResponse(payloads[request.full_url])  # noqa: E731
+        return real_download(model, models_dir, opener=opener, **kwargs)
+
+    monkeypatch.setattr(setup, "download", offline_download)
+
+    assert setup.main(["--models-dir", str(tmp_path), "download"]) == 0
+
+    total = len(chat_data) + len(stt_data)
+    assert written[0] == {"state": "running", "done": 0, "total": total, "file": ""}
+    middle = [p for p in written[1:-1] if p["state"] == "running"]
+    assert middle and all(0 < int(p["done"]) <= len(chat_data) for p in middle)
+    assert written[-1] == {"state": "done", "done": total, "total": total, "file": ""}
+    assert setup.read_progress(tmp_path)["state"] == "done"
+
+
+def test_a_failed_download_says_so_in_its_progress(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    chat = replace(_model(b"weights"), key="chat-test", role="chat", filename="chat.gguf")
+    monkeypatch.setattr(setup, "recommend", lambda _ram: {"chat": chat})
+    monkeypatch.setattr(setup, "physical_ram_gb", lambda: 16.0)
+
+    real_download = setup.download
+
+    def offline(_request: Any) -> FakeResponse:
+        raise OSError("no network")
+
+    def failing_download(model: models.ModelFile, models_dir: Path, **kwargs: Any) -> Path:
+        return real_download(model, models_dir, opener=offline, **kwargs)
+
+    monkeypatch.setattr(setup, "download", failing_download)
+    assert setup.main(["--models-dir", str(tmp_path), "download"]) == 1
+    assert setup.read_progress(tmp_path)["state"] == "failed"
+    assert setup.read_progress(tmp_path / "missing") == {}
+
+
 def test_the_selection_names_what_the_service_loads(tmp_path: Path) -> None:
     setup.write_selection(tmp_path, {"chat": "gemma-4-e2b"})
     assert setup.read_selection(tmp_path) == {"chat": "gemma-4-e2b"}

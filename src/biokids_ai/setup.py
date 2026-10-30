@@ -34,6 +34,12 @@ log = logging.getLogger("biokids-ai-setup")
 
 MODELS_DIR: Final = Path("/var/lib/biokids-ai/models")
 SELECTION_FILE: Final = "selection.json"
+PROGRESS_FILE: Final = "download.json"
+"""How far the download is, for the panel's progress bar (D-254): the state
+(`running`, `done`, `failed`), the bytes fetched and to fetch over every file of
+this download, and the file being fetched. The daemon reads it."""
+PROGRESS_EVERY: Final = 1 << 23
+"""Rewrite the progress file after this many more bytes (8 MiB)."""
 CHUNK: Final = 1 << 20
 TIMEOUT_S: Final = 60
 
@@ -69,6 +75,23 @@ def write_selection(models_dir: Path, selection: dict[str, str]) -> None:
     partial = models_dir / (SELECTION_FILE + ".part")
     partial.write_text(json.dumps(selection, indent=2) + "\n", encoding="utf-8")
     partial.replace(models_dir / SELECTION_FILE)
+
+
+def write_progress(models_dir: Path, **progress: object) -> None:
+    """The progress file, replaced whole so that a reader never sees half of it."""
+    models_dir.mkdir(parents=True, exist_ok=True)
+    partial = models_dir / (PROGRESS_FILE + ".part")
+    partial.write_text(json.dumps(progress) + "\n", encoding="utf-8")
+    partial.replace(models_dir / PROGRESS_FILE)
+
+
+def read_progress(models_dir: Path) -> dict[str, Any]:
+    """The last progress written, or {} when no download was ever started."""
+    try:
+        data = json.loads((models_dir / PROGRESS_FILE).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def download(
@@ -180,23 +203,58 @@ def main(argv: list[str] | None = None) -> int:
         return 3
 
     selection = read_selection(args.models_dir)
+    # The bar covers the whole download: what is already here, whole or in
+    # part, counts as done from the start.
+    total = sum(model.size for model in chosen.values())
+    done_before = 0
+    for model in chosen.values():
+        partial = args.models_dir / (model.filename + ".part")
+        if installed(model, args.models_dir):
+            done_before += model.size
+        elif partial.exists():
+            done_before += min(partial.stat().st_size, model.size)
+    write_progress(args.models_dir, state="running", done=done_before, total=total, file="")
+    finished = 0
     for role, model in chosen.items():
         log.info("downloading %s (%d MB, %s)", model.label, model.size_mb, model.licence)
-        last = [0]
+        last = [0, 0]
 
-        def report(done: int, total: int, last: list[int] = last) -> None:
-            percent = done * 100 // max(total, 1)
+        def report(
+            done: int,
+            size: int,
+            last: list[int] = last,
+            model: ModelFile = model,
+            finished: int = finished,
+        ) -> None:
+            percent = done * 100 // max(size, 1)
             if percent >= last[0] + 5:
                 last[0] = percent
                 log.info("  %d%%", percent)
+            if done - last[1] >= PROGRESS_EVERY:
+                last[1] = done
+                write_progress(
+                    args.models_dir,
+                    state="running",
+                    done=finished + done,
+                    total=total,
+                    file=model.label,
+                )
 
+        already = installed(model, args.models_dir)
         try:
             download(model, args.models_dir, progress=report)
         except (OSError, urllib.error.URLError, ValueError) as exc:
             log.error("%s could not be downloaded: %s", model.filename, exc)
+            write_progress(
+                args.models_dir, state="failed", done=finished, total=total, file=model.label
+            )
             return 1
+        finished += model.size
+        if already:
+            log.info("  already here")
         selection[role] = model.key
         write_selection(args.models_dir, selection)
+    write_progress(args.models_dir, state="done", done=total, total=total, file="")
     log.info("done")
     return 0
 

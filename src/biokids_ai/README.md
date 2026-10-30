@@ -11,6 +11,10 @@ each file pinned by SHA-256 (`models.py`); none is ever shipped in a package.
 
 1. **The word list** (`safety.py`, `data/lexicon.toml`): Turkish and English, folded
    for spelling tricks. A hit is refused at once, with a sentence people wrote.
+   A question about the helper itself or BioKids - who made it, its name, what
+   BioKids is - is then answered with sentences people wrote (`identity.py`), in
+   the question's language, without the classifier or the model, which does not
+   know; each sentence still passes the word list on its way out.
 2. **The classifier** (`prompts.CLASSIFY_SYSTEM`, `llm.py`): the same model, asked
    only whether a kind teacher would answer this for a child of this age, as JSON
    with a fixed set of categories and worked examples (few-shot). Unsure means no.

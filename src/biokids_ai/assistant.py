@@ -12,6 +12,11 @@ Any stage that cannot run ends the question with "I'm resting, ask me again
 later", never with an unchecked answer (principle 3): a model that cannot be
 asked whether a question is safe is not asked the question either.
 
+A question about the helper itself or BioKids - who made it, its name, what
+BioKids is - skips steps 2 and 3: the model does not know, so it is answered
+with sentences people wrote (`identity.py`), released through step 4 like any
+answer.
+
 The answer is released sentence by sentence (D-216): the model writes three
 tokens a second on a modest machine, and a child should not wait half a minute
 for the first word. Steps 1 and 2 still run before anything is shown, and
@@ -33,7 +38,7 @@ from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import dataclass, replace
 from typing import Final, Protocol
 
-from biokids_ai import arithmetic, prompts
+from biokids_ai import arithmetic, identity, prompts
 from biokids_ai.llm import ModelError
 from biokids_ai.safety import Lexicon, fold, tokens
 from biokids_ai.sentences import SentenceSplitter
@@ -46,6 +51,7 @@ _CONTROL: Final = re.compile(r"[\x00-\x1f\x7f]")
 #: Refusal sentence per category; anything not listed uses "default".
 REFUSAL_KEYS: Final = {
     "self_harm": "assistant.refuse.self_harm",
+    "hurt": "assistant.refuse.hurt",
     "personal_info": "assistant.refuse.personal_info",
     "rude": "assistant.refuse.rude",
     "beliefs": "assistant.refuse.family",
@@ -55,9 +61,10 @@ REFUSAL_KEYS: Final = {
 CUT_KEY: Final = "assistant.refuse.cut"
 """How an answer ends when the word list stopped it after some of it was shown
 (D-216): that is as much as Zio can tell, and a grown-up can tell the rest."""
-OWN_ENDING: Final = frozenset({"self_harm", "unavailable"})
+OWN_ENDING: Final = frozenset({"self_harm", "hurt", "unavailable"})
 """Categories that keep their own sentence even part-way through an answer:
-self-harm's gives 183 and 112, and "I'm resting" says why the answer stopped."""
+self-harm's and a hurt child's give 183 and 112 (D-254), and "I'm resting"
+says why the answer stopped."""
 
 
 #: Words a child greets or thanks with. A message made only of these is small
@@ -273,7 +280,14 @@ class Assistant:
             log.info("question stopped by the word list (%s)", hit.category)
             return refuse(hit.category, "lexicon")
 
-        if is_small_talk(question):
+        # Who made the helper, its name, what BioKids is: answered with
+        # sentences people wrote (`identity.py`), since a small model does not
+        # know. Only a whole message that is one of these questions, so, like
+        # a greeting, it has nothing for the classifier to judge. Not in
+        # English with Sio, where "What is your name?" is a turn to talk.
+        about = identity.answer(question, persona) if conversation is None else None
+
+        if about is not None or is_small_talk(question):
             category = "ok"
         else:
             try:
@@ -303,6 +317,9 @@ class Assistant:
                 ),
             )
             context = ""
+        elif about is not None:
+            log.info("a question about the helper (%s), answered as written", about.topic)
+            return self._recite(about.sentences, on_sentence or _ignore)
         else:
             context = await self._look_up(question, locale) if look_up else ""
             # A sum in the question is worked out, not guessed (D-248), and
@@ -352,6 +369,14 @@ class Assistant:
         if not released:
             return refuse("unavailable", "error")
         return answered(released)
+
+    def _recite(self, sentences: Sequence[str], on_sentence: SentenceSink) -> Reply:
+        """Sentences people wrote, released as the model's are: one at a time,
+        each through the word list first, so the launcher shows them and Zio
+        reads them exactly as an answer the model wrote (D-216)."""
+        released: list[str] = []
+        stopped = self._release(list(sentences), released, on_sentence)
+        return stopped if stopped is not None else answered(released)
 
     def _release(
         self, candidates: list[str], released: list[str], on_sentence: SentenceSink

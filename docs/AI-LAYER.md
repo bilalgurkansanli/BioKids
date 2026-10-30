@@ -291,6 +291,18 @@ launcher (child)  --shell.sock-->  daemon  --ai.sock-->  biokids-ai  --llm.sock-
   addresses) → small talk skips the classifier → classifier, temperature 0, output
   constrained to a JSON enum → answer, streamed → lexicon on each sentence. Any refusal
   is a fixed catalog sentence (`assistant.refuse.*`); the model never writes one.
+* **Questions about itself (`biokids_ai/identity.py`).** Asked "BioKids'i kim yaptı?",
+  the small model did not say: it knows nothing of BioKids. Who made the helper or
+  BioKids, its name, who it is and what BioKids is are recognised in code, in Turkish
+  and English, and answered with sentences people wrote, in the question's language:
+  Sor Bana ("Ask Me"), BioKids' helper; made by Bilal Gürkan Şanlı (BioStudio); free
+  and open source; on this computer, with no internet; Zio and Sio its voices. Only a
+  whole message that is one of these questions is recognised, a greeting or the
+  helper's name around it at most, so like small talk it skips the classifier; the
+  word list still runs first, and the sentences are released one at a time through
+  it, as a model's are. "BioKids'te oyun var mı?" and "Bu resmi kim yaptı?" are not
+  recognised, and nothing is in English with Sio. One line of the same facts is in
+  the answer's instructions, for the questions the matcher misses.
 * **Streaming (D-216).** The answer is asked for with `stream: true` and read as
   server-sent events (`localhttp.post_events`), the whole stream under the answer's
   old 120-second deadline. `sentences.SentenceSplitter` releases a sentence once the
@@ -378,7 +390,9 @@ leetspeak, phrases, false friends that must pass); `tests/test_ai_assistant.py` 
 pipeline with a fake model, the gate, the downloader and the runtime;
 `tests/test_ai_streaming.py` the sentence splitter, the per-sentence word list, a
 refusal and a dead model part-way, the stream's deadline, the service's `ask`/`more`,
-the gate's open answers and the launcher's one-sentence-at-a-time speech. Answer quality
+the gate's open answers and the launcher's one-sentence-at-a-time speech;
+`tests/test_ai_identity.py` the questions about itself, and what must not be taken
+for one. Answer quality
 is checked by hand on the VM with the prompts from the shared folder; it is not a CI
 test, because a model's wording is not a contract.
 
