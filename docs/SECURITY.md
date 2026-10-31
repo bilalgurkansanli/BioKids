@@ -144,7 +144,7 @@ under the archive's own `piper/` (D-196).
 | Recovery code, one per parent | argon2id of the normalised 8-word phrase |
 | SMTP password | encrypted with a key in `/etc/biokids/secret.key` (0600 root), with the rest of the mail settings (D-177) |
 | Browser extension signing key | generated on the machine at install, `/var/lib/biokids/extension-key.pem`, 0600; never in the repository (D-187) |
-| APT repo signing key | GitHub Secrets only. Never in the repo, never on the device |
+| APT repo signing key | GitHub Secrets and the owner's offline backup, made by `dev/make_release_keys.sh` (D-257). Never in the repo, never on the device |
 
 No secret is ever logged, echoed in an error message, or included in a data export.
 The export feature explicitly redacts them.
@@ -197,7 +197,7 @@ entry in `DECISIONS.md` and a note in the README.**
 | Destination | Purpose | Optional? |
 |---|---|---|
 | `deb.debian.org`, `security.debian.org` | OS updates | no |
-| our APT repo | BioKids updates | no |
+| our APT repo, `apt.biokids.bilalgurkansanli.com` on GitHub Pages | BioKids updates, signed by the key `biokids-archive-keyring` ships | no on a computer installed from the ISO, whose installer adds it (D-257); elsewhere only once the parent has added it |
 | the configured DNS upstream | resolution | no (can be a LAN resolver) |
 | blocklist source URLs | weekly refresh | **not built**: the lists ship inside biokids-core and update with it (D-167) |
 | the parent's own SMTP server | notifications | yes, opt-in |

@@ -2394,3 +2394,34 @@ has its own: `update-grub` still found desktop-base's picture.
   the image removes it.
 - Left as Debian's: the installer's own words and colours, the firmware's "debian" boot
   entry and the console's `/etc/issue`.
+
+**D-257 [claude] The APT archive in a repository of its own; the ISO points apt at it.**
+(2026-10-31)
+- **`BioKids-apt`**, public, holds the archive on its `gh-pages` branch, and its Pages
+  serve `apt.biokids.bilalgurkansanli.com`. The owner chose it over the archive on this
+  repository's `gh-pages` (the plan since D-28): every clone of this repository would
+  otherwise download every package ever published, and the archive does not wait on this
+  repository's visibility. `release.yml` pushes there with a deploy key that can write
+  to `BioKids-apt` only (secret `APT_DEPLOY_KEY`), to GitHub's pinned host key, and
+  removes it with the signing key. `BioKids-apt`'s `index.html` is a page with the two
+  commands for a browser.
+- **The keys are made once by `dev/make_release_keys.sh`** on the owner's computer, in a
+  folder outside any repository with a GnuPG home of its own: the archive key (RSA 4096,
+  signing only, no expiry, with its revocation certificate) and the deploy key. The
+  owner puts the private halves in GitHub Secrets and an offline backup, and deletes the
+  folder; only the public key and its fingerprint come into the repository. No expiry,
+  because a key that expires stops `apt update` on every family's computer on that day
+  unless someone remembers it; a stolen key is withdrawn with the revocation certificate
+  and a new `biokids-archive-keyring`.
+- **The ISO carries `biokids-archive-keyring`, and the installer's last step writes
+  `/etc/apt/sources.list.d/biokids.sources`** with `Signed-By` that keyring, beside
+  Debian's sources (D-252). Without it a computer installed from the ISO got Debian's
+  updates and never BioKids'. The keyring package itself still adds no source (a person
+  types the two commands); the installer of an image that is BioKids is the place where
+  the choice was made. Only where the key is installed, so an image built without it
+  leaves apt no source it cannot verify.
+- **The release's notes are `CHANGELOG.md`'s section for the version**; only a version
+  with none gets them from the commit log. **The ISO is named in `iso/published.toml`**
+  (version, file name, SHA256, archive.org item) before the tag: its checksum goes into
+  the signed `SHA256SUMS`, so the copy on archive.org is checked against the release's
+  signature, and its link into the notes.
