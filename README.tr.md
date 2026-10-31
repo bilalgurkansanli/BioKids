@@ -278,7 +278,9 @@ derlemek için: [`docs/VM-RUNBOOK.md`](docs/VM-RUNBOOK.md) §1.
 
 `biokids-desktop` çocuk kurulumunun tamamıdır: BioKids, Xfce, LightDM ve uygulama
 kataloğu. Yalnızca `biokids`, BioKids'i var olan masaüstünüze kurar. Asistan ayrı bir
-pakettir (`biokids-ai`) ve hiçbir zaman kendiliğinden kurulmaz.
+pakettir (`biokids-ai`) ve hiçbir zaman kendiliğinden kurulmaz. Çalışma ortamı, Debian 13
+için yeniden derlenmiş `llama.cpp` ve `whisper.cpp`, bu depoya 2.0.1 ile girecek; o zamana
+kadar asistan ISO ile gelir.
 
 ### Gereksinimler
 

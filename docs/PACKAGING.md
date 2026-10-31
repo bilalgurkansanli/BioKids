@@ -61,11 +61,20 @@ deploy key.
 https://apt.biokids.bilalgurkansanli.com/
   dists/trixie/{main}/binary-amd64/
   pool/main/b/biokids/
+  pool/main/{g/ggml,l/llama.cpp,w/whisper.cpp}/   the assistant's runtime
   KEY.gpg
 ```
 
 Distributions: `trixie` (stable releases) and `trixie-testing` (pre-releases from
 `main`). Nobody is pointed at `trixie-testing` by default.
+
+**The assistant's runtime** - `llama.cpp` and `whisper.cpp` rebuilt for trixie, and
+`libggml0` from trixie-backports - is not in Debian 13, and `biokids-ai` depends on it.
+Its .debs, the ones the ISO carries (`dist/ai`), are kept in `BioKids-apt`'s `main`
+branch, `extra/trixie`, put there by hand; `release.yml` adds to the archive only those
+whose SHA256 `debian/archive-extra.sha256sums` pins, and fails on one that does not match
+(D-257). A new build of them goes into `extra/trixie` and its lines into the pin file,
+in the same release.
 
 Installation, as documented in the README:
 

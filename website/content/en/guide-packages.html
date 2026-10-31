@@ -53,6 +53,9 @@
 
 <h2 id="assistant">If you want the assistant too</h2>
 <p>Ask Me needs newer versions of <code>llama.cpp</code> and <code>whisper.cpp</code> than Debian 13 ships; they come from the BioKids repository. So <code>biokids-ai</code> cannot be installed on a plain Debian 13 without the BioKids repository added. On the ISO, everything is already in place.</p>
+{% call m.callout('warn', 'The assistant comes with the ISO for now') %}
+<p>The assistant's runtime joins the APT repository with the next release (2.0.1). Until then <code>biokids-ai</code> cannot be installed this way; for a computer that should have the assistant, follow the <a href="{{ url('guide-install') }}">ISO install guide</a>.</p>
+{% endcall %}
 {{ m.code('sudo apt install biokids-ai', 'Terminal') }}
 <p>Then download the model in the panel and turn it on for a child: <a href="{{ url('guide-assistant') }}">Ask Me guide</a>.</p>
 

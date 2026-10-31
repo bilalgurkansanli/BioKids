@@ -53,6 +53,9 @@
 
 <h2 id="asistan">Asistanı da kurmak isterseniz</h2>
 <p>Sor Bana, Debian 13'tekinden daha yeni <code>llama.cpp</code> ve <code>whisper.cpp</code> sürümlerine ihtiyaç duyar; bunlar BioKids deposundan gelir. Bu yüzden <code>biokids-ai</code>, BioKids deposu eklenmemiş sıradan bir Debian 13'e kurulamaz. ISO'da ise her şey hazırdır.</p>
+{% call m.callout('warn', 'Asistan şimdilik yalnızca ISO ile') %}
+<p>Asistanın çalışma ortamı APT deposuna bir sonraki sürümle (2.0.1) girecek. O zamana kadar <code>biokids-ai</code> bu yolla kurulamaz; asistanı isteyen bir bilgisayar için <a href="{{ url('guide-install') }}">ISO ile kurulum</a> rehberini izleyin.</p>
+{% endcall %}
 {{ m.code('sudo apt install biokids-ai', 'Uçbirim') }}
 <p>Sonra modeli panelden indirip bir çocuk için açın: <a href="{{ url('guide-assistant') }}">Sor Bana rehberi</a>.</p>
 

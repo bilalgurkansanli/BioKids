@@ -266,7 +266,9 @@ packages yourself instead: [`docs/VM-RUNBOOK.md`](docs/VM-RUNBOOK.md) §1.
 
 `biokids-desktop` is the whole child setup: BioKids, Xfce, LightDM and the application
 catalogue. `biokids` alone installs BioKids on a desktop you already have. The
-assistant is a separate package, `biokids-ai`, never installed by default.
+assistant is a separate package, `biokids-ai`, never installed by default. Its runtime,
+`llama.cpp` and `whisper.cpp` rebuilt for Debian 13, joins this repository with 2.0.1;
+until then the assistant comes with the ISO.
 
 ### Requirements
 

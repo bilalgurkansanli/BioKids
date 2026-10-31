@@ -184,8 +184,10 @@ the site's button downloads it (`website/site.toml`, `iso_url`). What is left:
 1. SourceForge: the project waits on SourceForge's support (phone verification). Once
    it is open, the ISO goes there as well and `iso_url` moves to it (D-257).
 2. The assistant's runtime, llama.cpp and whisper.cpp rebuilt for Trixie (D-165), is
-   in the ISO but not yet in the APT repository, so `biokids-ai` installs from the ISO
-   only, not on a Debian 13 that adds the repository.
+   pinned in `debian/archive-extra.sha256sums` and kept in `BioKids-apt`'s
+   `extra/trixie`; the next release (2.0.1) signs it into the APT repository. Until
+   then `biokids-ai` installs from the ISO only, and the README and the site's packages
+   guide say so: take those notes out with that release.
 3. The announcement.
 
 The assistant is measured with `dev/assistant_eval.py` against a real model (D-248):

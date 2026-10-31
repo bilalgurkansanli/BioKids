@@ -2458,6 +2458,13 @@ that it is open source with the product, its screenshots and its facts.
   speed per connection, and small distributions (Bodhi, Peppermint, Linux Lite's
   torrents) publish on SourceForge, whose mirror network is free and fast. archive.org
   stays the fallback, and `release.yml` accepts either address.
+- **The assistant's runtime is in the archive too** (D-165): `llama.cpp` and
+  `whisper.cpp` rebuilt for trixie, and `libggml0` from trixie-backports, the five
+  packages the ISO carries. 2.0.0's archive lacked them, so `biokids-ai` could not be
+  installed on a Debian 13 that adds it. They are kept in `BioKids-apt`'s `main`
+  branch, `extra/trixie`, and `release.yml` adds only the files whose SHA256
+  `debian/archive-extra.sha256sums` pins: what reaches the signed archive is named in
+  this repository, not by whoever can push there.
 
 **D-258 [claude] The website is served by Vercel.** (2026-10-31)
 The owner moved biokids.bilalgurkansanli.com from GitHub Pages (D-256) to Vercel; the

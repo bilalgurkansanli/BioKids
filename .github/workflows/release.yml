@@ -310,6 +310,24 @@ jobs:
           fi
           aptly repo add biokids dist
 
+          # The assistant's runtime (D-165): llama.cpp and whisper.cpp rebuilt
+          # for trixie, which biokids-ai depends on and Debian 13 does not have.
+          # They are kept in BioKids-apt's main branch, extra/trixie, and only
+          # the files whose SHA256 debian/archive-extra.sha256sums pins are
+          # added: a file put there by hand cannot reach the signed archive
+          # unless this repository names it.
+          if [ -s debian/archive-extra.sha256sums ]; then
+            git -C gh-pages fetch -q --depth 1 origin main
+            mkdir extra extra-pinned
+            git -C gh-pages archive FETCH_HEAD extra/trixie \
+              | tar -x -C extra --strip-components=2
+            while read -r sum file; do
+              printf '%s  %s\n' "$sum" "extra/$file" | sha256sum --check --quiet --strict
+              cp "extra/$file" extra-pinned/
+            done < debian/archive-extra.sha256sums
+            aptly repo add biokids extra-pinned
+          fi
+
           publish_args="-batch -architectures=amd64 -distribution=$APT_SUITE"
           if [ -s "$RUNNER_TEMP/passphrase" ]; then
             publish_args="$publish_args -passphrase-file=$RUNNER_TEMP/passphrase"
