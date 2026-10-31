@@ -134,6 +134,47 @@ strong, b { font-weight: 500; }
 
 ::selection { background: var(--tint-amber); color: var(--ink); }
 
+/* Scrollbars in the site's colours: a soft indigo pill on the warm
+ * off-white, the buttons' indigo under the pointer, and the kite's four
+ * colours while it is dragged. Chrome, Edge and Safari read the
+ * ::-webkit-scrollbar rules - but ignore them once scrollbar-color is set, so
+ * the standard properties go only to browsers without those rules (Firefox). */
+::-webkit-scrollbar { width: 14px; height: 14px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb {
+  min-height: 56px;
+  border: 4px solid transparent;
+  border-radius: var(--r-pill);
+  background: #A4A9E4 padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--bio-indigo) padding-box; }
+::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, var(--bio-coral), var(--bio-amber), var(--bio-teal), var(--bio-indigo)) padding-box;
+}
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* Scroll areas inside the page are slimmer and sit on their own background. */
+.code pre::-webkit-scrollbar,
+.table-wrap::-webkit-scrollbar,
+.aside-sticky::-webkit-scrollbar { width: 10px; height: 10px; }
+.code pre::-webkit-scrollbar-track { background: #221E1C; }
+.code pre::-webkit-scrollbar-thumb { border-width: 3px; background: #5C534D padding-box; }
+.code pre::-webkit-scrollbar-thumb:hover { background: #7A706A padding-box; }
+.table-wrap::-webkit-scrollbar-track { background: var(--surface); border-radius: 0 0 var(--r-md) var(--r-md); }
+.aside-sticky::-webkit-scrollbar-track { background: transparent; }
+.table-wrap::-webkit-scrollbar-thumb,
+.aside-sticky::-webkit-scrollbar-thumb { border-width: 3px; background: #D3C5B6 padding-box; }
+.table-wrap::-webkit-scrollbar-thumb:hover,
+.aside-sticky::-webkit-scrollbar-thumb:hover { background: #A4A9E4 padding-box; }
+/* The guides' sidebar shows its bar only while the pointer is over it. */
+.aside-sticky:not(:hover)::-webkit-scrollbar-thumb { background: transparent; }
+
+@supports not selector(::-webkit-scrollbar) {
+  html { scrollbar-color: #A4A9E4 var(--bg); }
+  .code pre { scrollbar-color: #5C534D #221E1C; scrollbar-width: thin; }
+  .table-wrap, .aside-sticky { scrollbar-color: #D3C5B6 transparent; scrollbar-width: thin; }
+}
+
 .visually-hidden {
   position: absolute !important;
   width: 1px; height: 1px;
