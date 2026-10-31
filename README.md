@@ -242,13 +242,12 @@ the image is built.
 
 ### The packages — on an existing Debian 13
 
-> **Not published yet.** Releases go to the project's own APT repository,
-> `https://apt.biokids.bilalgurkansanli.com`, signed with a release key that does not
-> exist yet. The repository and the key's fingerprint arrive together, and the
-> fingerprint will be printed here. Until then, build the packages from this repository:
-> [`docs/VM-RUNBOOK.md`](docs/VM-RUNBOOK.md) §1.
+Releases go to the project's own APT repository,
+`https://apt.biokids.bilalgurkansanli.com`, signed with the BioKids archive key:
 
-Once it is published:
+```
+F6A4 D652 8690 1EE0 99A1  095A 793E 458A 5F17 E9B0
+```
 
 ```bash
 curl -fsSL https://apt.biokids.bilalgurkansanli.com/KEY.gpg \
@@ -260,6 +259,10 @@ https://apt.biokids.bilalgurkansanli.com trixie main" \
 
 sudo apt update && sudo apt install biokids-desktop
 ```
+
+Before `apt install`, `gpg --show-keys /usr/share/keyrings/biokids-archive-keyring.gpg`
+must print the fingerprint above; if it does not, the key is not ours. To build the
+packages yourself instead: [`docs/VM-RUNBOOK.md`](docs/VM-RUNBOOK.md) §1.
 
 `biokids-desktop` is the whole child setup: BioKids, Xfce, LightDM and the application
 catalogue. `biokids` alone installs BioKids on a desktop you already have. The

@@ -254,13 +254,12 @@ Windows olan bir bilgisayar için adımlar ve kalıbın nasıl derlendiği
 
 ### Paketler: Debian 13 yüklü bir bilgisayarda
 
-> **Henüz yayımlanmadı.** Sürümler projenin kendi APT deposuna,
-> `https://apt.biokids.bilalgurkansanli.com` adresine gider ve henüz oluşturulmamış bir
-> yayın anahtarıyla imzalanır. Depo ve anahtarın parmak izi birlikte gelecek; parmak izi
-> buraya yazılacak. O zamana kadar paketler bu depodan derlenir:
-> [`docs/VM-RUNBOOK.md`](docs/VM-RUNBOOK.md) §1.
+Sürümler projenin kendi APT deposuna, `https://apt.biokids.bilalgurkansanli.com`
+adresine gider ve BioKids arşiv anahtarıyla imzalanır:
 
-Yayımlandığında:
+```
+F6A4 D652 8690 1EE0 99A1  095A 793E 458A 5F17 E9B0
+```
 
 ```bash
 curl -fsSL https://apt.biokids.bilalgurkansanli.com/KEY.gpg \
@@ -272,6 +271,10 @@ https://apt.biokids.bilalgurkansanli.com trixie main" \
 
 sudo apt update && sudo apt install biokids-desktop
 ```
+
+`apt install`'dan önce `gpg --show-keys /usr/share/keyrings/biokids-archive-keyring.gpg`
+yukarıdaki parmak izini yazmalı; yazmıyorsa anahtar bizim değildir. Paketleri kendiniz
+derlemek için: [`docs/VM-RUNBOOK.md`](docs/VM-RUNBOOK.md) §1.
 
 `biokids-desktop` çocuk kurulumunun tamamıdır: BioKids, Xfce, LightDM ve uygulama
 kataloğu. Yalnızca `biokids`, BioKids'i var olan masaüstünüze kurar. Asistan ayrı bir
