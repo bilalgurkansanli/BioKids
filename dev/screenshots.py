@@ -4,7 +4,7 @@
 A parental-control project with no screenshots gets no stars
 (`docs/PACKAGING.md` §6), and a screenshot taken by hand goes stale the first
 time a margin changes. This drives a headless Chromium over a running panel and
-launcher and writes the images where the README expects them.
+launcher and writes the images to dist/screenshots/, to choose from for the READMEs.
 
 It is a development tool, not part of the build: run it, look at what came out,
 commit the images.
@@ -30,7 +30,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "assets" / "screenshots"
+OUT = ROOT / "dist" / "screenshots"
+"""Not `assets/screenshots/`: the READMEs' pictures there are one set per language,
+chosen and composed by hand (`assets/brand/README.md`); this writes candidates."""
 
 CANDIDATES = (
     r"C:\Program Files\Google\Chrome\Application\chrome.exe",

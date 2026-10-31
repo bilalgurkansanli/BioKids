@@ -15,11 +15,22 @@ rather than drawn as vectors, so every other logo file is cut from it by
 
 To change the logo, replace `logo.jpg` and run the two scripts again.
 
+`logo-card.png` is the logo on a white card, for the top of the READMEs: GitHub's
+dark theme would otherwise put the dark lettering on a dark page.
+
 `social-preview.png` (1280 x 640) is the card GitHub shows where the repository is
-linked: the logo, one line, and the launcher. GitHub does not read it from the
-repository; it is uploaded in the repository's settings (General, Social preview).
-It and `assets/screenshots/` were made from the panel and launcher over
-`dev/seed.py`'s family, with `dev/screenshots.py`.
+linked: the logo, one line, and the English launcher. GitHub does not read it from
+the repository; it is uploaded in the repository's settings (General, Social
+preview), which only a public repository shows.
+
+The READMEs' pictures are in `assets/screenshots/en/` and `assets/screenshots/tr/`,
+one set per language, so neither README shows the other's language. They were taken
+from the real panel and launcher over `dev/seed.py`'s family with a stand-in
+daemon, through Chrome's DevTools protocol, so a page could be used first (the live
+view started, a question asked) and the phone is a phone-sized viewport. Two things
+in them are not what a BioKids computer shows: the assistant's answer was written
+for the picture, since the stand-in has no model, and the emoji are those of the
+Windows machine that took them, where a BioKids computer draws Noto's.
 
 ## The typeface
 

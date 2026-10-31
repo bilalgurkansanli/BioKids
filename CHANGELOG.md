@@ -13,6 +13,15 @@ Debian version, because that is what `apt policy biokids` shows.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The live view showed "Canlı izle" and "Durdur" together** (D-253): `.btn`'s
+  `display` beat the `hidden` attribute. The panel now hides whatever is `hidden`.
+  Found in the README's screenshots, after the 2.0.0 image was built.
+- **CI was red on Linux** although every check passed on the Windows development host:
+  mypy's platform-only `type: ignore` comments, dbus-next's re-exported names, and a
+  test that expected the launcher port of uid 1000. No change to what is installed.
+
 ## [2.0.0-1] - 2026-10-30
 
 The packages and the ISO together, after the owner installed the image beside Windows

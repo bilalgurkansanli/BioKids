@@ -1,12 +1,14 @@
 <div align="center">
 
-<img src="src/biokids_core/data/static/brand/logo.png" alt="BioKids" width="300">
+**English** · [Türkçe](README.tr.md)
+
+<br>
+
+<img src="assets/brand/logo-card.png" alt="BioKids" width="300">
 
 ### Parental controls for Debian that stay on your own computer
 
 For children aged 4–10 · no account · no cloud · nothing leaves the device
-
-*Çocuklar için, tamamen kendi bilgisayarınızda çalışan ebeveyn denetimi.*
 
 [![CI](https://github.com/bilalgurkansanli/BioKids/actions/workflows/ci.yml/badge.svg)](https://github.com/bilalgurkansanli/BioKids/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/bilalgurkansanli/BioKids?color=FFB020&label=release)](https://github.com/bilalgurkansanli/BioKids/releases)
@@ -22,7 +24,9 @@ For children aged 4–10 · no account · no cloud · nothing leaves the device
 
 <br>
 
-<img src="assets/screenshots/hero.png" alt="The child's launcher with big tiles and the minutes left, and the parent panel on a phone" width="900">
+<img src="assets/screenshots/en/hero.png" alt="The child's launcher showing &quot;Mom can see your screen now&quot;, beside the parent's phone watching that screen live" width="900">
+
+<sub>The child's screen, and the parent watching it live from a phone. The child sees it.</sub>
 
 </div>
 
@@ -56,8 +60,21 @@ there is no BioKids server.
 <td width="50%" valign="top">
 
 **👀 The child knows.** Supervision is always visible. The first run explains what the
-family can see, and when a parent looks at the screen live, the child sees
-"👁 Annen ekranını görüyor" for as long as it lasts.
+family can see, and while a parent watches the screen, the child sees it says so.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+**🤖 An assistant that runs on the computer.** *Sor Bana* answers a child's questions
+with a language model on the machine itself. No question goes to a cloud.
+
+</td>
+<td valign="top">
+
+**📱 Your phone is the remote.** Grant ten more minutes, lock the screen, answer a
+request, or watch the screen live — from anywhere, over your own private network.
 
 </td>
 </tr>
@@ -78,32 +95,74 @@ happening.
 </tr>
 </table>
 
-## Screenshots
+## Sor Bana: an assistant that never leaves the computer
+
+<img src="assets/screenshots/en/assistant.png" alt="Ask Zio: a child asks why the sky is blue and gets a short answer for their age" width="820">
+
+A child types a question — or says it, if the parent allows the microphone — and gets
+an answer for their age, in the language they asked in. The answer comes from a
+language model running **on the computer** (Gemma through llama.cpp, Whisper for
+speech), checked against an offline Wikipedia. Nothing is sent anywhere: an ordinary
+question is answered and forgotten.
+
+It refuses what a child should not ask, and the parent sees what it refused. It is a
+separate package, off until a parent downloads it from the panel (with a progress bar)
+and turns it on for a child, and it needs 7 GB of memory or more. In the English
+corner, Sio uses the same model to chat with a child in simple English.
+
+## The screen, live, on your phone
 
 <table>
 <tr>
-<td width="50%"><img src="assets/screenshots/login.png" alt="The BioKids login screen: each child is their own picture"></td>
-<td width="50%"><img src="assets/screenshots/launcher.png" alt="The child's launcher: big tiles, the minutes left, open apps at the bottom"></td>
+<td width="58%" valign="top">
+
+From the panel — at the computer, or on your phone anywhere — press **Watch live** and
+you see your child's screen as it is now, about one picture a second.
+
+- **The child is told.** While you watch, the launcher and the bar over every app show
+  *"👁 Mom can see your screen now"*. That sign cannot be turned off.
+- **Nothing is recorded.** Each picture replaces the last in memory and is never
+  written anywhere. Leaving the page ends the watch.
+- **The family can see it happened.** Every start is in the audit log.
+
+It is the only time BioKids ever looks at a child's screen, and only while a parent is
+looking.
+
+</td>
+<td width="42%" valign="top">
+
+<img src="assets/screenshots/en/panel-live.png" alt="The parent panel on a phone: Live screen, showing the child's launcher as it is now, with a Stop button">
+
+</td>
+</tr>
+</table>
+
+## More screens
+
+<table>
+<tr>
+<td width="50%"><img src="assets/screenshots/en/launcher.png" alt="The child's launcher: big tiles, the minutes left, open apps at the bottom"></td>
+<td width="50%"><img src="assets/screenshots/en/first-run.png" alt="The first run: Zio explains what the family can see"></td>
 </tr>
 <tr>
-<td align="center"><b>Log in by picture.</b> A child just taps; only the parent's account asks for a password.</td>
 <td align="center"><b>The launcher.</b> The apps the parent chose, the minutes left, and what is open.</td>
+<td align="center"><b>The first run.</b> Zio tells the child what the family can see.</td>
 </tr>
 <tr>
-<td><img src="assets/screenshots/panel-today.png" alt="The parent panel's Today screen: one card per child with the time left and big buttons"></td>
-<td><img src="assets/screenshots/panel-history.png" alt="The history: a year of minutes as a map, and the last fourteen days as bars"></td>
+<td><img src="assets/screenshots/en/panel-today.png" alt="The parent panel's Today screen: one card per child with the time left and big buttons"></td>
+<td><img src="assets/screenshots/en/panel-history.png" alt="The history: a year of minutes as a map, and the last fourteen days as bars"></td>
 </tr>
 <tr>
 <td align="center"><b>Today.</b> One card per child: the time left, what is on screen, +10 min, lock, shut down.</td>
 <td align="center"><b>History.</b> A year at a glance, the last two weeks, and any day in detail.</td>
 </tr>
 <tr>
-<td><img src="assets/screenshots/panel-child-time.png" alt="A child's time rules: weekday and weekend minutes, allowed hours, what happens at the end"></td>
-<td><img src="assets/screenshots/blocked.png" alt="A closed site: a friendly page with an Ask a grown-up button"></td>
+<td><img src="assets/screenshots/en/panel-time.png" alt="A child's time rules: weekday and weekend minutes, allowed hours, what happens at the end"></td>
+<td><img src="assets/screenshots/en/blocked.png" alt="A closed site: a friendly page with an Ask a grown-up button"></td>
 </tr>
 <tr>
-<td align="center"><b>Time rules.</b> A few clear controls; the rest is behind <i>Gelişmiş</i>.</td>
-<td align="center"><b>A closed site</b> is a friendly page with a <i>Büyüğüme sor</i> (ask a grown-up) button.</td>
+<td align="center"><b>Time rules.</b> A few clear controls; the rest is behind <i>Advanced</i>.</td>
+<td align="center"><b>A closed site</b> is a friendly page with an <i>Ask a grown-up</i> button.</td>
 </tr>
 </table>
 
@@ -126,7 +185,7 @@ happening.
   sentences, and an English corner with Sio.
 - **Ask a grown-up.** More time, a site or an app: the request reaches the parent's
   phone, is answered in one tap, and the child is told the answer.
-- **Sesim**: the child can send their parent a recording of their own.
+- **My voice** (*Sesim*): the child can send their parent a recording of their own.
 
 ### For the parent
 
@@ -141,13 +200,12 @@ happening.
 - **The panel**, in the applications menu and on the parent's phone over their own
   private network (Tailscale, set up with one button; no port forwarding, ever).
   Mail notifications go through the parent's own mail server.
-- **A live view of the screen**, asked for in the panel, shown to the child while it
-  lasts, and kept nowhere.
+- **The screen, live** — [above](#the-screen-live-on-your-phone).
 - **History and an audit log.** Two weeks of minutes in detail and a year as a map;
   every rule change, PIN attempt, grant and clock change in the log.
-- **The warm side.** "Aferin!" in one tap or a short note to the child's screen;
-  "Birlikteyiz" while you play together, when nothing is counted; a few things to talk
-  about in the evening, from the child's day.
+- **The warm side.** "Well done!" in one tap or a short note to the child's screen;
+  "We're together" while you play together, when nothing is counted; a few things to
+  talk about in the evening, from the child's day.
 - **Peace of mind.** A protection checklist that says what is in place and what to do
   where something is not, and an encrypted backup to move everything to a new computer.
 
@@ -160,13 +218,10 @@ happening.
   around it, and the BioKids extension turns a closed site into a friendly page.
 - **No man-in-the-middle proxy**: BioKids never decrypts anyone's traffic.
 
-### Optional: Sor Bana, an assistant on the computer
+### Optional
 
-A child types or, if allowed, says a question and gets an answer for their age from a
-language model running **on the machine** (Gemma through llama.cpp, Whisper for speech),
-checked against an offline Wikipedia. It refuses what a child should not ask, and the
-parent sees what it refused. It is a separate package, off until a parent downloads it
-and turns it on for a child; an ordinary question is answered and forgotten.
+- **Sor Bana**, the assistant on the computer — [above](#sor-bana-an-assistant-that-never-leaves-the-computer).
+- **An offline Wikipedia** as a tile for 8–10 year olds, downloaded with the assistant.
 
 ## Download
 
@@ -230,8 +285,8 @@ assistant is a separate package, `biokids-ai`, never installed by default.
 3. **The child logs in** by tapping their picture. The first time, the launcher explains
    — in words and out loud for the youngest — what Zio and Sio do and what the family
    can see.
-4. **The panel** is the "BioKids Ebeveyn Paneli" icon on your desktop and in the
-   applications menu, and on your phone once phone access is on. **Yardım** answers the
+4. **The panel** is the "BioKids Parent Panel" icon on your desktop and in the
+   applications menu, and on your phone once phone access is on. **Help** answers the
    common questions, and the [website](https://biokids.bilalgurkansanli.com) has guides.
 
 ## Privacy

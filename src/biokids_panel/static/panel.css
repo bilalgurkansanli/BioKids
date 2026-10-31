@@ -13,6 +13,13 @@
   box-sizing: border-box;
 }
 
+/* `hidden` means hidden, whatever display a class gives the element. Without
+ * this, `.btn`'s inline-flex beat the attribute, and the live view showed its
+ * Watch and Stop buttons side by side (D-253). */
+[hidden] {
+  display: none !important;
+}
+
 html {
   font-size: calc(100% * var(--font-scale));
   -webkit-text-size-adjust: 100%;
