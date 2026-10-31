@@ -114,6 +114,7 @@ def load_pages() -> list[Page]:
 # ------------------------------------------------------------------------ helpers
 
 
+@functools.cache
 def git_date(*paths: Path) -> str:
     """The last commit that touched any of `paths`, as YYYY-MM-DD; today if none.
 
@@ -298,12 +299,18 @@ class Site:
 
     # -- JSON-LD
 
+    @property
+    def author(self) -> dict[str, str]:
+        """A reference to the author: the Person of his own site (site.toml)."""
+        return {"@id": self.site["author_id"]}
+
     def person(self) -> dict[str, Any]:
         s = self.site
         return {
             "@type": "Person",
-            "@id": f"{self.base}/#author",
+            "@id": s["author_id"],
             "name": s["author"],
+            "alternateName": s["author_alt"],
             "url": s["author_url"],
             "email": f"mailto:{s['email']}",
             "sameAs": [s["github_user"]],
@@ -338,9 +345,10 @@ class Site:
             "processorRequirements": "x86-64 (amd64)",
             "inLanguage": ["tr", "en"],
             "audience": {"@type": "Audience", "audienceType": t["audience"]},
-            "author": {"@id": f"{self.base}/#author"},
-            "publisher": {"@id": f"{self.base}/#author"},
-            "sameAs": [s["repo"]],
+            "author": self.author,
+            "publisher": self.author,
+            # The repository, and BioKids in the author's own list of his work.
+            "sameAs": [s["repo"], s["work_id"]],
         }
 
     def source_code(self) -> dict[str, Any]:
@@ -353,7 +361,7 @@ class Site:
             "programmingLanguage": ["Python", "HTML", "CSS", "JavaScript", "Shell"],
             "runtimePlatform": "Debian 13",
             "license": "https://opensource.org/licenses/MIT",
-            "author": {"@id": f"{self.base}/#author"},
+            "author": self.author,
             "targetProduct": {"@id": f"{self.base}/#software"},
         }
 
@@ -371,7 +379,7 @@ class Site:
             "alternateName": t["site_alt_name"],
             "description": t["software_description"],
             "inLanguage": ["tr", "en"],
-            "publisher": {"@id": f"{self.base}/#author"},
+            "publisher": self.author,
             "about": {"@id": f"{self.base}/#software"},
         }
         webpage: dict[str, Any] = {
@@ -387,7 +395,7 @@ class Site:
             "about": {"@id": f"{self.base}/#software"},
             "dateModified": modified,
             "primaryImageOfPage": self.abs(f"/assets/og/{lang}-{page.key}.jpg"),
-            "author": {"@id": f"{self.base}/#author"},
+            "author": self.author,
         }
         nodes: list[dict[str, Any]] = [website, webpage, self.person(), self.software(lang)]
         if page.kind == "home":
@@ -470,15 +478,20 @@ class Site:
 
     # -- pages
 
+    def modified(self, page: Page, lang: str) -> str:
+        """When a page last changed: its body, pages.toml (its title, and a
+        guide's facts), and faq.toml for the two pages that show the questions.
+        A guide's "last updated", every page's dateModified and the sitemap's
+        lastmod are this one date, so a search engine is never told two."""
+        paths = [HERE / "content" / lang / f"{page.key}.html", HERE / "pages.toml"]
+        if page.kind in {"faq", "home"}:
+            paths.append(HERE / "faq.toml")
+        return git_date(*paths)
+
     def render(self, page: Page, lang: str) -> str:
         v = page.v(lang)
         other = "en" if lang == "tr" else "tr"
-        src = HERE / "content" / lang / f"{page.key}.html"
-        modified = (
-            git_date(src, HERE / "pages.toml")
-            if page.key != "faq"
-            else git_date(src, HERE / "faq.toml")
-        )
+        modified = self.modified(page, lang)
         ctx = {
             "page": page,
             "v": v,
@@ -590,10 +603,9 @@ class Site:
             if page.noindex:
                 continue
             for lang in LANGS:
-                src = HERE / "content" / lang / f"{page.key}.html"
                 rows.append("  <url>")
                 rows.append(f"    <loc>{self.abs(page.v(lang).path)}</loc>")
-                rows.append(f"    <lastmod>{git_date(src)}</lastmod>")
+                rows.append(f"    <lastmod>{self.modified(page, lang)}</lastmod>")
                 for alt in LANGS:
                     rows.append(
                         f'    <xhtml:link rel="alternate" hreflang="{alt}" '
@@ -733,9 +745,12 @@ class _Refs(HTMLParser):
         self.ids: set[str] = set()
         self.dup_ids: set[str] = set()
         self.h1 = 0
+        self.noindex = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         a = dict(attrs)
+        if tag == "meta" and a.get("name") == "robots":
+            self.noindex = "noindex" in (a.get("content") or "")
         if a.get("id"):
             if a["id"] in self.ids:
                 self.dup_ids.add(a["id"] or "")
@@ -808,6 +823,18 @@ def check(site: Site) -> int:
                 problems.append(f"{rel}: broken link {link}")
             elif anchor and anchor not in ids.get(path, set()):
                 problems.append(f"{rel}: no #{anchor} on {path}")
+    # The sitemap lists every page there is to index, and only those.
+    sitemap = (OUT / "sitemap.xml").read_text(encoding="utf-8")
+    listed = re.findall(r"<loc>([^<]+)</loc>", sitemap)
+    indexable = {
+        site.abs(rel.removesuffix("index.html")) for rel, p in parsed.items() if not p.noindex
+    }
+    for loc in sorted(set(listed) - indexable):
+        problems.append(f"sitemap.xml: {loc} is not a page that can be indexed")
+    for loc in sorted(indexable - set(listed)):
+        problems.append(f"sitemap.xml: {loc} is missing")
+    if len(listed) != len(set(listed)):
+        problems.append("sitemap.xml: an address is listed twice")
     for page in site.pages:
         for lang in LANGS:
             v = page.v(lang)

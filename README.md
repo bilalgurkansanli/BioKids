@@ -428,7 +428,7 @@ parent downloads, in [`src/biokids_ai/models.py`](src/biokids_ai/models.py).
 
 <div align="center">
 
-Made with care under the [BioStudio](https://bilalgurkansanli.com) label by
+Made with care under the [BioStudio](https://www.bilalgurkansanli.com/) label by
 **Bilal Gürkan Şanlı**.
 
 </div>

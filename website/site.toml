@@ -11,7 +11,15 @@ release_url = "https://github.com/bilalgurkansanli/BioKids/releases/latest"
 issues_url = "https://github.com/bilalgurkansanli/BioKids/issues/new/choose"
 github_user = "https://github.com/bilalgurkansanli"
 author = "Bilal Gürkan Şanlı"
-author_url = "https://bilalgurkansanli.com"
+# The author is one person on the web: the Person his own site describes, under
+# its @id. BioKids' JSON-LD names him by that @id, so a search engine or an
+# assistant that reads both sites sees the same entity rather than two. His
+# site is served on www (the bare domain redirects to it).
+author_id = "https://www.bilalgurkansanli.com/#person"
+author_url = "https://www.bilalgurkansanli.com/"
+author_alt = ["Bilal Gurkan Sanli"]
+# BioKids as the archive of the author's projects lists it.
+work_id = "https://www.bilalgurkansanli.com/#work-biokids"
 label = "BioStudio"
 iso_name = "biokids-2.0.0-amd64.hybrid.iso"
 apt_url = "https://apt.biokids.bilalgurkansanli.com"
