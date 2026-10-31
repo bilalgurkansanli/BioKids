@@ -16,7 +16,8 @@ python website/build.py --check      # what CI runs
 `--check` fails on a broken internal link or anchor, a missing picture or share card,
 an image without `alt`, `width` or `height`, a page without exactly one `<h1>`, an id
 used twice, JSON-LD that does not parse, a link to a repository file that is not
-there, or a title (20-65 characters) or description (70-165) out of range. `--out DIR`
+there, a sitemap that leaves out a page to index or lists one that is not, or a
+title (20-65 characters) or description (70-165) out of range. `--out DIR`
 builds somewhere other than `website/_site/`, which is ignored by git.
 
 ## Where it is served
