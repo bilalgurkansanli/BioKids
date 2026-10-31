@@ -100,7 +100,7 @@ biokids/
 ├── extension/                 # Chromium managed extension (URL reporting)
 ├── debian/                    # single source package -> multiple binary packages
 ├── iso/                       # live-build config (Phase 3 only)
-├── website/                   # biokids.bilalgurkansanli.com, static, GitHub Pages (D-256)
+├── website/                   # biokids.bilalgurkansanli.com, static, on Vercel (D-256, D-258)
 ├── assets/                    # icons, character art, themes, sounds
 ├── tests/
 └── .github/workflows/

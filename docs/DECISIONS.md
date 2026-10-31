@@ -2454,3 +2454,23 @@ that it is open source with the product, its screenshots and its facts.
   (version, file name, SHA256, archive.org item) before the tag: its checksum goes into
   the signed `SHA256SUMS`, so the copy on archive.org is checked against the release's
   signature, and its link into the notes.
+
+**D-258 [claude] The website is served by Vercel.** (2026-10-31)
+The owner moved biokids.bilalgurkansanli.com from GitHub Pages (D-256) to Vercel; the
+APT archive stays on `BioKids-apt`'s Pages under its own name (D-257), so the two never
+meet.
+- **`vercel.json` at the root** names the build, `website/vercel-build.sh` (Jinja2, then
+  `build.py --check`), and the output, `website/_site`. A failed check fails the
+  deployment: a broken page never replaces a working site. Each pull request gets a
+  preview, which Vercel keeps out of search engines; the canonical links name the real
+  domain anyway.
+- **Real response headers** where GitHub Pages allowed none: the Content-Security-Policy
+  (the page's own meta copy stays, for a local preview) with `frame-ancestors 'none'`,
+  `X-Frame-Options`, `nosniff`, a referrer policy and a permissions policy that turns off
+  the camera, microphone, location and the rest. Fonts are cached for a year. Addresses
+  keep their trailing slash, as the sitemap and the canonical links have them.
+- **`website.yml` only checks**, with the same script, so a pull request shows the site's
+  check beside the product's CI; it no longer deploys. The build stops writing `CNAME`
+  and `.nojekyll`.
+- **The privacy page names Vercel** as the host that sees a visitor's address, and says
+  that Vercel's analytics are not used. They stay off.

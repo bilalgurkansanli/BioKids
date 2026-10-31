@@ -134,8 +134,8 @@ def git_date(*paths: Path) -> str:
 
 @functools.cache
 def asset_version(rel: str) -> str:
-    """A short hash of a static file, for its URL: GitHub Pages caches for ten
-    minutes, and a changed stylesheet should not wait for that."""
+    """A short hash of a static file, for its URL: a browser that kept the old
+    stylesheet must not use it with a new page."""
     data = (HERE / "static" / rel).read_bytes()
     return hashlib.sha256(data).hexdigest()[:8]
 
@@ -562,8 +562,8 @@ class Site:
 
         for page in self.pages:
             if page.kind == "404":
-                # GitHub Pages serves one /404.html for every address, so it is
-                # one page in both languages, written as content/tr/404.html.
+                # The host serves one /404.html for every address, so it is one
+                # page in both languages, written as content/tr/404.html.
                 self.write("404.html", self.render(page, "tr"))
                 continue
             for lang in LANGS:
@@ -577,8 +577,6 @@ class Site:
         self.write("llms-full.txt", self.llms_full())
         self.write(".well-known/security.txt", self.security_txt())
         self.write("site.webmanifest", self.manifest())
-        self.write("CNAME", self.base.split("://", 1)[1] + "\n")
-        self.write(".nojekyll", "")
 
     # -- the files beside the pages
 
