@@ -21,18 +21,19 @@
         <p>BioKids yüklü Debian 13: Xfce, çocukların uygulamaları ve asistanın çalışma ortamı içinde gelir. Bellekten açılır, Debian'ın kendi kurulum programıyla ve <strong>internet gerekmeden</strong> kurulur. Windows olan bir bilgisayarda Windows'u küçültüp yanına kurmayı önerir.</p>
         <p>Dosya adı: <span class="file">{{ site.iso_name }}</span></p>
         <div class="btn-row">
-          <a class="btn btn-primary btn-lg" href="{{ site.release_url }}" rel="noopener">{% include "icon-download.html" %} Son sürümü indir</a>
+          <a class="btn btn-primary btn-lg" href="{{ site.iso_url }}" rel="noopener">{% include "icon-download.html" %} ISO'yu indir</a>
           <a class="btn btn-secondary btn-lg" href="{{ url('guide-install') }}">Nasıl kurulur?</a>
         </div>
-        {% call m.callout('note', 'Dosya neden archive.org\'da?') %}
-        <p>ISO, GitHub'ın 2 GB'lık dosya sınırından büyük. Bu yüzden sürüm sayfası, dosyanın archive.org'daki kopyasına ve SHA256 değerine bağlantı verir.</p>
+        <p>Sürüm notları ve imzalı <code>SHA256SUMS</code>: <a href="{{ site.release_url }}" rel="noopener">GitHub'daki sürüm sayfası</a>.</p>
+        {% call m.callout('note', 'Dosya neden ' ~ site.iso_host ~ '\'da?') %}
+        <p>ISO, GitHub'ın 2 GB'lık dosya sınırından büyük; bu yüzden {{ site.iso_host }}'da duruyor. Dosyanın SHA256 değeri GitHub'daki sürüm sayfasında, BioKids'in anahtarıyla imzalı olarak yazar: <a href="{{ url('download', 'dogrulama') }}">nasıl doğrulanır?</a></p>
         {% endcall %}
       </article>
       <div class="dl-side">
         <article class="dl-card" aria-labelledby="paketler">
-          <span class="badge badge-soon">Yakında</span>
+          <span class="badge badge-real">APT</span>
           <h2 id="paketler">Debian paketleri</h2>
-          <p>Zaten Debian 13 kullanıyorsanız BioKids'i APT ile kurabilirsiniz. Projenin APT deposu ve imza anahtarı ilk sürümle birlikte yayımlanacak.</p>
+          <p>Zaten Debian 13 kullanıyorsanız BioKids'i projenin imzalı APT deposundan kurabilirsiniz; güncellemeler de oradan gelir.</p>
           <p><a href="{{ url('guide-packages') }}">Paketlerle kurulum rehberi →</a></p>
         </article>
         <article class="dl-card" aria-labelledby="kaynak">
@@ -95,12 +96,16 @@
       <div class="tab-panel" data-tab="linux" data-label="Linux">
         <h3 class="tab-title">Linux</h3>
         <p><code>SHA256SUMS</code> dosyasını ISO ile aynı klasöre indirin ve yazın:</p>
-        {{ m.code('sha256sum -c SHA256SUMS', 'Uçbirim') }}
+        {{ m.code('sha256sum -c --ignore-missing SHA256SUMS', 'Uçbirim') }}
         <p>Dosya adının yanında <code>OK</code> ya da Türkçe karşılığı yazmalı.</p>
       </div>
     </div>
     {% call m.callout('privacy', 'İmza') %}
-    <p>Sürümler, projenin yayın anahtarıyla imzalanacak; anahtarın parmak izi yayımlandığında bu sayfaya ve README'ye yazılacak.</p>
+    <p>Sürüm sayfasındaki <code>SHA256SUMS.asc</code>, <code>SHA256SUMS</code> dosyasının BioKids yayın anahtarıyla atılmış imzasıdır. Anahtarın parmak izi:</p>
+    <p><code>{{ site.key_fingerprint }}</code></p>
+    <p>Linux'ta imzayı denetlemek için, iki dosya da ISO ile aynı klasördeyken:</p>
+    {{ m.code('curl -fsSL ' ~ site.apt_url ~ '/KEY.gpg | gpg --import\ngpg --verify SHA256SUMS.asc SHA256SUMS', 'Uçbirim') }}
+    <p>Çıktıda "Good signature" (iyi imza) ve yukarıdaki parmak izi görünmeli.</p>
     {% endcall %}
   </div>
 </section>

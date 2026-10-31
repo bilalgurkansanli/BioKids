@@ -334,7 +334,7 @@ class Site:
             "license": "https://opensource.org/licenses/MIT",
             "isAccessibleForFree": True,
             "offers": {"@type": "Offer", "price": "0", "priceCurrency": "TRY"},
-            "downloadUrl": s["release_url"],
+            "downloadUrl": s["iso_url"],
             "installUrl": self.abs(self.url("guide-install", lang)),
             "releaseNotes": f"{s['repo']}/blob/main/CHANGELOG.md",
             "screenshot": [self.abs(f"/assets/img/{lang}/{n}.webp") for n in shots],
@@ -646,7 +646,8 @@ class Site:
             f"- License: MIT. Source code: {s['repo']}",
             f"- Developer: {s['author']} ({s['label']}), {s['author_url']}",
             f"- Contact and support: {s['email']}",
-            f"- Download: {s['release_url']}",
+            f"- Download: {s['iso_url']}",
+            f"- Release notes and signed checksums: {s['release_url']}",
             "- Languages: Turkish and English (the site: Turkish at /, English at /en/)",
             "",
         ]

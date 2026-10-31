@@ -22,7 +22,14 @@ author_alt = ["Bilal Gurkan Sanli"]
 work_id = "https://www.bilalgurkansanli.com/#work-biokids"
 label = "BioStudio"
 iso_name = "biokids-2.0.0-amd64.hybrid.iso"
+# The ISO is larger than a GitHub release file may be, so the button gets it
+# from where it is published (D-257): SourceForge, or archive.org until the
+# project is open there. iso_host names that place on the download page.
+iso_url = "https://archive.org/download/biokids-2.0.0/biokids-2.0.0-amd64.hybrid.iso"
+iso_host = "archive.org"
 apt_url = "https://apt.biokids.bilalgurkansanli.com"
+# The archive key, as README.md and debian/biokids-archive-keyring.asc have it.
+key_fingerprint = "F6A4 D652 8690 1EE0 99A1  095A 793E 458A 5F17 E9B0"
 # security.txt must say when it stops being true (RFC 9116); renew yearly.
 security_txt_expires = "2027-10-31T00:00:00Z"
 

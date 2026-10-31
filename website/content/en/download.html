@@ -21,18 +21,19 @@
         <p>Debian 13 with BioKids: Xfce, the children's apps and the assistant's runtime included. It starts from the stick and installs with Debian's own installer, <strong>with no internet needed</strong>. On a computer with Windows it offers to shrink Windows and install beside it.</p>
         <p>File name: <span class="file">{{ site.iso_name }}</span></p>
         <div class="btn-row">
-          <a class="btn btn-primary btn-lg" href="{{ site.release_url }}" rel="noopener">{% include "icon-download.html" %} Get the latest release</a>
+          <a class="btn btn-primary btn-lg" href="{{ site.iso_url }}" rel="noopener">{% include "icon-download.html" %} Download the ISO</a>
           <a class="btn btn-secondary btn-lg" href="{{ url('guide-install') }}">How to install</a>
         </div>
-        {% call m.callout('note', 'Why is the file on archive.org?') %}
-        <p>The ISO is larger than GitHub's 2 GB file limit, so the release page links to its copy on archive.org and to its SHA256.</p>
+        <p>Release notes and the signed <code>SHA256SUMS</code>: <a href="{{ site.release_url }}" rel="noopener">the release page on GitHub</a>.</p>
+        {% call m.callout('note', 'Why is the file on ' ~ site.iso_host ~ '?') %}
+        <p>The ISO is larger than GitHub's 2 GB file limit, so it is kept on {{ site.iso_host }}. Its SHA256 is on the release page on GitHub, signed with BioKids' key: <a href="{{ url('download', 'verify') }}">how to check it</a>.</p>
         {% endcall %}
       </article>
       <div class="dl-side">
         <article class="dl-card" aria-labelledby="packages">
-          <span class="badge badge-soon">Coming soon</span>
+          <span class="badge badge-real">APT</span>
           <h2 id="packages">Debian packages</h2>
-          <p>Already on Debian 13? You can install BioKids with APT. The project's APT repository and its signing key are published with the first release.</p>
+          <p>Already on Debian 13? Install BioKids from the project's signed APT repository; its updates come from there too.</p>
           <p><a href="{{ url('guide-packages') }}">Install with packages →</a></p>
         </article>
         <article class="dl-card" aria-labelledby="source">
@@ -95,12 +96,16 @@
       <div class="tab-panel" data-tab="linux" data-label="Linux">
         <h3 class="tab-title">Linux</h3>
         <p>Download <code>SHA256SUMS</code> into the same folder as the ISO and type:</p>
-        {{ m.code('sha256sum -c SHA256SUMS', 'Terminal') }}
+        {{ m.code('sha256sum -c --ignore-missing SHA256SUMS', 'Terminal') }}
         <p>It should end with <code>OK</code>.</p>
       </div>
     </div>
     {% call m.callout('privacy', 'Signature') %}
-    <p>Releases will be signed with the project's release key; its fingerprint will be written on this page and in the README when it is published.</p>
+    <p><code>SHA256SUMS.asc</code> on the release page is the signature of <code>SHA256SUMS</code>, made with the BioKids release key. The key's fingerprint:</p>
+    <p><code>{{ site.key_fingerprint }}</code></p>
+    <p>To check the signature on Linux, with both files in the same folder as the ISO:</p>
+    {{ m.code('curl -fsSL ' ~ site.apt_url ~ '/KEY.gpg | gpg --import\ngpg --verify SHA256SUMS.asc SHA256SUMS', 'Terminal') }}
+    <p>It should say "Good signature" and show the fingerprint above.</p>
     {% endcall %}
   </div>
 </section>

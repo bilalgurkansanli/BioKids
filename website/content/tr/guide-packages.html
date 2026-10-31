@@ -1,10 +1,6 @@
 {% extends "guide.html" %}
 {% import "macros.html" as m with context %}
 {% block body %}
-{% call m.callout('warn', 'APT deposu henüz yayımlanmadı') %}
-<p>BioKids'in APT deposu (<code>{{ site.apt_url }}</code>) ve onu imzalayan yayın anahtarı ilk yayınla birlikte gelecek; anahtarın parmak izi o zaman bu sayfaya ve README'ye yazılacak. O zamana kadar paketler kaynak koddan derlenir: <a href="{{ site.repo }}/blob/main/docs/VM-RUNBOOK.md" rel="noopener">docs/VM-RUNBOOK.md</a> §1. Bir bilgisayarı en kolay yoldan hazırlamak için <a href="{{ url('guide-install') }}">ISO ile kurulum</a> rehberini izleyin.</p>
-{% endcall %}
-
 <p>Bilgisayarınızda zaten Debian 13 varsa BioKids'i ISO yerine paketlerle kurabilirsiniz. Bu rehber biraz uçbirim (terminal) kullanmayı gerektirir.</p>
 
 <h2 id="gereksinimler">Gereksinimler</h2>
@@ -31,7 +27,9 @@
 {% call m.step('Deponun anahtarını ekleyin', 'anahtar') %}
 <p>Bir uçbirim açın ve BioKids'in imza anahtarını indirip APT'nin anahtarlığına koyun:</p>
 {{ m.code('curl -fsSL ' ~ site.apt_url ~ '/KEY.gpg \\\n  | sudo tee /usr/share/keyrings/biokids-archive-keyring.gpg > /dev/null', 'Uçbirim') }}
-<p>Anahtarın parmak izini, yayımlandığında bu sayfada yazacak olanla karşılaştırın.</p>
+<p>Sonra anahtarın gerçekten BioKids'in olduğunu kontrol edin:</p>
+{{ m.code('gpg --show-keys /usr/share/keyrings/biokids-archive-keyring.gpg', 'Uçbirim') }}
+<p>Çıktıda şu parmak izi görünmeli: <code>{{ site.key_fingerprint }}</code>. Görünmüyorsa anahtar bizim değildir; devam etmeyin.</p>
 {% endcall %}
 
 {% call m.step('Depoyu ekleyin', 'depo') %}

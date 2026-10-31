@@ -1,10 +1,6 @@
 {% extends "guide.html" %}
 {% import "macros.html" as m with context %}
 {% block body %}
-{% call m.callout('warn', 'The APT repository is not published yet') %}
-<p>BioKids' APT repository (<code>{{ site.apt_url }}</code>) and the release key that signs it arrive with the first release; the key's fingerprint will be written on this page and in the README then. Until that day, the packages are built from the source: <a href="{{ site.repo }}/blob/main/docs/VM-RUNBOOK.md" rel="noopener">docs/VM-RUNBOOK.md</a> §1. For the easiest way to set up a computer, follow the <a href="{{ url('guide-install') }}">ISO install guide</a>.</p>
-{% endcall %}
-
 <p>If your computer already runs Debian 13, you can install BioKids from packages instead of the ISO. This guide needs a little use of a terminal.</p>
 
 <h2 id="requirements">Requirements</h2>
@@ -31,7 +27,9 @@
 {% call m.step('Add the repository\'s key', 'key') %}
 <p>Open a terminal and put BioKids' signing key in APT's keyring:</p>
 {{ m.code('curl -fsSL ' ~ site.apt_url ~ '/KEY.gpg \\\n  | sudo tee /usr/share/keyrings/biokids-archive-keyring.gpg > /dev/null', 'Terminal') }}
-<p>Compare the key's fingerprint with the one this page will show once it is published.</p>
+<p>Then check that the key really is BioKids':</p>
+{{ m.code('gpg --show-keys /usr/share/keyrings/biokids-archive-keyring.gpg', 'Terminal') }}
+<p>It must show this fingerprint: <code>{{ site.key_fingerprint }}</code>. If it does not, the key is not ours; stop there.</p>
 {% endcall %}
 
 {% call m.step('Add the repository', 'repository') %}
