@@ -55,7 +55,7 @@ def child_accounts() -> set[str]:
     import grp  # POSIX only; the tests run on other systems too
 
     try:
-        return set(grp.getgrnam(CHILD_GROUP).gr_mem)
+        return set(grp.getgrnam(CHILD_GROUP).gr_mem)  # type: ignore[attr-defined, unused-ignore]
     except KeyError:
         return set()
 

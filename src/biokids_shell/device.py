@@ -130,10 +130,19 @@ async def set_brightness(percent: int) -> bool:
     global _brightness_wanted
     _brightness_wanted = clamp(percent, low=20)
     async with _brightness_lock:
-        if _brightness_wanted is None:
+        level = _take_brightness_wanted()
+        if level is None:
             return True
-        level, _brightness_wanted = _brightness_wanted, None
         return await _apply_brightness(level)
+
+
+def _take_brightness_wanted() -> int | None:
+    """The latest level asked for, once: None when a request that waited
+    before this one has applied it already. A function, so mypy does not carry
+    the assignment above across the `await` that lets the others run."""
+    global _brightness_wanted
+    level, _brightness_wanted = _brightness_wanted, None
+    return level
 
 
 async def _apply_brightness(percent: int) -> bool:

@@ -105,7 +105,7 @@ class DaemonServer:
 
         start_unix_server = cast(
             "Callable[..., Awaitable[AbstractServer]]",
-            asyncio.start_unix_server,  # type: ignore[attr-defined]
+            asyncio.start_unix_server,  # type: ignore[attr-defined, unused-ignore]
         )
         self._server = await start_unix_server(self._serve, path=str(path))
         self._apply_permissions(path)
@@ -122,7 +122,7 @@ class DaemonServer:
             return
         try:
             gid = int(_grp.getgrnam(self.config.daemon.socket_group).gr_gid)
-            chown = cast("Callable[[Path, int, int], None]", os.chown)  # type: ignore[attr-defined]
+            chown = cast("Callable[[Path, int, int], None]", os.chown)  # type: ignore[attr-defined, unused-ignore]
             chown(path, 0, gid)
         except KeyError:
             log.warning(

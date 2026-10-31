@@ -98,9 +98,11 @@ class SystemClock:
     @staticmethod
     def boottime() -> float:
         if _CLOCK_BOOTTIME is not None:
-            clock_gettime = cast(
+            # mypy runs on Linux in CI and on Windows on the development host;
+            # each code below is an error on one and unused on the other.
+            clock_gettime = cast(  # type: ignore[redundant-cast, unused-ignore]
                 "Callable[[int], float]",
-                time.clock_gettime,  # type: ignore[attr-defined]
+                time.clock_gettime,  # type: ignore[attr-defined, unused-ignore]
             )
             return clock_gettime(_CLOCK_BOOTTIME)
         # A development host without CLOCK_BOOTTIME (Windows, macOS). Suspend is

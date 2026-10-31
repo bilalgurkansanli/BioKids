@@ -238,8 +238,8 @@ class LogindSessionSource:
         self._on_change: list[Any] = []
 
     async def start(self) -> None:
-        from dbus_next import BusType
-        from dbus_next.aio import MessageBus
+        from dbus_next.aio.message_bus import MessageBus
+        from dbus_next.constants import BusType
 
         self._bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
         introspection = await self._bus.introspect(LOGIND_BUS, LOGIND_PATH)

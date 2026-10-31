@@ -85,7 +85,7 @@ def peer_uid(writer: asyncio.StreamWriter) -> int | None:
     try:
         creds = raw.getsockopt(
             socket.SOL_SOCKET,
-            socket.SO_PEERCRED,  # type: ignore[attr-defined]
+            socket.SO_PEERCRED,  # type: ignore[attr-defined, unused-ignore]
             struct.calcsize("3i"),
         )
     except (OSError, AttributeError):  # pragma: no cover - non-Linux
@@ -129,7 +129,7 @@ class ShellServer:
 
         start_unix_server = cast(
             "Callable[..., Awaitable[AbstractServer]]",
-            asyncio.start_unix_server,  # type: ignore[attr-defined]
+            asyncio.start_unix_server,  # type: ignore[attr-defined, unused-ignore]
         )
         # A press-and-speak recording arrives as one frame of base64 (D-166),
         # far over the stream's default 64 KiB line.
@@ -474,7 +474,7 @@ def username_for_uid(uid: int) -> str | None:
         import pwd as pwd_module
     except ImportError:  # pragma: no cover - the Windows development host
         return None
-    getpwuid = cast("Callable[[int], Any]", pwd_module.getpwuid)  # type: ignore[attr-defined]
+    getpwuid = cast("Callable[[int], Any]", pwd_module.getpwuid)  # type: ignore[attr-defined, unused-ignore]
     try:
         return str(getpwuid(uid).pw_name)
     except KeyError:

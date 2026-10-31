@@ -438,7 +438,7 @@ class AsyncDaemonClient:
         # the Windows development host. Production is Linux (D-12).
         open_unix = cast(
             "Callable[[str], Awaitable[tuple[asyncio.StreamReader, asyncio.StreamWriter]]]",
-            asyncio.open_unix_connection,  # type: ignore[attr-defined]
+            asyncio.open_unix_connection,  # type: ignore[attr-defined, unused-ignore]
         )
         try:
             return await asyncio.wait_for(
