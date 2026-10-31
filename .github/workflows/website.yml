@@ -23,9 +23,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request replaces its older check; a publish is never
+# cut off half way.
 concurrency:
   group: website-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:

@@ -734,11 +734,14 @@ class _Refs(HTMLParser):
         self.links: list[str] = []
         self.imgs: list[dict[str, str | None]] = []
         self.ids: set[str] = set()
+        self.dup_ids: set[str] = set()
         self.h1 = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         a = dict(attrs)
         if a.get("id"):
+            if a["id"] in self.ids:
+                self.dup_ids.add(a["id"] or "")
             self.ids.add(a["id"] or "")
         if tag == "a" and a.get("href"):
             self.links.append(a["href"] or "")
@@ -749,6 +752,9 @@ class _Refs(HTMLParser):
         if tag == "img":
             self.imgs.append(a)
             self.links.append(a.get("src") or "")
+            for candidate in (a.get("srcset") or "").split(","):
+                if candidate.strip():
+                    self.links.append(candidate.split()[0])
         if tag == "h1":
             self.h1 += 1
 
@@ -770,9 +776,24 @@ def check(site: Site) -> int:
         for card in re.findall(r'property="og:image" content="([^"]+)"', page_html):
             if not (OUT / card.removeprefix(site.base).lstrip("/")).exists():
                 problems.append(f"{rel}: no share card {card} (make_images.py --og)")
+        for block in re.findall(
+            r'<script type="application/ld\+json">(.*?)</script>', page_html, re.S
+        ):
+            try:
+                json.loads(block)
+            except ValueError as e:
+                problems.append(f"{rel}: JSON-LD does not parse: {e}")
+        # A link into the repository names a file that is there.
+        for path in re.findall(
+            re.escape(site.site["repo"]) + r'/(?:blob|tree)/main/([^"#?]+)', page_html
+        ):
+            if not (ROOT / path).exists():
+                problems.append(f"{rel}: links to {path}, which is not in the repository")
     for rel, p in parsed.items():
         if p.h1 != 1:
             problems.append(f"{rel}: {p.h1} h1 elements")
+        for dup in sorted(p.dup_ids):
+            problems.append(f"{rel}: id {dup!r} is used twice")
         for img in p.imgs:
             if img.get("alt") is None:
                 problems.append(f"{rel}: <img src={img.get('src')}> has no alt")

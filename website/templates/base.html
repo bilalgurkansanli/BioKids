@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+{# Everything comes from this site; the JSON-LD block is data, not script. Inline
+   style attributes are allowed for the drawings' backgrounds. #}
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <title>{{ v.title }}</title>
 <meta name="description" content="{{ v.description }}">
 {% if page.noindex %}
@@ -71,6 +74,7 @@
     </nav>
     <div class="header-actions">
       <a class="lang-switch" href="{{ alt.path if page.kind != '404' else url('home', lang=other) }}" hreflang="{{ other }}" lang="{{ other }}" title="{{ t.lang_switch }}"><span aria-hidden="true">🌐</span> {{ t.lang_short }}<span class="visually-hidden"> — {{ t.lang_name }}</span></a>
+      <a class="gh-link" href="{{ site.repo }}" rel="noopener" aria-label="{{ t.gh_label }}" title="{{ t.gh_label }}">{% include "github-mark.html" %}<span class="gh-link-text">GitHub</span></a>
       <a class="btn btn-primary btn-sm header-cta" href="{{ url('download') }}">{{ t.nav_download }}</a>
       <details class="menu">
         <summary aria-label="{{ t.menu }}"><span class="menu-icon" aria-hidden="true"></span></summary>
@@ -79,6 +83,7 @@
             {% for key, label in nav %}
             <li><a href="{{ url(key) }}"{% if page.key == key %} aria-current="page"{% endif %}>{{ label }}</a></li>
             {% endfor %}
+            <li><a href="{{ site.repo }}" rel="noopener">{% include "github-mark.html" %} GitHub</a></li>
             <li><a href="{{ url('download') }}" class="btn btn-primary">{{ t.nav_download }}</a></li>
           </ul>
         </nav>
@@ -86,12 +91,14 @@
     </div>
   </div>
 </header>
+{% if page.kind != '404' %}
 <div class="lang-hint" hidden data-lang-hint="{{ lang }}">
   <div class="wrap lang-hint-inner">
     <span lang="{{ other }}">{{ t.lang_hint }} <a href="{{ alt.path if page.kind != '404' else url('home', lang=other) }}" hreflang="{{ other }}">{{ t.lang_hint_link }} →</a></span>
     <button type="button" class="lang-hint-close" aria-label="{{ t.lang_hint_close }}">✕</button>
   </div>
 </div>
+{% endif %}
 
 <main id="main" tabindex="-1">
 {% block main %}{% endblock %}
@@ -108,6 +115,7 @@
         <div class="btn-row">
           <a class="btn btn-primary btn-lg" href="{{ url('download') }}">{{ t.cta_download }}</a>
           <a class="btn btn-secondary btn-lg" href="{{ url('guide-install') }}">{{ t.cta_guide }}</a>
+          <a class="btn btn-secondary btn-lg" href="{{ site.repo }}" rel="noopener">{% include "github-mark.html" %} {{ t.gh_cta }}</a>
         </div>
       </div>
     </div>
@@ -144,7 +152,7 @@
     <nav aria-labelledby="f-project">
       <h2 id="f-project">{{ t.footer_project }}</h2>
       <ul>
-        <li><a href="{{ site.repo }}" rel="noopener">{{ t.footer_source }}</a></li>
+        <li><a href="{{ site.repo }}" rel="noopener">{% include "github-mark.html" %} {{ t.footer_source }}</a></li>
         <li><a href="{{ site.repo }}/blob/main/CHANGELOG.md" rel="noopener">{{ t.footer_changelog }}</a></li>
         <li><a href="{{ site.repo }}/blob/main/CONTRIBUTING.md" rel="noopener">{{ t.footer_contribute }}</a></li>
         <li><a href="{{ site.repo }}/blob/main/LICENSE" rel="noopener license">{{ t.footer_license }}</a></li>

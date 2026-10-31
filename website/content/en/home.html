@@ -11,6 +11,7 @@
         <a class="btn btn-primary btn-lg" href="{{ url('download') }}"><span aria-hidden="true">⬇</span> Download free</a>
         <a class="btn btn-secondary btn-lg" href="{{ url('guide-install') }}">How to install</a>
       </div>
+      <p class="hero-gh"><a href="{{ site.repo }}" rel="noopener">{% include "github-mark.html" %} {{ t.gh_hero }} →</a></p>
       <ul class="trust">
         <li>No account</li>
         <li>No telemetry</li>
@@ -217,6 +218,24 @@
       <div class="stat"><strong>~291k</strong><span>harmful domains blocked</span></div>
       <div class="stat"><strong>4 GB</strong><span>of RAM is enough</span></div>
       <div class="stat"><strong>MIT</strong><span>free license</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight" aria-labelledby="open-source">
+  <div class="wrap">
+    <div class="gh-card">
+      <span class="gh-card-mark" aria-hidden="true">{% include "github-mark.html" %}</span>
+      <div>
+        <p class="eyebrow tint-indigo">Open source</p>
+        <h2 id="open-source">Every line of the code is open</h2>
+        <p>All of BioKids (the background service, the parent panel, the child's launcher, the assistant and the ISO) is on GitHub under the MIT license. Read how it works for yourself, report a bug, or send a translation or a hardware report.</p>
+        <div class="btn-row">
+          <a class="btn btn-primary" href="{{ site.repo }}" rel="noopener">{% include "github-mark.html" %} {{ t.gh_cta }}</a>
+          <a class="btn btn-secondary" href="{{ site.repo }}/blob/main/CONTRIBUTING.md" rel="noopener">Contribute</a>
+          <a class="btn btn-secondary" href="{{ site.repo }}/blob/main/docs/DECISIONS.md" rel="noopener">Every design decision</a>
+        </div>
+      </div>
     </div>
   </div>
 </section>

@@ -11,6 +11,7 @@
         <a class="btn btn-primary btn-lg" href="{{ url('download') }}"><span aria-hidden="true">⬇</span> Ücretsiz indir</a>
         <a class="btn btn-secondary btn-lg" href="{{ url('guide-install') }}">Nasıl kurulur?</a>
       </div>
+      <p class="hero-gh"><a href="{{ site.repo }}" rel="noopener">{% include "github-mark.html" %} {{ t.gh_hero }} →</a></p>
       <ul class="trust">
         <li>Hesap gerekmez</li>
         <li>Telemetri yok</li>
@@ -217,6 +218,24 @@
       <div class="stat"><strong>~291 bin</strong><span>kapalı zararlı alan adı</span></div>
       <div class="stat"><strong>4 GB</strong><span>RAM yeterli</span></div>
       <div class="stat"><strong>MIT</strong><span>özgür lisans</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight" aria-labelledby="open-source">
+  <div class="wrap">
+    <div class="gh-card">
+      <span class="gh-card-mark" aria-hidden="true">{% include "github-mark.html" %}</span>
+      <div>
+        <p class="eyebrow tint-indigo">Açık kaynak</p>
+        <h2 id="open-source">Kodun her satırı açık</h2>
+        <p>BioKids'in tamamı (arka plan hizmeti, ebeveyn paneli, çocuğun başlatıcısı, asistan ve ISO) GitHub'da, MIT lisansıyla. Nasıl çalıştığını kendiniz okuyun, bir hata bildirin, bir çeviri ya da donanım raporu gönderin.</p>
+        <div class="btn-row">
+          <a class="btn btn-primary" href="{{ site.repo }}" rel="noopener">{% include "github-mark.html" %} {{ t.gh_cta }}</a>
+          <a class="btn btn-secondary" href="{{ site.repo }}/blob/main/CONTRIBUTING.md" rel="noopener">Katkıda bulunun</a>
+          <a class="btn btn-secondary" href="{{ site.repo }}/blob/main/docs/DECISIONS.md" rel="noopener">Her tasarım kararı</a>
+        </div>
+      </div>
     </div>
   </div>
 </section>

@@ -135,17 +135,19 @@
   }
 
   /* A visitor whose browser does not speak this page's language is told,
-   * once per tab, that the other one exists. Never redirected. */
+   * once per tab, that the other one exists: on a Turkish page anyone who
+   * does not read Turkish (English is the way in for every other language),
+   * on an English page anyone who reads Turkish. Never redirected. */
   var hint = document.querySelector("[data-lang-hint]");
   if (hint) {
     var pageLang = hint.getAttribute("data-lang-hint");
     var langs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""])
       .map(function (l) { return String(l).toLowerCase().slice(0, 2); });
     var speaksPage = langs.indexOf(pageLang) !== -1;
-    var other = pageLang === "tr" ? "en" : "tr";
     var dismissed = false;
     try { dismissed = sessionStorage.getItem("bk-lang-hint") === "1"; } catch (err) { /* private mode */ }
-    if (!speaksPage && langs.indexOf(other) !== -1 && !dismissed) {
+    var wantsOther = pageLang === "tr" ? !speaksPage : langs.indexOf("tr") !== -1 && langs[0] !== "en";
+    if (wantsOther && !dismissed) {
       hint.hidden = false;
       hint.querySelector(".lang-hint-close").addEventListener("click", function () {
         hint.hidden = true;
