@@ -1,0 +1,98 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>Kurulum sihirbazı her çocuğa yaşına göre bir başlangıç süresi verir. İstediğiniz zaman panelden değiştirebilirsiniz: birkaç temel ayar yeter, gerisi <strong>Gelişmiş</strong>'in arkasında bekler.</p>
+
+<ol class="steps">
+{% call m.step('Süre kuralları sayfasını açın', 'sayfayi-acin') %}
+<p>Panelde üstteki <strong>Çocuklar</strong>'a gidin ve çocuğunuzun kartında <strong>Süre kuralları</strong>'na basın.</p>
+{{ m.shot(lang ~ '/children', 'Panelin Çocuklar ekranı: Elif ve Kerem kartlarında Süre kuralları, Uygulamalar ve siteler, İnternet, Asistan, Ekranını gör ve Düzenle düğmeleri.', 'Çocuklar ekranı: her çocuğun kendi kuralları.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Günlük süreyi seçin', 'gunluk-sure') %}
+<p><strong>Hafta içi günlük süre</strong> ve <strong>Hafta sonu günlük süre</strong>: bir günde toplam kaç dakika kullanabileceği. Dakikayı yazın ya da hızlı seçimlerden birine basın: <strong>30 dk</strong>, <strong>1 sa</strong>, <strong>1,5 sa</strong>, <strong>2 sa</strong>.</p>
+{{ m.shot(lang ~ '/panel-time', 'Elif için Süre kuralları: hafta içi 60, hafta sonu 90 dakika, hafta içi ve hafta sonu saatleri, Süre bitince seçenekleri ve BioKids bu çocuğu yönetsin kutusu.', 'Süre kuralları sayfası.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Kullanabileceği saatleri belirleyin', 'saatler') %}
+<p><strong>Hafta içi saatler</strong> ve <strong>Hafta sonu saatler</strong> için <strong>Başlangıç</strong> ve <strong>Bitiş</strong> seçin. Okul öncesi ve sonrası gibi iki aralık seçebilirsiniz; saat seçmezseniz gün boyu serbesttir.</p>
+<ul>
+  <li>Hem dakika hem saat koyarsanız hangisi önce dolarsa o geçerlidir.</li>
+  <li>İki aralığın arasında ekran kilitlenir ve çocuk bir sonraki saatini bekler.</li>
+</ul>
+{% endcall %}
+
+{% call m.step('Süre bitince ne olacağını seçin', 'sure-bitince') %}
+<p><strong>Süre bitince</strong> üç seçenek var:</p>
+<ul>
+  <li><strong>Ekranı kilitle</strong>: bilgisayar açık kalır, ekran kilitlenir.</li>
+  <li><strong>Oturumu kapat</strong>: açık uygulamalar kapanır, giriş ekranına dönülür.</li>
+  <li><strong>Bilgisayarı kapat</strong>: bilgisayar tamamen kapanır (önerilen).</li>
+</ul>
+<p>Süre bitmeden 10, 5 ve 1 dakika kala Zio ya da Sio bunu sesli söyler. Süre bittiğinde ekran kilitlenir ve 2 dakikalık bir geri sayımdan sonra seçtiğiniz şey olur. Bilgisayarda başka biri de oturum açmışsa bilgisayar kapanmaz, yalnızca ekran kilitlenir.</p>
+{% call m.callout('child', 'Akşam biten günler') %}
+<p>Gün 19:00'dan sonra bitiyorsa son 10 dakikada sözler "iyi geceler"e döner ve ekran yavaş yavaş kısılır. Bitiş ekranı "İyi geceler" der; parlaklık sonra eski haline döner.</p>
+{% endcall %}
+{% endcall %}
+
+{% call m.step('Kaydedin', 'kaydedin') %}
+<p>Sayfanın altındaki <strong>Kaydet</strong>'e basın. Yeni kurallar hemen geçerli olur; çocuğun açık oturumu da yeni süreyle devam eder.</p>
+{% endcall %}
+</ol>
+
+<h2 id="gelismis">Gelişmiş ayarlar</h2>
+<p>Aynı sayfada <strong>Gelişmiş</strong>'i açtığınızda şunlar çıkar. Hepsi isteğe bağlıdır; boş bırakılanlar hiçbir şeyi değiştirmez.</p>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">Ayar</th><th scope="col">Ne işe yarar?</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Bazı günler farklı olsun</th><td>Örneğin cuma günü için ayrı süre ve saatler. Boş bırakılan kısım hafta içi/hafta sonu kuralını izler.</td></tr>
+      <tr><th scope="row">Türlere göre günlük süre</th><td><strong>Oyun</strong>, <strong>Eğitim</strong>, <strong>İnternet</strong> ve <strong>Serbest</strong> için ayrı üst sınır; örneğin oyunlara günde en fazla 30 dakika. Bir türün süresi dolunca o türdeki uygulama kapanır ve çocuk "Bunun bugünlük süresi bitti" ekranını görür.</td></tr>
+      <tr><th scope="row">Oyunlar kaç dakika öğrendikten sonra açılsın?</th><td>Örneğin 15 yazarsanız oyunlar, çocuk bugün 15 dakika öğrenme uygulaması kullandıktan sonra açılır.</td></tr>
+      <tr><th scope="row">Kazanılan süre</th><td>Eğitim uygulamalarında geçen süre oyun süresine eklenir: varsayılan olarak her öğrenme dakikası 1 dakika, günde en fazla 60 dakika.</td></tr>
+      <tr><th scope="row">Zorunlu mola</th><td>Varsayılan olarak kapalı. Açınca örneğin 40 dakikada bir 5 dakikalık mola verilir; ekranda gözler için birkaç hareket önerilir. Mola süreden düşmez.</td></tr>
+      <tr><th scope="row">Son tur hakkı</th><td>Süre bitmek üzereyken çocuk günde bir kez <strong>Bitireyim</strong>'e basıp oyununu ya da resmini bitirmek için 2, 3 ya da 5 dakika alabilir (varsayılan 3). Kullanırsa Bugün ekranında görürsünüz.</td></tr>
+    </tbody>
+  </table>
+</div>
+<p>Her uygulamaya tek tek sınır konmaz; sınırlar yukarıdaki dört tür üzerinden çalışır.</p>
+
+<h2 id="ozel-gunler">Özel günler: bayram, tatil, doğum günü</h2>
+<ul>
+  <li><strong>Bugün özel bir gün mü?</strong> Yalnızca bugün için <strong>+1 sa</strong>, <strong>+2 sa</strong> ya da süre sınırı olmayan bir gün (izinli saatler yine geçerli). Yarın her şey her zamanki gibi. Bunu Bugün ekranında çocuğunuzun kartından da açabilirsiniz.</li>
+  <li><strong>Birkaç gün için: tatil, bayram</strong>: ilk ve son günü seçin (en fazla 100 gün), sonra bu günlerde <strong>Hafta sonu gibi</strong> mi yoksa <strong>Günde şu kadar dakika</strong> mı olacağını. Geçmiş günler değişmez.</li>
+</ul>
+
+<h2 id="gun-icinde">Gün içinde</h2>
+{{ m.shot(lang ~ '/panel-today', 'Bugün ekranı: Elif için 42 dakika kaldı; +10 dk, +30 dk, Kilitle, Kilidi aç, Kapat düğmeleri ve altında Birlikteyiz, Bir şey gönder, Bugün özel bir gün mü?', 'Bugün ekranında her çocuğa bir kart.', sizes='(min-width: 960px) 760px, 100vw') }}
+<ul>
+  <li><strong>+10 dk</strong> ve <strong>+30 dk</strong> düğmeleri hemen süre ekler; ekran kilitliyse kendiliğinden açılır.</li>
+  <li>Çocuk ekranından <strong>Biraz daha süre iste</strong>'ye basarsa (son 15 dakikada görünür) istek <em>İstekler</em>'e ve telefonunuza düşer; <strong>+15 dk</strong>, <strong>+30 dk</strong>, <strong>+60 dk</strong> ya da <strong>Şimdi değil</strong> dersiniz. Cevabınız çocuğa sesli söylenir.</li>
+  <li><strong>Birlikteyiz</strong>: yanında oturup birlikte oynarken 30 dk, 1 sa ya da 2 sa boyunca süre sayılmaz; uyarı ve kilit de olmaz. Seçtiğiniz süre dolunca kendiliğinden biter.</li>
+  <li><strong>Kilitle</strong> ekranı hemen kilitler, <strong>Kapat</strong> önce sorar, sonra bilgisayarı kapatır.</li>
+</ul>
+
+{% call m.callout('privacy', 'Saati değiştirmek işe yaramaz') %}
+<p>BioKids dakikaları duvar saatiyle değil, bilgisayarın açılıştan beri işleyen saatiyle (<code>CLOCK_BOOTTIME</code>) sayar. Sistem saatini ileri ya da geri almak süreyi değiştirmez; bilgisayarın uykuda geçirdiği süre de sayılmaz.</p>
+{% endcall %}
+
+<h2 id="sorun">Sorun mu var?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>Çocuğumun ekranı kilitlendi. Ne yapmalıyım?</h3></summary>
+    <div class="faq-answer"><p>Günlük süre bitince ya da izin verilen saatlerin dışında ekran kilitlenir. Bugün ekranından ek süre verirseniz kilit kendiliğinden açılır.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>BioKids'i bir çocuk için bir süreliğine kapatabilir miyim?</h3></summary>
+    <div class="faq-answer"><p>Süre kuralları sayfasındaki <strong>BioKids bu çocuğu yönetsin</strong> kutusunu kaldırın; parolanız sorulur. Kapalıyken o hesapta hiçbir sınır uygulanmaz. Kutuyu yeniden işaretleyince koruma geri gelir.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Kurallar ne kadar sürede geçerli olur?</h3></summary>
+    <div class="faq-answer"><p>Kaydettiğiniz anda. Çocuğun açık oturumu yeniden başlatılmadan yeni kurallarla devam eder.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Bilgisayar kapanmadı, yalnızca ekran kilitlendi.</h3></summary>
+    <div class="faq-answer"><p>Bilgisayarda başka biri de oturum açıksa (örneğin bir kardeş ya da siz), kimsenin işi yarım kalmasın diye BioKids yalnızca ekranı kilitler.</p></div>
+  </details>
+</div>
+{% endblock %}

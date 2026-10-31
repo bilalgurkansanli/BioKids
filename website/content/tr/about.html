@@ -1,0 +1,97 @@
+{% extends "page.html" %}
+{% import "macros.html" as m with context %}
+{% block h1 %}BioKids hakkında{% endblock %}
+{% block lead %}<p class="lead"><strong>BioKids</strong>, 4–10 yaş çocuklar için Debian 13 tabanlı, ücretsiz ve açık kaynak bir ebeveyn denetimi sistemidir. Bilal Gürkan Şanlı tarafından BioStudio etiketiyle geliştirilir ve MIT lisansıyla herkese açıktır.</p>{% endblock %}
+{% block body %}
+<section class="section-tight">
+  <div class="wrap narrow prose">
+    <h2 id="neden">Neden var?</h2>
+    <p>Küçük bir çocuk bir bilgisayarı tek başına kullanabilmeli: resmine dokunup girmeli, kocaman kutulardan istediğini açmalı, süresi bitmek üzereyken bunu duymalı. Ebeveyn de kuralları koyabilmeli: ne kadar, ne zaman, hangi siteler.</p>
+    <p>Ama çoğu ebeveyn denetimi bunun için bir hesap açtırır, çocuğun gününü bir şirketin sunucularına gönderir ve çocuğa neyin görüldüğünü pek söylemez. BioKids tersini yapmak için var:</p>
+    <ul class="checks">
+      <li><strong>Kurallar da veriler de evde kalır.</strong> Bir BioKids sunucusu yok, hesap yok.</li>
+      <li><strong>Çocuk bilir.</strong> Denetim hiçbir zaman gizli değildir.</li>
+      <li><strong>Panel, teknik olmayan bir ebeveynin anlayacağı sadeliktedir.</strong> Açıklama isteyen her ayar "Gelişmiş"in arkasında durur.</li>
+    </ul>
+
+    <h2 id="kim">Kim yapıyor?</h2>
+    <div class="card person">
+      <span class="person-badge" aria-hidden="true"><img src="/assets/img/brand/kite.png" width="34" height="58" alt=""></span>
+      <div>
+        <h3>{{ site.author }}</h3>
+        <p>BioKids'i <strong>{{ site.label }}</strong> etiketiyle geliştiriyor.</p>
+        <div class="btn-row">
+          <a class="btn btn-secondary btn-sm" href="{{ site.author_url }}" rel="author noopener">bilalgurkansanli.com</a>
+          <a class="btn btn-secondary btn-sm" href="{{ site.github_user }}" rel="noopener">GitHub</a>
+          <a class="btn btn-secondary btn-sm" href="mailto:{{ site.email }}">✉️ {{ site.email }}</a>
+        </div>
+      </div>
+    </div>
+    <p>BioKids açık kaynaktır: hata bildirimleri, çeviriler, donanım raporları ve kod katkıları için <a href="{{ url('support') }}">Destek</a> sayfasına bakın.</p>
+  </div>
+</section>
+
+<section class="section-tight">
+  <div class="wrap">
+    <header class="section-head center">
+      <p class="eyebrow tint-indigo">Söz</p>
+      <h2 id="ilkeler">Değişmeyen altı ilke</h2>
+      <p class="lead">Projenin anayasasında yazılıdır ve diğer her kuralın önüne geçer. Bunlarla çelişen bir özellik eklenmez.</p>
+    </header>
+    <div class="principles">
+      <div><h3><span class="emoji" aria-hidden="true">🏠</span> Hiçbir şey cihazdan çıkmaz</h3><p>Telemetri, analiz, bulutta çıkarım ya da hata raporu yoktur. Dış bağlantıların tamamı açıkça listelenir.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">👀</span> Çocuk bilir</h3><p>Gizli ekran görüntüsü, sessiz tuş kaydı yoktur. Ebeveyn ekranı canlı izlerken bu çocuğa her zaman gösterilir.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">🔒</span> Güvenli tarafta kalır</h3><p>Koruma çökerse çocuğun oturumu kilitlenir ve ebeveyne haber verilir. "Korumasız devam" yoktur.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">🧯</span> Sizi asla dışarıda bırakmaz</h3><p>Ebeveyni dışarıda bırakabilecek her şey isteğe bağlı, geri alınabilir ve bir kurtarma yolu yazılıdır.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">📴</span> Önce çevrimdışı</h3><p>Temel her özellik ağ kablosu çıkarılmışken de çalışır. Bulut hizmetleri ebeveynin açtığı eklerdir.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">🙂</span> Anlaşılır panel</h3><p>Panel, teknik olmayan bir ebeveynin anlayacağı gibidir; açıklama isteyen ayarlar "Gelişmiş"in arkasındadır.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight">
+  <div class="wrap narrow prose">
+    <h2 id="uzerine-kurulu">Neyin üzerine kurulu?</h2>
+    <p>BioKids, yıllardır güvenilen özgür yazılımların üzerinde durur:</p>
+    <ul class="built-on">
+      <li><a href="https://www.debian.org" rel="noopener">Debian</a> 13 "trixie"</li>
+      <li><a href="https://xfce.org" rel="noopener">Xfce</a> masaüstü</li>
+      <li><a href="https://www.chromium.org" rel="noopener">Chromium</a> tarayıcı</li>
+      <li><a href="https://thekelleys.org.uk/dnsmasq/doc.html" rel="noopener">dnsmasq</a> ve <a href="https://netfilter.org/projects/nftables/" rel="noopener">nftables</a></li>
+      <li><a href="https://tailscale.com" rel="noopener">Tailscale</a></li>
+      <li><a href="https://github.com/espeak-ng/espeak-ng" rel="noopener">espeak-ng</a> ve <a href="https://github.com/rhasspy/piper" rel="noopener">Piper</a></li>
+      <li><a href="https://github.com/ggml-org/llama.cpp" rel="noopener">llama.cpp</a> ve <a href="https://github.com/ggml-org/whisper.cpp" rel="noopener">whisper.cpp</a></li>
+      <li><a href="https://kiwix.org" rel="noopener">Kiwix</a> ve <a href="https://www.wikipedia.org" rel="noopener">Vikipedi</a></li>
+      <li><a href="https://github.com/ShadowWhisperer/BlockLists" rel="noopener">ShadowWhisperer</a> engel listeleri</li>
+      <li><a href="https://github.com/hafontia/Fredoka-One" rel="noopener">Fredoka</a> ve <a href="https://github.com/googlefonts/noto-emoji" rel="noopener">Noto Color Emoji</a></li>
+    </ul>
+    <p>BioKids'in kendisi Python 3.13, FastAPI ve SQLite ile yazılır; ekranlar Jinja2 ve elle yazılmış CSS'tir. Derleme adımı, npm ya da bir çatı (framework) yoktur. Bu site de aynı anlayışla yapıldı: hiçbir şey başka bir sunucudan yüklenmez.</p>
+
+    <h2 id="durum">Bugün ne durumda?</h2>
+    <p>Güncel sürüm <strong>{{ site.version }}</strong>: Debian paketleri ve kurulmaya hazır ISO birlikte. Paketler derleniyor, lintian denetiminden geçiyor ve Debian 13'te kurulup, güncellenip, tamamen kaldırılabiliyor. ISO, VirtualBox'ta (BIOS ve UEFI) ve gerçek bir bilgisayarda Windows'un yanına kuruldu.</p>
+    <p>Sırada projenin kendi APT deposunun ve yayın anahtarının yayımlanması var. Neyin yapıldığı, neden vazgeçildiği ve sırada ne olduğu <a href="{{ site.repo }}/blob/main/docs/ROADMAP.md" rel="noopener">yol haritasında</a>; sürüm sürüm değişenler <a href="{{ site.repo }}/blob/main/CHANGELOG.md" rel="noopener">sürüm notlarında</a>. Her tasarım kararı ve nedeni de <a href="{{ site.repo }}/blob/main/docs/DECISIONS.md" rel="noopener">kararlar belgesinde</a> yazılı.</p>
+
+    <h2 id="lisans">Lisans</h2>
+    <p>BioKids <a href="{{ site.repo }}/blob/main/LICENSE" rel="noopener license">MIT lisanslıdır</a>: kullanmak, değiştirmek ve paylaşmak serbesttir. Paketlerin taşıdığı yazılımların lisansları <code>debian/copyright</code> dosyasında, ebeveynin indirdiği modellerinkiler <code>src/biokids_ai/models.py</code> dosyasında yazılı.</p>
+
+    <h2 id="basin">Basın ve marka</h2>
+    <div class="card">
+      <p><strong>Ad:</strong> BioKids, tek kelime, B ve K büyük. "Bio Kids" ya da "Biokids" değil.</p>
+      <p><strong>Tek cümleyle:</strong> BioKids, 4–10 yaş çocuklar için Debian 13 tabanlı, tamamen bilgisayarın kendisinde çalışan, ücretsiz ve açık kaynak bir ebeveyn denetimi sistemidir.</p>
+      <p><strong>Bir paragrafla:</strong> BioKids, Debian 13 yüklü bir bilgisayarı küçük bir çocuğun tek başına kullanabileceği hale getirir. Çocuk resmine dokunarak girer ve kocaman kutulardan oluşan bir başlatıcıya gelir; kalan süre bir halkada görünür ve Zio ile Sio adlı iki ses bitmesine az kala haber verir. Ebeveyn kuralları aynı bilgisayardaki ya da telefonundaki panelden koyar: saati değiştirerek kandırılamayan süre sınırları, zararlı siteleri kapatan yerel bir filtre, ekranı canlı izleme (çocuk bunu her zaman görür) ve bilgisayarda çalışan bir yapay zekâ asistanı. Hesap, bulut ya da telemetri yoktur. MIT lisanslıdır.</p>
+      <p><strong>Logo:</strong> kalp biçiminde ipiyle bir uçurtma ve "BioKids" yazısı; yazı tipi Fredoka.</p>
+      <div class="press-logos">
+        <a href="/assets/img/brand/logo.png" download><img src="/assets/img/brand/logo.png" width="480" height="340" alt="BioKids logosu: renkli bir uçurtma ve BioKids yazısı" loading="lazy" decoding="async"><span>logo.png · şeffaf PNG</span></a>
+        <a href="/assets/img/brand/kite.png" download><img src="/assets/img/brand/kite.png" width="120" height="203" alt="Yalnızca uçurtma" loading="lazy" decoding="async"><span>kite.png · yalnızca uçurtma</span></a>
+      </div>
+      <ul class="swatches" aria-label="Marka renkleri">
+        <li><i style="background:#FF6B5B"></i> Mercan #FF6B5B (Zio)</li>
+        <li><i style="background:#FFB020"></i> Amber #FFB020</li>
+        <li><i style="background:#1FB6A6"></i> Turkuaz #1FB6A6 (Sio)</li>
+        <li><i style="background:#4B54C8"></i> Çivit #4B54C8</li>
+        <li><i style="background:#FBF7F2"></i> Zemin #FBF7F2</li>
+      </ul>
+    </div>
+  </div>
+</section>
+{% endblock %}

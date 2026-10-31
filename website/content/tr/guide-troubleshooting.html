@@ -1,0 +1,94 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>BioKids'te en sık karşılaşılan durumlar ve ne yapacağınız, kısa kısa. Aradığınız şeyi yandaki listeden (telefonda yukarıdaki başlıklardan) bulun. Burada olmayan bir şeyde bize yazın.</p>
+
+{% call m.callout('tip', 'Önce panelin kendi Yardım sayfasına bakın') %}
+<p>Panelin üstündeki <strong>Yardım</strong>, sık soruları ve adım adım rehberleri bilgisayarın kendisinde, internetsiz de gösterir. <strong>Ayarlar → Koruma durumu</strong> ise neyin yerinde olduğunu, neyin size ihtiyaç duyduğunu tek listede söyler.</p>
+{% endcall %}
+
+<h2 id="pin-unuttum">PIN'imi unuttum</h2>
+<ol>
+<li>Panelin giriş sayfasında <strong>PIN'imi unuttum</strong>'a basın.</li>
+<li>Kurulumda (ya da sizi ebeveyn olarak eklerken) kâğıda yazdığınız <strong>8 kelimelik kurtarma kodunu</strong>, kelimeler arasında boşluk bırakarak girin.</li>
+<li>Yeni bir PIN seçin.</li>
+</ol>
+<p>Kurtarma kodu da kaybolduysa: bilgisayarda kendi (ebeveyn) hesabınızla oturum açın, uygulamalar menüsünden <strong>Uçbirim</strong>'i açın ve şunu yazın. Bilgisayarın parolası sorulur (PIN değil, kurulumda seçtiğiniz hesap parolası):</p>
+{{ m.code('sudo biokids-admin reset-pin') }}
+<p>Birden çok ebeveyn varsa kimin PIN'i olduğunu sorar; isterseniz baştan söyleyebilirsiniz: <code>sudo biokids-admin reset-pin --parent AD</code>.</p>
+
+<h2 id="cok-yanlis-pin">"Çok fazla deneme" diyor</h2>
+<p>Üst üste 5 yanlış PIN'den sonra giriş 15 dakika kapanır; yanlışlar sürerse bu süre her seferinde ikiye katlanır, en fazla bir güne kadar. Her ebeveynin sayacı ayrıdır. Beklemek istemiyorsanız PIN'inizi yukarıdaki gibi kurtarma koduyla sıfırlayın.</p>
+
+<h2 id="parola-unuttum">Aile parolasını unuttum</h2>
+<p>Aile parolası; korumayı kapatmak, bir çocuğu silmek, ebeveyn eklemek ya da çıkarmak ve yedek almak için sorulur. Unuttuysanız uçbirimde şunu yazın ve en az 10 karakterlik yeni bir parola seçin:</p>
+{{ m.code('sudo biokids-admin reset-passphrase') }}
+
+<h2 id="ekran-kilitli">Çocuğun ekranı kilitli</h2>
+<p>Ekran şu durumlarda kilitlenir: günün süresi bittiyse, izin verilen saatlerin dışındaysa ("Saatini bekliyor"), zorunlu moladaysa ya da siz kilitlediyseniz. Panelde <strong>Bugün</strong> ekranından çocuğunuzun kartında <strong>+10 dk</strong> ya da <strong>+30 dk</strong>'ya basın: kilit kendiliğinden açılır.</p>
+<p>Çocuğun ekranında <strong>"BioKids şu an cevap vermiyor. Bir büyüğüne söyle."</strong> yazıyorsa BioKids'in arka plan hizmeti bir sorun yaşamıştır. BioKids böyle bir anda çocuğu korumasız bırakmak yerine oturumu kilitler ve size haber verir. Hizmet yeniden başladıktan sonra da kilit, siz Bugün ekranından süre verene kadar durur. Panel "BioKids servisi yanıt vermiyor" diyorsa bilgisayarı yeniden başlatın; sorun sürerse <a href="#hata-bildirmek">bize bildirin</a>.</p>
+
+<h2 id="giris-ekraninda-yok">Çocuğum giriş ekranında görünmüyor</h2>
+<p>BioKids kurulduktan sonra bilgisayarın <strong>bir kez yeniden başlatılması</strong> gerekir: resimli giriş ekranı çocukları ancak açılırken okur. Yeniden başlattıysanız ve çocuk yine yoksa panelde <strong>Çocuklar</strong> sayfasında ekli olduğuna bakın.</p>
+
+<h2 id="internet-yok">Çocuğun interneti yok</h2>
+<ul>
+<li>BioKids'in internet filtresi <strong>güvenli tarafta</strong> hata verir: filtre çalışmıyorsa çocuk hesaplarında internet hiç açılmaz. <strong>Ayarlar → Koruma durumu</strong>'nda "İnternet filtresi" satırına bakın; yeşil değilse yanında ne yapacağınız yazar. Çoğu zaman bilgisayarı yeniden başlatmak yeter.</li>
+<li>Çocuk <strong>Sadece seçtiğim siteler</strong> modundaysa yalnızca sizin seçtiğiniz siteler açılır. <a href="{{ url('guide-web') }}">Güvenli internet rehberi</a>.</li>
+<li>Tek bir site açılmıyorsa kapalı bir site olabilir: çocuk <strong>Büyüğüme sor</strong>'a basınca istek <strong>İstekler</strong>'e düşer; <strong>İzin ver</strong> o siteyi açar.</li>
+</ul>
+
+<h2 id="windows-saati">Windows'a geçince saat kaymış</h2>
+<p>Windows'un yanına kurulu bilgisayarlarda Windows'un saati birkaç saat ileri ya da geri görünebilir. Windows'ta <strong>Ayarlar → Zaman ve dil → Tarih ve saat</strong>'e gidip <strong>Şimdi eşitle</strong>'ye basın. BioKids'in süre sayımı saatten bağımsızdır; bundan etkilenmez.</p>
+
+<h2 id="gecici-kapatma">BioKids'i bir süreliğine kapatmak</h2>
+<p>Birlikte oynayacaksanız panelde <strong>Birlikteyiz</strong>'i başlatın: 30 dakika, 1 ya da 2 saat boyunca hiçbir şey sayılmaz, uyarı ve kilit olmaz. Daha uzun bir ara için <strong>Çocuklar → Süre kuralları</strong>'nda <strong>BioKids bu çocuğu yönetsin</strong> kutusunu kaldırın; aile parolanız sorulur. Kutuyu yeniden işaretleyince koruma geri gelir.</p>
+
+<h2 id="guncelleme">Güncelleme</h2>
+<p>BioKids kendiliğinden güncellenmez; ne zaman güncelleyeceğinize siz karar verirsiniz. Ebeveyn hesabınızla bir uçbirim açın ve şunu yazın. Bu, Debian'ın güvenlik güncellemelerini de getirir:</p>
+{{ m.code('sudo apt update && sudo apt upgrade') }}
+<p>BioKids paketleri birlikte güncellenir; birini tek başına güncellemeye çalışmayın. Bir güncelleme yeni bir şey getirdiyse yeniden başlatmak en temiz yoldur.</p>
+
+<h2 id="yedek">Yedek almak ve yeni bilgisayara taşımak</h2>
+<p><strong>Ayarlar → Yedekle ve taşı</strong>, çocuklarınızın kurallarını, uygulamalarını, çıkartmalarını, İngilizce ve okuma ilerlemesini ve geçmişini tek bir <code>.biokids</code> dosyasında saklar.</p>
+<ol>
+<li><strong>Parolanızı doğrulayın</strong> kutusuna aile parolanızı yazın ve <strong>Yedeği indir</strong>'e basın. Dosyayı bir USB belleğe ya da güvendiğiniz bir yere koyun.</li>
+<li>Yeni bilgisayara BioKids'i kurun ve ilk kurulumu yapın.</li>
+<li>Aynı sayfada <strong>Yedekten geri yükle</strong>: dosyayı seçin, bu bilgisayarın aile parolasını ve (farklıysa) eski bilgisayarınkini yazın.</li>
+<li>Bilgisayarı bir kez yeniden başlatın ve e-posta ayarlarını yeniden yapın.</li>
+</ol>
+{{ m.shot(lang ~ '/backup', 'Yedekle ve taşı sayfası: üstte parolayı doğrulayıp Yedeği indir, altta yedek dosyası ve parolalarla Geri yükle.', 'Yedekle ve taşı: üstte yedek almak, altta geri yüklemek.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% call m.callout('privacy', 'Yedekte ne yok?') %}
+<p>Dosya aile parolanızla şifrelenir; içinde PIN, parola, kurtarma kodu ya da e-posta ayarı olmaz. Asistanın modelleri ve doğal ses de yedeğe girmez; yeni bilgisayarda panelden yeniden indirilir.</p>
+{% endcall %}
+
+<h2 id="bilgisayari-korumak">Bilgisayarın kendisini korumak</h2>
+<p><strong>Ayarlar → Koruma durumu</strong> her şeyi tek listede gösterir: BioKids çalışıyor mu, internet filtresi, tarayıcı kuralları ve eklentisi, başka bir tarayıcı, e-posta uyarıları, yedek, disk alanı, saat ve önyükleme parolası. Yeşil olanlar yerinde; uyarı olanların yanında ne yapacağınız yazar.</p>
+{{ m.shot(lang ~ '/settings-protection', 'Koruma durumu listesi: e-posta uyarıları için bir uyarı, yedek, saat ve önyükleme parolası için bilgi notları, diğerleri yeşil.', 'Koruma durumu: yeşiller yerinde, diğerlerinin yanında "Ne yapmalıyım".', sizes='(min-width: 960px) 600px, 100vw') }}
+<p>BioKids, USB bellekten açan ya da diski söken birini durduramaz. Teknik bilgisi olan bir çocuğu yavaşlatmak isterseniz BIOS'ta ve açılış menüsünde parola koymak <strong>sizin seçiminizdir</strong>; BioKids bunu hiçbir zaman kendisi yapmaz. Nasıl yapılacağı ve nasıl geri alınacağı panelin <strong>Bilgisayarın kendisini korumak</strong> rehberinde. Koyduğunuz parolaları bir yere yazın: unutulan bir BIOS parolası bilgisayarı kilitleyebilir.</p>
+
+<h2 id="kurtarma-modu">Açılış menüsü ve kurtarma modu</h2>
+<p>Yalnızca BioKids kurulu bir bilgisayarda açılış menüsü gizlidir ve bir saniye bekler. Bilgisayar açılırken <kbd>Esc</kbd>'ye basarsanız menü görünür; oradan Debian'ın kurtarma moduna girebilirsiniz. Windows'un yanına kurulu bilgisayarlarda menü her açılışta 5 saniye görünür. Bir açılış yarıda kaldıysa menü bir sonraki açılışta kendiliğinden daha uzun görünür.</p>
+
+<h2 id="e-posta">E-posta bildirimleri gelmiyor</h2>
+<p><strong>Ayarlar → E-posta bildirimleri</strong>'nde bilgileri girip <strong>Kaydet ve deneme gönder</strong>'e basın; deneme gelmezse ayar yanlıştır.</p>
+<ul>
+<li><strong>Gmail</strong>: sunucu <code>smtp.gmail.com</code>, port 587, STARTTLS; şifre olarak normal parolanız değil, Google hesabınızda oluşturduğunuz bir <em>uygulama şifresi</em> gerekir.</li>
+<li><strong>Yandex</strong> ve <strong>iCloud</strong> çalışır.</li>
+<li>Kişisel <strong>Outlook / Hotmail</strong> hesapları artık bu yolla e-posta gönderemiyor; başka bir hesap kullanın.</li>
+</ul>
+{{ m.shot(lang ~ '/settings-mail', 'E-posta bildirimleri bölümü: hangi adrese gelsin, Önemli olaylarda hemen haber ver ve Pazar akşamı haftalık özet gönder seçenekleri, posta sunucusu bilgileri ve Kaydet ve deneme gönder düğmesi.', 'E-posta bildirimleri: e-postalar sizin kendi posta sunucunuzdan gider.', sizes='(min-width: 960px) 600px, 100vw') }}
+
+<h2 id="hata-bildirmek">Hata bildirmek</h2>
+<p>Bir şey olması gerektiği gibi çalışmıyorsa bize yardımcı olacak üç şey:</p>
+<ol>
+<li><strong>Sürüm:</strong> panelin en altında yazar (ör. "BioKids 2.0.0"), ya da uçbirimde <code>biokids-admin version</code>.</li>
+<li><strong>Debian sürümü</strong> ve bilgisayarın gerçek mi sanal makine mi olduğu.</li>
+<li><strong>Kayıtlar:</strong> uçbirimde aşağıdaki komutun çıktısı. Göndermeden önce içindeki çocuk adlarını silin.</li>
+</ol>
+{{ m.code('sudo journalctl -u biokids-daemon -n 200 --no-pager') }}
+<p>Sonra <a href="{{ site.issues_url }}" rel="noopener">GitHub'da hata formunu</a> doldurun ya da <a href="mailto:{{ site.email }}">{{ site.email }}</a> adresine yazın. Donanım sorunları (ekran, ses, Wi-Fi, mikrofon) için GitHub'da ayrı bir donanım formu var.</p>
+{% call m.callout('danger', 'Çocuğunuzu gösteren hiçbir şey eklemeyin') %}
+<p>Bir hata bildirimine çocuğunuzun adını, ekran görüntüsünü ya da geçmişini asla eklemeyin. Güvenlik açığı bulduysanız herkese açık bir bildirim değil, <a href="{{ site.repo }}/blob/main/SECURITY.md" rel="noopener">SECURITY.md</a>'deki gibi gizli bir bildirim yapın.</p>
+{% endcall %}
+{% endblock %}

@@ -2395,6 +2395,35 @@ has its own: `update-grub` still found desktop-base's picture.
 - Left as Debian's: the installer's own words and colours, the firmware's "debian" boot
   entry and the console's `/etc/issue`.
 
+**D-256 [claude] The website lives in the repository.** (2026-10-31)
+The owner chose to build biokids.bilalgurkansanli.com here rather than separately, so
+that it is open source with the product, its screenshots and its facts.
+- **`website/`**: Jinja2 templates in two languages, Turkish at `/` and English under
+  `/en/`, built to static HTML by `website/build.py` (Jinja2 and the standard library)
+  and published by GitHub Pages from `.github/workflows/website.yml` on every push to
+  main that touches it. No npm, no framework, no CDN, no font service, no analytics and
+  no cookies: the site keeps the product's own rules (principle 1, D-32).
+- **The product's look:** `tokens.css`'s colours, Fredoka copied from `biokids_core` at
+  build time (one copy of the font in the repository), the logo cut by
+  `website/make_images.py` the way `dev/make_icons.py` cuts it, the footer in the boot
+  menu's deep indigo (D-255).
+- **For search engines and assistants:** canonical and hreflang pairs (x-default is
+  English), JSON-LD made from the same files as the pages (WebSite, Person,
+  SoftwareApplication, BreadcrumbList, a HowTo from each guide's steps, a FAQPage from
+  `website/faq.toml`), a sitemap with alternates, a robots.txt open to every crawler,
+  `llms.txt` and `llms-full.txt`, `/.well-known/security.txt`, and a share card per page.
+  `build.py --check` fails CI on a broken link or anchor, an image without alt text or
+  size, a page without exactly one h1, or a title or description out of range.
+- **Real pictures:** the READMEs' screenshots and 27 more of the panel in each language
+  (the wizard, phone access, the internet, the assistant, Insights...), taken over
+  `dev/seed.py`'s family with a stand-in daemon. Drawings (the disk, the firmware menu,
+  the installer, the boot menu) are labelled as drawings.
+- **Only what 2.0.0 does.** Where the product is not there yet the site says so: the APT
+  repository and the release key, Secure Boot on real hardware, Ubuntu.
+- **The owner sets the domain once:** Pages source "GitHub Actions", the custom domain,
+  "Enforce HTTPS", and a DNS CNAME record `biokids` -> `bilalgurkansanli.github.io`. The
+  APT repository keeps its own host name, `apt.biokids.bilalgurkansanli.com`.
+
 **D-257 [claude] The APT archive in a repository of its own; the ISO points apt at it.**
 (2026-10-31)
 - **`BioKids-apt`**, public, holds the archive on its `gh-pages` branch, and its Pages
@@ -2425,3 +2454,23 @@ has its own: `update-grub` still found desktop-base's picture.
   (version, file name, SHA256, archive.org item) before the tag: its checksum goes into
   the signed `SHA256SUMS`, so the copy on archive.org is checked against the release's
   signature, and its link into the notes.
+
+**D-258 [claude] The website is served by Vercel.** (2026-10-31)
+The owner moved biokids.bilalgurkansanli.com from GitHub Pages (D-256) to Vercel; the
+APT archive stays on `BioKids-apt`'s Pages under its own name (D-257), so the two never
+meet.
+- **`vercel.json` at the root** names the build, `website/vercel-build.sh` (Jinja2, then
+  `build.py --check`), and the output, `website/_site`. A failed check fails the
+  deployment: a broken page never replaces a working site. Each pull request gets a
+  preview, which Vercel keeps out of search engines; the canonical links name the real
+  domain anyway.
+- **Real response headers** where GitHub Pages allowed none: the Content-Security-Policy
+  (the page's own meta copy stays, for a local preview) with `frame-ancestors 'none'`,
+  `X-Frame-Options`, `nosniff`, a referrer policy and a permissions policy that turns off
+  the camera, microphone, location and the rest. Fonts are cached for a year. Addresses
+  keep their trailing slash, as the sitemap and the canonical links have them.
+- **`website.yml` only checks**, with the same script, so a pull request shows the site's
+  check beside the product's CI; it no longer deploys. The build stops writing `CNAME`
+  and `.nojekyll`.
+- **The privacy page names Vercel** as the host that sees a visitor's address, and says
+  that Vercel's analytics are not used. They stay off.

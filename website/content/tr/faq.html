@@ -1,0 +1,20 @@
+{% extends "page.html" %}
+{% import "macros.html" as m with context %}
+{% block h1 %}Sık sorulan sorular{% endblock %}
+{% block lead %}<p class="lead">Ebeveynlerin BioKids hakkında en çok merak ettikleri: ücret, kurulum, güvenlik, gizlilik, yapay zekâ asistanı ve günlük kullanım. Bir soruya tıklayın, yanıtı açılsın.</p>{% endblock %}
+{% block body %}
+<section class="section-tight">
+  <div class="wrap narrow">
+    {{ m.faq_list(faq) }}
+
+    <div class="card ask-more">
+      <h2 id="sorunuz-yok-mu">Sorunuz burada yok mu?</h2>
+      <p>Bize yazın; Türkçe ya da İngilizce, hangisi kolayınıza gelirse. Yanıtı başkaları da merak ediyorsa bu sayfaya ekleriz.</p>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="mailto:{{ site.email }}?subject={{ 'BioKids: bir sorum var' | urlencode }}">✉️ {{ site.email }}</a>
+        <a class="btn btn-secondary" href="{{ url('support') }}">Destek seçenekleri</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

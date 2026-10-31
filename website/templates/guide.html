@@ -1,0 +1,59 @@
+{# A guide: what it is for, how long it takes and what it needs, then numbered
+   steps (the `step` macro), then where to go next. build.py fills <!--TOC-->
+   from the page's own h2s and steps. #}
+{% extends "base.html" %}
+{% import "macros.html" as m with context %}
+{% block main %}
+{% set g = page.guide %}
+<div class="page-hero guide-hero">
+  <div class="wrap">
+    {% include "crumbs.html" %}
+    <div class="guide-title">
+      <span class="ico ico-lg tint-{{ ['coral', 'amber', 'teal', 'indigo'][(g.order - 1) % 4] }}" aria-hidden="true">{{ g.icon }}</span>
+      <h1>{% block h1 %}{{ v.short }}{% endblock %}</h1>
+    </div>
+    <p class="lead">{% block lead %}{{ v.description }}{% endblock %}</p>
+    <ul class="meta-chips">
+      <li><span aria-hidden="true">⏱</span> {{ t.duration }}: <strong>~{{ g.minutes }} {{ t.minutes }}</strong></li>
+      <li><span aria-hidden="true">📶</span> {{ t.level }}: <strong>{{ t['level_' ~ g.level] }}</strong></li>
+      {% if g.get('supply', {}).get(lang) %}
+      <li><span aria-hidden="true">🧺</span> {{ t.needs }}: <strong>{{ g.supply[lang] | join(', ') }}</strong></li>
+      {% endif %}
+      <li><span aria-hidden="true">🗓</span> {{ t.updated }}: <time datetime="{{ modified }}">{{ modified | longdate(lang) }}</time></li>
+    </ul>
+  </div>
+</div>
+<div class="wrap guide-layout">
+  <article class="prose guide-body">
+    {% block body %}{% endblock %}
+
+    <aside class="stuck">
+      <p class="stuck-title"><span aria-hidden="true">🙋</span> {{ t.stuck_title }}</p>
+      <p>{{ t.stuck_text }}</p>
+      <p class="btn-row"><a class="btn btn-secondary btn-sm" href="mailto:{{ site.email }}?subject={{ ('BioKids: ' ~ v.short) | urlencode }}">✉️ {{ site.email }}</a> <a class="btn btn-secondary btn-sm" href="{{ site.issues_url }}" rel="noopener">{{ t.stuck_issue }}</a></p>
+    </aside>
+
+    {% set ns = namespace(next=None) %}
+    {% for other_g in guides %}{% if other_g.guide.order == g.order + 1 %}{% set ns.next = other_g %}{% endif %}{% endfor %}
+    {% if ns.next %}
+    <nav class="next-guide" aria-label="{{ t.next_guide }}">
+      <p class="eyebrow tint-indigo">{{ t.next_guide }}</p>
+      {{ m.guide_card(ns.next) }}
+    </nav>
+    {% endif %}
+  </article>
+  <aside class="guide-aside">
+    <div class="aside-sticky">
+      <!--TOC-->
+      <nav class="aside-guides" aria-labelledby="aside-guides-title">
+        <p class="aside-title" id="aside-guides-title">{{ t.all_guides }}</p>
+        <ol>
+          {% for gg in guides %}
+          <li><a href="{{ gg.v(lang).path }}"{% if gg.key == page.key %} aria-current="page"{% endif %}><span aria-hidden="true">{{ gg.guide.icon }}</span> {{ gg.v(lang).short }}</a></li>
+          {% endfor %}
+        </ol>
+      </nav>
+    </div>
+  </aside>
+</div>
+{% endblock %}

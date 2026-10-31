@@ -1,0 +1,99 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>Once BioKids is installed, a setup wizard opens by itself the first time you sign in with your parent account. In nine short steps you choose your PIN, add your first child and set their rules. It opens again at every sign-in until it is finished, and it never opens in a child's session.</p>
+
+{% call m.callout('tip', 'Before you start') %}
+<p>Have a pen and paper ready: in step 3 you will write down a recovery code that is shown only once. <strong>Step 1 of 9</strong> at the top of the page tells you where you are.</p>
+{% endcall %}
+
+<ol class="steps">
+{% call m.step('Choose the language', 'language') %}
+<p>The language of the panel and of the child's screen: <strong>Türkçe</strong> or <strong>English</strong>. The box below it is BioKids' promise: <em>Nothing leaves your device.</em> Press <strong>Continue</strong>.</p>
+{{ m.shot(lang ~ '/wizard-1-language', 'Step 1 of the setup wizard: the language choice, a Nothing leaves your device box and the Continue button.', 'Step 1 of 9: Language.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Create your parent account', 'parent') %}
+<p>Your <strong>name</strong> and a <strong>6-digit PIN</strong>: you will use it every time you open the panel. Type it again in the second box. PINs that are easy to guess, such as 123456 or 111111, are refused.</p>
+{{ m.shot(lang ~ '/wizard-2-parent', 'Step 2 of the setup wizard: boxes for your name, a 6-digit PIN and the PIN again.', 'Step 2 of 9: Parent account.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Write down the passphrase and the recovery code', 'passphrase') %}
+<p>First choose a <strong>Passphrase</strong> of at least 10 characters. It is separate from the PIN and is asked for the big things: turning protection off, removing a child or a parent, and backing up.</p>
+<p>Below it is <strong>Your recovery code</strong>: 8 words. It is the easiest way back in if you forget your PIN, and it is <strong>never shown again</strong>. The words are Turkish words written without Turkish letters (such as <em>sifir</em>), even in English. Write them on paper, then tick <strong>I have written the recovery code down</strong>.</p>
+{{ m.shot(lang ~ '/wizard-3-passphrase', 'Step 3 of the setup wizard: a Passphrase box, an eight-word recovery code and the I have written the recovery code down box.', 'Step 3 of 9: Passphrase and recovery code. These words are an example; yours will differ.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% call m.callout('warn', 'Do not keep the code as a photo of the screen') %}
+<p>Write it on paper and put it somewhere safe. Anyone who knows the code can change your PIN.</p>
+{% endcall %}
+{% endcall %}
+
+{% call m.step('Add your first child', 'child') %}
+<p>Their <strong>name</strong>, <strong>year of birth</strong>, a <strong>username</strong> on the computer (lowercase letters and digits only, e.g. <code>elif</code>), a <strong>picture</strong> for the login screen, and the <strong>language</strong> of their screen.</p>
+<p>The year of birth decides the look of their screen: up to age 7, bigger tiles that read themselves aloud (the 4–7 look); after that, more tiles, a clock and their own files (the 8–10 look). You can add your other children later in the panel.</p>
+{{ m.shot(lang ~ '/wizard-4-child', 'Step 4 of the setup wizard: name, year of birth, username on the computer, a choice of animal pictures and the language.', 'Step 4 of 9: Add a child.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Choose the apps', 'apps') %}
+<p>Choose which tiles your child will see. The ones that suit their age come ticked: GCompris, Paint, Numbers, Music Lab, English and others. Volume, brightness and the shut-down button always stay on the screen. You can change all of this later in the panel.</p>
+{{ m.shot(lang ~ '/wizard-5-apps', 'Step 5 of the setup wizard: a grid of app and site boxes, some ticked and some not.', 'Step 5 of 9: Apps. From this step to step 8 there is also a "Skip for now" button.', sizes='(min-width: 960px) 760px, 100vw', cls='crop-top') }}
+{% endcall %}
+
+{% call m.step('Set the daily time', 'time') %}
+<p>BioKids suggests a starting point by age: for 4–7, 60 minutes on weekdays and 90 at weekends; for 8–10, 120 and 180. In <strong>Allowed hours</strong> type something like <code>16:00-20:00</code>, or leave it empty to allow the whole day.</p>
+<p>Choose what happens <strong>When time runs out</strong>: <strong>Lock the screen</strong>, <strong>Log out</strong>, or <strong>Shut the computer down</strong> (the default). More rules are in the <a href="{{ url('guide-time') }}">time rules guide</a>.</p>
+{{ m.shot(lang ~ '/wizard-6-time', 'Step 6 of the setup wizard: 60 minutes on weekdays, 90 at weekends, allowed hours 16:00-20:00, and the When time runs out choices with Shut the computer down selected.', 'Step 6 of 9: Daily time.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Choose how the internet works', 'internet') %}
+<p>For most families the right choice is <strong>Open internet, harmful sites closed (recommended)</strong>: adult, gambling and harmful sites are always closed, and Google and YouTube are kept to SafeSearch. For very young children you can choose <strong>Only the sites I choose</strong>. Details: <a href="{{ url('guide-web') }}">safe browsing guide</a>.</p>
+{{ m.shot(lang ~ '/wizard-7-internet', 'Step 7 of the setup wizard: the two internet choices, open internet with harmful sites closed, or only the sites I choose.', 'Step 7 of 9: Site blocking.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Turn on phone access (or leave it for later)', 'phone') %}
+<p>To open the panel on your phone, at home or away, BioKids uses the free Tailscale app: four steps, about five minutes. If you would rather not now, press <strong>Skip for now</strong>; you can turn it on later in <em>Settings → Access from your phone</em>. Step by step: <a href="{{ url('guide-phone') }}">phone access guide</a>.</p>
+{{ m.shot(lang ~ '/wizard-8-phone', 'Step 8 of the setup wizard: four steps for phone access, App Store and Google Play QR codes, and the Turn on phone access and Skip for now buttons.', 'Step 8 of 9: Access from your phone.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Choose Zio and Sio\'s voice', 'voices') %}
+<p>With <strong>Voices</strong> on, Zio and Sio say the time warnings aloud. Tick the box below it to download a natural, human-like voice (about 153 MB; with no internet, BioKids keeps trying until it gets through). It comes ticked for Turkish families, unticked for English ones. You can also record your own voice later in the panel. Press <strong>Finish</strong>.</p>
+{{ m.shot(lang ~ '/wizard-9-voices', 'Step 9 of the setup wizard: the Voices box, the natural voice download box, and a note that BioKids is an aid, not a guarantee.', 'Step 9 of 9: Voices and AI.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% call m.callout('note', 'Where is the Ask Me assistant?') %}
+<p>The AI assistant is not part of the wizard; families who want it download it later in the panel and turn it on for a child: <a href="{{ url('guide-assistant') }}">Ask Me guide</a>.</p>
+{% endcall %}
+{% endcall %}
+
+{% call m.step('Restart the computer once', 'restart') %}
+<p>The last page says <strong>Ready</strong> and lists three small things left to do. The most important: <strong>restart the computer once.</strong> Only then does your child's picture appear on the login screen. Until you do, the panel's Today screen shows a <strong>Restart now</strong> button.</p>
+{{ m.shot(lang ~ '/wizard-10-done', 'The wizard\'s last page, Ready: restart the computer once, your child taps their picture, this is how you get back to the panel; a Go to the panel button.', 'The last page: Ready.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Your child taps their picture', 'first-login') %}
+<p>On the login screen your child taps their own picture; no password is needed. At their first login Zio and Sio introduce themselves and explain what the family can see, aloud too for the youngest. Supervision is never hidden.</p>
+{{ m.shot(lang ~ '/first-run', 'The child\'s first login: Zio explains what the family can see.', 'The child\'s first login: Zio explains what the family can see.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+</ol>
+
+<h2 id="where-is-the-panel">Where is the panel?</h2>
+<p>The parent panel is the <strong>BioKids Parent Panel</strong> icon on your desktop and in the applications menu, and it opens by itself when you sign in with your parent account (you can turn that off in <em>Settings</em>). If you turned on phone access, it is on your phone too. The panel's <strong>Help</strong> page answers the common questions, even offline.</p>
+{{ m.shot(lang ~ '/panel-today', 'The panel\'s Today screen: a card for Elif with 42 minutes left and the +10 min, +30 min, Lock, Unlock and Shut down buttons.', 'The panel\'s Today screen: one card per child.', sizes='(min-width: 960px) 760px, 100vw') }}
+
+<h2 id="something-wrong">Something wrong?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>The wizard did not open.</h3></summary>
+    <div class="faq-answer"><p>The wizard opens only when you sign in with your parent account. If it did not, double-click the <strong>BioKids Parent Panel</strong> icon on the desktop; the panel takes you to the step where you left off.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>My child is not on the login screen.</h3></summary>
+    <div class="faq-answer"><p>The computer needs one restart after setup. If they are still missing, check that your child is listed on the panel's <em>Children</em> screen.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>I filled in a step wrongly.</h3></summary>
+    <div class="faq-answer"><p>No problem: time, apps, internet and voices can all be changed later in the panel. Add or edit children on the <em>Children</em> screen.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>I forgot to write down the recovery code.</h3></summary>
+    <div class="faq-answer"><p>As long as you know your PIN, nothing is lost. If you forget the PIN too, type <code>sudo biokids-admin reset-pin</code> in a terminal on the computer to set a new one: <a href="{{ url('guide-troubleshooting') }}">Troubleshooting</a>.</p></div>
+  </details>
+</div>
+{% endblock %}

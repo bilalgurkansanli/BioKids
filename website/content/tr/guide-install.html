@@ -1,0 +1,147 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>Bu rehber BioKids'i bir bilgisayara <strong>tek sistem olarak</strong> kurar: bilgisayarda BioKids'ten başka bir şey kalmaz. Kurulum ağ istemez ve çoğu bilgisayarda 20–40 dakika sürer.</p>
+
+{% call m.callout('warn', 'Bilgisayarda Windows var ve kalsın mı istiyorsunuz?') %}
+<p>O zaman bu rehber yerine <a href="{{ url('guide-dual-boot') }}">Windows'un yanına kurulum</a> rehberini izleyin. Burada seçeceğimiz "diskin tamamını kullan" seçeneği diskteki her şeyi siler.</p>
+{% endcall %}
+
+<h2 id="baslamadan-once">Başlamadan önce</h2>
+<ul class="checks">
+  <li><strong>BioKids USB belleği</strong> hazır olsun: <a href="{{ url('guide-usb') }}">USB belleği hazırlama</a>.</li>
+  <li>Bilgisayar <strong>64 bit</strong> olsun, en az <strong>4 GB bellek</strong> ve <strong>25 GB disk</strong> (<a href="{{ url('download', 'gereksinimler') }}">gereksinimler</a>).</li>
+  <li>Bilgisayardaki <strong>önemli dosyaları yedekleyin</strong>. Dizüstüyse fişe takın.</li>
+  <li>Size ait bir <strong>parola</strong> düşünün: bilgisayardaki ebeveyn hesabınızın parolası olacak. Çocuğunuz bilmesin.</li>
+</ul>
+
+<h2 id="kurulum">Kurulum</h2>
+<ol class="steps">
+  {% call m.step('Bilgisayarı USB bellekten açın', 'bellekten-ac') %}
+  <p>Belleği takın ve bilgisayarı açarken (ya da yeniden başlatırken) <strong>açılış menüsü tuşuna</strong> art arda basın. Marka göre değişir; çoğu zaman {{ m.kbd('F12') }}, {{ m.kbd('F11') }}, {{ m.kbd('F9') }}, {{ m.kbd('F8') }} ya da {{ m.kbd('Esc') }} olur. Açılan listeden USB belleği seçip {{ m.kbd('Enter') }}'a basın.</p>
+  {% call m.illus('Bilgisayarın kendi açılış menüsü. Görünüşü markaya göre değişir; USB belleğinizin adını arayın.') %}
+  <div class="bios">
+    <div class="bios-box">
+      <p>Boot Menu</p>
+      <ul>
+        <li>Windows Boot Manager</li>
+        <li class="sel">UEFI: USB Flash Disk 1.00</li>
+        <li>USB Flash Disk 1.00</li>
+        <li>Network Boot (IPv4)</li>
+      </ul>
+    </div>
+    <p class="bios-hint">↑↓ seç · Enter başlat</p>
+  </div>
+  {% endcall %}
+  <p>Listede hem <strong>"UEFI: …"</strong> ile başlayan hem de başlamayan bir bellek girişi varsa, yeni bilgisayarlarda <strong>UEFI</strong> olanı seçin.</p>
+  {% endcall %}
+
+  {% call m.step('"Start installer"ı seçin', 'start-installer') %}
+  <p>BioKids'in mavi açılış menüsü gelir. Ok tuşlarıyla <strong>Start installer</strong>'a gelin ve {{ m.kbd('Enter') }}'a basın.</p>
+  {% call m.illus('USB belleğin açılış menüsü. Diğer satırların adları biraz farklı olabilir; seçmeniz gereken "Start installer".') %}
+  <div class="boot stick" style="background-image:url('/assets/img/illus/grub.webp')">
+    <span class="boot-space"></span>
+    <ul class="boot-menu">
+      <li>Live system (amd64)</li>
+      <li class="sel">Start installer</li>
+      <li>Advanced install options…</li>
+    </ul>
+    <p class="boot-foot">↑ ↓ · Enter</p>
+  </div>
+  {% endcall %}
+  {% call m.callout('note') %}
+  <p>"Live system" BioKids'in masaüstünü denemenizi sağlar ama çocuk denetimi orada çalışmaz: denetim, kurulu bilgisayarda başlar.</p>
+  {% endcall %}
+  {% endcall %}
+
+  {% call m.step('Dili ve klavyeyi seçin', 'dil-klavye') %}
+  <p>Kurulum programı Debian'ın kendi programıdır; üstünde BioKids'in uçurtması durur. Önce <strong>dili</strong>, sonra <strong>klavye düzenini</strong> seçin (çoğu Türkçe klavye "Türkçe Q"dur). Seçtiğiniz dil, bilgisayarın dili olur.</p>
+  {% call m.illus('Kurulum programının üst şeridinde Debian logosu yerine BioKids yazar; sorular ve düğmeler Debian\'ındır.') %}
+  <div class="di">
+    <img class="di-banner" src="/assets/img/illus/installer-banner.webp" width="800" height="75" alt="">
+    <div class="di-body">
+      <p class="di-title">Select a language</p>
+      <div class="di-list">
+        <div>English - English</div>
+        <div>Français - French</div>
+        <div class="sel">Türkçe - Turkish</div>
+      </div>
+    </div>
+    <div class="di-foot"><span class="di-btn">Go Back</span><span class="di-btn">Continue</span></div>
+  </div>
+  {% endcall %}
+  <p>Saat dilimi ve bilgisayarın adı (<code>biokids</code>) önceden ayarlıdır; sorulmaz.</p>
+  {% endcall %}
+
+  {% call m.step('Ebeveyn hesabınızı oluşturun', 'ebeveyn-hesabi') %}
+  <p>Adınızı, bir <strong>kullanıcı adını</strong> (ör. <code>anne</code>) ve bir <strong>parolayı</strong> iki kez girin. Bu, bilgisayardaki <em>sizin</em> hesabınızdır ve yönetici yetkisi vardır; ayrıca bir "root" parolası sorulmaz.</p>
+  <p>Çocukların hesaplarını burada açmayın: onları kurulumdan sonra sihirbaz açar ve çocuk parola yerine resmine dokunarak girer.</p>
+  {% call m.callout('tip') %}<p>Parolayı bir kâğıda yazıp güvenli bir yere koyun. Çocuğunuz bu parolayı bilmemeli.</p>{% endcall %}
+  {% endcall %}
+
+  {% call m.step('Diski seçin', 'disk') %}
+  <p><strong>Disk bölümleme</strong> ekranında diskin tamamını kullanan ilk yönlendirmeli seçeneği seçin: İngilizcesi <strong>"Guided - use entire disk"</strong>; Türkçe seçtiyseniz aynı satır Türkçe görünür ("tüm diski kullan", LVM'siz olan). Sonra diski seçin ve "tüm dosyalar tek bölümde" önerisini kabul edin.</p>
+  {% call m.illus('Bölümleme yöntemi. Tek sistem için "use entire disk"; Windows\'un yanına kurarken başka bir seçenek seçilir.') %}
+  <div class="di">
+    <img class="di-banner" src="/assets/img/illus/installer-banner.webp" width="800" height="75" alt="">
+    <div class="di-body">
+      <p class="di-title">Partition disks</p>
+      <p>Partitioning method:</p>
+      <div class="di-list">
+        <div class="sel">Guided - use entire disk</div>
+        <div>Guided - use entire disk and set up LVM</div>
+        <div>Guided - use entire disk and set up encrypted LVM</div>
+        <div>Manual</div>
+      </div>
+    </div>
+    <div class="di-foot"><span class="di-btn">Go Back</span><span class="di-btn">Continue</span></div>
+  </div>
+  {% endcall %}
+  <p>Son ekranda "bölümlendirmeyi bitir ve değişiklikleri diske yaz" satırını (<em>Finish partitioning and write changes to disk</em>) seçin ve <strong>Evet</strong> ile onaylayın. Bu andan sonra diskteki eski her şey silinir.</p>
+  {% endcall %}
+
+  {% call m.step('Kurulumun bitmesini bekleyin', 'bekle') %}
+  <p>Program, BioKids'i bellekten diske kopyalar; internet gerekmez. Çoğu bilgisayarda 20–40 dakika sürer. Önyükleyici hakkında bir soru gelirse önerilen seçeneği (bilgisayarın ana diski) seçin.</p>
+  {% endcall %}
+
+  {% call m.step('Belleği çıkarın ve yeniden başlatın', 'yeniden-baslat') %}
+  <p>"Kurulum tamamlandı" yazısını görünce USB belleği çıkarın ve <strong>Continue</strong>'ya basın. Bilgisayar açılırken ekranda BioKids'in uçurtması görünür.</p>
+  <p>Bilgisayarda yalnızca BioKids varsa açılış menüsü gizlidir ve bilgisayar doğrudan açılır.</p>
+  {% endcall %}
+
+  {% call m.step('Giriş yapın, sihirbaz sizi karşılasın', 'sihirbaz') %}
+  <p>Giriş ekranında kendi hesabınızı seçip parolanızı yazın. <strong>BioKids kurulum sihirbazı</strong> kendiliğinden açılır: dil, PIN'iniz, ilk çocuğunuz, uygulamaları, süresi, interneti… Dokuz kısa adımdır.</p>
+  {{ m.shot(lang ~ '/wizard-1-language', 'BioKids kurulum sihirbazının ilk adımı: dil seçimi ve Hiçbir şey cihazınızdan çıkmaz notu.', 'Sihirbazın ilk adımı. Her adım ilk kurulum rehberinde anlatılıyor.', sizes='(min-width: 960px) 760px, 100vw') }}
+  <p>Devamı: <a href="{{ url('guide-first-setup') }}">İlk kurulum sihirbazı rehberi</a>.</p>
+  {% endcall %}
+</ol>
+
+<h2 id="kurulumdan-sonra">Kurulumdan sonra</h2>
+<ul>
+  <li>Sihirbaz bitince bilgisayarı <strong>bir kez yeniden başlatın</strong>: çocuğunuzun resmi ancak o zaman giriş ekranına gelir.</li>
+  <li>Ebeveyn paneli masaüstünüzdeki <strong>BioKids Ebeveyn Paneli</strong> simgesidir; uygulamalar menüsünde de bulunur.</li>
+  <li>BioKids kendiliğinden güncellenmez; güncellemeler Debian'ın olağan güncellemeleriyle gelir.</li>
+  <li><strong>Türkiye dışında mı yaşıyorsunuz?</strong> Saat dilimi İstanbul'a ayarlı gelir. Kendi hesabınızda bir uçbirim açıp kendi diliminizi yazın (adını <code>timedatectl list-timezones</code> ile bulabilirsiniz):</li>
+</ul>
+{{ m.code('sudo timedatectl set-timezone Europe/Berlin') }}
+
+<h2 id="sorun">Sorun mu var?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>USB bellek açılış menüsünde görünmüyor</h3></summary>
+    <div class="faq-answer"><p>Belleği başka bir USB girişine takın (mümkünse doğrudan bilgisayara, çoklayıcıya değil). Bilgisayarın ayarlarında (BIOS/UEFI) "Fast Boot" açıksa kapatın. Bellek hâlâ görünmüyorsa yazmayı <a href="{{ url('guide-usb') }}">Etcher ile ya da Rufus'ta DD modunda</a> tekrarlayın.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Bellek seçiliyor ama açılmıyor ya da "Secure Boot" uyarısı çıkıyor</h3></summary>
+    <div class="faq-answer"><p>BioKids, Debian'ın imzalı açılış yükleyicisini kullanır; Secure Boot çoğu bilgisayarda açık kalabilir. Sizin bilgisayarınız yine de engelliyorsa bilgisayarın ayarlarından Secure Boot'u kapatıp tekrar deneyin.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Wi-Fi'ı bulamadı</h3></summary>
+    <div class="faq-answer"><p>Kurulum için ağ gerekmez, devam edebilirsiniz. Kalıp yaygın Wi-Fi kartlarının sürücülerini içerir; kartınız tanınmazsa kurulumdan sonra kabloyla bağlanın ve <a href="{{ site.issues_url }}" rel="noopener">donanım formunu</a> doldurun, birlikte çözelim.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Kurulum ekranı İngilizce</h3></summary>
+    <div class="faq-answer"><p>İlk ekranda <strong>Türkçe</strong>'yi seçerseniz kurulumun geri kalanı Türkçe sorar. Bazı teknik seçeneklerin adları (ör. "Guided") her dilde Debian'ın kendi çevirisidir.</p></div>
+  </details>
+</div>
+{% endblock %}

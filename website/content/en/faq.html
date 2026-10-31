@@ -1,0 +1,20 @@
+{% extends "page.html" %}
+{% import "macros.html" as m with context %}
+{% block h1 %}Frequently asked questions{% endblock %}
+{% block lead %}<p class="lead">What parents most want to know about BioKids: the price, installing it, safety, privacy, the AI assistant and everyday use. Click a question to open its answer.</p>{% endblock %}
+{% block body %}
+<section class="section-tight">
+  <div class="wrap narrow">
+    {{ m.faq_list(faq) }}
+
+    <div class="card ask-more">
+      <h2 id="not-answered">Not answered here?</h2>
+      <p>Write to us, in English or Turkish, whichever is easier. If others are likely to ask the same, we will add the answer to this page.</p>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="mailto:{{ site.email }}?subject={{ 'BioKids: a question' | urlencode }}">✉️ {{ site.email }}</a>
+        <a class="btn btn-secondary" href="{{ url('support') }}">Ways to get help</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

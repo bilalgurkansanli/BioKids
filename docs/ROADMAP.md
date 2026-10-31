@@ -130,7 +130,7 @@ Ideas that are still worth having, in no order. None is promised.
 - an opt-in extra blocklist for ads and tracking (D-62)
 - launcher ports that cannot collide: two children whose uids differ by a multiple of
   100 share one today, and only one of them can be logged in at a time (D-188)
-- a documentation site, screenshots of the launcher, a short demo video
+- a short demo video for the website (D-256)
 - translation infrastructure so other languages can be contributed
 - the screen watcher, only if it can be built without breaking principles 1 and 2
   (`docs/AI-LAYER.md`)

@@ -1,0 +1,85 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>BioKids'i gerçek bilgisayara kurmadan önce görmek mi istiyorsunuz? Ücretsiz <strong>VirtualBox</strong> ile kendi bilgisayarınızın içinde bir "sanal bilgisayar" açıp BioKids'i oraya kurabilirsiniz. Gerçek diskinize hiçbir şey olmaz.</p>
+
+{% call m.callout('note', 'Neden USB bellekle denemiyoruz?') %}
+<p>USB bellekteki canlı oturum masaüstünü denemek ve kurmak içindir; orada BioKids'in hizmetleri bilerek kapalıdır. Başlatıcı, süre ve panel ancak <em>kurulu</em> bir sistemde çalışır. Sanal makine, bilgisayarınızı değiştirmeden bunu görmenin en kolay yoludur.</p>
+{% endcall %}
+
+<h2 id="baslamadan-once">Başlamadan önce</h2>
+<ul class="checks">
+  <li><strong>VirtualBox 7</strong>, <a href="https://www.virtualbox.org/" rel="noopener">virtualbox.org</a> adresinden (Windows, macOS Intel ve Linux için ücretsiz).</li>
+  <li><strong>BioKids ISO dosyası</strong>, <a href="{{ url('download', 'iso') }}">indirme sayfasından</a>. USB belleğe yazmanız gerekmez.</li>
+  <li>Bilgisayarınızda en az <strong>8 GB bellek</strong> ve <strong>45 GB boş disk</strong>.</li>
+</ul>
+
+<h2 id="sanal-makine">Sanal makineyi oluşturun</h2>
+<ol class="steps">
+  {% call m.step('Yeni bir makine oluşturun', 'yeni') %}
+  <p>VirtualBox'ta <strong>Makine → Yeni</strong>'ye basın. Ad: <code>BioKids</code>. <strong>ISO Kalıbı</strong> olarak BioKids ISO'sunu seçin. Tür <strong>Linux</strong>, sürüm <strong>Debian (64-bit)</strong> olsun.</p>
+  {% call m.callout('warn') %}<p><strong>"Katılımsız kurulumu atla"</strong> (<em>Skip Unattended Installation</em>) kutusunu işaretleyin. Yoksa VirtualBox kurulumu kendi bildiği gibi yapmaya çalışır.</p>{% endcall %}
+  {% endcall %}
+
+  {% call m.step('Belleği, işlemciyi ve diski ayarlayın', 'donanim') %}
+  <div class="table-wrap">
+    <table class="settings-table">
+      <tbody>
+        <tr><th scope="row">Bellek</th><td><strong>4096 MB</strong>; Sor Bana asistanını da denemek için <strong>8192 MB</strong> ya da fazlası</td></tr>
+        <tr><th scope="row">İşlemci</th><td><strong>2</strong> ya da daha fazla</td></tr>
+        <tr><th scope="row">EFI</th><td>İsteğe bağlı: hem EFI hem BIOS çalışır</td></tr>
+        <tr><th scope="row">Sabit disk</th><td><strong>40 GB</strong>, <em>dinamik olarak ayrılan</em> (yer kullandıkça büyür)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {% endcall %}
+
+  {% call m.step('Görüntü bağdaştırıcısını VBoxSVGA yapın', 'ekran') %}
+  <p>Makineyi seçip <strong>Ayarlar → Ekran</strong>'a gidin. <strong>Grafik Denetleyicisi</strong>'ni <strong>VBoxSVGA</strong> yapın, görüntü belleğini 128 MB'a çıkarın. Bazı bilgisayarlarda VMSVGA ile ekran siyah kalır.</p>
+  {% endcall %}
+</ol>
+
+<h2 id="kurulum">BioKids'i kurun</h2>
+<ol class="steps">
+  {% call m.step('Başlatın ve "Start installer"ı seçin', 'baslat') %}
+  <p><strong>Başlat</strong>'a basın. BioKids menüsü gelince <strong>Start installer</strong>'ı seçin. Dil, klavye ve ebeveyn hesabı adımları <a href="{{ url('guide-install', 'dil-klavye') }}">kurulum rehberindeki</a> gibidir.</p>
+  <p>Sanal makinenin içine tıkladığınızda fare oraya "yakalanabilir"; geri almak için klavyenin sağındaki {{ m.kbd('Ctrl') }} tuşuna (Host tuşu; Mac'te sol {{ m.kbd('⌘') }}) basın.</p>
+  {% endcall %}
+
+  {% call m.step('Disk: "use entire disk" burada güvenli', 'disk') %}
+  <p>Sanal makinede <strong>"Guided - use entire disk"</strong> (tüm diski kullan) seçeneğini seçebilirsiniz: silinen, yalnızca sanal makinenin kendi 40 GB'lık sanal diskidir. Gerçek diskinize dokunulmaz.</p>
+  {% endcall %}
+
+  {% call m.step('ISO\'yu çıkarın, yeniden başlatın', 'iso-cikar') %}
+  <p>Kurulum bitince, yeniden başlatmadan önce VirtualBox menüsünden <strong>Aygıtlar → Optik Sürücüler → Sanal sürücüden diski çıkar</strong>'ı seçin. Sonra <strong>Continue</strong>'ya basın.</p>
+  {% endcall %}
+
+  {% call m.step('Sihirbazı tamamlayın ve çocuk gibi girin', 'dene') %}
+  <p>Kendi hesabınızla girin; <a href="{{ url('guide-first-setup') }}">ilk kurulum sihirbazı</a> açılır. Bir deneme çocuğu ekleyin, sihirbaz bitince sanal makineyi bir kez yeniden başlatın ve giriş ekranında çocuğun resmine tıklayın. Artık çocuğun gördüğünü görüyorsunuz.</p>
+  {{ m.shot(lang ~ '/launcher', 'Çocuğun başlatıcısı: büyük kutular, kalan dakikalar, altta parlaklık ve açık uygulamalar.', 'Sanal makinede de aynı başlatıcı açılır.', sizes='(min-width: 960px) 760px, 100vw') }}
+  {% endcall %}
+</ol>
+
+<h2 id="ipuclari">İpuçları</h2>
+<ul>
+  <li>Bir şeyi denemeden önce <strong>Makine → Anlık Görüntü Al</strong>'a basın; her şeyi bir tıkla o ana döndürebilirsiniz.</li>
+  <li>Sanal makine, penceresi öndeyken çok daha hızlıdır. Asistan sanal makinede gerçek bir bilgisayardan belirgin biçimde yavaş yanıt verir; bu normaldir.</li>
+  <li>Beğendiniz mi? Gerçek bilgisayara kurmak için: <a href="{{ url('guide-usb') }}">USB belleği hazırlama</a>.</li>
+</ul>
+
+<h2 id="sorun">Sorun mu var?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>Ekran siyah kalıyor</h3></summary>
+    <div class="faq-answer"><p>Makineyi kapatın, Ayarlar → Ekran'da Grafik Denetleyicisi'nin <strong>VBoxSVGA</strong> olduğunu kontrol edin ve yeniden başlatın.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>"No bootable medium found" yazıyor</h3></summary>
+    <div class="faq-answer"><p>ISO bağlı değil. Ayarlar → Depolama'da optik sürücüye BioKids ISO'sunu seçin. Kurulumdan sonra bu yazı çıkıyorsa kurulum tamamlanmamıştır; yeniden kurun.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Her şey çok yavaş</h3></summary>
+    <div class="faq-answer"><p>İşlemci sayısını artırın, sanal makine penceresini önde tutun ve bilgisayarınızda başka ağır programları kapatın.</p></div>
+  </details>
+</div>
+{% endblock %}

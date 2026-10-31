@@ -1,0 +1,98 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>The setup wizard gives each child a starting time for their age. You can change it whenever you like in the panel: a few basic settings are enough, and the rest waits behind <strong>Advanced</strong>.</p>
+
+<ol class="steps">
+{% call m.step('Open the time rules page', 'open-the-page') %}
+<p>In the panel go to <strong>Children</strong> at the top and press <strong>Time rules</strong> on your child's card.</p>
+{{ m.shot(lang ~ '/children', 'The panel\'s Children screen: cards for Elif and Kerem with Time rules, Apps and sites, Internet, Assistant, See their screen and Edit buttons.', 'The Children screen: each child has their own rules.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Choose the daily time', 'daily-time') %}
+<p><strong>Weekday daily time</strong> and <strong>Weekend daily time</strong>: how many minutes they may use in total in one day. Type the minutes or press a quick choice: <strong>30 min</strong>, <strong>1 h</strong>, <strong>1.5 h</strong>, <strong>2 h</strong>.</p>
+{{ m.shot(lang ~ '/panel-time', 'Time rules for Elif: 60 minutes on weekdays and 90 at weekends, weekday and weekend hours, the When time runs out choices and the Let BioKids manage this child box.', 'The time rules page.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Set the hours they can use it', 'hours') %}
+<p>Under <strong>Weekday hours</strong> and <strong>Weekend hours</strong>, choose <strong>From</strong> and <strong>Until</strong>. You can choose two ranges, such as before and after school; leave the times empty to allow the whole day.</p>
+<ul>
+  <li>If you set both minutes and hours, whichever runs out first wins.</li>
+  <li>Between two ranges the screen locks and waits for the next one.</li>
+</ul>
+{% endcall %}
+
+{% call m.step('Choose what happens when time runs out', 'time-runs-out') %}
+<p><strong>When time runs out</strong> has three choices:</p>
+<ul>
+  <li><strong>Lock the screen</strong>: the computer stays on and the screen locks.</li>
+  <li><strong>Log out</strong>: open apps close and the login screen comes back.</li>
+  <li><strong>Shut the computer down</strong>: the computer shuts down completely (the default).</li>
+</ul>
+<p>When 10, 5 and 1 minutes are left, Zio or Sio says so aloud. When the time is up the screen locks, and after a 2-minute countdown your choice happens. If someone else is also logged in to the computer, it does not shut down; only the screen locks.</p>
+{% call m.callout('child', 'Days that end in the evening') %}
+<p>If the day ends after 7 pm, the last 10 minutes turn to good-night words and the screen dims gently. The end screen says good night; then the brightness goes back to where it was.</p>
+{% endcall %}
+{% endcall %}
+
+{% call m.step('Save', 'save') %}
+<p>Press <strong>Save</strong> at the bottom of the page. The new rules apply at once, and the child's open session carries on with the new time.</p>
+{% endcall %}
+</ol>
+
+<h2 id="advanced">Advanced settings</h2>
+<p>Open <strong>Advanced</strong> on the same page to find these. All are optional; anything left empty changes nothing.</p>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">Setting</th><th scope="col">What it does</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Some days are different</th><td>Separate minutes and hours for, say, Fridays. Anything left empty follows the weekday or weekend rule.</td></tr>
+      <tr><th scope="row">Daily time by kind of app</th><td>A cap for <strong>Games</strong>, <strong>Learning</strong>, <strong>Web</strong> and <strong>Free</strong>; for example, at most 30 minutes of games a day. When a kind is used up, its open app closes and the child sees "That's all of this for today".</td></tr>
+      <tr><th scope="row">Games open after how many minutes of learning?</th><td>Type 15, for example, and games open once the child has used learning apps for 15 minutes today.</td></tr>
+      <tr><th scope="row">Earned time</th><td>Time spent in learning apps is added to games time: by default 1 minute for each minute of learning, at most 60 minutes a day.</td></tr>
+      <tr><th scope="row">Forced break</th><td>Off by default. Turned on, it gives a break of, say, 5 minutes every 40 minutes, with a few moves for the eyes on the screen. The break does not use up their time.</td></tr>
+      <tr><th scope="row">The last round</th><td>As the time runs out, once a day, the child can tap <strong>Let me finish</strong> to get 2, 3 or 5 minutes to finish a game or a drawing (3 by default). If they use it, Today tells you.</td></tr>
+    </tbody>
+  </table>
+</div>
+<p>There are no limits for single apps; limits work through the four kinds above.</p>
+
+<h2 id="special-days">Special days: holidays, school breaks, birthdays</h2>
+<ul>
+  <li><strong>Is today a special day?</strong> For today only: <strong>+1 h</strong>, <strong>+2 h</strong>, or a day with no daily limit (the allowed hours still apply). Tomorrow is an ordinary day again. You can also open this from your child's card on Today.</li>
+  <li><strong>For several days: a holiday, a school break</strong>: choose the first and last day (up to 100 days), then whether those days are <strong>Like the weekend</strong> or <strong>This many minutes a day</strong>. Days already over do not change.</li>
+</ul>
+
+<h2 id="during-the-day">During the day</h2>
+{{ m.shot(lang ~ '/panel-today', 'The Today screen: 42 minutes left for Elif; +10 min, +30 min, Lock, Unlock and Shut down buttons, and below them We\'re together, Send something, and Is today a special day?', 'One card per child on the Today screen.', sizes='(min-width: 960px) 760px, 100vw') }}
+<ul>
+  <li><strong>+10 min</strong> and <strong>+30 min</strong> add time at once; a locked screen opens by itself.</li>
+  <li>If the child presses <strong>Ask for more time</strong> on their screen (it appears in the last 15 minutes), the request reaches <em>Requests</em> and your phone; you answer <strong>+15 min</strong>, <strong>+30 min</strong>, <strong>+60 min</strong> or <strong>Not now</strong>. Your answer is spoken to the child.</li>
+  <li><strong>We're together</strong>: while you sit and play together, nothing is counted for 30 min, 1 h or 2 h, with no warnings and no lock. It ends by itself.</li>
+  <li><strong>Lock</strong> locks the screen at once; <strong>Shut down</strong> asks first, then shuts the computer down.</li>
+</ul>
+
+{% call m.callout('privacy', 'Changing the clock does not work') %}
+<p>BioKids counts minutes not on the wall clock but on the clock that runs since the computer started (<code>CLOCK_BOOTTIME</code>). Moving the system clock forward or back does not change the time left, and time spent asleep is not counted.</p>
+{% endcall %}
+
+<h2 id="something-wrong">Something wrong?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>My child's screen is locked. What do I do?</h3></summary>
+    <div class="faq-answer"><p>The screen locks when the day's time is used up or outside the allowed hours. Give more time on the Today screen and it unlocks by itself.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Can I turn BioKids off for one child for a while?</h3></summary>
+    <div class="faq-answer"><p>Untick <strong>Let BioKids manage this child</strong> on the time rules page; your passphrase is asked. While it is off, no limits apply to that account. Tick it again and protection is back.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>How soon do new rules apply?</h3></summary>
+    <div class="faq-answer"><p>As soon as you save. The child's open session carries on with the new rules without restarting.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>The computer did not shut down; only the screen locked.</h3></summary>
+    <div class="faq-answer"><p>If someone else is also logged in (a sibling, or you), BioKids only locks the screen so that nobody loses their work.</p></div>
+  </details>
+</div>
+{% endblock %}

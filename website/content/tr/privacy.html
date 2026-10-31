@@ -1,0 +1,125 @@
+{% extends "page.html" %}
+{% import "macros.html" as m with context %}
+{% block h1 %}Hiçbir şey cihazınızdan çıkmaz{% endblock %}
+{% block lead %}<p class="lead">BioKids ailenizle ilgili hiçbir şeyi bir sunucuya göndermez: telemetri yok, hesap yok, bulut yok. Bilgisayarın dışarıya yaptığı her bağlantı ya kendi güncellemeleri içindir ya da sizin açtığınız bir şeydir; hepsi bu sayfada tek tek yazılı.</p>{% endblock %}
+{% block body %}
+<section class="section-tight">
+  <div class="wrap">
+    <div class="grid grid-3">
+      {% call m.feature('🏠', 'Bulut yok', 'coral') %}<p>Kurallar, geçmiş ve kayıtlar bu bilgisayarda kalır. Bir BioKids sunucusu, bir hesap ya da "anonim kullanım istatistiği" yoktur.</p>{% endcall %}
+      {% call m.feature('👀', 'Çocuk bilir', 'amber') %}<p>Denetim gizli değildir. Çocuğa ilk açılışta neler görülebildiği anlatılır; siz ekranını izlerken bunu ekranında görür.</p>{% endcall %}
+      {% call m.feature('🗓️', 'Kayıtlar kendiliğinden silinir', 'teal') %}<p>Her kaydın bir ömrü vardır: siteler 30 gün, istekler 90 gün, kayıt defteri bir yıl, günlük dakikalar 400 gün.</p>{% endcall %}
+    </div>
+  </div>
+  <div class="wrap narrow prose after-cards">
+    <h2 id="neler-tutulur">BioKids neyi görür, neyi saklar?</h2>
+    <p>BioKids yalnızca kuralları uygulamak ve size bir özet göstermek için gerekeni tutar. Hepsi bilgisayarın içindeki tek bir veritabanındadır ve süresi dolan kayıtlar kendiliğinden silinir.</p>
+    <div class="table-wrap">
+      <table class="retention">
+        <thead><tr><th scope="col">Ne tutulur</th><th scope="col">Ne kadar</th><th scope="col">Ayrıntı</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Açılan sitelerin adları</th><td>30 gün</td><td>Yalnızca sitenin adı (ör. <code>trtcocuk.net.tr</code>); sayfanın içeriği, arama ya da yazılan hiçbir şey değil.</td></tr>
+          <tr><th scope="row">Uygulama kullanımı</th><td>30 gün</td><td>Hangi uygulamanın ne kadar açık kaldığı.</td></tr>
+          <tr><th scope="row">Saatlik kullanım</th><td>30 gün</td><td>Analiz'deki "Günün hangi saatlerinde?" grafiği için.</td></tr>
+          <tr><th scope="row">Günlük dakikalar</th><td>400 gün</td><td>Geçmiş'teki bir yıllık harita için.</td></tr>
+          <tr><th scope="row">İstekler</th><td>90 gün</td><td>Çocuğun "Büyüğüme sor" ile istediği süre, site ve uygulamalar.</td></tr>
+          <tr><th scope="row">Kayıt defteri</th><td>365 gün</td><td>Her kural değişikliği, PIN denemesi, verilen süre, saat değişikliği ve her canlı izleme başlangıcı. Panelden silinemez.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>Hiçbir zaman tutulmayanlar:</strong></p>
+    <ul class="checks no">
+      <li>Ekran görüntüsü ya da ekran kaydı.</li>
+      <li>Sayfaların içeriği, çocuğun yazdıkları, tuş vuruşları.</li>
+      <li>Asistana sorulan sıradan sorular: yanıtlanır ve unutulur.</li>
+      <li>Mikrofonun duyduğu ses: bellekte yazıya çevrilir ve atılır.</li>
+      <li>Konum bilgisi.</li>
+    </ul>
+    {% call m.callout('note', 'Asistanın reddettiği sorular') %}
+    <p>Sor Bana bir soruyu reddederse (ör. çocuk ev adresini paylaşmak isterse) o soru, çocuğun kendi sözleriyle, panelde "Cevaplanmayan sorular" altında size gösterilir. Çocuğun ekranında da "Sorduğun bazı soruları ailen görebilir." yazar.</p>
+    {% endcall %}
+
+    <h2 id="canli-ekran">Canlı ekran: tek istisna</h2>
+    <p>BioKids'in bir çocuğun ekranına baktığı tek an, panelde sizin <strong>Canlı izle</strong>'ye bastığınız andır.</p>
+    <ul class="checks">
+      <li>Saniyede yaklaşık bir kare gelir; her kare bellekte bir öncekinin yerini alır, <strong>hiçbir yere yazılmaz</strong>.</li>
+      <li>Sayfadan ayrıldığınızda ya da <strong>Durdur</strong>'a bastığınızda izleme biter.</li>
+      <li>Siz izlerken çocuğun ekranında "👁 Annen şu an ekranını görüyor" gibi bir işaret durur. <strong>Bu işaret kapatılamaz.</strong></li>
+      <li>Her izleme başlangıcı kayıt defterine yazılır; ailede herkes bunun olduğunu görebilir.</li>
+    </ul>
+
+    <h2 id="cocuk-bilir">Çocuk bilir</h2>
+    <p>Denetim çocuğa her zaman söylenir. Bu, BioKids'in değiştirilemeyen ilkelerinden biridir.</p>
+    <ul class="checks">
+      <li><strong>İlk açılışta</strong> Zio, en küçükler için sesli olarak da, ailenin neleri görebileceğini anlatır. Bu anlatım her zaman yapılır.</li>
+      <li>Ekrandaki <strong>göz işareti</strong> denetimi hatırlatır. Ebeveyn onu küçültebilir; ama canlı izleme sürerken çıkan işaret kapatılamaz.</li>
+      <li>Kapalı bir aramada çocuğa "Bu aramayı bir büyüğün de görecek." denir; asistan da hangi soruların aileye gösterileceğini söyler.</li>
+      <li>Tarayıcı eklentisinin yalnızca sitelerin adını bildirdiği çocuğa da anlatılır.</li>
+    </ul>
+
+    <h2 id="veriler-nerede">Veriler nerede ve nasıl korunur?</h2>
+    <ul>
+      <li>Her şey <code>/var/lib/biokids/biokids.db</code> dosyasındadır. Bu dosyayı yalnızca yönetici (root) okuyabilir; çocukların hesapları ona ulaşamaz.</li>
+      <li>PIN'ler argon2 ile özetlenerek saklanır, düz metin olarak asla. E-posta parolanız şifrelenmiş olarak durur.</li>
+      <li>Asistan kendi ayrı kullanıcısıyla çalışır ve çalışırken <strong>hiç ağ bağlantısı yoktur</strong>; modeli ve çevrimdışı Vikipedi bilgisayarda durur.</li>
+      <li>Sizin ve çocuğun ses kayıtları bilgisayarda kalır.</li>
+      <li><strong>Yedek</strong> (Ayarlar → Yedekle ve taşı) aile parolanızla mühürlenir (argon2id ve AES-256-GCM). İçinde PIN, parola, kurtarma kodu ya da e-posta ayarları yoktur.</li>
+      <li>E-posta bildirimleri çocuğun yazdıklarını ya da aradıklarını asla içermez.</li>
+    </ul>
+
+    <h2 id="baglantilar">BioKids'in yaptığı dış bağlantılar</h2>
+    <p>Aşağıdaki liste eksiksizdir. Bir bağlantı eklenirse önce projenin <a href="{{ site.repo }}/blob/main/docs/SECURITY.md" rel="noopener">güvenlik belgesinde (§4)</a> yazılmak zorundadır.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Nereye</th><th scope="col">Neden</th></tr></thead>
+        <tbody>
+          <tr><th scope="row" colspan="2" class="row-group">Her zaman</th></tr>
+          <tr><td><code>deb.debian.org</code>, <code>security.debian.org</code></td><td>Debian güncellemeleri</td></tr>
+          <tr><td>BioKids APT deposu</td><td>BioKids güncellemeleri</td></tr>
+          <tr><td>DNS sunucusu</td><td>Alan adlarını çözmek (modeminiz de olabilir)</td></tr>
+          <tr><th scope="row" colspan="2" class="row-group">Yalnızca siz açarsanız</th></tr>
+          <tr><td>Kendi e-posta sunucunuz (SMTP)</td><td>E-posta bildirimleri ve haftalık özet</td></tr>
+          <tr><td>Tailscale ve <code>pkgs.tailscale.com</code></td><td>Telefondan erişim; düğmeye bastığınızda kurulur</td></tr>
+          <tr><td>Hugging Face</td><td>Asistanın modelleri ve doğal ses</td></tr>
+          <tr><td><code>github.com</code></td><td>Doğal ses programı (Piper)</td></tr>
+          <tr><td><code>download.kiwix.org</code></td><td>Çevrimdışı Vikipedi</td></tr>
+          <tr><th scope="row" colspan="2" class="row-group">Hiçbir zaman</th></tr>
+          <tr><td colspan="2">Telemetri, hata raporu, sürüm sorgusu, kullanım istatistiği. Tailscale'in kendi günlük gönderimi kapalıdır (<code>--no-logs-no-support</code>). Engel listeleri paketin içinde gelir; dışarıdan yenilenmez.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Sizin başlattığınız her indirme, sabitlenmiş bir sağlama toplamıyla (SHA-256) denetlenir; tutmayan dosya kullanılmaz.</p>
+    {% call m.callout('privacy', 'Telefondan erişimin küçük bir bedeli') %}
+    <p>Telefondan erişimi açtığınızda bilgisayarın Tailscale adresi (<code>…ts.net</code>) herkese açık sertifika kayıtlarında görünür. Panel yine yalnızca sizin Tailscale ağınızdaki cihazlardan açılır.</p>
+    {% endcall %}
+
+    <h2 id="yapmadiklari">BioKids'in asla yapmadıkları</h2>
+    <ul class="checks no">
+      <li>Trafiğin arasına girip şifresini çözmez (araya giren vekil sunucu yoktur).</li>
+      <li>Gizli bir izleme modu yoktur.</li>
+      <li>Tuş kaydı tutmaz.</li>
+      <li>Konum izlemez.</li>
+      <li>Ekranı izleyen, görüntü okuyan ya da "risk puanı" çıkaran bir yapay zekâ kullanmaz.</li>
+    </ul>
+
+    <h2 id="sinirlar">Sınırlar: bir yardımcıdır, garanti değil</h2>
+    <p>BioKids, <strong>tek bir bilgisayarda tek başına çalışan, 4–10 yaşında meraklı bir çocuk</strong> için yapıldı. Şunları durdurmaz:</p>
+    <ul>
+      <li>Bilgisayarı USB bellekten ya da başka bir sistemden açmak,</li>
+      <li>açılışta çekirdek komut satırını değiştirmek ya da diski sökmek,</li>
+      <li>yanında ona yardım eden bir yetişkin ya da becerikli bir genç,</li>
+      <li>telefonlar ve tabletler: BioKids yalnızca kurulu olduğu bilgisayarı yönetir.</li>
+    </ul>
+    <p>Kapsamın içinde ve dışında kalanların tamamı <a href="{{ site.repo }}/blob/main/docs/SECURITY.md" rel="noopener">tehdit modelinde (§1)</a>. Bir ebeveynin kendini olduğundan daha güvende hissetmesindense sınırlar konusunda dürüst olmayı tercih ediyoruz: hiçbir filtre her şeyi yakalamaz ve bunların hiçbiri çocuğunuzla konuşmanın yerini tutmaz.</p>
+
+    <h2 id="bu-site">Bu web sitesinin gizliliği</h2>
+    <ul class="checks">
+      <li><strong>Çerez yok, analiz yok, reklam yok.</strong> Ziyaretinizi sayan ya da izleyen hiçbir kod yoktur.</li>
+      <li><strong>Başka bir sunucudan hiçbir şey yüklenmez:</strong> yazı tipi (Fredoka) dahil her dosya bu sitededir.</li>
+      <li>Saklanan tek şey, dil önerisini kapatırsanız tarayıcınızın o sekmesinde tutulan küçük bir "kapatıldı" işaretidir (<code>sessionStorage</code>); sekme kapanınca silinir.</li>
+    </ul>
+    <p>Site Vercel üzerinde barındırılır. Her web sunucusunda olduğu gibi Vercel, sayfayı size gönderebilmek için IP adresinizi ve isteğinizi görür; bu, <a href="https://vercel.com/legal/privacy-policy" rel="noopener">Vercel'in gizlilik politikasına</a> tabidir. Vercel'in ziyaretçi analizi ve hız ölçümü kullanılmaz. GitHub'daki kaynak koduna ya da bir e-posta bağlantısına tıkladığınızda o hizmetin kendi kuralları geçerlidir.</p>
+    <p>Bir sorunuz mu var? <a href="mailto:{{ site.email }}">{{ site.email }}</a></p>
+  </div>
+</section>
+{% endblock %}

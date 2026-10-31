@@ -1,0 +1,116 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>BioKids comes as an ISO file. To install it, you first <em>write</em> that file to a USB stick; copying it onto the stick is not enough. A small program does it for you in a few clicks.</p>
+
+{% call m.illus('A writing program puts the ISO on the USB stick; the computer then starts from the stick.') %}
+<div class="usb-flow">
+  <div class="node"><span class="emoji tint-amber">💿</span>BioKids ISO<br><small>~3.3 GB</small></div>
+  <span class="arrow" aria-hidden="true">→</span>
+  <div class="node"><span class="emoji tint-indigo">🛠️</span>Etcher or Rufus</div>
+  <span class="arrow" aria-hidden="true">→</span>
+  <div class="node"><span class="emoji tint-teal">💾</span>USB stick<br><small>8 GB or more</small></div>
+  <span class="arrow" aria-hidden="true">→</span>
+  <div class="node"><span class="emoji tint-coral">💻</span>Your child's computer</div>
+</div>
+{% endcall %}
+
+<h2 id="before-you-start">Before you start</h2>
+<ul class="checks">
+  <li><strong>A USB stick of 8 GB or more.</strong> Everything on it will be erased, so copy anything important off it first.</li>
+  <li><strong>The BioKids ISO</strong> (<code>{{ site.iso_name }}</code>) from the <a href="{{ url('download', 'iso') }}">download page</a>.</li>
+  <li>Optionally, <a href="{{ url('download', 'verify') }}">check its SHA256</a>. A broken download causes strange errors halfway through installing.</li>
+</ul>
+
+<h2 id="write">Write the stick</h2>
+<p>Pick the computer you are using now. The easiest tool is <strong>balenaEtcher</strong>: the same three steps on Windows, macOS and Linux.</p>
+
+<div class="tabs">
+  <div class="tab-panel" data-tab="windows" data-label="Windows">
+    <h3 class="tab-title">Windows</h3>
+    <ol class="steps">
+      {% call m.step('Download and open Etcher', 'get-etcher') %}
+      <p>Download the Windows version from <a href="https://etcher.balena.io/" rel="noopener">etcher.balena.io</a> and install it. It is free.</p>
+      {% endcall %}
+      {% call m.step('Choose the ISO and the stick, then flash', 'flash') %}
+      <p><strong>Flash from file</strong> picks the ISO, <strong>Select target</strong> picks the USB stick, then press <strong>Flash!</strong> Say <em>Yes</em> if Windows asks for permission.</p>
+      {% call m.illus('balenaEtcher\'s three steps: file, target, flash.') %}
+      <div class="etcher">
+        <div class="etcher-step on"><span class="emoji" aria-hidden="true">💿</span><span class="etcher-btn">Flash from file</span><span class="etcher-note">{{ site.iso_name }}</span></div>
+        <div class="etcher-step on"><span class="emoji" aria-hidden="true">💾</span><span class="etcher-btn">Select target</span><span class="etcher-note">USB Flash Disk · 8 GB</span></div>
+        <div class="etcher-step"><span class="emoji" aria-hidden="true">⚡</span><span class="etcher-btn">Flash!</span><span class="etcher-note">writes, then verifies</span></div>
+      </div>
+      {% endcall %}
+      <p>Writing and the check after it take 5–15 minutes, depending on the stick. When you see "Flash Complete!", you can take the stick out.</p>
+      {% endcall %}
+      {% call m.step('Or use Rufus (DD mode)', 'rufus') %}
+      <p><a href="https://rufus.ie/" rel="noopener">Rufus</a> works too, with one thing to watch: when you press <strong>Start</strong>, an "ISOHybrid image detected" window appears. Choose <strong>Write in DD Image mode</strong> there.</p>
+      {% call m.illus('When Rufus asks, choose DD mode. A stick written in ISO mode may not start.') %}
+      <div class="mock">
+        <div class="mock-dialog">
+          <div class="mock-titlebar"><span>ISOHybrid image detected</span><span class="dots" aria-hidden="true">✕</span></div>
+          <div class="mock-body">
+            <p class="mock-small">The image you have selected is an 'ISOHybrid' image…</p>
+            <div class="mock-radio"><span class="mock-dot"></span><span>Write in ISO Image mode (Recommended)</span></div>
+            <div class="mock-radio"><span class="mock-dot on"></span><span class="mock-hl">Write in DD Image mode</span></div>
+          </div>
+          <div class="mock-buttons"><span class="mock-btn primary">OK</span><span class="mock-btn">Cancel</span></div>
+        </div>
+      </div>
+      {% endcall %}
+      {% endcall %}
+    </ol>
+  </div>
+
+  <div class="tab-panel" data-tab="macos" data-label="macOS">
+    <h3 class="tab-title">macOS</h3>
+    {# Plain step markup here, not m.step: only the Windows path feeds the
+       table of contents and the HowTo data. #}
+    <ol class="steps">
+      <li class="step" id="mac-etcher"><h3>Download Etcher</h3>
+      <div class="step-body"><p>Download the macOS version from <a href="https://etcher.balena.io/" rel="noopener">etcher.balena.io</a> and drag it to Applications. If macOS asks on first launch, press <em>Open</em>.</p></div></li>
+      <li class="step" id="mac-flash"><h3>Flash in three steps</h3>
+      <div class="step-body"><p><strong>Flash from file</strong> → the ISO, <strong>Select target</strong> → the USB stick, then <strong>Flash!</strong> It asks for your Mac password; that is normal.</p></div></li>
+      <li class="step" id="mac-warning"><h3>Ignore the warning</h3>
+      <div class="step-body"><p>When it is done, macOS may say "The disk you attached was not readable by this computer". That is expected: the stick is now made to start a PC. Press <strong>Eject</strong>.</p></div></li>
+    </ol>
+  </div>
+
+  <div class="tab-panel" data-tab="linux" data-label="Linux">
+    <h3 class="tab-title">Linux</h3>
+    <ol class="steps">
+      <li class="step" id="linux-find"><h3>Find the stick's name</h3>
+      <div class="step-body"><p>Plug the stick in and list the disks in a terminal. Recognise yours by its size (for example <code>sdb</code>, 7.5G).</p>
+      {{ m.code('lsblk -d -o NAME,SIZE,MODEL') }}</div></li>
+      <li class="step" id="linux-dd"><h3>Write it with dd</h3>
+      <div class="step-body"><p>Replace <code>sdX</code> with your stick's name. <strong>Picking the wrong disk erases that disk</strong>, so look twice.</p>
+      {{ m.code('sudo dd if=' ~ site.iso_name ~ ' of=/dev/sdX bs=4M status=progress conv=fsync') }}
+      <p>Rather not use a terminal? Etcher works on Linux too, and so does <em>Restore Disk Image</em> in GNOME Disks.</p></div></li>
+    </ol>
+  </div>
+</div>
+
+<h2 id="next">What next?</h2>
+<p>The stick is ready. Now you start the computer from it:</p>
+<ul>
+  <li>If nothing on the computer needs to be kept: the <a href="{{ url('guide-install') }}">install guide</a>.</li>
+  <li>If you want to keep Windows: <a href="{{ url('guide-dual-boot') }}">install beside Windows</a>.</li>
+  <li>To try it first, you do not even need the stick: <a href="{{ url('guide-virtualbox') }}">try it in VirtualBox</a>.</li>
+</ul>
+
+<h2 id="problems">Something wrong?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>Etcher says "Something went wrong"</h3></summary>
+    <div class="faq-answer"><p>It is usually the stick or the file. <a href="{{ url('download', 'verify') }}">Check the ISO's SHA256</a>, and try another USB port or another stick. Some cheap sticks say 8 GB but hold less.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Windows wants me to format the stick</h3></summary>
+    <div class="faq-answer"><p><strong>Do not format it</strong>; close the window. Windows cannot read the stick because it is now prepared for Linux, which means the writing worked.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Can I use the stick for other things afterwards?</h3></summary>
+    <div class="faq-answer"><p>Yes. After installing, format it again in Windows' Disk Management, or with Rufus or Etcher, and use it as before.</p></div>
+  </details>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>BioKids'te internet açıktır, en kötüleri kapalıdır. Kapatma işi bilgisayarın kendisinde, yalnızca çocukların hesaplarında yapılır; sizin hesabınızdaki internet hiç değişmez. Birkaç ayarla çocuğunuza göre biçimlendirebilirsiniz.</p>
+
+<ol class="steps">
+{% call m.step('İnternet sayfasını açın', 'sayfayi-acin') %}
+<p>Panelde <strong>Çocuklar</strong>'a gidin ve çocuğunuzun kartında <strong>İnternet</strong>'e basın. En üstteki yeşil kutu filtrenin çalıştığını söyler: <em>Zararlı site koruması çalışıyor.</em></p>
+{{ m.shot(lang ~ '/child-internet', 'Elif için İnternet sayfası: Zararlı site koruması çalışıyor kutusu, İnternet nasıl olsun sorusu ve iki seçenek, Kaydet düğmesi.', 'Bir çocuğun İnternet sayfası.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('İnternetin nasıl olacağını seçin', 'mod') %}
+<p><strong>İnternet nasıl olsun?</strong> sorusunun iki cevabı var:</p>
+<ul>
+  <li><strong>Açık internet, zararlı siteler kapalı (önerilen)</strong>: çocuk internette gezebilir; yetişkin içerikli, kumar ve zararlı siteler her zaman kapalıdır. Her yaş için varsayılan budur.</li>
+  <li><strong>Sadece seçtiğim siteler</strong>: yalnızca Uygulamalar ve siteler ekranında işaretlediğiniz siteler açılır. Çok küçük çocuklar için.</li>
+</ul>
+<p><strong>Kaydet</strong>'e basın.</p>
+{% call m.callout('note', 'Tarayıcı ayarı bilgisayarda bir tanedir') %}
+<p>Çocuklardan biri için <strong>Sadece seçtiğim siteler</strong>'i seçerseniz tarayıcı bütün çocuklar için öyle çalışır. Kardeşler farklı yaştaysa bunu göz önünde bulundurun.</p>
+{% endcall %}
+{% endcall %}
+
+{% call m.step('Çocuğa uygun siteleri işaretleyin', 'siteler') %}
+<p>Aynı sayfadaki <strong>Uygulamalar ve siteler</strong> bağlantısı çocuğunuzun kutucuklarını açar. İşaretlediğiniz her şey ekranında bir kutu olarak görünür; işaretlemediğiniz hiçbir şey görünmez. Hazır siteler arasında EBA, TRT Çocuk, KÜRE Çocuk, Bilim Çocuk, Meraklı Minik, Scratch, Müzik Atölyesi ve Kodlama (Code.org) var; YouTube Kids, Google Earth ve PBS KIDS gibi bazıları ise siz işaretleyene kadar kapalı gelir.</p>
+{{ m.shot(lang ~ '/child-apps-top', 'Elif için Uygulamalar ve siteler: GCompris, Boya, Sayılar, Çizim, SuperTux, Balonlar gibi işaretli kutular ve yaş önerileri.', 'Uygulamalar ve siteler: işaretlediğiniz her şey çocuğun ekranında bir kutu olur.', sizes='(min-width: 960px) 760px, 100vw', cls='crop-top') }}
+{% endcall %}
+
+{% call m.step('Çocuğunuzun isteklerini yanıtlayın', 'istekler') %}
+<p>Çocuk kapalı bir siteye girmeye çalışırsa sevimli bir sayfa görür: <strong>Burası senin için değil</strong>. Oradaki <strong>Büyüğüme sor</strong> düğmesine basarsa istek panelin <strong>İstekler</strong> ekranına ve telefonunuza düşer.</p>
+{{ m.shot(lang ~ '/blocked', 'Çocuğun ekranında kapalı bir site: Burası senin için değil yazan sayfa, Büyüğüme sor ve Geri dön düğmeleri.', 'Kapalı bir site, çocuğun ekranında.', sizes='(min-width: 960px) 760px, 100vw') }}
+<p><strong>İzin ver</strong> o siteyi açar, <strong>Şimdi değil</strong> kapalı tutar. Cevabınız çocuğun ekranında hemen görünür ve sesli söylenir. Aynı ekrandan uygulama ve süre isteklerini de yanıtlarsınız.</p>
+{{ m.shot(lang ~ '/requests', 'İstekler ekranı: Elif biraz daha süre istiyor, Kerem bir siteyi açmak istiyor, Kerem bir uygulama istiyor; İzin ver ve Şimdi değil düğmeleri.', 'İstekler: süre, site ve uygulama istekleri tek yerde.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('İsterseniz aranamayacak kelimeler ekleyin', 'kelimeler') %}
+<p>İnternet sayfasının altındaki <strong>Gelişmiş</strong>'i açın. BioKids yetişkin içerikli ve zararlı aramaları 89 kelimelik hazır bir listeyle zaten durdurur: Google'da, YouTube'da, Vikipedi'de ve başka arama kutularında bu kelimeler aranamaz, arama hiç gönderilmez. Listeye eklemek istediğiniz kelimeleri <strong>Aranamayacak kelimeler</strong> kutusuna, her satıra bir tane yazın. Liste bütün çocuklarınız için geçerlidir.</p>
+{{ m.shot(lang ~ '/child-internet-advanced', 'Gelişmiş açıkken İnternet sayfası: Aranamayacak kelimeler açıklaması ve Sizin eklediğiniz kelimeler kutusu.', 'Gelişmiş: kendi kelime listeniz.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+</ol>
+
+<h2 id="her-zaman-kapali">Her zaman kapalı olanlar</h2>
+<ul class="checks">
+  <li><strong>Yetişkin içerik, kumar, zararlı yazılım ve dolandırıcılık</strong> siteleri: yaklaşık 291.000 alan adı. Liste BioKids'le birlikte gelir, internetsiz de çalışır.</li>
+  <li><strong>Filtreyi atlatmaya yarayan şifreli DNS (DoH) servisleri.</strong></li>
+  <li><strong>Güvenli arama zorunlu:</strong> Google, Bing ve DuckDuckGo'da SafeSearch, YouTube'da kısıtlı mod.</li>
+  <li><strong>Araya giren vekil sunucu yok:</strong> BioKids kimsenin trafiğinin şifresini çözmez; filtre bilgisayardaki DNS'te (dnsmasq ve nftables) çalışır.</li>
+</ul>
+
+{% call m.callout('privacy', 'Neyi görürsünüz, neyi görmezsiniz?') %}
+<p><strong>Geçmiş</strong> ve <strong>Analiz</strong>'de çocuğun açtığı sitelerin yalnızca <em>adlarını</em> görürsünüz (30 gün); sayfaların içeriğini, yazılanları ya da ekran görüntülerini asla. Engellenen aramaların kelimelerini Analiz'de ve Bugün ekranındaki bir uyarıda görürsünüz, e-postada değil. Sıradan aramalar kimseye bildirilmez. Bunlar çocuğa da anlatılır.</p>
+{% endcall %}
+
+{% call m.callout('warn', 'Filtre çalışmazsa internet de çalışmaz') %}
+<p>Filtre bir nedenle çalışmazsa çocukların hesapları internete hiç bağlanamaz ve panel bunu söyler. BioKids hiçbir zaman "korumasız devam etmez". Bilgisayarı yeniden başlatmak çoğu zaman yeter.</p>
+{% endcall %}
+
+<h2 id="sorun">Sorun mu var?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>Çocuğa uygun bir site açılmıyor.</h3></summary>
+    <div class="faq-answer"><p>Çocuğunuz kapalı sayfada <strong>Büyüğüme sor</strong>'a bassın; istek <strong>İstekler</strong>'e düşer ve <strong>İzin ver</strong> o siteyi açar. Sitenin hazır listede olup olmadığına <strong>Uygulamalar ve siteler</strong>'den de bakabilirsiniz.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Kardeşinin tarayıcısı da "yalnızca seçtiğim siteler" gibi davranıyor.</h3></summary>
+    <div class="faq-answer"><p>Bilgisayarda tek bir tarayıcı ayarı vardır: bir çocuk için bu mod seçilince bütün çocuklar için geçerli olur. Büyük çocuk için açık internet istiyorsanız iki çocuğu da <strong>Açık internet, zararlı siteler kapalı</strong>'da tutun.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Panelde "Zararlı site koruması şu an çalışmıyor" yazıyor.</h3></summary>
+    <div class="faq-answer"><p>Güvenlik için çocuk hesapları şu an internete bağlanamaz. Bilgisayarı yeniden başlatmayı deneyin; geçmezse <a href="{{ url('guide-troubleshooting') }}">Sorun giderme</a> sayfasına bakın.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Hangi sitelere girdiğini görebilir miyim?</h3></summary>
+    <div class="faq-answer"><p>Evet, Geçmiş'te bir günü açınca "Açılan siteler" listesinde ve Analiz'de. Yalnızca sitelerin adları tutulur, 30 gün.</p></div>
+  </details>
+</div>
+{% endblock %}

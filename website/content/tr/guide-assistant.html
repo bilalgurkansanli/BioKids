@@ -1,0 +1,100 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p><strong>Sor Bana</strong>, çocuğunuzun sorularını yaşına uygun, kısa cevaplarla yanıtlayan bir yapay zekâ asistanıdır. Bilgisayarın <strong>kendisinde</strong> çalışır: sorular ve cevaplar hiçbir yere gönderilmez. İsteğe bağlıdır ve siz açana kadar kapalı durur.</p>
+
+{% call m.callout('note', 'Başlamadan önce') %}
+<ul>
+<li><strong>Bellek:</strong> en az 7 GB RAM. Daha azında asistan kurulmaz; BioKids'in geri kalanı her zamanki gibi çalışır.</li>
+<li><strong>Paket:</strong> BioKids ISO'sunda asistan paketi (<code>biokids-ai</code>) hazır gelir. Debian paketleriyle kurduysanız asistan, BioKids deposundaki llama.cpp ve whisper.cpp derlemelerine ihtiyaç duyar; ayrıntı <a href="{{ url('guide-packages') }}">Debian paketleri rehberinde</a>.</li>
+<li><strong>İnternet:</strong> yalnızca modelleri bir kez indirmek için. Sonrası tamamen çevrimdışı.</li>
+</ul>
+{% endcall %}
+
+<h2 id="kurulum">Sor Bana'yı açmak</h2>
+<ol class="steps">
+{% call m.step('Çocuğun Asistan sayfasını açın', 'asistan-sayfasi') %}
+<p>Panelde <strong>Çocuklar</strong>'a gidin ve çocuğunuzun kartında <strong>Asistan</strong>'a basın.</p>
+{% endcall %}
+
+{% call m.step('Modelleri indirin', 'modelleri-indirin') %}
+<p><strong>Bu bilgisayardaki modeller</strong> kutusunda <strong>Modelleri indir</strong>'e basın. BioKids bilgisayarın belleğine uygun modeli kendisi seçer:</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th scope="col">Bilgisayarın belleği</th><th scope="col">İndirilenler</th><th scope="col">Toplam</th></tr></thead>
+<tbody>
+<tr><th scope="row">7–12 GB</th><td>Gemma 4 E2B dil modeli (3,35 GB), Whisper small (190 MB), Türkçe ve İngilizce çevrimdışı Vikipedi (138 + 297 MB)</td><td>yaklaşık 4 GB</td></tr>
+<tr><th scope="row">12 GB ve üzeri</th><td>Gemma 4 E4B dil modeli (5,15 GB), Whisper large-v3-turbo (574 MB), aynı Vikipedi paketleri</td><td>yaklaşık 6,2 GB</td></tr>
+</tbody>
+</table>
+</div>
+<p>İndirme arka planda, bir ilerleme çubuğuyla sürer; bağlantı koparsa düğmeye tekrar basın, kaldığı yerden devam eder. Her dosya sabitlenmiş bir SHA-256 değeriyle denetlenir ve <code>/var/lib/biokids-ai/models</code> klasörüne yazılır.</p>
+{{ m.shot(lang ~ '/child-assistant-download', 'Elif\'in Asistan sayfası: Asistan açık, Bas-konuş açık ve Cevapları Vikipedi ile kontrol et kutuları; altta Modelleri indir düğmesi.', 'Modeller indirilmeden önce: altta Modelleri indir düğmesi. İndirme boyutları yukarıdaki tabloda.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Çocuğunuz için açın', 'cocuk-icin-acin') %}
+<p>İndirme bitince aynı sayfada şunları işaretleyin ve <strong>Kaydet</strong>'e basın:</p>
+<ul>
+<li><strong>Asistan açık</strong>: bu çocuk için Sor Bana'yı açar. Her çocuk için ayrı ayrı açılır.</li>
+<li><strong>Bas-konuş açık</strong>: çocuk sorusunu sesli de sorabilir. Mikrofon yalnızca çocuk düğmeyi basılı tuttuğu sürece, en fazla 15 saniye açılır; ses bilgisayarda yazıya çevrilir, hiçbir zaman kaydedilmez.</li>
+<li><strong>Cevapları Vikipedi ile kontrol et</strong>: önerilir ve baştan açıktır. Küçük bir model bazen yanılır; Zio önce bilgisayardaki Vikipedi özetlerine bakar. Bütün çocuklar için geçerlidir.</li>
+</ul>
+{{ m.shot(lang ~ '/child-assistant', 'Kerem\'in Asistan sayfası: Cevaplanmayan sorular kutusunda bir soru, açık olan üç ayar ve Asistan hazır yazan modeller kutusu.', 'Asistan hazır ve açık. Üstte, asistanın cevaplamadığı bir soru.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Çocuğunuz sorsun', 'cocuk-sorsun') %}
+<p>Çocuğun başlatıcısında <strong>Sor Bana</strong> kutusu belirir (modeller hazır olmadan görünmez). Çocuk sorusunu yazar ya da mikrofon düğmesine basılı tutarak söyler; cevap cümle cümle gelir ve Zio onu sesli okur.</p>
+{{ m.shot(lang ~ '/assistant', 'Zio\'ya sor ekranı: çocuk gökyüzünün neden mavi olduğunu soruyor, Zio kısa bir cevap veriyor.', 'Çocuğun ekranı: soru, kısa cevap ve altta "Sorduğun bazı soruları ailen görebilir."', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+</ol>
+
+<h2 id="nasil-cevaplar">Nasıl cevap verir?</h2>
+<ul class="checks">
+<li><strong>Kısa:</strong> 4–7 yaş için en fazla 5, 8–10 yaş için en fazla 7 cümle.</li>
+<li><strong>Sorulduğu dilde:</strong> Türkçe soruya Türkçe, İngilizce soruya İngilizce.</li>
+<li><strong>Hesapları tahmin etmez:</strong> toplama, çıkarma gibi işlemleri dil modeli değil, bilgisayar hesaplar.</li>
+<li><strong>Ölçülü:</strong> çocuk 10 dakikada en fazla 20 soru sorabilir.</li>
+</ul>
+
+<h2 id="reddettikleri">Neleri cevaplamaz?</h2>
+<p>Çocuğun sormaması gereken bir şeyde "Buna cevap veremiyorum" der. Reddettiği konular: cinsellik, kendine zarar verme, şiddet ve silahlar, uyuşturucu, alkol ve kumar, kişisel bilgi paylaşmak (adres, telefon…), kaba sözler, yaşına uygun olmayanlar, kuralları aşmaya çalışmak ve inanç konuları (bunlar aileye bırakılır).</p>
+{% call m.callout('child', 'Çocuk zor bir şey söylerse') %}
+<p>Kendine zarar vermekten söz eden ya da birinin ona zarar verdiğini söyleyen bir çocuğa asistan, güvendiği bir büyüğe söylemesini ve 183 ile 112'yi önerir.</p>
+{% endcall %}
+
+<h2 id="siz-ne-gorursunuz">Siz ne görürsünüz?</h2>
+<ul>
+<li>Asistanın cevaplamadığı sorular, çocuğun kendi kelimeleriyle, Asistan sayfasındaki <strong>Cevaplanmayan sorular</strong>'da durur. Okuduktan sonra <strong>Gördüm</strong>'e basın. Bugün ekranında da bir uyarı çıkar; e-posta bildirimleri açıksa size yalnızca konunun adı gider.</li>
+<li><strong>Sıradan sorular saklanmaz.</strong> "Gökyüzü neden mavi?" sorulur, cevaplanır ve unutulur.</li>
+<li>Çocuk ekranında her zaman <em>"Sorduğun bazı soruları ailen görebilir."</em> yazısını görür.</li>
+</ul>
+{% call m.callout('tip', 'Konuşmak için bir fırsat') %}
+<p>Cevaplanmayan bir soru çoğu zaman bir alarm değil, merakın işaretidir. Akşam sakin bir anda "Bugün Sor Bana'ya ne sordun?" diye açmak, yasaklamaktan daha çok işe yarar.</p>
+{% endcall %}
+
+<h2 id="hiz">Hız, bellek ve bekleme</h2>
+<p>Cevap hızı bilgisayarınızın işlemcisine bağlıdır. Model, ilk soruda belleğe yüklenir; bu yüzden bir süre kullanılmadıktan sonraki ilk cevap daha uzun sürebilir. 10 dakika soru gelmezse model bellekten çıkar ve bilgisayar yeniden hafifler.</p>
+
+<h2 id="vikipedi-ingilizce">Çevrimdışı Vikipedi ve İngilizce sohbet</h2>
+<p>Modellerle birlikte inen Vikipedi paketleri iki işe yarar: asistanın cevaplarını denetler, ayrıca 8–10 yaş için başlatıcıya eklenebilecek bir <strong>Vikipedi</strong> kutusu olur; internetsiz çalışır. Asistan açıkken İngilizce köşesinde <strong>Sio ile İngilizce konuş</strong> da açılır: Sio, çocuğun öğrendiği kelimelerle basit İngilizce sohbet eder; aynı denetimlerden geçer.</p>
+
+<h2 id="sorun-mu-var">Sorun mu var?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>Sor Bana kutusu çocuğun ekranında yok</h3></summary>
+    <div class="faq-answer"><p>Kutu, modeller tamamen indirilip asistan o çocuk için açılınca görünür. Asistan sayfasında "Asistan hazır." yazdığına ve <strong>Asistan açık</strong> kutusunun işaretli olduğuna bakın.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>İndirme yarıda kaldı</h3></summary>
+    <div class="faq-answer"><p>İnternet bağlantısını kontrol edip <strong>Modelleri indir</strong>'e yeniden basın; kaldığı yerden devam eder. Diskte en az 7 GB boş yer olduğundan da emin olun.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Asistan yanlış bir şey söyledi</h3></summary>
+    <div class="faq-answer"><p>Olabilir: bilgisayarda çalışan küçük modeller bazen yanılır. <strong>Cevapları Vikipedi ile kontrol et</strong> açıkken bu çok azalır. Çocuğunuza da "Asistan da yanılabilir, emin değilsen bana sor" demek iyi bir alışkanlıktır.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Bilgisayarımda 7 GB'tan az bellek var</h3></summary>
+    <div class="faq-answer"><p>O zaman asistan kurulmaz; BioKids'in diğer her şeyi 4 GB ile çalışır. Bellek eklemek mümkünse asistan sonradan da açılabilir.</p></div>
+  </details>
+</div>
+{% endblock %}

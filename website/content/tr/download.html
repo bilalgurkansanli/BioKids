@@ -1,0 +1,121 @@
+{% extends "page.html" %}
+{% import "macros.html" as m with context %}
+{% block h1 %}BioKids'i indirin{% endblock %}
+{% block lead %}
+<p class="lead">Ücretsizdir, hesap istemez. Çoğu aile için doğru seçim ISO'dur: bir USB belleğe yazılır ve bilgisayara kurulur; isterseniz Windows'un yanına.</p>
+{% endblock %}
+{% block body %}
+<section class="section-tight">
+  <div class="wrap">
+    <div class="dl-grid">
+      <article class="dl-card main" aria-labelledby="iso">
+        <p class="eyebrow tint-indigo"><span aria-hidden="true">⭐</span> Önerilen</p>
+        <h2 id="iso">ISO kalıbı: USB bellekten kurulum</h2>
+        <ul class="dl-meta">
+          <li>Sürüm {{ site.version }}</li>
+          <li>≈ 3,3 GB</li>
+          <li>64 bit (amd64)</li>
+          <li>BIOS ve UEFI</li>
+          <li>Türkçe ve İngilizce</li>
+        </ul>
+        <p>BioKids yüklü Debian 13: Xfce, çocukların uygulamaları ve asistanın çalışma ortamı içinde gelir. Bellekten açılır, Debian'ın kendi kurulum programıyla ve <strong>internet gerekmeden</strong> kurulur. Windows olan bir bilgisayarda Windows'u küçültüp yanına kurmayı önerir.</p>
+        <p>Dosya adı: <span class="file">{{ site.iso_name }}</span></p>
+        <div class="btn-row">
+          <a class="btn btn-primary btn-lg" href="{{ site.release_url }}" rel="noopener">{% include "icon-download.html" %} Son sürümü indir</a>
+          <a class="btn btn-secondary btn-lg" href="{{ url('guide-install') }}">Nasıl kurulur?</a>
+        </div>
+        {% call m.callout('note', 'Dosya neden archive.org\'da?') %}
+        <p>ISO, GitHub'ın 2 GB'lık dosya sınırından büyük. Bu yüzden sürüm sayfası, dosyanın archive.org'daki kopyasına ve SHA256 değerine bağlantı verir.</p>
+        {% endcall %}
+      </article>
+      <div class="dl-side">
+        <article class="dl-card" aria-labelledby="paketler">
+          <span class="badge badge-soon">Yakında</span>
+          <h2 id="paketler">Debian paketleri</h2>
+          <p>Zaten Debian 13 kullanıyorsanız BioKids'i APT ile kurabilirsiniz. Projenin APT deposu ve imza anahtarı ilk sürümle birlikte yayımlanacak.</p>
+          <p><a href="{{ url('guide-packages') }}">Paketlerle kurulum rehberi →</a></p>
+        </article>
+        <article class="dl-card" aria-labelledby="kaynak">
+          <span class="badge badge-real">MIT</span>
+          <h2 id="kaynak">Kaynak kodu</h2>
+          <p>Her satır açık. ISO'yu kendiniz de derleyebilirsiniz.</p>
+          <p><a href="{{ site.repo }}" rel="noopener">GitHub'da BioKids →</a><br><a href="{{ site.repo }}/blob/main/iso/README.md" rel="noopener">ISO nasıl derlenir? →</a></p>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight" aria-labelledby="hangisi">
+  <div class="wrap">
+    {{ m.head('hangisi', 'Hangi rehberle başlamalıyım?', 'Sonraki adım', 'Bilgisayarınıza en uygun yolu seçin; her biri birkaç kısa adım.', 'teal') }}
+    <div class="picker">
+      <a href="{{ url('guide-install') }}"><span class="emoji" aria-hidden="true">💻</span><strong>Bilgisayarda yalnızca BioKids olacak</strong><span>Boşta duran ya da yeni bir bilgisayar.</span><span>Kurulum →</span></a>
+      <a href="{{ url('guide-dual-boot') }}"><span class="emoji" aria-hidden="true">🪟</span><strong>Windows da kalsın</strong><span>Açılışta ikisinden birini seçin.</span><span>Windows'un yanına →</span></a>
+      <a href="{{ url('guide-virtualbox') }}"><span class="emoji" aria-hidden="true">🧪</span><strong>Önce denemek istiyorum</strong><span>Bilgisayarınıza dokunmadan.</span><span>VirtualBox'ta deneyin →</span></a>
+      <a href="{{ url('guide-packages') }}"><span class="emoji" aria-hidden="true">📦</span><strong>Zaten Debian 13 kullanıyorum</strong><span>Var olan sisteme paketlerle.</span><span>Debian paketleri →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight" aria-labelledby="gereksinimler">
+  <div class="wrap narrow">
+    {{ m.head('gereksinimler', 'Sistem gereksinimleri', 'Gereksinimler', 'Birkaç yaşındaki sıradan bir dizüstü ya da masaüstü bilgisayar yeter.', 'amber') }}
+    <div class="table-wrap">
+      <table>
+        <tbody>
+          <tr><th scope="row">İşlemci</th><td>64 bit (amd64 / x86-64). ARM ve Apple Silicon desteklenmez.</td></tr>
+          <tr><th scope="row">Bellek (RAM)</th><td>4 GB. İsteğe bağlı Sor Bana asistanı için 7 GB ya da daha fazla (12 GB ve üzerinde daha büyük bir model).</td></tr>
+          <tr><th scope="row">Disk</th><td>Yaklaşık 25 GB; Windows'un yanına kurarken en az 40 GB boş alan ayırın.</td></tr>
+          <tr><th scope="row">USB bellek</th><td>8 GB ya da daha büyük (içindekiler silinir).</td></tr>
+          <tr><th scope="row">Sistem</th><td>ISO'nun içinde Debian 13 "trixie" gelir. Paketlerle kurulum yalnızca Debian 13'te desteklenir; Ubuntu test edilmedi.</td></tr>
+          <tr><th scope="row">Oturum</th><td>X11 (Wayland desteklenmez); ISO bunu kendisi ayarlar.</td></tr>
+          <tr><th scope="row">İnternet</th><td>Kurulum için gerekmez. Güncellemeler, telefondan erişim ve isteğe bağlı indirmeler için gerekir.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight" aria-labelledby="dogrulama">
+  <div class="wrap narrow prose">
+    <h2 id="dogrulama">İndirdiğiniz dosyayı doğrulayın</h2>
+    <p>Dosyanın eksiksiz ve değiştirilmemiş olduğundan emin olmak için SHA256 değerini hesaplayın ve sürüm sayfasındaki <code>SHA256SUMS</code> dosyasındaki değerle karşılaştırın. İkisi harfi harfine aynı olmalı.</p>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="windows" data-label="Windows">
+        <h3 class="tab-title">Windows</h3>
+        <p>Dosyanın bulunduğu klasörde PowerShell açın ve yazın:</p>
+        {{ m.code('Get-FileHash .\\' ~ site.iso_name ~ ' -Algorithm SHA256', 'PowerShell') }}
+      </div>
+      <div class="tab-panel" data-tab="macos" data-label="macOS">
+        <h3 class="tab-title">macOS</h3>
+        <p>Terminal'de, dosyanın bulunduğu klasörde:</p>
+        {{ m.code('shasum -a 256 ' ~ site.iso_name, 'Terminal') }}
+      </div>
+      <div class="tab-panel" data-tab="linux" data-label="Linux">
+        <h3 class="tab-title">Linux</h3>
+        <p><code>SHA256SUMS</code> dosyasını ISO ile aynı klasöre indirin ve yazın:</p>
+        {{ m.code('sha256sum -c SHA256SUMS', 'Uçbirim') }}
+        <p>Dosya adının yanında <code>OK</code> ya da Türkçe karşılığı yazmalı.</p>
+      </div>
+    </div>
+    {% call m.callout('privacy', 'İmza') %}
+    <p>Sürümler, projenin yayın anahtarıyla imzalanacak; anahtarın parmak izi yayımlandığında bu sayfaya ve README'ye yazılacak.</p>
+    {% endcall %}
+  </div>
+</section>
+
+<section class="section-tight" aria-labelledby="icinde">
+  <div class="wrap narrow prose">
+    <h2 id="icinde">ISO'nun içinde neler var?</h2>
+    <ul class="checks">
+      <li>Debian 13 "trixie" ve Xfce masaüstü (ebeveyn için; çocuk onu hiç görmez).</li>
+      <li>BioKids'in tamamı: arka plan hizmeti, ebeveyn paneli, çocuğun başlatıcısı, Zio ve Sio.</li>
+      <li>Çocuk uygulamaları: GCompris, Tux Paint, TuxMath, SuperTux ve diğerleri.</li>
+      <li>Sor Bana asistanının çalışma ortamı (llama.cpp, whisper.cpp, Kiwix). Modeller içinde <strong>yoktur</strong>; isterseniz panelden indirilir.</li>
+      <li>Kablosuz ağ kartları için Debian'ın donanım yazılımları.</li>
+    </ul>
+    <p>USB bellekteki canlı oturum yalnızca denemek ve kurmak içindir: çocuk denetimi kurulu bilgisayarda çalışır.</p>
+  </div>
+</section>
+{% endblock %}

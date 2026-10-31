@@ -1,0 +1,52 @@
+name: Website
+
+# biokids.bilalgurkansanli.com is built and served by Vercel (vercel.json,
+# D-258), which deploys main and gives each pull request a preview. This only
+# checks the site on GitHub too, so a pull request shows a broken link, a
+# missing picture or an out-of-range title next to the product's own CI.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "website/**"
+      - "vercel.json"
+      - "src/biokids_core/data/static/fonts/**"
+      - ".github/workflows/website.yml"
+  pull_request:
+    paths:
+      - "website/**"
+      - "vercel.json"
+      - "src/biokids_core/data/static/fonts/**"
+      - ".github/workflows/website.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build and check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The whole history, so each page's "last updated" and the sitemap's
+          # lastmod are the date of its last commit rather than today.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      # The same script Vercel runs: Jinja2, then build.py --check, which fails
+      # on a broken internal link or anchor, a missing picture or share card,
+      # an image without alt text or size, a page without exactly one h1, a
+      # repeated id, JSON-LD that does not parse, or a title or description
+      # out of range.
+      - name: Build and check
+        run: sh website/vercel-build.sh

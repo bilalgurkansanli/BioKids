@@ -1,0 +1,79 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>Ebeveyn paneli normalde yalnızca bilgisayarın kendisinde açılır. Telefondan erişimi açtığınızda aynı panel telefonunuzda da açılır: evde, işte ya da yolda. Süre verir, ekranı kilitler, bir isteği yanıtlar ya da <a href="{{ url('guide-live') }}">ekranı canlı izlersiniz</a>.</p>
+
+<p>Bunun için ücretsiz <strong>Tailscale</strong> uygulaması kullanılır: telefonunuzla bilgisayar arasında yalnızca sizin kullanabildiğiniz şifreli, özel bir ağ kurar. Modeminizde hiçbir ayar yapmanız gerekmez; internete hiçbir kapı açılmaz.</p>
+
+{% call m.callout('tip', 'Kurulum sihirbazında yaptıysanız') %}
+<p>İlk kurulumun 8. adımı da aynı dört adımdır. Orada tamamladıysanız paneli telefonunuzda zaten açabilirsiniz; bu rehbere yalnızca sonradan açmak ya da kapatmak için dönün.</p>
+{% endcall %}
+
+<h2 id="adimlar">Dört adımda telefondan erişim</h2>
+<p>Bu adımları <strong>bilgisayarın başında</strong>, panelde yapın. Toplam yaklaşık beş dakika sürer.</p>
+
+<ol class="steps">
+{% call m.step('Bu bilgisayarı bağlayın', 'bilgisayari-baglayin') %}
+<p>Panelde <strong>Ayarlar → Telefondan erişim</strong>'e gidin ve <strong>Telefondan erişimi aç</strong>'a basın. BioKids, Tailscale'i bu bilgisayara kendisi kurar; sizin bir şey indirmeniz gerekmez.</p>
+{{ m.shot(lang ~ '/phone-access', 'Panelde Telefondan erişim sayfası: dört numaralı adım ve altta Telefondan erişimi aç düğmesi.', 'Başlangıç: Tailscale henüz kurulu değil. Dört adım ve en altta Telefondan erişimi aç düğmesi.', sizes='(min-width: 960px) 760px, 100vw') }}
+<p>Ardından <strong>Giriş sayfasını aç</strong> düğmesi ve bir QR kodu çıkar. Açılan sayfada Google, Apple ya da Microsoft hesabınızla giriş yapın; hesabınız yoksa ücretsiz bir Tailscale hesabı açabilirsiniz. İsterseniz QR kodunu telefonunuzla okutup girişi telefondan yapın.</p>
+{{ m.shot(lang ~ '/phone-access-signin', 'Birinci adımda Tailscale hesabınızla bir kez giriş yapın kutusu: Giriş sayfasını aç düğmesi ve bir QR kodu.', 'Birinci adım: Tailscale\'e bir kez giriş yapılır, düğmeyle ya da QR koduyla.', sizes='(min-width: 960px) 760px, 100vw', cls='crop-top') }}
+{% endcall %}
+
+{% call m.step('Telefondan erişime izin verin', 'izin-verin') %}
+<p>Bilgisayar bağlanınca BioKids paneli telefonunuza açar. Tailscale bu özelliği ağınızda ilk kez açarken onay isteyebilir: o zaman burada <strong>Tailscale'de onayla</strong> düğmesi çıkar. Basın, açılan sayfada onaylayın, sonra <strong>Telefondan erişimi aç</strong>'a tekrar basın. Bu yalnızca bir kez olur.</p>
+{{ m.shot(lang ~ '/phone-access-approval', 'İkinci adımda Tailscale\'in onay beklediğini söyleyen kutu ve Tailscale\'de onayla düğmesi.', 'Tailscale onay isterse ikinci adımda bu düğme görünür.', sizes='(min-width: 960px) 760px, 100vw', cls='crop-top') }}
+{% endcall %}
+
+{% call m.step('Telefonunuza Tailscale\'i kurun', 'telefona-kurun') %}
+<p>Sayfadaki iki QR kodundan telefonunuza uygun olanı (iPhone · iPad ya da Android) telefonunuzun kamerasıyla okutun; Tailscale uygulaması mağazada açılır. Kurun, açın ve <strong>bilgisayarda kullandığınız hesapla</strong> giriş yapın.</p>
+<ul>
+<li>Telefon "VPN bağlantısı ekle" izni ister: izin verin. Bu yalnızca Tailscale'in kendi bağlantısıdır; telefonunuzun diğer internet kullanımı değişmez.</li>
+<li>Uygulamada <strong>Bağlan</strong> (Connect) düğmesine basın; üstte "Connected" yazmalı.</li>
+</ul>
+{% endcall %}
+
+{% call m.step('Paneli telefonda açın', 'paneli-acin') %}
+<p>Üç adım tamamlanınca sayfada panelin telefon adresi ve bir QR kodu belirir. Adres <code>https://bilgisayarınızın-adı.ağınızın-adı.ts.net</code> biçimindedir. Kodu telefonunuzun kamerasıyla okutun ve PIN'inizi girin.</p>
+{{ m.shot(lang ~ '/phone-access-done', 'Dört adımın tamamlandığı Telefondan erişim sayfası: panel adresi, okutulacak QR kodu ve Telefondan erişimi kapat düğmesi.', 'Hazır: panelin telefon adresi ve QR kodu. Bu adrese yalnızca sizin Tailscale ağınızdaki cihazlar ulaşabilir.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% call m.callout('tip', 'Bir uygulama gibi dursun') %}
+<p>Telefonun tarayıcısında menüyü açıp <strong>Ana ekrana ekle</strong>'yi seçin. BioKids telefonunuzda bir uygulama simgesi gibi durur ve tek dokunuşla açılır.</p>
+{% endcall %}
+{% endcall %}
+</ol>
+
+<h2 id="gunluk-kullanim">Günlük kullanım</h2>
+<p>Paneli telefonda açmak için telefonunuzdaki Tailscale uygulamasının bağlı (Connected) olması yeter. Panelde 30 dakika işlem yapmazsanız oturum kapanır; tekrar PIN'inizi girersiniz.</p>
+<p>Telefondan neredeyse her şeyi yapabilirsiniz: <strong>Bugün</strong> ekranından +10 dk vermek, kilitlemek ya da kapatmak, <strong>İstekler</strong>'i yanıtlamak, Geçmiş ve Analiz'e bakmak, ekranı canlı izlemek. Yalnızca <strong>Oturumu değiştir</strong> bilgisayarın başında çalışır.</p>
+
+{% call m.callout('privacy', 'Gizlilik açısından') %}
+<p>Tailscale'in koordinasyon sunucusu, bu özelliği açtığınızda devreye giren tek dış taraftır; BioKids onu kayıt tutmadan (<code>--no-logs-no-support</code>) çalıştırır. Panelin içeriği yalnızca sizin şifreli ağınızda dolaşır, hiçbir BioKids sunucusundan geçmez. Bilmeniz gereken tek şey: güvenli bağlantı (HTTPS) sertifikası nedeniyle bilgisayarınızın <code>.ts.net</code> adı herkese açık sertifika kayıtlarında görünür. Görünen yalnızca bir addır; ailenizle ilgili hiçbir bilgi değil. BioKids'in tüm dış bağlantıları <a href="{{ url('privacy', 'baglantilar') }}">Gizlilik sayfasında</a>.</p>
+{% endcall %}
+
+{% call m.callout('danger', 'Port yönlendirme yapmayın') %}
+<p>Panelin internete açılması için modeminizde port yönlendirme yapmayın, Tailscale Funnel'ı da açmayın. BioKids Funnel'ı zaten reddeder: panel yalnızca sizin ağınızdaki cihazlara açıktır ve öyle kalmalıdır.</p>
+{% endcall %}
+
+<h2 id="kapatmak">Telefondan erişimi kapatmak</h2>
+<p><strong>Ayarlar → Telefondan erişim</strong>'de <strong>Telefondan erişimi kapat</strong>'a basın. Panel artık telefonunuzdan açılmaz. Tailscale bilgisayarda kurulu kalır; tekrar açmak isterseniz aynı düğmeye basmanız yeter.</p>
+
+<h2 id="sorun-mu-var">Sorun mu var?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>Telefonda panel açılmıyor</h3></summary>
+    <div class="faq-answer"><p>Önce telefondaki Tailscale uygulamasını açın ve "Connected" yazdığına bakın. Bilgisayarın açık ve internete bağlı olduğundan emin olun; uyku modundaki ya da kapalı bir bilgisayara ulaşılamaz. Telefonda ve bilgisayarda aynı Tailscale hesabıyla giriş yaptığınızı kontrol edin.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Tailscale ücretli mi?</h3></summary>
+    <div class="faq-answer"><p>Hayır. Bir ailenin bu kullanımı için Tailscale'in ücretsiz kişisel hesabı yeterlidir.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Eşim de telefonundan girebilir mi?</h3></summary>
+    <div class="faq-answer"><p>Evet. Eşinizin telefonuna da Tailscale'i kurup aynı hesapla giriş yapın; panelde ona <strong>Ayarlar → Ebeveynler</strong>'den kendi adı ve PIN'iyle bir ebeveyn hesabı açın. En fazla dört ebeveyn olabilir.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Telefonumu kaybedersem?</h3></summary>
+    <div class="faq-answer"><p>Panel yine PIN ister, yani telefonu bulan biri PIN'iniz olmadan giremez. Yine de Tailscale'in web sitesinde, yönetim panelindeki cihaz listesinden o telefonu ağınızdan çıkarın.</p></div>
+  </details>
+</div>
+{% endblock %}

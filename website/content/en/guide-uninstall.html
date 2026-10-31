@@ -1,0 +1,115 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>You can always leave BioKids; nothing locks you in. How to remove it depends on how you installed it.</p>
+
+{% call m.callout('tip', 'Only want a break for a while?') %}
+<p>No need to remove anything. In the panel, under Children → Time rules, untick <strong>"Let BioKids manage this child"</strong> (your family passphrase is asked). Tick it again and everything carries on where it left off.</p>
+{% endcall %}
+
+<h2 id="which-case">Which case are you?</h2>
+<div class="cases">
+  <a href="#packages"><span class="emoji" aria-hidden="true">📦</span><strong>Remove BioKids, keep Debian</strong><span>Installed from the ISO or from packages: a plain Debian stays.</span></a>
+  <a href="#back-to-windows"><span class="emoji" aria-hidden="true">🪟</span><strong>Go back to Windows only</strong><span>Installed beside Windows: give BioKids' space back to Windows.</span></a>
+  <a href="#another-system"><span class="emoji" aria-hidden="true">💿</span><strong>Install another system</strong><span>If BioKids is the only thing on the computer.</span></a>
+</div>
+
+<h2 id="backup-first">First: your family's backup (optional)</h2>
+<p>If you might install it again one day, use <strong>Settings → Back up and move → Download the backup</strong> in the panel to save the children's rules and history as one file, and copy it to a USB stick. The file is sealed with your family passphrase; it holds no PINs and no mail settings.</p>
+
+<h2 id="packages">Remove BioKids, keep Debian</h2>
+<p>Even when installed from the ISO, BioKids sits on top of Debian as packages. Remove them and a plain Debian with the Xfce desktop is left. Sign in with your own account and open a terminal:</p>
+<ol class="steps">
+  {% call m.step('Delete the assistant\'s models (if installed)', 'assistant') %}
+  <p>This deletes Ask Me's models, several GB of them.</p>
+  {{ m.code('sudo apt purge biokids-ai') }}
+  {% endcall %}
+
+  {% call m.step('Remove BioKids', 'remove') %}
+  {{ m.code('sudo apt purge biokids biokids-desktop biokids-core biokids-daemon biokids-panel biokids-shell biokids-voice') }}
+  <p>It asks one question: <strong>"Delete the stored BioKids data for this family?"</strong> The default answer is <em>No</em>, and the records stay on the computer. Answer <em>Yes</em> to delete everything: the rules, the history, the voice recordings and the downloaded natural voice.</p>
+  <p>This also brings back Debian's usual boot menu.</p>
+  {% endcall %}
+
+  {% call m.step('Delete the children\'s accounts (if you want)', 'accounts') %}
+  <p>The children's accounts on the computer, and their files (their drawings, for example), are left on purpose. To delete them, once for each child, with their username:</p>
+  {{ m.code('sudo deluser --remove-home elif') }}
+  {% endcall %}
+
+  {% call m.step('Clean up what is left', 'clean-up') %}
+  {{ m.code('sudo apt autoremove') }}
+  <p>If you turned on phone access, Tailscale was installed as well; remove it with <code>sudo apt purge tailscale</code> if you no longer need it.</p>
+  {% endcall %}
+</ol>
+
+<h2 id="back-to-windows">Go back to Windows only</h2>
+<p>If the computer has both Windows and BioKids, you can delete BioKids' partitions and give the space back to Windows. These are Windows' own tools, not BioKids'; do it carefully and in order.</p>
+{% call m.callout('danger', 'Before you start') %}
+<ul>
+  <li><strong>Back up</strong> your important files.</li>
+  <li>If you use BitLocker, have your <strong>recovery key</strong> at hand (<code>aka.ms/myrecoverykey</code>).</li>
+  <li>Keep the order: first make Windows start first and check it, <em>then</em> delete the partitions. The other way round, the computer may not start.</li>
+</ul>
+{% endcall %}
+<ol class="steps">
+  {% call m.step('Start Windows', 'win-start') %}
+  <p>Choose <strong>Windows Boot Manager</strong> in the boot menu.</p>
+  {% endcall %}
+
+  {% call m.step('Make Windows start first', 'win-first') %}
+  <p>Type <code>cmd</code> in Start, right-click <strong>Command Prompt</strong>, choose <strong>Run as administrator</strong> and type:</p>
+  {{ m.code('bcdedit /set {fwbootmgr} displayorder {bootmgr} /addfirst', 'Command Prompt (administrator)') }}
+  <p>Restart: <strong>Windows should start directly</strong>, without the menu. If it does not, stop here and move <em>Windows Boot Manager</em> to the top of the <strong>Boot Order</strong> in the computer's settings (BIOS/UEFI).</p>
+  {% call m.callout('note', 'Legacy (BIOS) installs') %}
+  <p>If Windows' BIOS Mode is "Legacy", instead of this command go to Settings → System → Recovery → Advanced startup → Troubleshoot → Advanced options → <strong>Command Prompt</strong>, type <code>bootrec /fixmbr</code>, then restart and check that Windows starts directly.</p>
+  {% endcall %}
+  {% endcall %}
+
+  {% call m.step('Delete BioKids\' partitions', 'delete-partitions') %}
+  <p>Right-click the Start button and open <strong>Disk Management</strong>. BioKids' partitions have <strong>no drive letter</strong>; recognise them by size: one as large as the space you freed for BioKids, and a smaller swap partition of a few GB next to it. Right-click each and choose <strong>Delete Volume</strong>.</p>
+  {% call m.illus('Delete only the red ones. Do not touch EFI, C: or Recovery.') %}
+  <div class="mock mock-win">
+    <div class="mock-body">
+      <div class="disk-row">
+        <p class="disk-title">Disk 0</p>
+        <div class="disk"><div class="efi"><b>EFI</b>100 MB</div><div class="win"><b>Windows (C:)</b>197 GB</div><div class="del"><b>Healthy (Primary Partition)</b>~36 GB · delete</div><div class="swap"><b>swap</b>delete</div><div class="rec"><b>Recovery</b></div></div>
+      </div>
+      <div class="disk-legend"><span><i style="background:#2b6cc4"></i>Windows' (leave alone)</span><span><i style="background:#E04A3F"></i>BioKids' (delete)</span></div>
+    </div>
+  </div>
+  {% endcall %}
+  {% call m.callout('warn') %}<p>Never delete the <strong>EFI System Partition</strong>, the <strong>Recovery</strong> partition or <strong>C:</strong>. If you are not sure which is which, stop and <a href="mailto:{{ site.email }}">write to us</a>.</p>{% endcall %}
+  {% endcall %}
+
+  {% call m.step('Grow C:', 'extend') %}
+  <p>Right-click <strong>C:</strong> → <strong>Extend Volume…</strong> → Next → Finish. The free space joins C:.</p>
+  <p>If Windows greys this option out, the free space is not right next to C: (a Recovery partition may sit between them). Then right-click the free space and use <strong>New Simple Volume</strong> to make it a separate drive (D:).</p>
+  {% endcall %}
+
+  {% call m.step('Remove the debian folder from EFI (optional)', 'efi-clean') %}
+  <p>So that an unused "debian" entry does not linger in the firmware's boot list, type these one by one in an administrator Command Prompt. Type the letters carefully.</p>
+  {{ m.code('mountvol S: /s
+rd /s /q S:\\EFI\\debian
+mountvol S: /d', 'Command Prompt (administrator)') }}
+  {% endcall %}
+</ol>
+
+<h2 id="another-system">If BioKids is the only system</h2>
+<p>Two ways: go back to a plain Debian with the <a href="#packages">package steps</a> above, or install another system (Windows, for example) from its own USB stick. Its installer erases the disk, so take your family's backup and your files first.</p>
+
+<h2 id="problems">Something wrong?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>After deleting, a black screen says "grub rescue"</h3></summary>
+    <div class="faq-answer"><p>The computer is still looking for BioKids' boot loader. Open the computer's settings (often {{ m.kbd('F2') }}, {{ m.kbd('F10') }} or {{ m.kbd('Del') }}) and move <em>Windows Boot Manager</em> to the top of the <strong>Boot Order</strong>. On a Legacy (BIOS) install, run <code>bootrec /fixmbr</code> from Windows' recovery environment.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>What happens to my family's data?</h3></summary>
+    <div class="faq-answer"><p>It stays on the computer unless you choose to delete it. Answer <em>Yes</em> to the question asked while removing, and the rules, history and records are deleted. If you deleted the partitions, it is all gone anyway.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Can I install it again later?</h3></summary>
+    <div class="faq-answer"><p>Of course. After installing, load your backup with <strong>Back up and move → Restore</strong> in the panel, and the children's rules and history come back.</p></div>
+  </details>
+</div>
+{% endblock %}

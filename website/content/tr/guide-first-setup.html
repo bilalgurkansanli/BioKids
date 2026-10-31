@@ -1,0 +1,99 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>BioKids kurulduktan sonra ebeveyn hesabınızla ilk girişte bir kurulum sihirbazı kendiliğinden açılır. Dokuz kısa adımda PIN'inizi, ilk çocuğunuzu ve onun kurallarını belirlersiniz. Sihirbaz bitene kadar her girişinizde yeniden açılır; bir çocuğun oturumunda hiçbir zaman açılmaz.</p>
+
+{% call m.callout('tip', 'Başlamadan önce') %}
+<p>Yanınızda bir kâğıt ve kalem olsun: 3. adımda size bir kez gösterilen kurtarma kodunu yazacaksınız. Ekranın üstündeki <strong>Adım 1 / 9</strong> yazısı nerede olduğunuzu gösterir.</p>
+{% endcall %}
+
+<ol class="steps">
+{% call m.step('Dili seçin', 'dil') %}
+<p>Panelin ve çocuğun ekranının dili: <strong>Türkçe</strong> ya da <strong>English</strong>. Altındaki kutu BioKids'in sözünü hatırlatır: <em>Hiçbir şey cihazınızdan çıkmaz.</em> <strong>Devam</strong>'a basın.</p>
+{{ m.shot(lang ~ '/wizard-1-language', 'Kurulum sihirbazının 1. adımı: Dil seçimi, altında Hiçbir şey cihazınızdan çıkmaz kutusu ve Devam düğmesi.', 'Adım 1 / 9: Dil.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Ebeveyn hesabınızı oluşturun', 'ebeveyn') %}
+<p><strong>Adınız</strong> ve <strong>6 haneli PIN</strong>: panele her girişte bunu kullanacaksınız. PIN'i <strong>PIN tekrar</strong> kutusuna bir kez daha yazın. 123456 ya da 111111 gibi kolay tahmin edilen PIN'ler kabul edilmez.</p>
+{{ m.shot(lang ~ '/wizard-2-parent', 'Kurulum sihirbazının 2. adımı: Adınız, 6 haneli PIN ve PIN tekrar kutuları.', 'Adım 2 / 9: Ebeveyn hesabı.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Parolayı ve kurtarma kodunu yazın', 'parola') %}
+<p>Önce bir <strong>Parola</strong> belirleyin: en az 10 karakter. PIN'den ayrıdır; korumayı kapatmak, bir çocuğu ya da ebeveyni silmek ve yedek almak gibi büyük işlemlerde sorulur.</p>
+<p>Altında <strong>Kurtarma kodunuz</strong> görünür: 8 kelime. PIN'inizi unutursanız panele en kolay dönüş yolu budur ve <strong>bir daha gösterilmez</strong>. Kâğıda yazın, sonra <strong>Kurtarma kodunu bir yere yazdım</strong> kutusunu işaretleyin.</p>
+{{ m.shot(lang ~ '/wizard-3-passphrase', 'Kurulum sihirbazının 3. adımı: Parola kutusu, sekiz kelimelik kurtarma kodu ve Kurtarma kodunu bir yere yazdım onay kutusu.', 'Adım 3 / 9: Parola ve kurtarma kodu. Buradaki kelimeler örnektir; sizinki farklı olur.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% call m.callout('warn', 'Kodu ekranın fotoğrafını çekerek saklamayın') %}
+<p>Kâğıda yazıp güvenli bir yere koyun. Kodu bilen biri PIN'inizi değiştirebilir.</p>
+{% endcall %}
+{% endcall %}
+
+{% call m.step('İlk çocuğunuzu ekleyin', 'cocuk') %}
+<p><strong>Adı</strong>, <strong>Doğum yılı</strong>, <strong>Bilgisayardaki kullanıcı adı</strong> (yalnızca küçük harf ve rakam, ör. <code>elif</code>), giriş ekranında görünecek bir <strong>Simge</strong> ve ekranının <strong>Dili</strong>.</p>
+<p>Doğum yılı çocuğun ekranını belirler: 7 yaşa kadar daha büyük ve kendini sesli okuyan kutular (4–7 yaş görünümü), sonrasında daha çok kutu, saat ve kendi dosyaları (8–10 yaş görünümü). Diğer çocuklarınızı sonra panelden ekleyebilirsiniz.</p>
+{{ m.shot(lang ~ '/wizard-4-child', 'Kurulum sihirbazının 4. adımı: Adı, Doğum yılı, Bilgisayardaki kullanıcı adı, hayvan simgelerinden biri ve Dili.', 'Adım 4 / 9: Çocuk ekleyin.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Uygulamaları seçin', 'uygulamalar') %}
+<p>Çocuğun ekranında hangi kutuların olacağını seçin. Yaşına uygun olanlar zaten işaretli gelir: GCompris, Boya, TRT Çocuk, EBA, Okuma, İngilizce gibi. Ses, parlaklık ve kapatma düğmeleri her zaman ekranda kalır. Sonra panelden istediğiniz zaman değiştirebilirsiniz.</p>
+{{ m.shot(lang ~ '/wizard-5-apps', 'Kurulum sihirbazının 5. adımı: işaretli ve işaretsiz uygulama ve site kutularından oluşan bir liste.', 'Adım 5 / 9: Uygulamalar. Bu adımdan 8. adıma kadar "Şimdilik geç" düğmesi de vardır.', sizes='(min-width: 960px) 760px, 100vw', cls='crop-top') }}
+{% endcall %}
+
+{% call m.step('Günlük süreyi belirleyin', 'sure') %}
+<p>BioKids yaşa göre bir öneri hazırlar: 4–7 yaş için hafta içi 60, hafta sonu 90 dakika; 8–10 yaş için 120 ve 180 dakika. <strong>Kullanabileceği saatler</strong> kutusuna ör. <code>16:00-20:00</code> yazabilir ya da boş bırakıp günün tamamını serbest bırakabilirsiniz.</p>
+<p><strong>Süre bitince</strong> ne olacağını seçin: <strong>Ekranı kilitle</strong>, <strong>Oturumu kapat</strong> ya da <strong>Bilgisayarı kapat</strong> (önerilen). Ayrıntılı kurallar için: <a href="{{ url('guide-time') }}">Süre kuralları rehberi</a>.</p>
+{{ m.shot(lang ~ '/wizard-6-time', 'Kurulum sihirbazının 6. adımı: hafta içi 60, hafta sonu 90 dakika, 16:00-20:00 saatleri ve Süre bitince seçenekleri; Bilgisayarı kapat seçili.', 'Adım 6 / 9: Günlük süre.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('İnterneti seçin', 'internet') %}
+<p>Çoğu aile için doğru seçim <strong>Açık internet, zararlı siteler kapalı (önerilen)</strong>: yetişkin içerikli, kumar ve zararlı siteler her zaman kapalıdır, Google ve YouTube'da güvenli arama açıktır. Çok küçük çocuklar için <strong>Sadece seçtiğim siteler</strong> de seçilebilir. Ayrıntılar: <a href="{{ url('guide-web') }}">Güvenli internet rehberi</a>.</p>
+{{ m.shot(lang ~ '/wizard-7-internet', 'Kurulum sihirbazının 7. adımı: Site engelleme; Açık internet, zararlı siteler kapalı ve Sadece seçtiğim siteler seçenekleri.', 'Adım 7 / 9: Site engelleme.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Telefondan erişimi açın (ya da sonraya bırakın)', 'telefon') %}
+<p>Paneli telefonunuzdan, evde ya da dışarıda açmak için ücretsiz Tailscale uygulaması kullanılır: dört adım, yaklaşık beş dakika. Şimdi uğraşmak istemiyorsanız <strong>Şimdilik geç</strong>'e basın; sonra <em>Ayarlar → Telefondan erişim</em>'den açabilirsiniz. Adım adım: <a href="{{ url('guide-phone') }}">Telefondan erişim rehberi</a>.</p>
+{{ m.shot(lang ~ '/wizard-8-phone', 'Kurulum sihirbazının 8. adımı: Telefondan erişim için dört adım, App Store ve Google Play QR kodları, Telefondan erişimi aç ve Şimdilik geç düğmeleri.', 'Adım 8 / 9: Telefondan erişim.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Zio ile Sio\'nun sesini seçin', 'sesler') %}
+<p><strong>Sesler</strong> açıkken Zio ve Sio süre uyarılarını sesli söyler. Altındaki kutu işaretliyse doğal, insan gibi bir ses indirilir (yaklaşık 153 MB; internet yoksa BioKids bağlantı gelince kendisi dener). Türkçe kurulumlarda bu kutu işaretli gelir. İsterseniz sonra panelden kendi sesinizi de kaydedebilirsiniz. <strong>Bitir</strong>'e basın.</p>
+{{ m.shot(lang ~ '/wizard-9-voices', 'Kurulum sihirbazının 9. adımı: Sesler kutusu, doğal ses indirme kutusu ve BioKids bir yardımcıdır, garanti değil notu.', 'Adım 9 / 9: Sesler ve yapay zekâ.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% call m.callout('note', 'Sor Bana asistanı nerede?') %}
+<p>Yapay zekâ asistanı sihirbazda yoktur; isteyen aile onu sonra panelden indirip bir çocuk için açar: <a href="{{ url('guide-assistant') }}">Sor Bana rehberi</a>.</p>
+{% endcall %}
+{% endcall %}
+
+{% call m.step('Bilgisayarı bir kez yeniden başlatın', 'yeniden-baslat') %}
+<p>Son ekran <strong>Hazır</strong> der ve geriye kalan üç küçük şeyi sıralar. En önemlisi: <strong>bilgisayarı bir kez yeniden başlatın.</strong> Çocuğun resmi giriş ekranına ancak böyle gelir. Yeniden başlatana kadar panelin Bugün ekranında bir <strong>Şimdi yeniden başlat</strong> düğmesi görürsünüz.</p>
+{{ m.shot(lang ~ '/wizard-10-done', 'Kurulum sihirbazının son ekranı Hazır: bilgisayarı bir kez yeniden başlatın, çocuğunuz resmine tıklayarak girer, panele buradan ulaşırsınız; Panele git düğmesi.', 'Son ekran: Hazır.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Çocuğunuz resmine dokunarak girsin', 'ilk-giris') %}
+<p>Giriş ekranında çocuğunuz kendi resmine dokunur; parola gerekmez. İlk girişte Zio ve Sio kendilerini tanıtır ve ailenin neleri görebileceğini anlatır, küçükler için sesli olarak da. Denetim hiçbir zaman gizli değildir.</p>
+{{ m.shot(lang ~ '/first-run', 'Çocuğun ilk girişi: Zio, ailenin neleri görebileceğini anlatıyor.', 'Çocuğun ilk girişi: Zio, ailenin neleri görebileceğini anlatır.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+</ol>
+
+<h2 id="panel-nerede">Panel nerede?</h2>
+<p>Ebeveyn paneli, masaüstünüzdeki ve uygulamalar menüsündeki <strong>BioKids Ebeveyn Paneli</strong> simgesidir; ebeveyn hesabınızla girdiğinizde de kendiliğinden açılır (bunu <em>Ayarlar</em>'dan kapatabilirsiniz). Telefondan erişimi açtıysanız telefonunuzda da. Panelin <strong>Yardım</strong> sayfası sık soruları internetsiz de yanıtlar.</p>
+{{ m.shot(lang ~ '/panel-today', 'Panelin Bugün ekranı: Elif kartında 42 dakika kaldı, +10 dk, +30 dk, Kilitle, Kilidi aç ve Kapat düğmeleri.', 'Panelin Bugün ekranı: her çocuğa bir kart.', sizes='(min-width: 960px) 760px, 100vw') }}
+
+<h2 id="sorun">Sorun mu var?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>Sihirbaz açılmadı.</h3></summary>
+    <div class="faq-answer"><p>Sihirbaz yalnızca ebeveyn hesabınızla girişte açılır. Açılmadıysa masaüstündeki <strong>BioKids Ebeveyn Paneli</strong> simgesine çift tıklayın; panel sizi kaldığınız adıma götürür.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Çocuğum giriş ekranında görünmüyor.</h3></summary>
+    <div class="faq-answer"><p>Kurulumdan sonra bilgisayarın bir kez yeniden başlatılması gerekir. Yine görünmüyorsa panelde <em>Çocuklar</em> ekranında çocuğunuzun ekli olduğuna bakın.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Bir adımı yanlış doldurdum.</h3></summary>
+    <div class="faq-answer"><p>Sorun değil: süreyi, uygulamaları, interneti ve sesleri sonra panelden istediğiniz zaman değiştirebilirsiniz. Çocuklarınızı <em>Çocuklar</em> ekranından ekler ya da düzenlersiniz.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Kurtarma kodunu yazmayı unuttum.</h3></summary>
+    <div class="faq-answer"><p>PIN'inizi bildiğiniz sürece sorun yok. PIN'i de unutursanız bilgisayarda bir uçbirimde <code>sudo biokids-admin reset-pin</code> ile yenisini belirleyebilirsiniz: <a href="{{ url('guide-troubleshooting') }}">Sorun giderme</a>.</p></div>
+  </details>
+</div>
+{% endblock %}

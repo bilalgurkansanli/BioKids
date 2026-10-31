@@ -1,0 +1,147 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>This guide installs BioKids as the <strong>only system</strong> on a computer: nothing else stays on it. Installing needs no network and takes 20–40 minutes on most computers.</p>
+
+{% call m.callout('warn', 'Is there a Windows on it you want to keep?') %}
+<p>Then follow <a href="{{ url('guide-dual-boot') }}">install beside Windows</a> instead. The "use entire disk" option this guide picks erases everything on the disk.</p>
+{% endcall %}
+
+<h2 id="before-you-start">Before you start</h2>
+<ul class="checks">
+  <li>Have the <strong>BioKids USB stick</strong> ready: <a href="{{ url('guide-usb') }}">make a USB stick</a>.</li>
+  <li>A <strong>64-bit</strong> computer with at least <strong>4 GB of memory</strong> and <strong>25 GB of disk</strong> (<a href="{{ url('download', 'requirements') }}">requirements</a>).</li>
+  <li><strong>Back up</strong> anything important on the computer. Plug a laptop in.</li>
+  <li>Think of a <strong>password</strong> for your own parent account on the computer. Your child should not know it.</li>
+</ul>
+
+<h2 id="install">Installing</h2>
+<ol class="steps">
+  {% call m.step('Start the computer from the USB stick', 'boot-stick') %}
+  <p>Plug the stick in and, while the computer starts (or restarts), keep tapping its <strong>boot menu key</strong>. It depends on the brand; often {{ m.kbd('F12') }}, {{ m.kbd('F11') }}, {{ m.kbd('F9') }}, {{ m.kbd('F8') }} or {{ m.kbd('Esc') }}. Pick the USB stick from the list and press {{ m.kbd('Enter') }}.</p>
+  {% call m.illus('The computer\'s own boot menu. It looks different on every brand; look for your stick\'s name.') %}
+  <div class="bios">
+    <div class="bios-box">
+      <p>Boot Menu</p>
+      <ul>
+        <li>Windows Boot Manager</li>
+        <li class="sel">UEFI: USB Flash Disk 1.00</li>
+        <li>USB Flash Disk 1.00</li>
+        <li>Network Boot (IPv4)</li>
+      </ul>
+    </div>
+    <p class="bios-hint">↑↓ select · Enter boot</p>
+  </div>
+  {% endcall %}
+  <p>If the stick is listed twice, once starting with <strong>"UEFI: …"</strong>, choose the <strong>UEFI</strong> one on a recent computer.</p>
+  {% endcall %}
+
+  {% call m.step('Choose "Start installer"', 'start-installer') %}
+  <p>BioKids' blue boot menu appears. Use the arrow keys to reach <strong>Start installer</strong> and press {{ m.kbd('Enter') }}.</p>
+  {% call m.illus('The stick\'s boot menu. The other lines may be named a little differently; the one you want is "Start installer".') %}
+  <div class="boot stick" style="background-image:url('/assets/img/illus/grub.webp')">
+    <span class="boot-space"></span>
+    <ul class="boot-menu">
+      <li>Live system (amd64)</li>
+      <li class="sel">Start installer</li>
+      <li>Advanced install options…</li>
+    </ul>
+    <p class="boot-foot">↑ ↓ · Enter</p>
+  </div>
+  {% endcall %}
+  {% call m.callout('note') %}
+  <p>"Live system" lets you look at BioKids' desktop, but the child supervision does not run there: it starts on the installed computer.</p>
+  {% endcall %}
+  {% endcall %}
+
+  {% call m.step('Choose the language and keyboard', 'language-keyboard') %}
+  <p>The installer is Debian's own, with BioKids' kite on top. Choose the <strong>language</strong>, then the <strong>keyboard layout</strong>. The language you choose becomes the computer's.</p>
+  {% call m.illus('The installer\'s banner says BioKids instead of Debian; its questions and buttons are Debian\'s.') %}
+  <div class="di">
+    <img class="di-banner" src="/assets/img/illus/installer-banner.webp" width="800" height="75" alt="">
+    <div class="di-body">
+      <p class="di-title">Select a language</p>
+      <div class="di-list">
+        <div class="sel">English - English</div>
+        <div>Français - French</div>
+        <div>Türkçe - Turkish</div>
+      </div>
+    </div>
+    <div class="di-foot"><span class="di-btn">Go Back</span><span class="di-btn">Continue</span></div>
+  </div>
+  {% endcall %}
+  <p>The computer's name (<code>biokids</code>) and the time zone are preset and not asked. The time zone is set to Istanbul; if you live elsewhere, change it after installing (see <a href="#after-installing">After installing</a>).</p>
+  {% endcall %}
+
+  {% call m.step('Create your parent account', 'parent-account') %}
+  <p>Enter your name, a <strong>username</strong> (for example <code>mum</code>) and a <strong>password</strong>, twice. This is <em>your</em> account on the computer, with administrator rights; no separate "root" password is asked.</p>
+  <p>Do not create your children's accounts here: the setup wizard makes them after installing, and a child signs in by tapping their picture instead of typing a password.</p>
+  {% call m.callout('tip') %}<p>Write the password down and keep it somewhere safe. Your child should not know it.</p>{% endcall %}
+  {% endcall %}
+
+  {% call m.step('Choose the disk', 'disk') %}
+  <p>On <strong>Partition disks</strong>, choose <strong>"Guided - use entire disk"</strong>, then the disk, and accept "All files in one partition".</p>
+  {% call m.illus('The partitioning method. "Use entire disk" for a computer with only BioKids; installing beside Windows uses another option.') %}
+  <div class="di">
+    <img class="di-banner" src="/assets/img/illus/installer-banner.webp" width="800" height="75" alt="">
+    <div class="di-body">
+      <p class="di-title">Partition disks</p>
+      <p>Partitioning method:</p>
+      <div class="di-list">
+        <div class="sel">Guided - use entire disk</div>
+        <div>Guided - use entire disk and set up LVM</div>
+        <div>Guided - use entire disk and set up encrypted LVM</div>
+        <div>Manual</div>
+      </div>
+    </div>
+    <div class="di-foot"><span class="di-btn">Go Back</span><span class="di-btn">Continue</span></div>
+  </div>
+  {% endcall %}
+  <p>On the last screen choose <strong>Finish partitioning and write changes to disk</strong> and confirm with <strong>Yes</strong>. From this moment the old contents of the disk are gone.</p>
+  {% endcall %}
+
+  {% call m.step('Wait for it to finish', 'wait') %}
+  <p>The installer copies BioKids from the stick to the disk; no internet needed. It takes 20–40 minutes on most computers. If it asks about the boot loader, accept the suggested choice (the computer's main disk).</p>
+  {% endcall %}
+
+  {% call m.step('Take the stick out and restart', 'restart') %}
+  <p>When it says the installation is complete, take the USB stick out and press <strong>Continue</strong>. BioKids' kite appears while the computer starts.</p>
+  <p>With only BioKids on the computer, the boot menu stays hidden and the computer starts straight away.</p>
+  {% endcall %}
+
+  {% call m.step('Sign in and let the wizard welcome you', 'wizard') %}
+  <p>On the login screen choose your account and type your password. The <strong>BioKids setup wizard</strong> opens by itself: language, your PIN, your first child, their apps, time, internet… nine short steps.</p>
+  {{ m.shot(lang ~ '/wizard-1-language', 'The first step of the BioKids setup wizard: choosing the language, with the note that nothing leaves your device.', 'The wizard\'s first step. The first-setup guide walks through every step.', sizes='(min-width: 960px) 760px, 100vw') }}
+  <p>Continue with the <a href="{{ url('guide-first-setup') }}">first-setup guide</a>.</p>
+  {% endcall %}
+</ol>
+
+<h2 id="after-installing">After installing</h2>
+<ul>
+  <li>When the wizard is done, <strong>restart once</strong>: only then does your child's picture appear on the login screen.</li>
+  <li>The parent panel is the <strong>BioKids Parent Panel</strong> icon on your desktop, and in the applications menu.</li>
+  <li><strong>Not in Turkey?</strong> The installer sets the time zone to Istanbul. Open a terminal from your own account and set yours (find its name with <code>timedatectl list-timezones</code>):</li>
+</ul>
+{{ m.code('sudo timedatectl set-timezone Europe/London') }}
+<p>BioKids never updates itself; updates come with Debian's usual updates.</p>
+
+<h2 id="problems">Something wrong?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>The USB stick is not in the boot menu</h3></summary>
+    <div class="faq-answer"><p>Try another USB port (straight into the computer, not a hub). If "Fast Boot" is on in the computer's settings (BIOS/UEFI), turn it off. If the stick still does not show, write it again with <a href="{{ url('guide-usb') }}">Etcher, or Rufus in DD mode</a>.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>The stick is chosen but does not start, or a "Secure Boot" message appears</h3></summary>
+    <div class="faq-answer"><p>BioKids uses Debian's signed boot loader, so Secure Boot can stay on with most computers. If yours still refuses, turn Secure Boot off in the computer's settings and try again.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>It did not find the Wi-Fi</h3></summary>
+    <div class="faq-answer"><p>Installing needs no network, so carry on. The image includes drivers for common Wi-Fi cards; if yours is not recognised, use a cable after installing and fill in the <a href="{{ site.issues_url }}" rel="noopener">hardware form</a>, and we will sort it out together.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>The clock is wrong after installing</h3></summary>
+    <div class="faq-answer"><p>Set your own time zone as shown in <a href="#after-installing">After installing</a>; the time corrects itself once the computer is online.</p></div>
+  </details>
+</div>
+{% endblock %}

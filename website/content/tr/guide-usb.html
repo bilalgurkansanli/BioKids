@@ -1,0 +1,117 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>BioKids bir ISO dosyası olarak gelir. Bilgisayara kurabilmek için önce bu dosyayı bir USB belleğe <em>yazmanız</em> gerekir; dosyayı belleğe sürükleyip bırakmak yetmez. Bir program bunu sizin için birkaç tıklamayla yapar.</p>
+
+{% call m.illus('ISO dosyası bir yazma programıyla USB belleğe yazılır; bilgisayar sonra bu bellekten açılır.') %}
+<div class="usb-flow">
+  <div class="node"><span class="emoji tint-amber">💿</span>BioKids ISO<br><small>~3,3 GB</small></div>
+  <span class="arrow" aria-hidden="true">→</span>
+  <div class="node"><span class="emoji tint-indigo">🛠️</span>Etcher ya da Rufus</div>
+  <span class="arrow" aria-hidden="true">→</span>
+  <div class="node"><span class="emoji tint-teal">💾</span>USB bellek<br><small>8 GB ya da büyük</small></div>
+  <span class="arrow" aria-hidden="true">→</span>
+  <div class="node"><span class="emoji tint-coral">💻</span>Çocuğun bilgisayarı</div>
+</div>
+{% endcall %}
+
+<h2 id="baslamadan-once">Başlamadan önce</h2>
+<ul class="checks">
+  <li><strong>8 GB ya da daha büyük bir USB bellek.</strong> İçindeki her şey silinir; önemli dosyaları başka bir yere kopyalayın.</li>
+  <li><strong>BioKids ISO dosyası</strong> (<code>{{ site.iso_name }}</code>), <a href="{{ url('download', 'iso') }}">indirme sayfasından</a>.</li>
+  <li>İsterseniz dosyanın sağlam indiğini <a href="{{ url('download', 'dogrulama') }}">SHA256 ile doğrulayın</a>. Yarım kalmış bir indirme, kurulumun ortasında garip hatalara yol açar.</li>
+</ul>
+
+<h2 id="yazma">Belleğe yazma</h2>
+<p>Kullandığınız bilgisayarı seçin. En kolayı <strong>balenaEtcher</strong>'dır: Windows, macOS ve Linux'ta aynı üç adımla çalışır.</p>
+
+<div class="tabs">
+  <div class="tab-panel" data-tab="windows" data-label="Windows">
+    <h3 class="tab-title">Windows</h3>
+    <ol class="steps">
+      {% call m.step('Etcher\'ı indirin ve açın', 'etcher-indir') %}
+      <p><a href="https://etcher.balena.io/" rel="noopener">etcher.balena.io</a> adresinden Windows sürümünü indirip kurun. Ücretsizdir.</p>
+      {% endcall %}
+      {% call m.step('ISO\'yu, belleği seçin ve yazın', 'etcher-yaz') %}
+      <p><strong>Flash from file</strong> ile ISO'yu, <strong>Select target</strong> ile USB belleği seçin ve <strong>Flash!</strong>'a basın. Windows izin isterse <em>Evet</em> deyin.</p>
+      {% call m.illus('balenaEtcher\'ın üç adımı: dosya, hedef, yaz. Program İngilizcedir.') %}
+      <div class="etcher">
+        <div class="etcher-step on"><span class="emoji" aria-hidden="true">💿</span><span class="etcher-btn">Flash from file</span><span class="etcher-note">{{ site.iso_name }}</span></div>
+        <div class="etcher-step on"><span class="emoji" aria-hidden="true">💾</span><span class="etcher-btn">Select target</span><span class="etcher-note">USB Flash Disk · 8 GB</span></div>
+        <div class="etcher-step"><span class="emoji" aria-hidden="true">⚡</span><span class="etcher-btn">Flash!</span><span class="etcher-note">yazar, sonra doğrular</span></div>
+      </div>
+      {% endcall %}
+      <p>Yazma ve ardından gelen doğrulama, belleğin hızına göre 5–15 dakika sürer. "Flash Complete!" yazısını görünce belleği çıkarabilirsiniz.</p>
+      {% endcall %}
+      {% call m.step('Ya da Rufus kullanın (DD modu)', 'rufus') %}
+      <p><a href="https://rufus.ie/" rel="noopener">Rufus</a> da iyi çalışır, tek bir şarta dikkat edin: <strong>Başlat</strong>'a bastığınızda "ISOHybrid image detected" penceresi çıkar. Burada mutlaka <strong>DD Image</strong> modunu seçin.</p>
+      {% call m.illus('Rufus sorduğunda DD modunu seçin. ISO modunda yazılan bellek açılmayabilir.') %}
+      <div class="mock">
+        <div class="mock-dialog">
+          <div class="mock-titlebar"><span>ISOHybrid image detected</span><span class="dots" aria-hidden="true">✕</span></div>
+          <div class="mock-body">
+            <p class="mock-small">The image you have selected is an 'ISOHybrid' image…</p>
+            <div class="mock-radio"><span class="mock-dot"></span><span>Write in ISO Image mode (Recommended)</span></div>
+            <div class="mock-radio"><span class="mock-dot on"></span><span class="mock-hl">Write in DD Image mode</span></div>
+          </div>
+          <div class="mock-buttons"><span class="mock-btn primary">OK</span><span class="mock-btn">Cancel</span></div>
+        </div>
+      </div>
+      {% endcall %}
+      <p>Rufus'u Türkçe kullanıyorsanız seçeneklerin adı biraz farklıdır; içinde <strong>DD</strong> geçeni seçin.</p>
+      {% endcall %}
+    </ol>
+  </div>
+
+  <div class="tab-panel" data-tab="macos" data-label="macOS">
+    <h3 class="tab-title">macOS</h3>
+    {# Plain step markup here, not m.step: only the Windows path feeds the
+       table of contents and the HowTo data. #}
+    <ol class="steps">
+      <li class="step" id="mac-etcher"><h3>Etcher'ı indirin</h3>
+      <div class="step-body"><p><a href="https://etcher.balena.io/" rel="noopener">etcher.balena.io</a> adresinden macOS sürümünü indirin ve Uygulamalar klasörüne sürükleyin. İlk açılışta macOS izin isterse <em>Aç</em>'a basın.</p></div></li>
+      <li class="step" id="mac-yaz"><h3>Üç adımda yazın</h3>
+      <div class="step-body"><p><strong>Flash from file</strong> → ISO dosyası, <strong>Select target</strong> → USB bellek, sonra <strong>Flash!</strong> Mac parolanızı sorar; bu normaldir.</p></div></li>
+      <li class="step" id="mac-uyari"><h3>Uyarıyı yok sayın</h3>
+      <div class="step-body"><p>Yazma bitince macOS "Taktığınız disk bu bilgisayar tarafından okunamıyor" diyebilir. Bu beklenen bir şeydir: bellek artık bir PC'yi açmak için hazırlandı. <strong>Çıkar</strong>'a basın.</p></div></li>
+    </ol>
+  </div>
+
+  <div class="tab-panel" data-tab="linux" data-label="Linux">
+    <h3 class="tab-title">Linux</h3>
+    <ol class="steps">
+      <li class="step" id="linux-bul"><h3>Belleğin adını bulun</h3>
+      <div class="step-body"><p>Belleği takın ve bir uçbirimde diskleri listeleyin. Boyutundan belleğinizi tanıyın (ör. <code>sdb</code>, 7,5G).</p>
+      {{ m.code('lsblk -d -o NAME,SIZE,MODEL') }}</div></li>
+      <li class="step" id="linux-dd"><h3>dd ile yazın</h3>
+      <div class="step-body"><p><code>sdX</code> yerine kendi belleğinizin adını yazın. <strong>Yanlış diski seçmek o diski siler</strong>; iki kez bakın.</p>
+      {{ m.code('sudo dd if=' ~ site.iso_name ~ ' of=/dev/sdX bs=4M status=progress conv=fsync') }}
+      <p>Komut satırı istemiyorsanız Etcher Linux'ta da çalışır; GNOME Diskler'deki <em>Disk Kalıbını Geri Yükle</em> de olur.</p></div></li>
+    </ol>
+  </div>
+</div>
+
+<h2 id="sonra">Sonra ne olacak?</h2>
+<p>Bellek hazır. Şimdi bilgisayarı ondan açacaksınız:</p>
+<ul>
+  <li>Bilgisayarda başka bir şey yoksa ya da silinebilirse: <a href="{{ url('guide-install') }}">Kurulum rehberi</a>.</li>
+  <li>Windows'u korumak istiyorsanız: <a href="{{ url('guide-dual-boot') }}">Windows'un yanına kurulum</a>.</li>
+  <li>Önce denemek isterseniz belleğe gerek yok: <a href="{{ url('guide-virtualbox') }}">VirtualBox'ta deneme</a>.</li>
+</ul>
+
+<h2 id="sorun">Sorun mu var?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>Etcher "Something went wrong" diyor</h3></summary>
+    <div class="faq-answer"><p>Çoğu zaman bellek ya da dosyadır. ISO'yu <a href="{{ url('download', 'dogrulama') }}">SHA256 ile doğrulayın</a>, başka bir USB girişi ya da başka bir bellek deneyin. Bazı ucuz bellekler 8 GB yazsa da daha azını tutar.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Windows belleği biçimlendirmemi istiyor</h3></summary>
+    <div class="faq-answer"><p><strong>Biçimlendirmeyin</strong>, pencereyi kapatın. Windows bu belleği okuyamaz çünkü bellek artık Linux için hazırlandı; bu, yazmanın başarılı olduğunu gösterir.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Belleği sonra yeniden kullanabilir miyim?</h3></summary>
+    <div class="faq-answer"><p>Evet. Kurulumdan sonra belleği Windows'ta Disk Yönetimi'nden ya da Rufus/Etcher ile yeniden biçimlendirip eskisi gibi kullanabilirsiniz.</p></div>
+  </details>
+</div>
+{% endblock %}

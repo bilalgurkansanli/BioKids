@@ -1,0 +1,290 @@
+# The questions parents ask, in both languages. The FAQ page shows them all
+# (and its FAQPage data is made from them); the home page shows those marked
+# `home = true`. Answers are HTML; links are written as paths, and
+# build.py --check fails on one that goes nowhere.
+
+# ------------------------------------------------------------------- Türkçe
+
+[[tr]]
+id = "genel"
+title = "Genel"
+
+[[tr.items]]
+id = "biokids-nedir"
+home = true
+q = "BioKids nedir?"
+a = """<p><strong>BioKids</strong>, 4–10 yaş çocuklar için Debian 13 tabanlı, ücretsiz ve açık kaynak bir ebeveyn denetimi sistemidir. Bir bilgisayarı küçük bir çocuğun tek başına kullanabileceği hale getirir: çocuk resmine dokunarak girer, kocaman kutulardan oluşan bir başlatıcıya gelir; süre sınırları, güvenli internet, telefondan canlı izleme ve bilgisayarda çalışan bir yapay zekâ asistanı vardır. Hesap ve bulut gerektirmez.</p>"""
+
+[[tr.items]]
+id = "ucretli-mi"
+home = true
+q = "BioKids ücretli mi?"
+a = """<p>Hayır. BioKids tamamen ücretsizdir ve MIT lisansıyla açık kaynaktır. Abonelik, reklam, hesap ya da "premium" sürüm yoktur. Kaynak kodu <a href="https://github.com/bilalgurkansanli/BioKids">GitHub'da</a>.</p>"""
+
+[[tr.items]]
+id = "hangi-yas"
+q = "Hangi yaştaki çocuklar için?"
+a = """<p>4–10 yaş için tasarlandı. Doğum yılına göre iki görünüm vardır: 4–7 yaş için daha büyük kutular ve kendini sesli okuyan ekranlar, 8–10 yaş için daha fazla kutu, saat ve kendi dosyaları.</p>"""
+
+[[tr.items]]
+id = "telefon-tablet"
+q = "Telefonları ve tabletleri de korur mu?"
+a = """<p>Hayır. BioKids yalnızca kurulu olduğu bilgisayarı yönetir. Telefonunuz ise <em>kumanda</em> olarak kullanılır: paneli oradan açıp süre verebilir, istekleri yanıtlayabilir, ekranı canlı izleyebilirsiniz.</p>"""
+
+[[tr.items]]
+id = "internetsiz"
+home = true
+q = "İnternet olmadan çalışır mı?"
+a = """<p>Evet. Süre sınırları, başlatıcı, sesler ve kurallar ağ kablosu çıkarılmışken de çalışır; ISO'dan kurulum bile internet istemez. İnternet yalnızca güncellemeler, telefondan erişim, e-posta bildirimleri ve sizin başlattığınız indirmeler (asistanın modeli, doğal ses, çevrimdışı Vikipedi) için gerekir.</p>"""
+
+[[tr]]
+id = "kurulum"
+title = "Kurulum"
+
+[[tr.items]]
+id = "hangi-bilgisayar"
+q = "Hangi bilgisayarda çalışır?"
+a = """<p>64 bit (amd64) bir bilgisayarda: en az 4 GB bellek (RAM) ve yaklaşık 25 GB disk. Birkaç yaşındaki bir dizüstü bilgisayar yeter. İsteğe bağlı yapay zekâ asistanı için 7 GB ya da daha fazla bellek gerekir. Ayrıntılar <a href="/indir/#gereksinimler">indirme sayfasında</a>.</p>"""
+
+[[tr.items]]
+id = "windows-siler-mi"
+home = true
+q = "Windows'umu siler mi?"
+a = """<p>Siz istemedikçe hayır. Kurulum, Windows'u küçültüp yanına kurmayı önerir; bilgisayar her açılışta hangisini istediğinizi sorar. Yalnızca "diskin tamamını kullan" seçeneğini seçerseniz disk silinir. Her durumda önce önemli dosyalarınızı yedekleyin. Adım adım: <a href="/rehberler/windows-yanina-kurulum/">Windows'un yanına kurulum</a>.</p>"""
+
+[[tr.items]]
+id = "ubuntu"
+q = "Ubuntu'ya ya da başka bir Linux'a kurabilir miyim?"
+a = """<p>Şu an yalnızca Debian 13 "trixie" (amd64) desteklenir. Ubuntu ve diğer dağıtımlar test edilmedi. En kolay yol, BioKids'in kendi ISO'sunu kurmaktır: içinde Debian 13 zaten vardır.</p>"""
+
+[[tr.items]]
+id = "zor-mu"
+q = "Kurmak zor mu? Teknik bilgi gerekir mi?"
+a = """<p>Gerekmez. ISO'yu bir USB belleğe yazar, bilgisayarı bellekten açar ve kurulumu başlatırsınız; yaklaşık yarım saat sürer. Sonra bir sihirbaz sizi dokuz kısa adımda (PIN, çocuğunuz, süresi, interneti…) yönlendirir. <a href="/rehberler/kurulum/">Kurulum rehberi</a> her adımı resimlerle anlatır.</p>"""
+
+[[tr.items]]
+id = "once-denemek"
+q = "Kurmadan önce deneyebilir miyim?"
+a = """<p>Evet, bilgisayarınıza dokunmadan bir sanal makinede: <a href="/rehberler/sanal-makinede-deneme/">VirtualBox'ta deneme rehberi</a>. USB bellekteki canlı oturum ise yalnızca denemek ve kurmak içindir; çocuk denetimi kurulu bilgisayarda çalışır.</p>"""
+
+[[tr]]
+id = "guvenlik"
+title = "Güvenlik ve gizlilik"
+
+[[tr.items]]
+id = "atlatabilir-mi"
+home = true
+q = "Çocuğum BioKids'i atlatabilir mi?"
+a = """<p>BioKids, tek başına bilgisayar başındaki meraklı bir 4–10 yaş çocuğu için yapıldı. Sistem saatini değiştirmek süreyi uzatmaz; çocuğun terminali yoktur, program kuramaz, filtre çocuk hesaplarında çalışır ve bir şey bozulursa oturum kilitlenir. Ama USB bellekten açan ya da yanında ona yardım eden bir yetişkini durdurmaz. Panelde <em>Ayarlar → Koruma durumu</em> ve <em>Yardım</em>'daki "Bilgisayarın kendisini korumak" rehberi, bilgisayarın kendisini nasıl koruyacağınızı (ör. BIOS parolası) anlatır.</p>"""
+
+[[tr.items]]
+id = "ekran-kaydi"
+home = true
+q = "Çocuğumun ekranını kaydediyor mu?"
+a = """<p>Hayır. BioKids hiçbir ekranı kaydetmez. Tek istisna, sizin panelde başlattığınız <a href="/rehberler/canli-ekran/">canlı izlemedir</a>: o sürerken çocuğun ekranında bunu söyleyen bir işaret görünür, kareler hiçbir yere yazılmaz ve siz sayfadan ayrılınca izleme biter.</p>"""
+
+[[tr.items]]
+id = "siteleri-gorebilir-miyim"
+q = "Hangi sitelere girdiğini görebilir miyim?"
+a = """<p>Evet, Geçmiş ve Analiz sayfalarında. Yalnızca sitelerin <em>adları</em> tutulur (30 gün); sayfaların içeriği, yazılanlar ya da ekran görüntüleri asla tutulmaz. Bu, çocuğa da anlatılır.</p>"""
+
+[[tr.items]]
+id = "veriler-nereye"
+q = "Ailemin verileri nereye gidiyor?"
+a = """<p>Sizin açtıklarınız dışında hiçbir yere. Her şey bu bilgisayarda, yalnızca yöneticinin okuyabildiği bir veritabanında durur ve bir takvime göre silinir. Kendi posta sunucunuz, telefondan erişim için Tailscale ve başlattığınız indirmeler yalnızca siz açarsanız devreye girer. BioKids'in yaptığı dış bağlantıların tamamı <a href="/gizlilik/#baglantilar">Gizlilik sayfasında</a> listelidir.</p>"""
+
+[[tr.items]]
+id = "cokerse"
+q = "BioKids çökerse ne olur?"
+a = """<p>Çocuğun oturumu kilitlenir ve size haber verilir. BioKids'in ilkesi "korumasız devam etme"dir: arka plan hizmeti durursa, internet filtresi çalışmazsa ya da bir kilit tutmazsa çocuk korumasız kalmaz. Paneldeki <em>Bugün</em> ekranından süre verdiğinizde kilit açılır.</p>"""
+
+[[tr.items]]
+id = "pin-unuttum"
+q = "PIN'imi unutursam ne olur?"
+a = """<p>Giriş sayfasında "PIN'imi unuttum"a basın ve kurulumda kâğıda yazdığınız 8 kelimelik kurtarma kodunu girin. Kod da kaybolduysa bilgisayarda bir uçbirim açıp <code>sudo biokids-admin reset-pin</code> yazın. Ayrıntılar: <a href="/rehberler/sorun-giderme/">Sorun giderme</a>.</p>"""
+
+[[tr]]
+id = "yapay-zeka"
+title = "Yapay zekâ asistanı"
+
+[[tr.items]]
+id = "sor-bana-guvenli-mi"
+q = "Sor Bana asistanı güvenli mi?"
+a = """<p>Sor Bana tamamen bilgisayarda çalışır; hiçbir soru buluta gitmez. Cinsellik, şiddet, kendine zarar, uyuşturucu, kumar ve kişisel bilgi paylaşımı gibi konuları reddeder; birinin ona zarar verdiğini söyleyen çocuğu güvendiği bir büyüğe ve 183/112'ye yönlendirir. Reddettiği soruları siz görürsünüz. Yine de bir yardımcıdır, garanti değil.</p>"""
+
+[[tr.items]]
+id = "asistan-gereksinim"
+q = "Asistan için ne gerekir?"
+a = """<p>7 GB ya da daha fazla bellek ve modelin indirilmesi için bir kez internet. Bellek 7–12 GB ise yaklaşık 4 GB, 12 GB ve üzerindeyse yaklaşık 6,2 GB indirilir (daha büyük ve daha iyi bir model). İndirme panelden, ilerleme çubuğuyla yapılır: <a href="/rehberler/sor-bana-asistan/">Sor Bana rehberi</a>.</p>"""
+
+[[tr.items]]
+id = "ekran-yapay-zeka"
+q = "BioKids ekranı yapay zekâ ile izliyor mu?"
+a = """<p>Hayır. BioKids'te ekranı izleyen, görüntü okuyan ya da "risk puanı" çıkaran bir yapay zekâ yoktur. Yapay zekâ yalnızca çocuğun kendi sorduğu soruları yanıtlar.</p>"""
+
+[[tr]]
+id = "kullanim"
+title = "Günlük kullanım"
+
+[[tr.items]]
+id = "telefondan-yonetim"
+q = "Telefonumdan nasıl yönetirim?"
+a = """<p>Panelde <em>Ayarlar → Telefondan erişim</em>'e gidin ve dört adımı izleyin: ücretsiz Tailscale uygulamasıyla telefonunuz bilgisayara kendi özel ağınız üzerinden bağlanır. Yaklaşık beş dakika sürer, modeminizde hiçbir ayar gerekmez. <a href="/rehberler/telefondan-erisim/">Telefondan erişim rehberi</a>.</p>"""
+
+[[tr.items]]
+id = "birden-fazla-cocuk"
+q = "Birden fazla çocuğum var. Hepsini yönetebilir miyim?"
+a = """<p>Evet. Her çocuğun kendi hesabı, resmi, kuralları ve geçmişi olur; giriş ekranında herkes kendi resmine dokunur. Panele en fazla dört ebeveyn, her biri kendi PIN'iyle girebilir.</p>"""
+
+[[tr.items]]
+id = "parlaklik"
+q = "Ekran parlaklığı ayarlanabiliyor mu?"
+a = """<p>Evet. Çocuğun başlatıcısının altında her zaman bir parlaklık çubuğu (☀) vardır, üstte de ses ayarı. Parlaklık en düşük %20'ye iner; böylece ekran hiçbir zaman tamamen kararmaz. Gün akşam bitiyorsa son 10 dakikada ekran yavaş yavaş kısılır ve çocuğa "İyi geceler" denir; sonra parlaklık eski haline döner.</p>"""
+
+[[tr.items]]
+id = "ek-sure"
+q = "Çocuğuma nasıl ek süre veririm?"
+a = """<p>Paneldeki <em>Bugün</em> ekranında çocuğunuzun kartında <strong>+10 dk</strong> ya da <strong>+30 dk</strong>'ya basın; ekran kilitliyse kendiliğinden açılır. Çocuk ekranından süre isterse istek telefonunuza düşer ve oradan +15, +30 ya da +60 dakika verebilirsiniz.</p>"""
+
+# ------------------------------------------------------------------ English
+
+[[en]]
+id = "general"
+title = "General"
+
+[[en.items]]
+id = "what-is-biokids"
+home = true
+q = "What is BioKids?"
+a = """<p><strong>BioKids</strong> is a free, open-source parental-control system for children aged 4–10, built on Debian 13. It turns a computer into one a young child can use alone: the child signs in by tapping their picture and lands in a launcher of big tiles, with screen-time limits, safe browsing, a live view for the parent's phone and an AI assistant that runs on the computer itself. No account and no cloud.</p>"""
+
+[[en.items]]
+id = "is-it-free"
+home = true
+q = "Is BioKids free?"
+a = """<p>Yes. BioKids is completely free and open source under the MIT license. There is no subscription, no ads, no account and no "premium" edition. The source code is <a href="https://github.com/bilalgurkansanli/BioKids">on GitHub</a>.</p>"""
+
+[[en.items]]
+id = "what-age"
+q = "What age is it for?"
+a = """<p>Ages 4–10. There are two looks, chosen from the year of birth: bigger tiles and screens that read themselves aloud for 4–7, and more tiles, a clock and their own files for 8–10.</p>"""
+
+[[en.items]]
+id = "phones-tablets"
+q = "Does it protect phones and tablets too?"
+a = """<p>No. BioKids manages only the computer it is installed on. Your phone is the <em>remote control</em>: open the panel there to give time, answer requests and watch the screen live.</p>"""
+
+[[en.items]]
+id = "offline"
+home = true
+q = "Does it work without the internet?"
+a = """<p>Yes. Time limits, the launcher, the voices and the rules all work with the network cable unplugged; even installing from the ISO needs no internet. The network is needed only for updates, phone access, email notifications and the downloads you start (the assistant's model, the natural voice, the offline Wikipedia).</p>"""
+
+[[en]]
+id = "installing"
+title = "Installing"
+
+[[en.items]]
+id = "which-computer"
+q = "Which computers does it run on?"
+a = """<p>A 64-bit (amd64) PC with at least 4 GB of memory (RAM) and about 25 GB of disk. A laptop a few years old is enough. The optional AI assistant needs 7 GB of memory or more. Details are on the <a href="/en/download/#requirements">download page</a>.</p>"""
+
+[[en.items]]
+id = "erase-windows"
+home = true
+q = "Will it erase Windows?"
+a = """<p>Not unless you ask it to. The installer offers to shrink Windows and install beside it; the computer then asks which one you want at every start. The disk is erased only if you choose to use the entire disk. Either way, back up your important files first. Step by step: <a href="/en/guides/dual-boot-with-windows/">install beside Windows</a>.</p>"""
+
+[[en.items]]
+id = "ubuntu"
+q = "Can I install it on Ubuntu or another Linux?"
+a = """<p>Only Debian 13 "trixie" (amd64) is supported for now. Ubuntu and other distributions are untested. The easiest way is BioKids' own ISO, which already contains Debian 13.</p>"""
+
+[[en.items]]
+id = "is-it-hard"
+q = "Is it hard to install? Do I need to be technical?"
+a = """<p>No. You write the ISO to a USB stick, start the computer from it and run the installer; it takes about half an hour. A setup wizard then walks you through nine short steps (your PIN, your child, their time, the internet…). The <a href="/en/guides/install/">install guide</a> shows every step with pictures.</p>"""
+
+[[en.items]]
+id = "try-first"
+q = "Can I try it before installing?"
+a = """<p>Yes, in a virtual machine, without touching your computer: <a href="/en/guides/try-in-virtualbox/">try it in VirtualBox</a>. The live session on the USB stick is only for trying the system and installing it; the child supervision runs on the installed computer.</p>"""
+
+[[en]]
+id = "safety"
+title = "Safety and privacy"
+
+[[en.items]]
+id = "get-around"
+home = true
+q = "Can my child get around BioKids?"
+a = """<p>BioKids is made for one curious 4–10-year-old alone at the computer. Changing the system clock does not add time; the child has no terminal, cannot install software, the filter runs on the children's accounts, and if something breaks the session locks. It does not stop someone who boots from a USB stick, or an adult helping the child. In the panel, <em>Settings → Protection</em> and the Help guide "Protecting the computer itself" explain how to protect the computer itself (for example with a BIOS password).</p>"""
+
+[[en.items]]
+id = "screen-recording"
+home = true
+q = "Does it record my child's screen?"
+a = """<p>No. BioKids never records a screen. The one exception is the <a href="/en/guides/live-view/">live view</a> you start in the panel: while it runs, a sign on the child's screen says so, no frame is written anywhere, and it ends when you leave the page.</p>"""
+
+[[en.items]]
+id = "see-sites"
+q = "Can I see which websites they visit?"
+a = """<p>Yes, under History and Insights. Only the sites' <em>names</em> are kept (for 30 days); never what is on the pages, what was typed, or screenshots. The child is told this too.</p>"""
+
+[[en.items]]
+id = "where-data"
+q = "Where does my family's data go?"
+a = """<p>Nowhere, apart from what you turn on yourself. Everything stays on this computer, in a database only the administrator can read, and is deleted on a schedule. Your own mail server, Tailscale for phone access and the downloads you start come into play only if you turn them on. Every outbound connection BioKids makes is listed on the <a href="/en/privacy/#connections">Privacy page</a>.</p>"""
+
+[[en.items]]
+id = "crash"
+q = "What happens if BioKids crashes?"
+a = """<p>The child's session locks and you are told. BioKids' rule is never to "continue unprotected": if the background service stops, the web filter fails or a lock does not take, the child is not left unprotected. Give time from the panel's <em>Today</em> screen and the lock opens.</p>"""
+
+[[en.items]]
+id = "forgot-pin"
+q = "What if I forget my PIN?"
+a = """<p>On the sign-in page press "Forgot my PIN" and enter the 8-word recovery code you wrote down during setup (its words are Turkish words, written without Turkish letters). If the code is lost too, open a terminal on the computer and type <code>sudo biokids-admin reset-pin</code>. More in <a href="/en/guides/troubleshooting/">Troubleshooting</a>.</p>"""
+
+[[en]]
+id = "ai"
+title = "The AI assistant"
+
+[[en.items]]
+id = "is-ask-me-safe"
+q = "Is the Ask Me assistant safe?"
+a = """<p>Ask Me runs entirely on the computer; no question goes to a cloud. It refuses topics such as sex, violence, self-harm, drugs, gambling and sharing personal details, and points a child who says someone is hurting them to a trusted adult and to emergency help. You see the questions it refused. It is still an aid, not a guarantee.</p>"""
+
+[[en.items]]
+id = "assistant-needs"
+q = "What does the assistant need?"
+a = """<p>7 GB of memory or more, and the internet once to download the model. With 7–12 GB of memory about 4 GB is downloaded; with 12 GB or more about 6.2 GB (a bigger, better model). You start the download in the panel and watch a progress bar: <a href="/en/guides/ask-me-assistant/">Ask Me guide</a>.</p>"""
+
+[[en.items]]
+id = "ai-watching"
+q = "Does BioKids watch the screen with AI?"
+a = """<p>No. BioKids has no AI that watches the screen, reads images or computes a "risk score". The AI only answers the questions the child asks it.</p>"""
+
+[[en]]
+id = "everyday"
+title = "Everyday use"
+
+[[en.items]]
+id = "manage-from-phone"
+q = "How do I manage it from my phone?"
+a = """<p>In the panel go to <em>Settings → Access from your phone</em> and follow the four steps: with the free Tailscale app your phone connects to the computer over your own private network. It takes about five minutes and needs no change on your router. <a href="/en/guides/phone-access/">Phone access guide</a>.</p>"""
+
+[[en.items]]
+id = "several-children"
+q = "I have more than one child. Can I manage them all?"
+a = """<p>Yes. Each child gets their own account, picture, rules and history, and taps their own picture on the login screen. Up to four parents can use the panel, each with their own PIN.</p>"""
+
+[[en.items]]
+id = "brightness"
+q = "Can the screen brightness be adjusted?"
+a = """<p>Yes. The child's launcher always has a brightness slider (☀) at the bottom and the volume at the top. Brightness goes down to 20%, so the screen never goes fully dark. When the day ends in the evening, the screen dims gently over the last 10 minutes and Zio says good night; then the brightness goes back to where it was.</p>"""
+
+[[en.items]]
+id = "more-time"
+q = "How do I give my child more time?"
+a = """<p>On the panel's <em>Today</em> screen press <strong>+10 min</strong> or <strong>+30 min</strong> on your child's card; a locked screen opens by itself. If your child asks for time from their screen, the request reaches your phone and you can give +15, +30 or +60 minutes there.</p>"""

@@ -1,0 +1,48 @@
+{% extends "page.html" %}
+{% import "macros.html" as m with context %}
+{% block h1 %}Rehberler: adım adım, resimli{% endblock %}
+{% block lead %}
+<p class="lead">BioKids'i kurmak ve kullanmak için kısa rehberler. Teknik bilgi gerekmez; her adımda ne göreceğinizi gösteriyoruz.</p>
+{% endblock %}
+{% block body %}
+{% set by_key = {} %}
+{% for g in guides %}{% set _ = by_key.update({g.key: g}) %}{% endfor %}
+<section class="section-tight" aria-labelledby="nereden">
+  <div class="wrap">
+    {{ m.head('nereden', 'Nereden başlamalıyım?', 'İlk kez mi kuruyorsunuz?', 'Bilgisayarınıza uyan yolu seçin.', 'teal', center=False) }}
+    <div class="picker">
+      <a href="{{ url('guide-install') }}"><span class="emoji" aria-hidden="true">💻</span><strong>Bilgisayarda yalnızca BioKids olacak</strong><span>Boşta duran ya da yeni bir bilgisayar.</span><span>Kurulum →</span></a>
+      <a href="{{ url('guide-dual-boot') }}"><span class="emoji" aria-hidden="true">🪟</span><strong>Windows da kalsın</strong><span>Açılışta ikisinden birini seçin.</span><span>Windows'un yanına →</span></a>
+      <a href="{{ url('guide-virtualbox') }}"><span class="emoji" aria-hidden="true">🧪</span><strong>Önce denemek istiyorum</strong><span>Bilgisayarınıza dokunmadan.</span><span>VirtualBox'ta deneyin →</span></a>
+      <a href="{{ url('guide-packages') }}"><span class="emoji" aria-hidden="true">📦</span><strong>Zaten Debian 13 kullanıyorum</strong><span>Var olan sisteme paketlerle.</span><span>Debian paketleri →</span></a>
+    </div>
+  </div>
+</section>
+
+{% set groups = [
+  ('kurulum', '💿', 'Kurulum', ['guide-usb', 'guide-install', 'guide-dual-boot', 'guide-virtualbox', 'guide-packages']),
+  ('ilk-gunler', '🧭', 'İlk günler', ['guide-first-setup', 'guide-time', 'guide-web']),
+  ('uzaktan', '📱', 'Telefon ve yapay zekâ', ['guide-phone', 'guide-live', 'guide-assistant']),
+  ('yardim', '🧰', 'Yardım', ['guide-troubleshooting', 'guide-uninstall']),
+] %}
+<section class="section-tight">
+  <div class="wrap">
+    {% for id, icon, title, keys in groups %}
+    <div class="guide-group">
+      <h2 id="{{ id }}"><span class="emoji" aria-hidden="true">{{ icon }}</span> {{ title }}</h2>
+      <div class="grid grid-3">
+        {% for k in keys %}{{ m.guide_card(by_key[k]) }}{% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section-tight">
+  <div class="wrap narrow">
+    {% call m.callout('tip', 'Panelin içinde de rehberler var') %}
+    <p>BioKids kurulduktan sonra ebeveyn panelindeki <strong>Yardım</strong> sayfası; e-posta bildirimleri, telefondan erişim, çocuk ekleme, süreler, internet, Zio ve Sio'nun sesi, unutulan PIN ve bilgisayarın kendisini korumak üzerine adım adım rehberleri internet olmadan da gösterir.</p>
+    {% endcall %}
+  </div>
+</section>
+{% endblock %}

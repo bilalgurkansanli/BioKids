@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block main %}
+<section class="notfound">
+  <div class="wrap narrow">
+    <img src="/assets/img/brand/kite.png" width="120" height="203" alt="">
+    <div class="lang-block" lang="tr">
+      <h1>Bu sayfa uçup gitmiş</h1>
+      <p class="lead center">Aradığınız sayfa burada değil. Adres yanlış yazılmış ya da sayfa taşınmış olabilir.</p>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="/">Ana sayfa</a>
+        <a class="btn btn-secondary" href="/rehberler/">Rehberler</a>
+        <a class="btn btn-secondary" href="/indir/">İndir</a>
+      </div>
+    </div>
+    <div class="lang-block" lang="en">
+      <h2>This page has flown away</h2>
+      <p class="lead center">The page you were looking for is not here. The address may be mistyped, or the page may have moved.</p>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="/en/">Home</a>
+        <a class="btn btn-secondary" href="/en/guides/">Guides</a>
+        <a class="btn btn-secondary" href="/en/download/">Download</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block cta %}{% endblock %}

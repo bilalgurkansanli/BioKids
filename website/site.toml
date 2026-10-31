@@ -1,0 +1,188 @@
+# The website's settings and the words every page shares.
+# A page's own text is in content/<lang>/<key>.html; its title and description
+# in pages.toml. Turkish is the root of the site, English is under /en/.
+
+[site]
+url = "https://biokids.bilalgurkansanli.com"
+version = "2.0.0"
+email = "bilalsanli129@gmail.com"
+repo = "https://github.com/bilalgurkansanli/BioKids"
+release_url = "https://github.com/bilalgurkansanli/BioKids/releases/latest"
+issues_url = "https://github.com/bilalgurkansanli/BioKids/issues/new/choose"
+github_user = "https://github.com/bilalgurkansanli"
+author = "Bilal Gürkan Şanlı"
+author_url = "https://bilalgurkansanli.com"
+label = "BioStudio"
+iso_name = "biokids-2.0.0-amd64.hybrid.iso"
+apt_url = "https://apt.biokids.bilalgurkansanli.com"
+# security.txt must say when it stops being true (RFC 9116); renew yearly.
+security_txt_expires = "2027-10-31T00:00:00Z"
+
+[strings.tr]
+locale = "tr_TR"
+skip = "İçeriğe geç"
+nav_label = "Ana menü"
+menu = "Menü"
+nav_features = "Özellikler"
+nav_guides = "Rehberler"
+nav_privacy = "Gizlilik"
+nav_faq = "SSS"
+nav_support = "Destek"
+nav_download = "İndir"
+gh_label = "BioKids'in kaynak kodu GitHub'da"
+gh_cta = "GitHub'da inceleyin"
+gh_hero = "Açık kaynak: kodun her satırını GitHub'da inceleyin"
+lang_name = "English"
+lang_short = "EN"
+lang_switch = "Read this page in English"
+crumb_home = "Ana sayfa"
+crumbs_label = "Konum"
+on_this_page = "Bu sayfada"
+updated = "Son güncelleme"
+minutes = "dk"
+duration = "Süre"
+level = "Zorluk"
+needs = "Gerekenler"
+level_easy = "Kolay"
+level_medium = "Orta"
+level_advanced = "İleri"
+next_guide = "Sonraki rehber"
+all_guides = "Tüm rehberler"
+copy = "Kopyala"
+copied = "Kopyalandı"
+illustration = "Temsilî çizim"
+screenshot = "Gerçek ekran görüntüsü"
+stuck_title = "Takıldınız mı?"
+stuck_text = "Bize yazın, birlikte çözelim. Türkçe ya da İngilizce, hangisi kolayınıza gelirse."
+stuck_issue = "GitHub'da bildirin"
+cta_title = "Çocuğunuzun bilgisayarı, sizin evinizin kurallarıyla."
+cta_text = "Ücretsiz, açık kaynak ve hesap gerektirmez. Bir USB bellek ve yarım saat yeter."
+cta_download = "BioKids'i indir"
+cta_guide = "Nasıl kurulur?"
+footer_tagline = "Debian 13 için, tamamen kendi bilgisayarınızda çalışan ebeveyn denetimi. 4–10 yaş için."
+footer_product = "Ürün"
+footer_guides = "Rehberler"
+footer_project = "Proje"
+footer_contact = "İletişim"
+footer_source = "Kaynak kodu (GitHub)"
+footer_changelog = "Sürüm notları"
+footer_license = "Lisans: MIT"
+footer_contribute = "Katkıda bulunun"
+footer_security = "Güvenlik açığı bildirin"
+footer_issue = "Hata bildirin"
+footer_about = "Hakkında"
+footer_privacy_note = "Bu site çerez kullanmaz, sizi izlemez ve başka bir sunucudan hiçbir şey yüklemez."
+footer_made = "Özenle yapıldı."
+version_label = "Sürüm"
+lang_hint = "This page is also available in English."
+lang_hint_link = "Read in English"
+lang_hint_close = "Kapat"
+months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+site_alt_name = "BioKids — Çocuklar için ebeveyn denetimli Linux"
+software_category = "Ebeveyn denetimi"
+software_description = "BioKids, 4–10 yaş çocuklar için Debian 13 tabanlı, ücretsiz ve açık kaynak bir ebeveyn denetimi sistemidir: saati değiştirerek kandırılamayan süre sınırları, güvenli internet, telefondan canlı ekran izleme ve bilgisayarın kendisinde çalışan bir yapay zekâ asistanı. Hesap yok, bulut yok; hiçbir şey cihazdan çıkmaz."
+audience = "4–10 yaş çocukların ebeveynleri"
+req_memory = "4 GB RAM (isteğe bağlı asistan için 7 GB)"
+req_disk = "Yaklaşık 25 GB disk"
+feature_list = [
+  "Günlük süre kotaları, izin verilen saatler, hafta içi ve hafta sonu kuralları",
+  "Saati değiştirerek kandırılamayan süre sayımı (CLOCK_BOOTTIME)",
+  "Telefondan canlı ekran izleme; çocuk bunu ekranında görür",
+  "Bilgisayarda çalışan yapay zekâ asistanı Sor Bana (Gemma, llama.cpp, Whisper)",
+  "Çevrimdışı Vikipedi",
+  "Yetişkin, kumar, zararlı yazılım ve dolandırıcılık sitelerini kapatan DNS filtresi",
+  "Zorunlu SafeSearch ve yönetilen Chromium",
+  "Büyüğüme sor: süre, site ve uygulama istekleri",
+  "Zio ve Sio: anne ve baba sesiyle sesli uyarılar",
+  "Molalar, göz egzersizleri ve kazanılan süre",
+  "Geçmiş, bir yıllık süre haritası ve kayıt defteri",
+  "Tailscale ile telefondan güvenli erişim, port yönlendirme yok",
+  "Telemetri yok, hesap yok, bulut yok",
+]
+
+[strings.en]
+locale = "en_US"
+skip = "Skip to content"
+nav_label = "Main menu"
+menu = "Menu"
+nav_features = "Features"
+nav_guides = "Guides"
+nav_privacy = "Privacy"
+nav_faq = "FAQ"
+nav_support = "Support"
+nav_download = "Download"
+gh_label = "BioKids source code on GitHub"
+gh_cta = "View on GitHub"
+gh_hero = "Open source: read every line of the code on GitHub"
+lang_name = "Türkçe"
+lang_short = "TR"
+lang_switch = "Bu sayfayı Türkçe okuyun"
+crumb_home = "Home"
+crumbs_label = "Breadcrumb"
+on_this_page = "On this page"
+updated = "Last updated"
+minutes = "min"
+duration = "Time"
+level = "Difficulty"
+needs = "You need"
+level_easy = "Easy"
+level_medium = "Medium"
+level_advanced = "Advanced"
+next_guide = "Next guide"
+all_guides = "All guides"
+copy = "Copy"
+copied = "Copied"
+illustration = "Illustration"
+screenshot = "Real screenshot"
+stuck_title = "Stuck?"
+stuck_text = "Write to us and we will sort it out together, in English or Turkish."
+stuck_issue = "Report it on GitHub"
+cta_title = "Your child's computer, with your home's rules."
+cta_text = "Free, open source, and no account needed. A USB stick and half an hour are enough."
+cta_download = "Download BioKids"
+cta_guide = "How to install"
+footer_tagline = "Parental controls for Debian 13 that run entirely on your own computer. For ages 4–10."
+footer_product = "Product"
+footer_guides = "Guides"
+footer_project = "Project"
+footer_contact = "Contact"
+footer_source = "Source code (GitHub)"
+footer_changelog = "Release notes"
+footer_license = "License: MIT"
+footer_contribute = "Contribute"
+footer_security = "Report a vulnerability"
+footer_issue = "Report a bug"
+footer_about = "About"
+footer_privacy_note = "This site sets no cookies, does not track you, and loads nothing from any other server."
+footer_made = "Made with care."
+version_label = "Version"
+lang_hint = "Bu sayfanın Türkçesi de var."
+lang_hint_link = "Türkçe oku"
+lang_hint_close = "Close"
+months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+site_alt_name = "BioKids — parental-control Linux for kids"
+software_category = "Parental control"
+software_description = "BioKids is a free, open-source parental-control system for children aged 4–10, built on Debian 13: screen-time limits that changing the clock cannot fool, safe browsing, a live view of the child's screen on the parent's phone, and an AI assistant that runs on the computer itself. No account, no cloud; nothing leaves the device."
+audience = "Parents of children aged 4–10"
+req_memory = "4 GB RAM (7 GB for the optional assistant)"
+req_disk = "About 25 GB of disk"
+feature_list = [
+  "Daily time quotas, allowed hours, weekday and weekend rules",
+  "Screen time counted on CLOCK_BOOTTIME, so changing the clock cannot fool it",
+  "Live view of the child's screen from the parent's phone, always shown to the child",
+  "Ask Me, an AI assistant that runs on the computer (Gemma via llama.cpp, Whisper)",
+  "Offline Wikipedia",
+  "A local DNS filter that blocks adult, gambling, malware and scam sites",
+  "Enforced SafeSearch and a managed Chromium",
+  "Ask a grown-up: requests for time, sites and apps",
+  "Zio and Sio: spoken warnings in a mother's and a father's voice",
+  "Breaks, eye exercises and earned time",
+  "History, a year-long heatmap of screen time, and an audit log",
+  "Secure phone access over Tailscale, never port forwarding",
+  "No telemetry, no account, no cloud",
+]
+llms_intro = """
+BioKids turns a Debian 13 computer into one a 4–10-year-old can use alone. The child signs in by tapping their picture and lands in a full-screen launcher of big tiles instead of a desktop; a ring shows the minutes left, and two voices, Zio and Sio, say when time is running out. The parent sets the rules in a panel on the same computer or on their phone (over their own Tailscale network). Screen time is counted on the kernel's boot-time clock, so changing the system clock changes nothing. Harmful sites are blocked by a local DNS filter on the children's accounts only, SafeSearch is enforced, and nothing about the family leaves the computer: no telemetry, no account, no cloud. A parent can watch the child's screen live, and the child always sees a sign that says so. An optional assistant, Ask Me (Sor Bana), answers a child's questions with a language model that runs on the computer itself (Gemma via llama.cpp, Whisper for speech, an offline Wikipedia).
+
+BioKids ships as a ready-to-install ISO (Debian 13 with BioKids; it can install beside Windows) and as Debian packages. It is made for one curious child alone at one computer; it does not stop an adult with a USB stick, and it does not protect phones or tablets.
+"""

@@ -1,0 +1,97 @@
+{% extends "page.html" %}
+{% import "macros.html" as m with context %}
+{% block h1 %}About BioKids{% endblock %}
+{% block lead %}<p class="lead"><strong>BioKids</strong> is a free, open-source parental-control system for children aged 4–10, built on Debian 13. It is made by Bilal Gürkan Şanlı under the BioStudio label, and is open to everyone under the MIT license.</p>{% endblock %}
+{% block body %}
+<section class="section-tight">
+  <div class="wrap narrow prose">
+    <h2 id="why">Why it exists</h2>
+    <p>A young child should be able to use a computer on their own: tap their picture to sign in, open what they want from big tiles, and hear when their time is nearly up. And a parent should be able to set the rules: how long, when, and which sites.</p>
+    <p>Yet most parental controls make you open an account, send the child's day to a company's servers, and say little to the child about what is seen. BioKids exists to do the opposite:</p>
+    <ul class="checks">
+      <li><strong>The rules and the data stay home.</strong> There is no BioKids server and no account.</li>
+      <li><strong>The child knows.</strong> Supervision is never hidden.</li>
+      <li><strong>The panel is simple enough for a parent who is not technical.</strong> Any setting that needs explaining lives behind "Advanced".</li>
+    </ul>
+
+    <h2 id="who">Who makes it</h2>
+    <div class="card person">
+      <span class="person-badge" aria-hidden="true"><img src="/assets/img/brand/kite.png" width="34" height="58" alt=""></span>
+      <div>
+        <h3>{{ site.author }}</h3>
+        <p>The developer of BioKids, under the <strong>{{ site.label }}</strong> label.</p>
+        <div class="btn-row">
+          <a class="btn btn-secondary btn-sm" href="{{ site.author_url }}" rel="author noopener">bilalgurkansanli.com</a>
+          <a class="btn btn-secondary btn-sm" href="{{ site.github_user }}" rel="noopener">GitHub</a>
+          <a class="btn btn-secondary btn-sm" href="mailto:{{ site.email }}">✉️ {{ site.email }}</a>
+        </div>
+      </div>
+    </div>
+    <p>BioKids is open source: for bug reports, translations, hardware reports and code, see the <a href="{{ url('support') }}">Support</a> page.</p>
+  </div>
+</section>
+
+<section class="section-tight">
+  <div class="wrap">
+    <header class="section-head center">
+      <p class="eyebrow tint-indigo">Promise</p>
+      <h2 id="principles">Six principles that do not change</h2>
+      <p class="lead">They are written into the project's constitution and override every other rule. A feature that conflicts with them is not added.</p>
+    </header>
+    <div class="principles">
+      <div><h3><span class="emoji" aria-hidden="true">🏠</span> Nothing leaves the device</h3><p>No telemetry, analytics, cloud inference or crash reporting. Every outbound connection is listed in the open.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">👀</span> The child knows</h3><p>No hidden screenshots, no silent keylogging. When a parent watches the screen live, the child is always shown it.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">🔒</span> Fail safe, not silent</h3><p>If protection breaks, the child's session locks and the parent is told. Never "continue unprotected".</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">🧯</span> Never locks you out</h3><p>Anything that could lock a parent out is opt-in, reversible, and has a written recovery path.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">📴</span> Offline first</h3><p>Every core feature works with the network cable unplugged. Cloud services are add-ons a parent turns on.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">🙂</span> A panel anyone understands</h3><p>The panel is made for a parent who is not technical; settings that need explaining sit behind "Advanced".</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight">
+  <div class="wrap narrow prose">
+    <h2 id="built-on">What it is built on</h2>
+    <p>BioKids stands on free software that people have trusted for years:</p>
+    <ul class="built-on">
+      <li><a href="https://www.debian.org" rel="noopener">Debian</a> 13 "trixie"</li>
+      <li>The <a href="https://xfce.org" rel="noopener">Xfce</a> desktop</li>
+      <li>The <a href="https://www.chromium.org" rel="noopener">Chromium</a> browser</li>
+      <li><a href="https://thekelleys.org.uk/dnsmasq/doc.html" rel="noopener">dnsmasq</a> and <a href="https://netfilter.org/projects/nftables/" rel="noopener">nftables</a></li>
+      <li><a href="https://tailscale.com" rel="noopener">Tailscale</a></li>
+      <li><a href="https://github.com/espeak-ng/espeak-ng" rel="noopener">espeak-ng</a> and <a href="https://github.com/rhasspy/piper" rel="noopener">Piper</a></li>
+      <li><a href="https://github.com/ggml-org/llama.cpp" rel="noopener">llama.cpp</a> and <a href="https://github.com/ggml-org/whisper.cpp" rel="noopener">whisper.cpp</a></li>
+      <li><a href="https://kiwix.org" rel="noopener">Kiwix</a> and <a href="https://www.wikipedia.org" rel="noopener">Wikipedia</a></li>
+      <li>The <a href="https://github.com/ShadowWhisperer/BlockLists" rel="noopener">ShadowWhisperer</a> blocklists</li>
+      <li><a href="https://github.com/hafontia/Fredoka-One" rel="noopener">Fredoka</a> and <a href="https://github.com/googlefonts/noto-emoji" rel="noopener">Noto Color Emoji</a></li>
+    </ul>
+    <p>BioKids itself is written in Python 3.13 with FastAPI and SQLite; its screens are Jinja2 and hand-written CSS. There is no build step, no npm and no framework. This site is made the same way: nothing is loaded from another server.</p>
+
+    <h2 id="status">Where it stands today</h2>
+    <p>The current version is <strong>{{ site.version }}</strong>: the Debian packages and a ready-to-install ISO together. The packages build, pass lintian, and install, upgrade and purge cleanly on Debian 13. The ISO has been installed in VirtualBox (BIOS and UEFI) and beside Windows on a real computer.</p>
+    <p>Next is publishing the project's own APT repository and release key. What is done, what was dropped and what comes next is in the <a href="{{ site.repo }}/blob/main/docs/ROADMAP.md" rel="noopener">roadmap</a>; what changed in each version is in the <a href="{{ site.repo }}/blob/main/CHANGELOG.md" rel="noopener">release notes</a>. Every design decision, and why it was made, is in the <a href="{{ site.repo }}/blob/main/docs/DECISIONS.md" rel="noopener">decisions document</a>.</p>
+
+    <h2 id="license">License</h2>
+    <p>BioKids is <a href="{{ site.repo }}/blob/main/LICENSE" rel="noopener license">MIT licensed</a>: free to use, change and share. The licenses of the software the packages carry are in <code>debian/copyright</code>; those of the models a parent downloads are in <code>src/biokids_ai/models.py</code>.</p>
+
+    <h2 id="press">Press and brand</h2>
+    <div class="card">
+      <p><strong>Name:</strong> BioKids, one word, capital B and K. Not "Bio Kids" or "Biokids".</p>
+      <p><strong>In one sentence:</strong> BioKids is a free, open-source parental-control system for children aged 4–10, built on Debian 13, that runs entirely on the computer itself.</p>
+      <p><strong>In one paragraph:</strong> BioKids turns a Debian 13 computer into one a young child can use alone. The child signs in by tapping their picture and lands in a launcher of big tiles; a ring shows the time left, and two voices, Zio and Sio, say when it is nearly up. The parent sets the rules from a panel on the same computer or on their phone: screen-time limits that changing the clock cannot fool, a local filter that blocks harmful sites, a live view of the screen (always shown to the child), and an AI assistant that runs on the computer. There is no account, no cloud and no telemetry. It is MIT licensed.</p>
+      <p><strong>Logo:</strong> a kite whose string ends in a heart, beside the word "BioKids"; the typeface is Fredoka.</p>
+      <div class="press-logos">
+        <a href="/assets/img/brand/logo.png" download><img src="/assets/img/brand/logo.png" width="480" height="340" alt="The BioKids logo: a colourful kite and the word BioKids" loading="lazy" decoding="async"><span>logo.png · transparent PNG</span></a>
+        <a href="/assets/img/brand/kite.png" download><img src="/assets/img/brand/kite.png" width="120" height="203" alt="The kite alone" loading="lazy" decoding="async"><span>kite.png · the kite alone</span></a>
+      </div>
+      <ul class="swatches" aria-label="Brand colours">
+        <li><i style="background:#FF6B5B"></i> Coral #FF6B5B (Zio)</li>
+        <li><i style="background:#FFB020"></i> Amber #FFB020</li>
+        <li><i style="background:#1FB6A6"></i> Teal #1FB6A6 (Sio)</li>
+        <li><i style="background:#4B54C8"></i> Indigo #4B54C8</li>
+        <li><i style="background:#FBF7F2"></i> Ground #FBF7F2</li>
+      </ul>
+    </div>
+  </div>
+</section>
+{% endblock %}
