@@ -265,6 +265,7 @@ main:focus { outline: none; }
 }
 .lang-switch:hover { border-color: var(--ink-soft); color: var(--ink); }
 
+.ic { display: inline-block; width: 1.15em; height: 1.15em; flex: none; }
 .gh-mark { display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -0.16em; flex: none; }
 .gh-link {
   display: inline-flex;
@@ -533,10 +534,10 @@ code {
 }
 
 .hero-shot {
-  position: relative;
   margin: clamp(36px, 5vw, 60px) auto 0;
   max-width: 1120px;
 }
+.hero-frame { position: relative; }  /* the chips sit on the picture, never on its caption */
 .hero-shot img {
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-3);
@@ -560,9 +561,9 @@ code {
   animation: bob 6s ease-in-out infinite;
 }
 .float-chip .emoji { font-size: 1.2rem; }
-.float-chip.c1 { left: -14px; top: 18%; }
+.float-chip.c1 { left: -14px; top: 60%; }
 .float-chip.c2 { right: -10px; top: 6%; animation-delay: -2s; }
-.float-chip.c3 { left: 6%; bottom: -18px; animation-delay: -4s; }
+.float-chip.c3 { right: -10px; bottom: 14%; animation-delay: -4s; }
 @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 
 /* ------------------------------------------------------------ page hero */
@@ -1421,7 +1422,7 @@ tbody th { font-weight: 500; }
   .guide-layout { grid-template-columns: minmax(0, 1fr); }
   .guide-aside { display: none; }
   .float-chip.c1 { left: 4px; }
-  .float-chip.c2 { right: 4px; }
+  .float-chip.c2, .float-chip.c3 { right: 4px; }
 }
 
 @media (max-width: 640px) {

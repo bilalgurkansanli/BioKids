@@ -8,7 +8,7 @@
       <h1 id="hero-title">Çocuğunuz için <span class="hl">güvenli</span> bir bilgisayar. Kurallar sizde, her şey evde.</h1>
       <p class="lead"><strong>BioKids</strong>, 4–10 yaş çocuklar için Debian 13 tabanlı, ücretsiz ve açık kaynak bir ebeveyn denetimi sistemidir. Süre sınırları, güvenli internet, telefondan canlı izleme ve bilgisayarın kendisinde çalışan bir yapay zekâ asistanı sunar; hesap istemez, buluta hiçbir şey göndermez.</p>
       <div class="btn-row">
-        <a class="btn btn-primary btn-lg" href="{{ url('download') }}"><span aria-hidden="true">⬇</span> Ücretsiz indir</a>
+        <a class="btn btn-primary btn-lg" href="{{ url('download') }}">{% include "icon-download.html" %} Ücretsiz indir</a>
         <a class="btn btn-secondary btn-lg" href="{{ url('guide-install') }}">Nasıl kurulur?</a>
       </div>
       <p class="hero-gh"><a href="{{ site.repo }}" rel="noopener">{% include "github-mark.html" %} {{ t.gh_hero }} →</a></p>
@@ -20,10 +20,12 @@
       </ul>
     </div>
     <figure class="hero-shot">
-      {{ m.img(lang ~ '/hero', 'Solda çocuğun BioKids ekranı: büyük uygulama kutuları ve 42 dakika kaldığını gösteren halka; üstte "Annen şu an ekranını görüyor" yazısı. Sağda o ekranı canlı izleyen ebeveynin telefonu.', '(min-width: 1180px) 1120px, 100vw', eager=True) }}
-      <span class="float-chip c1" aria-hidden="true"><span class="emoji">⏱️</span> 42 dk kaldı</span>
-      <span class="float-chip c2" aria-hidden="true"><span class="emoji">🛡️</span> Zararlı siteler kapalı</span>
-      <span class="float-chip c3" aria-hidden="true"><span class="emoji">🤖</span> Yapay zekâ bilgisayarda</span>
+      <div class="hero-frame">
+        {{ m.img(lang ~ '/hero', 'Solda çocuğun BioKids ekranı: büyük uygulama kutuları ve 42 dakika kaldığını gösteren halka; üstte "Annen şu an ekranını görüyor" yazısı. Sağda o ekranı canlı izleyen ebeveynin telefonu.', '(min-width: 1180px) 1120px, 100vw', eager=True) }}
+        <span class="float-chip c1" aria-hidden="true"><span class="emoji">⏱️</span> 42 dk kaldı</span>
+        <span class="float-chip c2" aria-hidden="true"><span class="emoji">🛡️</span> Zararlı siteler kapalı</span>
+        <span class="float-chip c3" aria-hidden="true"><span class="emoji">🤖</span> Yapay zekâ bilgisayarda</span>
+      </div>
       <figcaption>Solda çocuğun ekranı, sağda onu telefondan canlı izleyen ebeveyn. Çocuk izlendiğini her zaman görür.</figcaption>
     </figure>
   </div>

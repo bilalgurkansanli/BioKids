@@ -8,7 +8,7 @@
       <h1 id="hero-title">A <span class="hl">safe</span> computer for your child. Your rules, and everything stays home.</h1>
       <p class="lead"><strong>BioKids</strong> is a free, open-source parental-control system for children aged 4–10, built on Debian 13. It brings screen-time limits, safe browsing, a live view of the screen on your phone, and an AI assistant that runs on the computer itself. No account, and nothing is sent to a cloud.</p>
       <div class="btn-row">
-        <a class="btn btn-primary btn-lg" href="{{ url('download') }}"><span aria-hidden="true">⬇</span> Download free</a>
+        <a class="btn btn-primary btn-lg" href="{{ url('download') }}">{% include "icon-download.html" %} Download free</a>
         <a class="btn btn-secondary btn-lg" href="{{ url('guide-install') }}">How to install</a>
       </div>
       <p class="hero-gh"><a href="{{ site.repo }}" rel="noopener">{% include "github-mark.html" %} {{ t.gh_hero }} →</a></p>
@@ -20,10 +20,12 @@
       </ul>
     </div>
     <figure class="hero-shot">
-      {{ m.img(lang ~ '/hero', 'Left: the child\'s BioKids screen with big app tiles, a ring showing 42 minutes left, and "Mum can see your screen now" at the top. Right: the parent\'s phone watching that screen live.', '(min-width: 1180px) 1120px, 100vw', eager=True) }}
-      <span class="float-chip c1" aria-hidden="true"><span class="emoji">⏱️</span> 42 min left</span>
-      <span class="float-chip c2" aria-hidden="true"><span class="emoji">🛡️</span> Harmful sites blocked</span>
-      <span class="float-chip c3" aria-hidden="true"><span class="emoji">🤖</span> AI on the computer</span>
+      <div class="hero-frame">
+        {{ m.img(lang ~ '/hero', 'Left: the child\'s BioKids screen with big app tiles, a ring showing 42 minutes left, and "Mum can see your screen now" at the top. Right: the parent\'s phone watching that screen live.', '(min-width: 1180px) 1120px, 100vw', eager=True) }}
+        <span class="float-chip c1" aria-hidden="true"><span class="emoji">⏱️</span> 42 min left</span>
+        <span class="float-chip c2" aria-hidden="true"><span class="emoji">🛡️</span> Harmful sites blocked</span>
+        <span class="float-chip c3" aria-hidden="true"><span class="emoji">🤖</span> AI on the computer</span>
+      </div>
       <figcaption>The child's screen on the left, the parent watching it live from a phone on the right. The child always sees that they are being watched.</figcaption>
     </figure>
   </div>

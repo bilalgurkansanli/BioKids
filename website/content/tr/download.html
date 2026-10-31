@@ -21,7 +21,7 @@
         <p>BioKids yüklü Debian 13: Xfce, çocukların uygulamaları ve asistanın çalışma ortamı içinde gelir. Bellekten açılır, Debian'ın kendi kurulum programıyla ve <strong>internet gerekmeden</strong> kurulur. Windows olan bir bilgisayarda Windows'u küçültüp yanına kurmayı önerir.</p>
         <p>Dosya adı: <span class="file">{{ site.iso_name }}</span></p>
         <div class="btn-row">
-          <a class="btn btn-primary btn-lg" href="{{ site.release_url }}" rel="noopener"><span aria-hidden="true">⬇</span> Son sürümü indir</a>
+          <a class="btn btn-primary btn-lg" href="{{ site.release_url }}" rel="noopener">{% include "icon-download.html" %} Son sürümü indir</a>
           <a class="btn btn-secondary btn-lg" href="{{ url('guide-install') }}">Nasıl kurulur?</a>
         </div>
         {% call m.callout('note', 'Dosya neden archive.org\'da?') %}

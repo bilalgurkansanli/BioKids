@@ -304,7 +304,6 @@ class Site:
             "@type": "Person",
             "@id": f"{self.base}/#author",
             "name": s["author"],
-            "alternateName": s["author_alt"],
             "url": s["author_url"],
             "email": f"mailto:{s['email']}",
             "sameAs": [s["github_user"]],

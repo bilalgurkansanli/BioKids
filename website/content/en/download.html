@@ -21,7 +21,7 @@
         <p>Debian 13 with BioKids: Xfce, the children's apps and the assistant's runtime included. It starts from the stick and installs with Debian's own installer, <strong>with no internet needed</strong>. On a computer with Windows it offers to shrink Windows and install beside it.</p>
         <p>File name: <span class="file">{{ site.iso_name }}</span></p>
         <div class="btn-row">
-          <a class="btn btn-primary btn-lg" href="{{ site.release_url }}" rel="noopener"><span aria-hidden="true">⬇</span> Get the latest release</a>
+          <a class="btn btn-primary btn-lg" href="{{ site.release_url }}" rel="noopener">{% include "icon-download.html" %} Get the latest release</a>
           <a class="btn btn-secondary btn-lg" href="{{ url('guide-install') }}">How to install</a>
         </div>
         {% call m.callout('note', 'Why is the file on archive.org?') %}
