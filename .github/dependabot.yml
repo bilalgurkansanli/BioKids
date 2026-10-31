@@ -1,0 +1,11 @@
+# The workflows' actions, kept current. Python dependencies are not here: an
+# installed BioKids runs on what Debian 13 ships, not on PyPI (D-154), so a
+# newer PyPI release is not an update anyone would get.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci

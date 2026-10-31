@@ -15,6 +15,12 @@ rather than drawn as vectors, so every other logo file is cut from it by
 
 To change the logo, replace `logo.jpg` and run the two scripts again.
 
+`social-preview.png` (1280 x 640) is the card GitHub shows where the repository is
+linked: the logo, one line, and the launcher. GitHub does not read it from the
+repository; it is uploaded in the repository's settings (General, Social preview).
+It and `assets/screenshots/` were made from the panel and launcher over
+`dev/seed.py`'s family, with `dev/screenshots.py`.
+
 ## The typeface
 
 Every screen, the parent's and the child's, is set in **Fredoka**, the logo's

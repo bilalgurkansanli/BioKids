@@ -174,13 +174,15 @@ tested on the Debian 13 VM and in the owner's own rounds of testing (D-219 to D-
 the ISO was installed beside Windows on a real computer by the owner. The decisions are
 in `docs/DECISIONS.md`, newest last.
 
-What is left before publishing:
-1. The owner's last look at the 2.0.0 ISO in VirtualBox.
+The owner went through the 2.0.0 ISO in VirtualBox on 2026-10-31 and found nothing
+to change. What is left before publishing:
+1. Open source: the repository is MIT, with its README, screenshots and community
+   files (`SUPPORT.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue forms); the owner
+   makes it public, then the site and the announcement follow.
 2. The owner's release key: the owner makes it, and only the public key and its
    fingerprint come into the repository (`biokids-archive-keyring`). The APT
    repository is published with it, and the ISO and the .debs go to a GitHub Release
    (the ISO to archive.org when it is over 2 GB, D-28).
-3. Open source: the repository is already MIT; the site and the announcement follow.
 
 The assistant is measured with `dev/assistant_eval.py` against a real model (D-248):
 run it after any change to `src/biokids_ai/prompts.py`.

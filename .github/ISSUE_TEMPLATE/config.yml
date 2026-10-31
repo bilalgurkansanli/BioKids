@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Guides and help with setting up
+    url: https://biokids.bilalgurkansanli.com
+    about: Installing, phone access, time rules and more, step by step.
   - name: Security vulnerability
     url: https://github.com/bilalgurkansanli/BioKids/security/advisories/new
     about: Please report privately, not as a public issue. See SECURITY.md.

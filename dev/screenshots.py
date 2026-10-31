@@ -58,11 +58,17 @@ class Shot:
 SHOTS: tuple[Shot, ...] = (
     Shot("panel-today", "/today", 980, 1000),
     Shot("panel-child-time", "/children/1/time", 980, 1250),
+    Shot("panel-history", "/history", 1100, 1000),
     Shot("panel-audit", "/audit", 1100, 900),
-    Shot("shell-home", "/", 1280, 800, target="shell"),
-    Shot("shell-blocked", "/blocked?url=https://example.com", 1280, 800, target="shell"),
-    Shot("shell-first-run", "/first-run", 1280, 900, target="shell"),
+    Shot("launcher", "/", 1280, 800, target="shell"),
+    Shot("blocked", "/blocked?url=https://example.com", 1280, 800, target="shell"),
 )
+
+SHELL_LOAD_MS = 5000
+"""How long a launcher page loads before it is captured. The launcher holds an
+`EventSource` open, so its page never finishes loading and
+`--virtual-time-budget` alone waits until the subprocess times out;
+`--timeout` stops the load and captures what is drawn."""
 
 
 def find_browser() -> str | None:
@@ -134,18 +140,24 @@ def sign_in(browser: str, profile: Path, panel: str, pin: str) -> None:
     run_browser(browser, profile, page.as_uri(), ["--window-size=900,900"])
 
 
-def capture(browser: str, profile: Path, url: str, out: Path, width: int, height: int) -> bool:
+def capture(
+    browser: str,
+    profile: Path,
+    url: str,
+    out: Path,
+    width: int,
+    height: int,
+    load_ms: int | None = None,
+) -> bool:
     out.parent.mkdir(parents=True, exist_ok=True)
     # Remove it first. Otherwise a failed capture leaves the previous run's image
     # in place and this reports success — which is how a screenshot quietly stops
     # matching the thing it is a screenshot of.
     out.unlink(missing_ok=True)
-    stderr = run_browser(
-        browser,
-        profile,
-        url,
-        [f"--window-size={width},{height}", f"--screenshot={out}"],
-    )
+    extra = [f"--window-size={width},{height}", f"--screenshot={out}"]
+    if load_ms is not None:
+        extra.append(f"--timeout={load_ms}")
+    stderr = run_browser(browser, profile, url, extra)
     if not out.is_file():
         print(f"  ! {out.name}: nothing written. {stderr[:200]}")
         return False
@@ -161,10 +173,9 @@ def main() -> int:
         "--with-shell",
         action="store_true",
         help=(
-            "also capture the launcher. Off by default: headless Chromium does "
-            "not finish loading a page holding an EventSource open, and the "
-            "launcher opens one immediately. Its real screenshots belong on the "
-            "VM, in the Chromium it was built for."
+            "also capture the launcher, from one served with a fake daemon. "
+            "Emoji come from the machine taking the screenshot, so on Windows "
+            "the tiles show Microsoft's rather than Noto's."
         ),
     )
     parser.add_argument("--out", type=Path, default=OUT)
@@ -203,7 +214,8 @@ def main() -> int:
             url = f"{bases[shot.target]}{shot.path}"
             out = args.out / f"{shot.name}.png"
             print(f"  {shot.name:<22} {url}")
-            if capture(browser, profile, url, out, shot.width, shot.height):
+            load_ms = SHELL_LOAD_MS if shot.target == "shell" else None
+            if capture(browser, profile, url, out, shot.width, shot.height, load_ms):
                 written += 1
 
     print(f"\n{written} screenshot(s) in {args.out}")
