@@ -3866,7 +3866,7 @@ msgid "preview.title"
 msgstr "Ekran önizlemesi"
 
 msgid "preview.intro"
-msgstr "Kurallarınızla çocuğunuzun ekranı böyle görünür. Bu bir önizlemedir; çocuğunuzun ekranını canlı göstermez."
+msgstr "Aşağıda, kurallarınızla çocuğunuzun ekranının nasıl göründüğü var. Bu resimler ekrandan alınmaz, ayarlarınızdan çizilir; canlı ekran yukarıda."
 
 msgid "preview.home"
 msgstr "Ana ekran"

@@ -3866,7 +3866,7 @@ msgid "preview.title"
 msgstr "Screen preview"
 
 msgid "preview.intro"
-msgstr "This is how your child's screen looks with your rules. It is a preview; it does not show your child's screen live."
+msgstr "Below is how your child's screen looks with your rules. These pictures are drawn from your settings, not taken from the screen; the live screen is above."
 
 msgid "preview.home"
 msgstr "Home screen"
