@@ -51,8 +51,11 @@ at the top of `debian/changelog`: `0.1.0-2` can only be tagged `v0.1.0`, and a
 
 ## 2. APT repository
 
-Built with **`aptly`**, hosted on **GitHub Pages**, served from a custom domain from
-day one so the URL never has to change.
+Built with **`aptly`**, hosted on **GitHub Pages** from a repository of its own,
+[`BioKids-apt`](https://github.com/bilalgurkansanli/BioKids-apt) (its `gh-pages`
+branch), served from a custom domain from day one so the URL never has to change
+(D-257). `release.yml` is the only thing that writes there, with that repository's
+deploy key.
 
 ```
 https://apt.biokids.bilalgurkansanli.com/
@@ -77,14 +80,19 @@ https://apt.biokids.bilalgurkansanli.com trixie main" \
 sudo apt update && sudo apt install biokids
 ```
 
-**The signing key never touches the repository or a developer machine.** The private
-key lives in GitHub Secrets; only the release workflow can use it. Generate a dedicated
-key for this, not a personal one, and publish the fingerprint in the README so people
-can verify.
+**The signing key never touches the repository.** It is a dedicated key, not a
+personal one, made once by [`dev/make_release_keys.sh`](../dev/make_release_keys.sh) on
+the owner's computer, in a folder of its own outside any repository, with the deploy
+key for `BioKids-apt`. The private halves go into GitHub Secrets (`GPG_PRIVATE_KEY`,
+`GPG_PASSPHRASE`, `APT_DEPLOY_KEY`) and onto an offline backup, and the folder is then
+deleted from the computer; only the release workflow can use them. The public half is
+`debian/biokids-archive-keyring.asc`, and its fingerprint is in the README so people can
+verify.
 
 This APT repo matters more than the ISO. It is what lets someone adopt BioGuard on an
 existing install in two commands, and what lets us ship a fix without rebuilding an
-image.
+image. A computer installed from the ISO is pointed at it by the installer's last step,
+with the key the image carries (D-257).
 
 ---
 
@@ -146,7 +154,9 @@ signing key is not worth it at this stage.
 
 GitHub caps release assets at 2 GB per file, which the full ISO will approach. Publish
 the ISO to an archive.org item named `biokids-<version>`, and let the GitHub Release
-carry the checksums and a link. Cloudflare R2 is a reasonable later addition if a
+carry the checksums and a link: before the tag, `iso/published.toml` names the item and
+the ISO's SHA256, and `release.yml` adds that checksum to the signed `SHA256SUMS` and
+the link to the notes. Cloudflare R2 is a reasonable later addition if a
 download link on the project's own domain is wanted.
 
 ---

@@ -9,6 +9,10 @@
 #  - Debian's mirror, its updates and its security updates: apt-setup's mirror
 #    step is not on the stick, so it wrote only the stick itself, and nothing
 #    would ever have been updated. The stick's line is commented out.
+#  - BioKids' own repository, signed with the key the image carries (D-257):
+#    without it the computer would get Debian's updates and never BioKids'.
+#    Only where the key is installed, so an image built without it does not
+#    leave apt a source it cannot verify.
 set -e
 
 locale=$(debconf-get debian-installer/locale || true)
@@ -27,6 +31,16 @@ URIs: http://security.debian.org/debian-security/
 Suites: trixie-security
 Components: main contrib non-free-firmware
 EOF
+
+if [ -f /target/usr/share/keyrings/biokids-archive-keyring.gpg ]; then
+    cat > /target/etc/apt/sources.list.d/biokids.sources <<'EOF'
+Types: deb
+URIs: https://apt.biokids.bilalgurkansanli.com/
+Suites: trixie
+Components: main
+Signed-By: /usr/share/keyrings/biokids-archive-keyring.gpg
+EOF
+fi
 
 if [ -f /target/etc/apt/sources.list ]; then
     sed -i 's/^deb cdrom:/# deb cdrom:/' /target/etc/apt/sources.list

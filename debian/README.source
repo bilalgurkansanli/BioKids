@@ -299,7 +299,8 @@ which drops `biokids-archive-keyring` from the build and skips the key entirely.
 CI uses exactly that, so the packaging is verified on every push; the release
 workflow does not, so a release that somehow lost the key fails loudly instead
 of shipping eight packages and no way to trust them. Before the first release, generate a dedicated signing key (not a
-personal one), commit its **public** half, ASCII-armoured, as
+personal one) with dev/make_release_keys.sh, commit its **public** half,
+ASCII-armoured, as
 debian/biokids-archive-keyring.asc, and publish its fingerprint in README.md so
 people can verify what they are trusting. The private half goes into GitHub
 Secrets as GPG_PRIVATE_KEY and never touches this repository or a developer's

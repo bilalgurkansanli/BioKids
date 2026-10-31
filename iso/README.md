@@ -12,7 +12,7 @@ On Debian 13 (the development VM's build image), from a clean `git` checkout - n
 a Windows working tree, whose line endings and file modes the image would carry:
 
     sudo apt install live-build
-    dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring   # the .debs, in ..
+    dpkg-buildpackage -us -uc -b                           # the .debs, in ..
     cd iso
     sudo make DEBS=../..                                      # 30-60 minutes
 
@@ -48,7 +48,8 @@ clean` before building again with changed configuration: live-build caches.
   language, the keyboard, the parent's account and the disk stay the installer's
   questions. Its `late_command` runs `includes.installer/usr/lib/biokids/late-command`,
   which writes Debian's mirror and security updates, left out by the live
-  installer, and makes the chosen language the computer's.
+  installer, and BioKids' own repository with the key the image carries
+  (`biokids-archive-keyring`, D-257), and makes the chosen language the computer's.
 - `auto/config`: the live session masks BioKids' services on its kernel command
   line - the stick is for trying and installing; the installed computer is the one
   that is supervised.

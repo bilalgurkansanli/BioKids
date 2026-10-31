@@ -1,14 +1,17 @@
 name: Release
 
 # Everything that turns a tag into something a stranger can install: build the
-# packages, sign them, publish the APT repository to GitHub Pages, and attach
-# the .deb files with their checksums and a detached signature to a GitHub
-# Release.
+# packages, sign them, publish the APT repository to the BioKids-apt
+# repository's GitHub Pages (D-257), and attach the .deb files with their
+# checksums and a detached signature to a GitHub Release, with the ISO's
+# address and checksum when iso/published.toml names one for this version.
 #
-# The signing key lives in this repository's Secrets and nowhere else. It is
-# never committed, never on a developer's machine, and never leaves the one job
-# below that needs it - which imports it into a throwaway GNUPGHOME under
-# RUNNER_TEMP and destroys it on the way out (PACKAGING.md section 2).
+# The signing key lives in this repository's Secrets and on the owner's offline
+# backup, nowhere else (dev/make_release_keys.sh). It is never committed and
+# never leaves the one job below that needs it - which imports it into a
+# throwaway GNUPGHOME under RUNNER_TEMP and destroys it on the way out
+# (PACKAGING.md section 2). The same job holds the deploy key that may push to
+# BioKids-apt, and destroys it the same way.
 
 on:
   push:
@@ -27,6 +30,8 @@ concurrency:
 env:
   APT_SUITE: trixie
   APT_DOMAIN: apt.biokids.bilalgurkansanli.com
+  # The archive's own repository: its Pages serve APT_DOMAIN from gh-pages.
+  APT_REPOSITORY: bilalgurkansanli/BioKids-apt
 
 jobs:
   build:
@@ -123,7 +128,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     permissions:
-      # Creating the release and pushing the archive to gh-pages.
+      # Creating the release. The archive goes to BioKids-apt with its own
+      # deploy key, which this token could not push to.
       contents: write
     steps:
       - uses: actions/checkout@v7
@@ -189,11 +195,50 @@ jobs:
           fi
           echo "keyring and signing key agree: $shipped"
 
+      - name: The ISO this release points at
+        run: |
+          set -eu
+          # The ISO is larger than a release asset may be, so it is published on
+          # archive.org (D-28) and named in iso/published.toml before the tag.
+          # Its checksum goes into the signed SHA256SUMS below: the copy people
+          # download from archive.org is then checked against this release's
+          # signature, not against a web page. A file naming another version is
+          # an older ISO, and a release of the packages alone has none.
+          if [ ! -f iso/published.toml ]; then
+            echo "no iso/published.toml; this release has no ISO"
+            exit 0
+          fi
+          python3 - <<'PY'
+          import os
+          import re
+          import tomllib
+
+          with open("iso/published.toml", "rb") as f:
+              iso = tomllib.load(f)
+          version = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          if iso.get("version") != version:
+              print(f"iso/published.toml is for {iso.get('version')}, not {version}: no ISO")
+              raise SystemExit(0)
+          name, sha256, url = iso["name"], iso["sha256"], iso["url"]
+          if not re.fullmatch(r"[A-Za-z0-9._+-]+\.iso", name):
+              raise SystemExit(f"iso/published.toml: {name!r} is not an ISO's file name")
+          if not re.fullmatch(r"[0-9a-f]{64}", sha256):
+              raise SystemExit(f"iso/published.toml: {sha256!r} is not a SHA256")
+          if not re.fullmatch(r"https://archive\.org/details/[A-Za-z0-9._-]+", url):
+              raise SystemExit(f"iso/published.toml: {url!r} is not an archive.org item")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
+              env.write(f"ISO_NAME={name}\nISO_SHA256={sha256}\nISO_URL={url}\n")
+          print(f"{name} at {url}")
+          PY
+
       - name: Checksums and a detached signature
         run: |
           set -eu
           cd dist
           sha256sum *.deb > SHA256SUMS
+          if [ -n "${ISO_SHA256:-}" ]; then
+            printf '%s  %s\n' "$ISO_SHA256" "$ISO_NAME" >> SHA256SUMS
+          fi
           sign_args="--batch --yes --pinentry-mode loopback"
           if [ -s "$RUNNER_TEMP/passphrase" ]; then
             sign_args="$sign_args --passphrase-file $RUNNER_TEMP/passphrase"
@@ -216,12 +261,28 @@ jobs:
             *)   echo "PRERELEASE=false" >> "$GITHUB_ENV" ;;
           esac
 
-      - name: Publish the APT repository to gh-pages
+      - name: Publish the APT repository to BioKids-apt
         if: env.PRERELEASE == 'false'
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          APT_DEPLOY_KEY: ${{ secrets.APT_DEPLOY_KEY }}
         run: |
           set -eu
+
+          # The archive is a repository of its own (D-257), so a clone of this
+          # one never downloads every package ever published. This job may push
+          # there with a deploy key that can write to BioKids-apt and nothing
+          # else, and only to GitHub: its host key is pinned (api.github.com/meta).
+          if [ -z "$APT_DEPLOY_KEY" ]; then
+            echo "the APT_DEPLOY_KEY secret is not set; it is the private half of" \
+                 "BioKids-apt's deploy key (dev/make_release_keys.sh)" >&2
+            exit 1
+          fi
+          umask 077
+          printf '%s\n' "$APT_DEPLOY_KEY" > "$RUNNER_TEMP/apt_deploy_key"
+          printf '%s\n' 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' \
+            > "$RUNNER_TEMP/known_hosts"
+          umask 022
+          export GIT_SSH_COMMAND="ssh -i $RUNNER_TEMP/apt_deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$RUNNER_TEMP/known_hosts"
 
           # The aptly database does not survive between runs, and it should not
           # have to: the repository is rebuilt from what is already published
@@ -230,8 +291,7 @@ jobs:
           mkdir gh-pages
           cd gh-pages
           git init -q -b gh-pages
-          git remote add origin \
-            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git remote add origin "git@github.com:${APT_REPOSITORY}.git"
           if git fetch -q --depth 1 origin gh-pages; then
             git reset -q --hard FETCH_HEAD
           else
@@ -263,7 +323,8 @@ jobs:
 
           # Pages must serve dists/ and pool/ verbatim, and the archive has had
           # its own domain since the first release so the URL never has to
-          # change.
+          # change. index.html, the page a browser gets, is BioKids-apt's own
+          # and stays as it is.
           printf '%s\n' "$APT_DOMAIN" > gh-pages/CNAME
           : > gh-pages/.nojekyll
 
@@ -275,54 +336,84 @@ jobs:
             || { echo "archive unchanged"; exit 0; }
           git push -q origin HEAD:gh-pages
 
-      - name: Release notes from the commit log
+      - name: Release notes
         run: |
           set -eu
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-          previous="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
-          if [ -n "$previous" ]; then
-            range="${previous}..${GITHUB_REF_NAME}"
-            echo "notes cover ${range}"
+          # CHANGELOG.md's section for this version, written for the people
+          # installing it. Only a version the changelog has no section for gets
+          # its notes from the commit log - which for the first tag would be the
+          # whole history.
+          version="${GITHUB_REF_NAME#v}"
+          awk -v head="## [${version}-" '
+            index($0, head) == 1 { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md | sed '/./,$!d' > changes.md
+          if [ -s changes.md ]; then
+            echo "notes from CHANGELOG.md"
+            cp changes.md notes.md
           else
-            range="$GITHUB_REF_NAME"
-            echo "first tag; notes cover the whole history"
-          fi
-          git log --no-merges --pretty=format:'%s (%h)' "$range" > commits.txt
-          printf '\n' >> commits.txt
+            previous="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+            if [ -n "$previous" ]; then
+              range="${previous}..${GITHUB_REF_NAME}"
+              echo "notes cover ${range}"
+            else
+              range="$GITHUB_REF_NAME"
+              echo "first tag; notes cover the whole history"
+            fi
+            git log --no-merges --pretty=format:'%s (%h)' "$range" > commits.txt
+            printf '\n' >> commits.txt
 
-          : > notes.md
+            : > notes.md
 
-          # Conventional Commits: "type(scope)!: subject". The heading is the
-          # human-readable name of the type; the "!" marks a break.
-          section() {
-            heading="$1"
-            types="$2"
-            body="$(grep -E "^(${types})(\([^)]*\))?!?: " commits.txt || true)"
-            if [ -n "$body" ]; then
-              printf '### %s\n\n' "$heading" >> notes.md
-              printf '%s\n' "$body" \
-                | sed -E "s/^(${types})(\([^)]*\))?!?: //" \
-                | sed -E 's/^/- /' >> notes.md
+            # Conventional Commits: "type(scope)!: subject". The heading is the
+            # human-readable name of the type; the "!" marks a break.
+            section() {
+              heading="$1"
+              types="$2"
+              body="$(grep -E "^(${types})(\([^)]*\))?!?: " commits.txt || true)"
+              if [ -n "$body" ]; then
+                printf '### %s\n\n' "$heading" >> notes.md
+                printf '%s\n' "$body" \
+                  | sed -E "s/^(${types})(\([^)]*\))?!?: //" \
+                  | sed -E 's/^/- /' >> notes.md
+                printf '\n' >> notes.md
+              fi
+            }
+
+            breaking="$(grep -E '^[a-z]+(\([^)]*\))?!: ' commits.txt || true)"
+            if [ -n "$breaking" ]; then
+              printf '### Breaking changes\n\n' >> notes.md
+              printf '%s\n' "$breaking" | sed -E 's/^/- /' >> notes.md
               printf '\n' >> notes.md
             fi
-          }
 
-          breaking="$(grep -E '^[a-z]+(\([^)]*\))?!: ' commits.txt || true)"
-          if [ -n "$breaking" ]; then
-            printf '### Breaking changes\n\n' >> notes.md
-            printf '%s\n' "$breaking" | sed -E 's/^/- /' >> notes.md
-            printf '\n' >> notes.md
+            section 'New' 'feat'
+            section 'Fixed' 'fix'
+            section 'Faster' 'perf'
+            section 'Documentation' 'docs'
+            section 'Under the hood' 'refactor|build|ci|test|style|chore'
+
+            if [ ! -s notes.md ]; then
+              printf 'See the commit log for what changed.\n\n' >> notes.md
+            fi
           fi
 
-          section 'New' 'feat'
-          section 'Fixed' 'fix'
-          section 'Faster' 'perf'
-          section 'Documentation' 'docs'
-          section 'Under the hood' 'refactor|build|ci|test|style|chore'
+          if [ -n "${ISO_URL:-}" ]; then
+            cat >> notes.md <<NOTES
 
-          if [ ! -s notes.md ]; then
-            printf 'See the commit log for what changed.\n\n' >> notes.md
+          ### The ISO
+
+          Debian 13 with BioKids, to try from a USB stick and install, beside Windows
+          too: [\`${ISO_NAME}\`](${ISO_URL}) on archive.org. It is larger than a
+          GitHub release file may be. Its SHA256 is in the signed \`SHA256SUMS\` too:
+
+          \`\`\`
+          ${ISO_SHA256}  ${ISO_NAME}
+          \`\`\`
+          NOTES
           fi
 
           cat >> notes.md <<NOTES
@@ -344,7 +435,7 @@ jobs:
 
           \`\`\`bash
           gpg --verify SHA256SUMS.asc SHA256SUMS
-          sha256sum --check SHA256SUMS
+          sha256sum --check --ignore-missing SHA256SUMS
           \`\`\`
 
           Signed with \`${GPG_KEY_ID}\`. The fingerprint is in README.md; check
@@ -369,11 +460,12 @@ jobs:
             --notes-file notes.md \
             dist/*.deb dist/SHA256SUMS dist/SHA256SUMS.asc
 
-      - name: Destroy the signing key
+      - name: Destroy the signing key and the deploy key
         # Runs even if something above failed. The runner is thrown away anyway;
         # this is so that no later step in a future edit of this file can reach
         # the key by accident.
         if: always()
         run: |
           gpgconf --kill all || true
-          rm -rf "$RUNNER_TEMP/gnupg" "$RUNNER_TEMP/passphrase"
+          rm -rf "$RUNNER_TEMP/gnupg" "$RUNNER_TEMP/passphrase" \
+                 "$RUNNER_TEMP/apt_deploy_key" "$RUNNER_TEMP/known_hosts"

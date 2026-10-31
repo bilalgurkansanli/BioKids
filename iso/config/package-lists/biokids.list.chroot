@@ -20,6 +20,10 @@ plymouth-themes
 
 # BioKids, the child's desktop and its apps (biokids-desktop recommends them).
 biokids-desktop
+# The key BioKids' own APT repository is signed with: the installer's last step
+# points apt at that repository with it, so an installed computer gets BioKids'
+# fixes as well as Debian's (D-257).
+biokids-archive-keyring
 # The assistant (off until a parent turns it on; the models are downloaded
 # from the panel, never shipped) and what it runs on.
 biokids-ai

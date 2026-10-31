@@ -23,6 +23,8 @@ and three empty tables (`parent_note`, `shared_recording`, `reading_item`).
 
 ### Added
 
+- **A computer installed from the ISO gets BioKids' fixes** (D-257): the installer points
+  apt at BioKids' own repository, with the key the image carries, beside Debian's.
 - **The child's screen, live, in the panel and on the phone** (D-253): "Canlı izle" on
   the preview page; the child's screen says who is watching for as long as it lasts,
   and no picture is kept.

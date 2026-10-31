@@ -183,10 +183,12 @@ before publishing:
 1. Open source: the repository is MIT, with its README, screenshots and community
    files (`SUPPORT.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue forms); the owner
    makes it public, then the site and the announcement follow.
-2. The owner's release key: the owner makes it, and only the public key and its
-   fingerprint come into the repository (`biokids-archive-keyring`). The APT
-   repository is published with it, and the ISO and the .debs go to a GitHub Release
-   (the ISO to archive.org when it is over 2 GB, D-28).
+2. The owner's release key: the owner makes it with `dev/make_release_keys.sh`, and
+   only the public key and its fingerprint come into the repository
+   (`biokids-archive-keyring`). The image is built once more after it, since a
+   computer installed from the ISO is pointed at BioKids' APT repository with that key
+   (D-257). The repository is published in `BioKids-apt`, the ISO goes to archive.org
+   and is named in `iso/published.toml`, and the .debs go to the GitHub Release (D-28).
 
 The assistant is measured with `dev/assistant_eval.py` against a real model (D-248):
 run it after any change to `src/biokids_ai/prompts.py`.
