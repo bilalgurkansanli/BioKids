@@ -14,6 +14,7 @@ testing BioKids and waiting for BioKids.
 | [`make_icons.py`](make_icons.py) | Cut the logo files and the app icons from `assets/brand/logo.jpg` |
 | [`make_fonts.py`](make_fonts.py) | Make the two Fredoka weights, with the Turkish letters it lacks |
 | [`screenshots.py`](screenshots.py) | Capture the README's screenshots from a running panel |
+| [`make_release_keys.sh`](make_release_keys.sh) | Make the archive signing key and BioKids-apt's deploy key, once, outside the repository |
 
 ## The one you will use most
 
