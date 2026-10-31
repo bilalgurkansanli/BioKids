@@ -44,7 +44,7 @@ jobs:
             git gnupg grub-common lintian po-debconf pybuild-plugin-pyproject \
             python3-all python3-setuptools
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Release notes are generated from the commits since the last tag.
           fetch-depth: 0
@@ -126,7 +126,7 @@ jobs:
       # Creating the release and pushing the archive to gh-pages.
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
