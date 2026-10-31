@@ -312,7 +312,7 @@ guards out of `/etc`, and removes `/etc/logrotate.d/biokids-core` and
   daemon's supervisor into one module per concern, with no change in behaviour.
 - **The release scope** (D-185): v1.0 is the packages; the ISO is v1.1, built with
   `live-build` and a preseeded installer. `docs/DECISIONS.md` is compacted; the full
-  original wording is `git show 435a526:docs/DECISIONS.md`.
+  original wording is `git show c948447:docs/DECISIONS.md`.
 
 ### Removed
 

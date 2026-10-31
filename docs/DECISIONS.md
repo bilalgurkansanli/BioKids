@@ -15,7 +15,7 @@ search for `D-<n>` lands on the entry. Gaps in the numbering were never used.
   by*, *Reversed by* or *Completed by* D-xxx: read that one instead. *Partly
   superseded* means the rest still stands.
 - The full original wording, bug histories included, is in git:
-  `git show 435a526:docs/DECISIONS.md`.
+  `git show c948447:docs/DECISIONS.md`.
 - A new decision takes the next free number, at the end. When it replaces an older
   one, cut the older one down and point it at the new one.
 
@@ -1224,7 +1224,7 @@ height too low and well left of the window's corner.
   never worked out in the bar - orange under five minutes and red under one, as the
   launcher's banners; under it the clock, for 8-10 only, as on the launcher (UX.md
   §2.2). Showing it to 4-7 too is a one-line change if the owner wants it. *The
-  owner asked for it the same day: the clock shows for every child (7c6b1e7).*
+  owner asked for it the same day: the clock shows for every child (41679aa).*
 - The launcher's own sound bar (D-199) can be dragged or tapped anywhere along its
   64-pixel height (pointer events, `touch-action: none`) and is a slider to a screen
   reader and the arrow keys; it posts at most every 120 ms and once where the finger

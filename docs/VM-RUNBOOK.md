@@ -277,7 +277,7 @@ version is then not the one written above.
 
 An upgrade from `0.1.0-1` is the one that moves the virtual-terminal guards out of
 `/etc` (`debian/biokids-shell.maintscript`, `rm_conffile … 0.1.0-2~`). To see that
-too, build `v1` from the commit before 0.1.0-2 (`git checkout 435a526` in the clone)
+too, build `v1` from the commit before 0.1.0-2 (`git checkout c948447` in the clone)
 and `v2` from the tip, instead of the `dch` above.
 
 ---
