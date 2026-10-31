@@ -36,6 +36,7 @@ from biokids_shell.kiosk import (
     POLICY_FILENAME,
     KioskSupervisor,
     kiosk_policy,
+    launcher_port,
 )
 from biokids_shell.launcher import AppLauncher, LaunchRequest
 
@@ -1185,9 +1186,11 @@ def test_a_policy_for_a_different_origin_does_not_count(config: Config, tmp_path
 
 
 def test_the_kiosk_is_pointed_at_the_launcher_and_nothing_else(config: Config) -> None:
+    """At this user's own launcher port (D-188): `shell.port` only where the
+    uid is a multiple of 100, which GitHub's runner (uid 1001) is not."""
     argv = KioskSupervisor(config).argv()
     assert "--kiosk" in argv
-    assert f"--app=http://{config.shell.host}:{config.shell.port}/" in argv
+    assert f"--app=http://{config.shell.host}:{launcher_port(config)}/" in argv
     assert any(part.startswith("--user-data-dir=") for part in argv)
 
 
