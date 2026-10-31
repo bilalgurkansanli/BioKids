@@ -176,19 +176,17 @@ tested on the Debian 13 VM and in the owner's own rounds of testing (D-219 to D-
 the ISO was installed beside Windows on a real computer by the owner. The decisions are
 in `docs/DECISIONS.md`, newest last.
 
-The owner went through the 2.0.0 ISO in VirtualBox on 2026-10-31 and found nothing
-to change. It is built again from `main` the same day, for the live view's buttons
-(`panel.css`, `[hidden]`), which the README's screenshots found after it. What is left
-before publishing:
-1. Open source: the repository is MIT, with its README, screenshots and community
-   files (`SUPPORT.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue forms); the owner
-   makes it public, then the site and the announcement follow.
-2. The owner's release key: the owner makes it with `dev/make_release_keys.sh`, and
-   only the public key and its fingerprint come into the repository
-   (`biokids-archive-keyring`). The image is built once more after it, since a
-   computer installed from the ISO is pointed at BioKids' APT repository with that key
-   (D-257). The repository is published in `BioKids-apt`, the ISO goes to archive.org
-   and is named in `iso/published.toml`, and the .debs go to the GitHub Release (D-28).
+**2.0.0 is released (2026-10-31, tag `v2.0.0`), and the repository is public.** The
+packages are in the APT repository (`BioKids-apt`, `apt.biokids.bilalgurkansanli.com`,
+signed with the archive key `F6A4 D652 … 5F17 E9B0`), the .debs and the signed
+`SHA256SUMS` on the GitHub Release, the ISO on archive.org (`iso/published.toml`), and
+the site's button downloads it (`website/site.toml`, `iso_url`). What is left:
+1. SourceForge: the project waits on SourceForge's support (phone verification). Once
+   it is open, the ISO goes there as well and `iso_url` moves to it (D-257).
+2. The assistant's runtime, llama.cpp and whisper.cpp rebuilt for Trixie (D-165), is
+   in the ISO but not yet in the APT repository, so `biokids-ai` installs from the ISO
+   only, not on a Debian 13 that adds the repository.
+3. The announcement.
 
 The assistant is measured with `dev/assistant_eval.py` against a real model (D-248):
 run it after any change to `src/biokids_ai/prompts.py`.
