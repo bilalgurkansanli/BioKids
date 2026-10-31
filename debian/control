@@ -316,11 +316,10 @@ Package: biokids-archive-keyring
 Architecture: all
 Multi-Arch: foreign
 Section: misc
-# This package cannot be built without the real archive key, which exists only
-# at release time. CI builds with `-Ppkg.biokids.nokeyring` so that everything
-# else is still verified on every push; the release build does not, so a release
+# Built from debian/biokids-archive-keyring.asc, the public half of the key that
+# signs the archive (D-257). debian/rules refuses to build without it, so a tree
 # that somehow lost the key fails loudly instead of shipping eight packages and
-# no way to trust them.
+# no way to trust them; `-Ppkg.biokids.nokeyring` leaves the package out.
 Build-Profiles: <!pkg.biokids.nokeyring>
 Depends: ${misc:Depends}
 Description: GnuPG archive key for the BioKids APT repository

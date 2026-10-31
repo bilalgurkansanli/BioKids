@@ -125,15 +125,15 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
 
       - name: Build packages
-        # Without the archive keyring: its key exists only at release time, and
-        # a pipeline that is red from the first commit teaches everyone to
-        # ignore it. The release workflow builds the full set.
+        # The full set, the archive keyring with it: the key's public half is
+        # debian/biokids-archive-keyring.asc (D-257), so CI builds what a
+        # release builds.
         #
         # The chmod is not paranoia: the tree is authored on Windows, where the
         # mode bit is not a thing .gitattributes can carry.
         run: |
           chmod +x debian/rules
-          dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring
+          dpkg-buildpackage -us -uc -b
 
       - name: lintian
         # `bad-distribution-in-changes-file` is suppressed for the same reason

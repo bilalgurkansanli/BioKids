@@ -298,7 +298,7 @@ def test_the_preview_shows_the_childs_screen(
         session.commit()
     login(client)
     page = client.get("/children/1/preview").text
-    assert "canlı göstermez" in page, "a preview, not a view of the screen"
+    assert "ayarlarınızdan çizilir" in page, "drawn from the rules, not the live screen"
     assert "Supertux" in page and "Gcompris" in page
     assert page.count("preview__tile--waiting") == 1, "the game waits for learning"
     assert "Bitireyim" in page

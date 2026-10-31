@@ -291,17 +291,15 @@ existed. Where this packaging differs, it is on purpose:
 behaviour: a keyring package that ships no key is worse than one that will not
 build.
 
-To build the other eight packages before the key exists, use the build profile:
+To build the other eight packages without the key, use the build profile:
 
     dpkg-buildpackage -us -uc -b -Ppkg.biokids.nokeyring
 
 which drops `biokids-archive-keyring` from the build and skips the key entirely.
-CI uses exactly that, so the packaging is verified on every push; the release
-workflow does not, so a release that somehow lost the key fails loudly instead
-of shipping eight packages and no way to trust them. Before the first release, generate a dedicated signing key (not a
-personal one) with dev/make_release_keys.sh, commit its **public** half,
-ASCII-armoured, as
-debian/biokids-archive-keyring.asc, and publish its fingerprint in README.md so
+CI built that way until the key existed; since D-257 it builds the full set, as
+the release workflow does. The key is a dedicated signing key (not a personal
+one), made by dev/make_release_keys.sh: its **public** half, ASCII-armoured, is
+debian/biokids-archive-keyring.asc, and its fingerprint is in README.md so
 people can verify what they are trusting. The private half goes into GitHub
 Secrets as GPG_PRIVATE_KEY and never touches this repository or a developer's
 machine - see .github/workflows/release.yml, which is the only thing that ever

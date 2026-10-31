@@ -1354,7 +1354,7 @@ msgid "assistant.panel.models"
 msgstr "Bu bilgisayardaki modeller"
 
 msgid "assistant.panel.not_installed"
-msgstr "Asistan bu bilgisayarda kurulu değil, bu yüzden \"Sor Bana\" çocuğunuzun ekranında görünmüyor. Kurmak için en az 8 GB bellek gerekir; bir uçbirimde: sudo apt install biokids-ai"
+msgstr "Asistan bu bilgisayarda kurulu değil, bu yüzden \"Sor Bana\" çocuğunuzun ekranında görünmüyor. Kurmak için en az 7 GB bellek gerekir; bir uçbirimde: sudo apt install biokids-ai"
 
 msgid "assistant.panel.ready"
 msgstr "Asistan hazır."
@@ -1366,7 +1366,7 @@ msgid "assistant.panel.download"
 msgstr "Modelleri indir"
 
 msgid "assistant.panel.download.help"
-msgstr "Bilgisayarın belleğine göre 1,5–4 GB indirilir ve birkaç dakika sürebilir. Sonrasında internet gerekmez."
+msgstr "Yaklaşık 4,0 GB indirilir; belleği 12 GB ya da daha fazla olan bilgisayarda yaklaşık 6,2 GB. Birkaç dakika sürebilir, sonrasında internet gerekmez."
 
 msgid "assistant.panel.download.started"
 msgstr "İndirme başladı ve asistan bu çocuk için açıldı. Modeller inince \"Sor Bana\" çocuğun ekranında görünür."
@@ -3097,7 +3097,7 @@ msgid "guide.voice.step.1"
 msgstr "Panelde Ayarlar'a gidin ve \"Sesleri ayarla\"ya basın."
 
 msgid "guide.voice.step.2"
-msgstr "Kurulumda doğal ses kutusu işaretliyse ses kendiliğinden iner. Değilse \"Doğal sesi indir\"e basın: yaklaşık 90 MB'tır ve birkaç dakika sürer."
+msgstr "Kurulumda doğal ses kutusu işaretliyse ses kendiliğinden iner. Değilse \"Doğal sesi indir\"e basın: yaklaşık 153 MB'tır ve birkaç dakika sürer."
 
 msgid "guide.voice.step.3"
 msgstr "Kendi sesinizi kullanmak için bir cümlenin yanındaki \"● Kaydet\"e basın, cümleyi söyleyin ve Durdur'a basın. Kayıtlar yalnızca bu bilgisayarda kalır."
@@ -3866,7 +3866,7 @@ msgid "preview.title"
 msgstr "Ekran önizlemesi"
 
 msgid "preview.intro"
-msgstr "Kurallarınızla çocuğunuzun ekranı böyle görünür. Bu bir önizlemedir; çocuğunuzun ekranını canlı göstermez."
+msgstr "Aşağıda, kurallarınızla çocuğunuzun ekranının nasıl göründüğü var. Bu resimler ekrandan alınmaz, ayarlarınızdan çizilir; canlı ekran yukarıda."
 
 msgid "preview.home"
 msgstr "Ana ekran"

@@ -16,6 +16,11 @@ biokids (2.0.0-1) trixie; urgency=medium
     someone hurts them, and shows its download's progress (D-254).
   * BioKids' own look in the boot menu and the installer (D-255); the boot
     menu shows beside a Windows installed for BIOS too (D-254).
+  * biokids-archive-keyring is built at last: the public key that signs the
+    APT repository at apt.biokids.bilalgurkansanli.com, fingerprint
+    F6A4D65286901EE099A1095A793E458A5F17E9B0. The ISO carries it and its
+    installer adds that repository, so an installed computer gets BioKids'
+    fixes (D-257).
 
  -- Bilal Gurkan Sanli <bilalsanli129@gmail.com>  Fri, 30 Oct 2026 12:00:00 +0300
 
