@@ -3097,7 +3097,7 @@ msgid "guide.voice.step.1"
 msgstr "Panelde Ayarlar'a gidin ve \"Sesleri ayarla\"ya basın."
 
 msgid "guide.voice.step.2"
-msgstr "Kurulumda doğal ses kutusu işaretliyse ses kendiliğinden iner. Değilse \"Doğal sesi indir\"e basın: yaklaşık 90 MB'tır ve birkaç dakika sürer."
+msgstr "Kurulumda doğal ses kutusu işaretliyse ses kendiliğinden iner. Değilse \"Doğal sesi indir\"e basın: yaklaşık 153 MB'tır ve birkaç dakika sürer."
 
 msgid "guide.voice.step.3"
 msgstr "Kendi sesinizi kullanmak için bir cümlenin yanındaki \"● Kaydet\"e basın, cümleyi söyleyin ve Durdur'a basın. Kayıtlar yalnızca bu bilgisayarda kalır."

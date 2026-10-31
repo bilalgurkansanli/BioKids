@@ -3097,7 +3097,7 @@ msgid "guide.voice.step.1"
 msgstr "In the panel, go to Settings and press \"Set up the voices\"."
 
 msgid "guide.voice.step.2"
-msgstr "If the natural voice box was ticked during setup, the voice comes down by itself. If not, press \"Download the natural voice\": about 90 MB, a few minutes."
+msgstr "If the natural voice box was ticked during setup, the voice comes down by itself. If not, press \"Download the natural voice\": about 153 MB, a few minutes."
 
 msgid "guide.voice.step.3"
 msgstr "To use your own voice, press \"● Record\" beside a sentence, say it, and press Stop. Recordings stay on this computer."
