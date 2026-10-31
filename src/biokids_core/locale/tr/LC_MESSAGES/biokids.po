@@ -1354,7 +1354,7 @@ msgid "assistant.panel.models"
 msgstr "Bu bilgisayardaki modeller"
 
 msgid "assistant.panel.not_installed"
-msgstr "Asistan bu bilgisayarda kurulu değil, bu yüzden \"Sor Bana\" çocuğunuzun ekranında görünmüyor. Kurmak için en az 8 GB bellek gerekir; bir uçbirimde: sudo apt install biokids-ai"
+msgstr "Asistan bu bilgisayarda kurulu değil, bu yüzden \"Sor Bana\" çocuğunuzun ekranında görünmüyor. Kurmak için en az 7 GB bellek gerekir; bir uçbirimde: sudo apt install biokids-ai"
 
 msgid "assistant.panel.ready"
 msgstr "Asistan hazır."
@@ -1366,7 +1366,7 @@ msgid "assistant.panel.download"
 msgstr "Modelleri indir"
 
 msgid "assistant.panel.download.help"
-msgstr "Bilgisayarın belleğine göre 1,5–4 GB indirilir ve birkaç dakika sürebilir. Sonrasında internet gerekmez."
+msgstr "Yaklaşık 4,0 GB indirilir; belleği 12 GB ya da daha fazla olan bilgisayarda yaklaşık 6,2 GB. Birkaç dakika sürebilir, sonrasında internet gerekmez."
 
 msgid "assistant.panel.download.started"
 msgstr "İndirme başladı ve asistan bu çocuk için açıldı. Modeller inince \"Sor Bana\" çocuğun ekranında görünür."

@@ -1354,7 +1354,7 @@ msgid "assistant.panel.models"
 msgstr "Models on this computer"
 
 msgid "assistant.panel.not_installed"
-msgstr "The assistant is not installed on this computer, so \"Ask Me\" does not appear on your child's screen. It needs at least 8 GB of memory; in a terminal: sudo apt install biokids-ai"
+msgstr "The assistant is not installed on this computer, so \"Ask Me\" does not appear on your child's screen. It needs at least 7 GB of memory; in a terminal: sudo apt install biokids-ai"
 
 msgid "assistant.panel.ready"
 msgstr "The assistant is ready."
@@ -1366,7 +1366,7 @@ msgid "assistant.panel.download"
 msgstr "Download the models"
 
 msgid "assistant.panel.download.help"
-msgstr "1.5–4 GB depending on this computer's memory; it can take a few minutes. No internet is needed after that."
+msgstr "About 4.0 GB, or about 6.2 GB on a computer with 12 GB of memory or more; it can take a few minutes. No internet is needed after that."
 
 msgid "assistant.panel.download.started"
 msgstr "The download has started and the assistant is on for this child. \"Ask Me\" appears on the child's screen once the models are here."
