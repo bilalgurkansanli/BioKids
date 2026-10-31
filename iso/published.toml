@@ -1,0 +1,8 @@
+# The ISO a release points at (D-257). The image is larger than a GitHub
+# release file may be, so it is published elsewhere first, and named here
+# before the tag: release.yml adds its SHA256 to the signed SHA256SUMS and its
+# link to the release notes. A file for another version is ignored.
+version = "2.0.0"
+name = "biokids-2.0.0-amd64.hybrid.iso"
+sha256 = "40ae8a13c6fd72fb299052bbfca1d1d6dcef8243524334c7019db4a86fb92a7b"
+url = "https://archive.org/details/biokids-2.0.0"
