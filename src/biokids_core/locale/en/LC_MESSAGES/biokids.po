@@ -2304,7 +2304,7 @@ msgid "remote.guide.1.title"
 msgstr "Connect this computer"
 
 msgid "remote.guide.1.body"
-msgstr "Press \"Open phone access\" below. BioKids installs Tailscale on this computer and asks you to sign in once. You can use your Google, Apple or Microsoft account; if you have none, a free one is made."
+msgstr "Press \"Turn on phone access\" below. BioKids installs Tailscale on this computer and asks you to sign in once. You can use your Google, Apple or Microsoft account; if you have none, a free one is made."
 
 msgid "remote.guide.1.done"
 msgstr "This computer is connected to Tailscale."
