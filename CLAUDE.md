@@ -175,7 +175,9 @@ the ISO was installed beside Windows on a real computer by the owner. The decisi
 in `docs/DECISIONS.md`, newest last.
 
 The owner went through the 2.0.0 ISO in VirtualBox on 2026-10-31 and found nothing
-to change. What is left before publishing:
+to change. It is built again from `main` the same day, for the live view's buttons
+(`panel.css`, `[hidden]`), which the README's screenshots found after it. What is left
+before publishing:
 1. Open source: the repository is MIT, with its README, screenshots and community
    files (`SUPPORT.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue forms); the owner
    makes it public, then the site and the announcement follow.
