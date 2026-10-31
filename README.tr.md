@@ -445,7 +445,7 @@ modellerinkiler [`src/biokids_ai/models.py`](src/biokids_ai/models.py) dosyasın
 
 <div align="center">
 
-[BioStudio](https://bilalgurkansanli.com) etiketiyle, özenle yapıldı:
+[BioStudio](https://www.bilalgurkansanli.com/) etiketiyle, özenle yapıldı:
 **Bilal Gürkan Şanlı**.
 
 </div>

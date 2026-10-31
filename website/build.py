@@ -298,12 +298,18 @@ class Site:
 
     # -- JSON-LD
 
+    @property
+    def author(self) -> dict[str, str]:
+        """A reference to the author: the Person of his own site (site.toml)."""
+        return {"@id": self.site["author_id"]}
+
     def person(self) -> dict[str, Any]:
         s = self.site
         return {
             "@type": "Person",
-            "@id": f"{self.base}/#author",
+            "@id": s["author_id"],
             "name": s["author"],
+            "alternateName": s["author_alt"],
             "url": s["author_url"],
             "email": f"mailto:{s['email']}",
             "sameAs": [s["github_user"]],
@@ -338,9 +344,10 @@ class Site:
             "processorRequirements": "x86-64 (amd64)",
             "inLanguage": ["tr", "en"],
             "audience": {"@type": "Audience", "audienceType": t["audience"]},
-            "author": {"@id": f"{self.base}/#author"},
-            "publisher": {"@id": f"{self.base}/#author"},
-            "sameAs": [s["repo"]],
+            "author": self.author,
+            "publisher": self.author,
+            # The repository, and BioKids in the author's own list of his work.
+            "sameAs": [s["repo"], s["work_id"]],
         }
 
     def source_code(self) -> dict[str, Any]:
@@ -353,7 +360,7 @@ class Site:
             "programmingLanguage": ["Python", "HTML", "CSS", "JavaScript", "Shell"],
             "runtimePlatform": "Debian 13",
             "license": "https://opensource.org/licenses/MIT",
-            "author": {"@id": f"{self.base}/#author"},
+            "author": self.author,
             "targetProduct": {"@id": f"{self.base}/#software"},
         }
 
@@ -371,7 +378,7 @@ class Site:
             "alternateName": t["site_alt_name"],
             "description": t["software_description"],
             "inLanguage": ["tr", "en"],
-            "publisher": {"@id": f"{self.base}/#author"},
+            "publisher": self.author,
             "about": {"@id": f"{self.base}/#software"},
         }
         webpage: dict[str, Any] = {
@@ -387,7 +394,7 @@ class Site:
             "about": {"@id": f"{self.base}/#software"},
             "dateModified": modified,
             "primaryImageOfPage": self.abs(f"/assets/og/{lang}-{page.key}.jpg"),
-            "author": {"@id": f"{self.base}/#author"},
+            "author": self.author,
         }
         nodes: list[dict[str, Any]] = [website, webpage, self.person(), self.software(lang)]
         if page.kind == "home":
