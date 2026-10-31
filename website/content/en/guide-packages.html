@@ -1,0 +1,87 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+{% call m.callout('warn', 'The APT repository is not published yet') %}
+<p>BioKids' APT repository (<code>{{ site.apt_url }}</code>) and the release key that signs it arrive with the first release; the key's fingerprint will be written on this page and in the README then. Until that day, the packages are built from the source: <a href="{{ site.repo }}/blob/main/docs/VM-RUNBOOK.md" rel="noopener">docs/VM-RUNBOOK.md</a> §1. For the easiest way to set up a computer, follow the <a href="{{ url('guide-install') }}">ISO install guide</a>.</p>
+{% endcall %}
+
+<p>If your computer already runs Debian 13, you can install BioKids from packages instead of the ISO. This guide needs a little use of a terminal.</p>
+
+<h2 id="requirements">Requirements</h2>
+<ul>
+  <li><strong>Debian 13 "trixie", amd64.</strong> Ubuntu and other distributions are untested and unsupported.</li>
+  <li><strong>An X11 session.</strong> Wayland is not supported; <code>biokids-desktop</code> brings Xfce and LightDM with it.</li>
+  <li>At least 4 GB of memory and about 25 GB of disk; 7 GB of memory or more for the optional assistant.</li>
+  <li>An account that can use <code>sudo</code>, and the internet while installing.</li>
+</ul>
+
+<h2 id="packages">Which package does what?</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">Package</th><th scope="col">What it installs</th><th scope="col">For whom</th></tr></thead>
+    <tbody>
+      <tr><th scope="row"><code>biokids-desktop</code></th><td>BioKids, Xfce, LightDM, Chromium, the children's apps (GCompris, Tux Paint, TuxMath, Klavaro, SuperTux…) and the hidden boot menu.</td><td>A machine that will be the child's computer. This is the recommended one.</td></tr>
+      <tr><th scope="row"><code>biokids</code></th><td>BioKids itself only: the background service, the panel, the launcher and the voices. It never touches the boot.</td><td>A computer that already has a desktop you want to keep as it is.</td></tr>
+      <tr><th scope="row"><code>biokids-ai</code></th><td>The Ask Me assistant. Never installed on its own; you download the models in the panel afterwards.</td><td>Families who want the assistant, on a computer with 7 GB of memory or more.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<ol class="steps">
+{% call m.step('Add the repository\'s key', 'key') %}
+<p>Open a terminal and put BioKids' signing key in APT's keyring:</p>
+{{ m.code('curl -fsSL ' ~ site.apt_url ~ '/KEY.gpg \\\n  | sudo tee /usr/share/keyrings/biokids-archive-keyring.gpg > /dev/null', 'Terminal') }}
+<p>Compare the key's fingerprint with the one this page will show once it is published.</p>
+{% endcall %}
+
+{% call m.step('Add the repository', 'repository') %}
+{{ m.code('echo "deb [signed-by=/usr/share/keyrings/biokids-archive-keyring.gpg] \\\n' ~ site.apt_url ~ ' trixie main" \\\n  | sudo tee /etc/apt/sources.list.d/biokids.list', 'Terminal') }}
+{% endcall %}
+
+{% call m.step('Install the package', 'install') %}
+{{ m.code('sudo apt update && sudo apt install biokids-desktop', 'Terminal') }}
+<p>If you do not want your existing desktop changed, type <code>biokids</code> instead of <code>biokids-desktop</code>.</p>
+{% endcall %}
+
+{% call m.step('Finish the setup wizard', 'wizard') %}
+<p>As soon as the install is done, a wizard opens in your parent account: your PIN, your first child, their time and their internet. Step by step: <a href="{{ url('guide-first-setup') }}">first setup guide</a>.</p>
+{% endcall %}
+
+{% call m.step('Restart the computer once', 'restart') %}
+<p>The login screen with your child's picture only appears after a restart.</p>
+{{ m.code('sudo systemctl reboot', 'Terminal') }}
+{% endcall %}
+</ol>
+
+<h2 id="assistant">If you want the assistant too</h2>
+<p>Ask Me needs newer versions of <code>llama.cpp</code> and <code>whisper.cpp</code> than Debian 13 ships; they come from the BioKids repository. So <code>biokids-ai</code> cannot be installed on a plain Debian 13 without the BioKids repository added. On the ISO, everything is already in place.</p>
+{{ m.code('sudo apt install biokids-ai', 'Terminal') }}
+<p>Then download the model in the panel and turn it on for a child: <a href="{{ url('guide-assistant') }}">Ask Me guide</a>.</p>
+
+<h2 id="upgrades">Upgrades</h2>
+<p>BioKids never updates itself. You get updates yourself, together with the rest of Debian. The BioKids packages depend on each other's exact version and are always upgraded together:</p>
+{{ m.code('sudo apt update && sudo apt upgrade', 'Terminal') }}
+
+<h2 id="removing">Removing</h2>
+<p>To remove the packages and keep or delete your family's records: <a href="{{ url('guide-uninstall') }}">uninstall guide</a>.</p>
+
+<h2 id="something-wrong">Something wrong?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>Can I install it on Ubuntu?</h3></summary>
+    <div class="faq-answer"><p>Not for now: the repository is for Debian 13 "trixie" only, and Ubuntu is untested. The easiest way is the BioKids ISO, which already contains Debian 13.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3><code>biokids-ai</code> will not install; it cannot find <code>llama.cpp-tools</code>.</h3></summary>
+    <div class="faq-answer"><p>The newer versions of these packages are not in Debian 13; they come from the BioKids repository. Make sure you added it as in step 2 and ran <code>sudo apt update</code>.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Which version is installed?</h3></summary>
+    <div class="faq-answer"><p>It is shown at the bottom of the panel. In a terminal, <code>apt policy biokids</code> tells you too.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>The session starts in Wayland.</h3></summary>
+    <div class="faq-answer"><p>BioKids runs only on X11. The LightDM and Xfce that come with <code>biokids-desktop</code> already use X11; with another login manager, choose the Xfce (X11) session.</p></div>
+  </details>
+</div>
+{% endblock %}

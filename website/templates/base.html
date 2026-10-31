@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="{{ lang }}" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ v.title }}</title>
+<meta name="description" content="{{ v.description }}">
+{% if page.noindex %}
+<meta name="robots" content="noindex, follow">
+{% else %}
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<link rel="canonical" href="{{ abs(v.path) }}">
+<link rel="alternate" hreflang="tr" href="{{ abs(page.v('tr').path) }}">
+<link rel="alternate" hreflang="en" href="{{ abs(page.v('en').path) }}">
+<link rel="alternate" hreflang="x-default" href="{{ abs(page.v('en').path) }}">
+{% endif %}
+<meta name="author" content="{{ site.author }}">
+<meta name="generator" content="BioKids website build.py">
+<meta name="theme-color" content="#FBF7F2">
+<meta name="color-scheme" content="light">
+<meta name="format-detection" content="telephone=no">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/icons/favicon-96.png" type="image/png" sizes="96x96">
+<link rel="icon" href="/assets/icons/favicon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/Fredoka-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/Fredoka-Medium.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{{ asset('css/site.css') }}">
+<link rel="sitemap" type="application/xml" href="/sitemap.xml">
+{% set og_key = 'home' if page.kind == '404' else page.key %}
+<meta property="og:type" content="{{ 'article' if page.kind == 'guide' else 'website' }}">
+<meta property="og:site_name" content="BioKids">
+<meta property="og:locale" content="{{ t.locale }}">
+<meta property="og:locale:alternate" content="{{ 'en_US' if lang == 'tr' else 'tr_TR' }}">
+<meta property="og:title" content="{{ v.title }}">
+<meta property="og:description" content="{{ v.description }}">
+<meta property="og:url" content="{{ abs(v.path) }}">
+<meta property="og:image" content="{{ abs('/assets/og/' ~ lang ~ '-' ~ og_key ~ '.jpg') }}">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{{ v.short }} — BioKids">
+{% if page.kind == 'guide' %}
+<meta property="article:modified_time" content="{{ modified }}">
+<meta property="article:author" content="{{ site.author }}">
+{% endif %}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ v.title }}">
+<meta name="twitter:description" content="{{ v.description }}">
+<meta name="twitter:image" content="{{ abs('/assets/og/' ~ lang ~ '-' ~ og_key ~ '.jpg') }}">
+{% block head_extra %}{% endblock %}
+<!--JSONLD-->
+</head>
+<body class="kind-{{ page.kind }} page-{{ page.key }}">
+<a class="skip" href="#main">{{ t.skip }}</a>
+
+<header class="site-header" id="top">
+  <div class="wrap header-inner">
+    <a class="brand" href="{{ url('home') }}" aria-label="BioKids — {{ t.crumb_home }}">
+      <img src="/assets/img/brand/lockup.png" width="156" height="48" alt="BioKids">
+    </a>
+    {% set nav = [('features', t.nav_features), ('guides', t.nav_guides), ('privacy', t.nav_privacy), ('faq', t.nav_faq), ('support', t.nav_support)] %}
+    <nav class="nav" aria-label="{{ t.nav_label }}">
+      <ul>
+        {% for key, label in nav %}
+        <li><a href="{{ url(key) }}"{% if page.key == key or (key == 'guides' and page.kind == 'guide') %} aria-current="page"{% endif %}>{{ label }}</a></li>
+        {% endfor %}
+      </ul>
+    </nav>
+    <div class="header-actions">
+      <a class="lang-switch" href="{{ alt.path if page.kind != '404' else url('home', lang=other) }}" hreflang="{{ other }}" lang="{{ other }}" title="{{ t.lang_switch }}"><span aria-hidden="true">🌐</span> {{ t.lang_short }}<span class="visually-hidden"> — {{ t.lang_name }}</span></a>
+      <a class="btn btn-primary btn-sm header-cta" href="{{ url('download') }}">{{ t.nav_download }}</a>
+      <details class="menu">
+        <summary aria-label="{{ t.menu }}"><span class="menu-icon" aria-hidden="true"></span></summary>
+        <nav class="menu-panel" aria-label="{{ t.nav_label }}">
+          <ul>
+            {% for key, label in nav %}
+            <li><a href="{{ url(key) }}"{% if page.key == key %} aria-current="page"{% endif %}>{{ label }}</a></li>
+            {% endfor %}
+            <li><a href="{{ url('download') }}" class="btn btn-primary">{{ t.nav_download }}</a></li>
+          </ul>
+        </nav>
+      </details>
+    </div>
+  </div>
+</header>
+<div class="lang-hint" hidden data-lang-hint="{{ lang }}">
+  <div class="wrap lang-hint-inner">
+    <span lang="{{ other }}">{{ t.lang_hint }} <a href="{{ alt.path if page.kind != '404' else url('home', lang=other) }}" hreflang="{{ other }}">{{ t.lang_hint_link }} →</a></span>
+    <button type="button" class="lang-hint-close" aria-label="{{ t.lang_hint_close }}">✕</button>
+  </div>
+</div>
+
+<main id="main" tabindex="-1">
+{% block main %}{% endblock %}
+</main>
+
+{% block cta %}
+<section class="cta-band" aria-labelledby="cta-title">
+  <div class="wrap">
+    <div class="cta-card">
+      <img class="cta-kite" src="/assets/img/brand/kite.png" width="120" height="203" alt="" loading="lazy" decoding="async">
+      <div>
+        <h2 id="cta-title">{{ t.cta_title }}</h2>
+        <p>{{ t.cta_text }}</p>
+        <div class="btn-row">
+          <a class="btn btn-primary btn-lg" href="{{ url('download') }}">{{ t.cta_download }}</a>
+          <a class="btn btn-secondary btn-lg" href="{{ url('guide-install') }}">{{ t.cta_guide }}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+<footer class="site-footer">
+  <div class="wrap footer-grid">
+    <div class="footer-brand">
+      <a href="{{ url('home') }}" aria-label="BioKids — {{ t.crumb_home }}"><img src="/assets/img/brand/lockup-light.png" width="156" height="48" alt="BioKids" loading="lazy" decoding="async"></a>
+      <p>{{ t.footer_tagline }}</p>
+      <p class="footer-version">{{ t.version_label }} {{ site.version }} · MIT</p>
+    </div>
+    <nav aria-labelledby="f-product">
+      <h2 id="f-product">{{ t.footer_product }}</h2>
+      <ul>
+        <li><a href="{{ url('features') }}">{{ t.nav_features }}</a></li>
+        <li><a href="{{ url('download') }}">{{ t.nav_download }}</a></li>
+        <li><a href="{{ url('privacy') }}">{{ t.nav_privacy }}</a></li>
+        <li><a href="{{ url('faq') }}">{{ t.nav_faq }}</a></li>
+        <li><a href="{{ url('about') }}">{{ t.footer_about }}</a></li>
+      </ul>
+    </nav>
+    <nav aria-labelledby="f-guides">
+      <h2 id="f-guides">{{ t.footer_guides }}</h2>
+      <ul>
+        {% for g in guides[:6] %}
+        <li><a href="{{ g.v(lang).path }}">{{ g.v(lang).short }}</a></li>
+        {% endfor %}
+        <li><a href="{{ url('guides') }}">{{ t.all_guides }} →</a></li>
+      </ul>
+    </nav>
+    <nav aria-labelledby="f-project">
+      <h2 id="f-project">{{ t.footer_project }}</h2>
+      <ul>
+        <li><a href="{{ site.repo }}" rel="noopener">{{ t.footer_source }}</a></li>
+        <li><a href="{{ site.repo }}/blob/main/CHANGELOG.md" rel="noopener">{{ t.footer_changelog }}</a></li>
+        <li><a href="{{ site.repo }}/blob/main/CONTRIBUTING.md" rel="noopener">{{ t.footer_contribute }}</a></li>
+        <li><a href="{{ site.repo }}/blob/main/LICENSE" rel="noopener license">{{ t.footer_license }}</a></li>
+      </ul>
+    </nav>
+    <nav aria-labelledby="f-contact">
+      <h2 id="f-contact">{{ t.footer_contact }}</h2>
+      <ul>
+        <li><a href="mailto:{{ site.email }}">{{ site.email }}</a></li>
+        <li><a href="{{ url('support') }}">{{ t.nav_support }}</a></li>
+        <li><a href="{{ site.issues_url }}" rel="noopener">{{ t.footer_issue }}</a></li>
+        <li><a href="{{ site.repo }}/blob/main/SECURITY.md" rel="noopener">{{ t.footer_security }}</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div class="wrap footer-bottom">
+    <p>© 2026 <a href="{{ site.author_url }}" rel="author">{{ site.author }}</a> · {{ site.label }} · {{ t.footer_made }}</p>
+    <p class="footer-privacy"><span aria-hidden="true">🍪🚫</span> {{ t.footer_privacy_note }}</p>
+    <p><a class="lang-switch-footer" href="{{ alt.path if page.kind != '404' else url('home', lang=other) }}" hreflang="{{ other }}" lang="{{ other }}">🌐 {{ t.lang_name }}</a></p>
+  </div>
+</footer>
+<script src="{{ asset('js/site.js') }}" defer></script>
+</body>
+</html>

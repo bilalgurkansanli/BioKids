@@ -1,0 +1,121 @@
+{% extends "page.html" %}
+{% import "macros.html" as m with context %}
+{% block h1 %}Download BioKids{% endblock %}
+{% block lead %}
+<p class="lead">It's free and needs no account. For most families the ISO is the right choice: write it to a USB stick and install it on the computer, beside Windows if you like.</p>
+{% endblock %}
+{% block body %}
+<section class="section-tight">
+  <div class="wrap">
+    <div class="dl-grid">
+      <article class="dl-card main" aria-labelledby="iso">
+        <p class="eyebrow tint-indigo"><span aria-hidden="true">⭐</span> Recommended</p>
+        <h2 id="iso">The ISO: install from a USB stick</h2>
+        <ul class="dl-meta">
+          <li>Version {{ site.version }}</li>
+          <li>≈ 3.3 GB</li>
+          <li>64-bit (amd64)</li>
+          <li>BIOS and UEFI</li>
+          <li>English and Turkish</li>
+        </ul>
+        <p>Debian 13 with BioKids: Xfce, the children's apps and the assistant's runtime included. It starts from the stick and installs with Debian's own installer, <strong>with no internet needed</strong>. On a computer with Windows it offers to shrink Windows and install beside it.</p>
+        <p>File name: <span class="file">{{ site.iso_name }}</span></p>
+        <div class="btn-row">
+          <a class="btn btn-primary btn-lg" href="{{ site.release_url }}" rel="noopener"><span aria-hidden="true">⬇</span> Get the latest release</a>
+          <a class="btn btn-secondary btn-lg" href="{{ url('guide-install') }}">How to install</a>
+        </div>
+        {% call m.callout('note', 'Why is the file on archive.org?') %}
+        <p>The ISO is larger than GitHub's 2 GB file limit, so the release page links to its copy on archive.org and to its SHA256.</p>
+        {% endcall %}
+      </article>
+      <div class="dl-side">
+        <article class="dl-card" aria-labelledby="packages">
+          <span class="badge badge-soon">Coming soon</span>
+          <h2 id="packages">Debian packages</h2>
+          <p>Already on Debian 13? You can install BioKids with APT. The project's APT repository and its signing key are published with the first release.</p>
+          <p><a href="{{ url('guide-packages') }}">Install with packages →</a></p>
+        </article>
+        <article class="dl-card" aria-labelledby="source">
+          <span class="badge badge-real">MIT</span>
+          <h2 id="source">Source code</h2>
+          <p>Every line is open. You can build the ISO yourself, too.</p>
+          <p><a href="{{ site.repo }}" rel="noopener">BioKids on GitHub →</a><br><a href="{{ site.repo }}/blob/main/iso/README.md" rel="noopener">How the ISO is built →</a></p>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight" aria-labelledby="which">
+  <div class="wrap">
+    {{ m.head('which', 'Which guide should I start with?', 'Next step', 'Pick the way that suits your computer; each is a few short steps.', 'teal') }}
+    <div class="picker">
+      <a href="{{ url('guide-install') }}"><span class="emoji" aria-hidden="true">💻</span><strong>Only BioKids on this computer</strong><span>A spare or a new computer.</span><span>Install →</span></a>
+      <a href="{{ url('guide-dual-boot') }}"><span class="emoji" aria-hidden="true">🪟</span><strong>Keep Windows too</strong><span>Choose one of the two at each start.</span><span>Beside Windows →</span></a>
+      <a href="{{ url('guide-virtualbox') }}"><span class="emoji" aria-hidden="true">🧪</span><strong>I want to try it first</strong><span>Without touching your computer.</span><span>Try in VirtualBox →</span></a>
+      <a href="{{ url('guide-packages') }}"><span class="emoji" aria-hidden="true">📦</span><strong>I already use Debian 13</strong><span>Packages on your existing system.</span><span>Debian packages →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight" aria-labelledby="requirements">
+  <div class="wrap narrow">
+    {{ m.head('requirements', 'System requirements', 'Requirements', 'An ordinary laptop or desktop a few years old is enough.', 'amber') }}
+    <div class="table-wrap">
+      <table>
+        <tbody>
+          <tr><th scope="row">Processor</th><td>64-bit (amd64 / x86-64). ARM and Apple Silicon are not supported.</td></tr>
+          <tr><th scope="row">Memory (RAM)</th><td>4 GB. 7 GB or more for the optional Ask Me assistant (a bigger model from 12 GB).</td></tr>
+          <tr><th scope="row">Disk</th><td>About 25 GB; leave at least 40 GB free when installing beside Windows.</td></tr>
+          <tr><th scope="row">USB stick</th><td>8 GB or larger (its contents are erased).</td></tr>
+          <tr><th scope="row">System</th><td>The ISO contains Debian 13 "trixie". Installing with packages is supported on Debian 13 only; Ubuntu is untested.</td></tr>
+          <tr><th scope="row">Session</th><td>X11 (Wayland is not supported); the ISO sets this up itself.</td></tr>
+          <tr><th scope="row">Internet</th><td>Not needed to install. Needed for updates, phone access and the optional downloads.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight" aria-labelledby="verify">
+  <div class="wrap narrow prose">
+    <h2 id="verify">Check the file you downloaded</h2>
+    <p>To be sure the file is complete and unchanged, compute its SHA256 and compare it with the value in the <code>SHA256SUMS</code> file on the release page. They must match character for character.</p>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="windows" data-label="Windows">
+        <h3 class="tab-title">Windows</h3>
+        <p>Open PowerShell in the folder with the file and type:</p>
+        {{ m.code('Get-FileHash .\\' ~ site.iso_name ~ ' -Algorithm SHA256', 'PowerShell') }}
+      </div>
+      <div class="tab-panel" data-tab="macos" data-label="macOS">
+        <h3 class="tab-title">macOS</h3>
+        <p>In Terminal, in the folder with the file:</p>
+        {{ m.code('shasum -a 256 ' ~ site.iso_name, 'Terminal') }}
+      </div>
+      <div class="tab-panel" data-tab="linux" data-label="Linux">
+        <h3 class="tab-title">Linux</h3>
+        <p>Download <code>SHA256SUMS</code> into the same folder as the ISO and type:</p>
+        {{ m.code('sha256sum -c SHA256SUMS', 'Terminal') }}
+        <p>It should end with <code>OK</code>.</p>
+      </div>
+    </div>
+    {% call m.callout('privacy', 'Signature') %}
+    <p>Releases will be signed with the project's release key; its fingerprint will be written on this page and in the README when it is published.</p>
+    {% endcall %}
+  </div>
+</section>
+
+<section class="section-tight" aria-labelledby="inside">
+  <div class="wrap narrow prose">
+    <h2 id="inside">What's in the ISO?</h2>
+    <ul class="checks">
+      <li>Debian 13 "trixie" and the Xfce desktop (for the parent; the child never sees it).</li>
+      <li>All of BioKids: the background service, the parent panel, the child's launcher, Zio and Sio.</li>
+      <li>Children's apps: GCompris, Tux Paint, TuxMath, SuperTux and more.</li>
+      <li>The runtime for the Ask Me assistant (llama.cpp, whisper.cpp, Kiwix). The models are <strong>not</strong> included; you download them from the panel if you want them.</li>
+      <li>Debian's firmware for wireless cards.</li>
+    </ul>
+    <p>The live session on the USB stick is only for trying and installing: the child supervision runs on the installed computer.</p>
+  </div>
+</section>
+{% endblock %}

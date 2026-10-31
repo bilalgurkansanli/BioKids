@@ -1,0 +1,200 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>Windows'u silmeden BioKids kurabilirsiniz: Windows'tan biraz yer açarsınız, BioKids o boş yere kurulur ve bilgisayar her açılışta hangisini istediğinizi sorar. Adımların yarısı Windows'ta, yarısı kurulumda geçer.</p>
+
+{% call m.illus('Önce Windows küçülür ve yanında boş bir alan kalır; BioKids yalnızca o alana kurulur.') %}
+<div class="mock mock-win">
+  <div class="mock-body">
+    <div class="disk-row">
+      <p class="disk-title">1. Bugün</p>
+      <div class="disk"><div class="efi"><b>EFI</b>100 MB</div><div class="win" style="flex:6"><b>Windows (C:)</b>237 GB</div><div class="rec"><b>Kurtarma</b></div></div>
+    </div>
+    <div class="disk-arrow" aria-hidden="true">↓</div>
+    <div class="disk-row">
+      <p class="disk-title">2. Windows küçültüldükten sonra</p>
+      <div class="disk"><div class="efi"><b>EFI</b></div><div class="win"><b>Windows (C:)</b>197 GB</div><div class="free"><b>Ayrılmamış</b>40 GB</div><div class="rec"><b>Kurtarma</b></div></div>
+    </div>
+    <div class="disk-arrow" aria-hidden="true">↓</div>
+    <div class="disk-row">
+      <p class="disk-title">3. BioKids kurulduktan sonra</p>
+      <div class="disk"><div class="efi"><b>EFI</b></div><div class="win"><b>Windows (C:)</b>197 GB</div><div class="bk"><b>BioKids</b>40 GB</div><div class="rec"><b>Kurtarma</b></div></div>
+    </div>
+  </div>
+</div>
+{% endcall %}
+
+<h2 id="baslamadan-once">Başlamadan önce</h2>
+<ul class="checks">
+  <li><strong>Önemli dosyalarınızı yedekleyin</strong> (harici disk ya da bulut). Disk bölümleriyle oynamak her zaman küçük bir risk taşır.</li>
+  <li>Windows diskinde en az <strong>40 GB boş yer</strong> olsun.</li>
+  <li><strong>BitLocker</strong> kullanılıyorsa kurtarma anahtarınız elinizin altında olsun (Microsoft hesabınızda: <code>aka.ms/myrecoverykey</code>).</li>
+  <li>Dizüstüyse <strong>fişe takın</strong>. BioKids USB belleği hazır olsun: <a href="{{ url('guide-usb') }}">USB belleği hazırlama</a>.</li>
+</ul>
+
+<h2 id="windows-hazirlik">Windows'ta hazırlık</h2>
+<ol class="steps">
+  {% call m.step('BitLocker\'ı askıya alın (varsa)', 'bitlocker') %}
+  <p>Denetim Masası → <strong>BitLocker Sürücü Şifrelemesi</strong>'ni açın. C: sürücüsünde BitLocker açıksa <strong>Korumayı askıya al</strong>'a basın. Böylece bilgisayar açılış ayarları değişince kurtarma anahtarı istemez. Kurulumdan sonra aynı yerden <strong>Korumayı sürdür</strong>'e basarsınız.</p>
+  <p>Bu sayfayı bulamıyorsanız (ör. Windows Home'da "Cihaz şifreleme"), yine de kurtarma anahtarınızı bir kâğıda yazın.</p>
+  {% endcall %}
+
+  {% call m.step('Hızlı Başlatma\'yı kapatın', 'hizli-baslatma') %}
+  <p>Hızlı Başlatma açıkken Windows kendini tam kapatmaz ve diski yarı açık bırakır. Kapatmak için: Denetim Masası → <strong>Güç Seçenekleri</strong> → <strong>Güç düğmelerinin yapacaklarını seçin</strong> → <strong>Şu anda kullanılamayan ayarları değiştirin</strong> → <strong>Hızlı başlatmayı aç</strong> kutusunu boşaltın → <strong>Değişiklikleri kaydet</strong>.</p>
+  {% call m.illus('Kapatma ayarları: "Hızlı başlatmayı aç" kutusu boş olmalı.') %}
+  <div class="mock mock-win">
+    <div class="mock-dialog">
+      <div class="mock-titlebar"><span>Sistem Ayarları</span><span class="dots" aria-hidden="true">— ▢ ✕</span></div>
+      <div class="mock-body">
+        <p class="mock-section">Kapatma ayarları</p>
+        <div class="mock-check"><span class="mock-box mock-hl"></span><span><span class="mock-strike">Hızlı başlatmayı aç (önerilir)</span><br><span class="mock-small">Bu, bilgisayarınızı kapattıktan sonra daha hızlı başlatmanıza yardımcı olur.</span></span></div>
+        <div class="mock-check"><span class="mock-box on"></span><span>Uyku</span></div>
+        <div class="mock-check"><span class="mock-box"></span><span>Hazırda Beklet</span></div>
+        <div class="mock-check"><span class="mock-box on"></span><span>Kilitle</span></div>
+      </div>
+      <div class="mock-buttons"><span class="mock-btn primary">Değişiklikleri kaydet</span><span class="mock-btn">İptal</span></div>
+    </div>
+  </div>
+  {% endcall %}
+  {% endcall %}
+
+  {% call m.step('Windows\'un açılış modunu öğrenin', 'acilis-modu') %}
+  <p>{{ m.kbd('Win') }} + {{ m.kbd('R') }}'ye basın, <code>msinfo32</code> yazıp {{ m.kbd('Enter') }}'a basın. <strong>Sistem Bilgisi</strong>'nde <strong>BIOS Modu</strong> satırına bakın: <strong>UEFI</strong> ya da <strong>Eski</strong> (Legacy). Az sonra USB belleği bu moda göre seçeceksiniz.</p>
+  {% call m.illus('Sistem Bilgisi. Yeni bilgisayarların çoğunda "UEFI" yazar.') %}
+  <div class="mock mock-win">
+    <div class="mock-body">
+      <table class="mock-table">
+        <thead><tr><th>Öğe</th><th>Değer</th></tr></thead>
+        <tbody>
+          <tr><td>İşletim Sistemi Adı</td><td>Microsoft Windows 11</td></tr>
+          <tr><td>Sistem Türü</td><td>x64 tabanlı bilgisayar</td></tr>
+          <tr class="hl"><td>BIOS Modu</td><td>UEFI</td></tr>
+          <tr><td>Güvenli Önyükleme Durumu</td><td>Açık</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endcall %}
+  {% endcall %}
+
+  {% call m.step('Windows\'u küçültün', 'kucult') %}
+  <p>Başlat düğmesine sağ tıklayıp <strong>Disk Yönetimi</strong>'ni açın. <strong>C:</strong> bölümüne sağ tıklayın → <strong>Birimi Daralt…</strong>. "Daraltılacak alan miktarını girin" kutusuna en az <strong>40960</strong> yazın (40 GB; isterseniz daha fazla) ve <strong>Daralt</strong>'a basın.</p>
+  {% call m.illus('Disk Yönetimi\'nde Daralt penceresi. Sayı MB cinsindendir: 40960 MB = 40 GB.') %}
+  <div class="mock mock-win">
+    <div class="mock-dialog">
+      <div class="mock-titlebar"><span>Daralt C:</span><span class="dots" aria-hidden="true">✕</span></div>
+      <div class="mock-body">
+        <div class="mock-field"><span>Daraltmadan önceki toplam boyut (MB):</span><span class="mock-input">242688</span></div>
+        <div class="mock-field"><span>Kullanılabilir daraltma alanı boyutu (MB):</span><span class="mock-input">118312</span></div>
+        <div class="mock-field"><span><strong>Daraltılacak alan miktarını girin (MB):</strong></span><span class="mock-input hl">40960</span></div>
+        <div class="mock-field"><span>Daraltmadan sonraki toplam boyut (MB):</span><span class="mock-input">201728</span></div>
+      </div>
+      <div class="mock-buttons"><span class="mock-btn primary">Daralt</span><span class="mock-btn">İptal</span></div>
+    </div>
+  </div>
+  {% endcall %}
+  <p>Diskte C:'nin yanında siyah çizgili <strong>Ayrılmamış</strong> bir alan belirir. Ona dokunmayın; BioKids oraya kurulacak.</p>
+  {% endcall %}
+</ol>
+
+<h2 id="kurulum">BioKids'i kurun</h2>
+<ol class="steps">
+  {% call m.step('USB bellekten, Windows\'la aynı modda açın', 'bellekten-ac') %}
+  <p>Belleği takın, bilgisayarı yeniden başlatın ve açılış menüsü tuşuna art arda basın (çoğu zaman {{ m.kbd('F12') }}, {{ m.kbd('F11') }}, {{ m.kbd('F9') }}, {{ m.kbd('F8') }} ya da {{ m.kbd('Esc') }}). BIOS Modu <strong>UEFI</strong> ise <strong>"UEFI: …"</strong> ile başlayan bellek girişini, <strong>Eski</strong> ise "UEFI" yazmayanı seçin.</p>
+  {% call m.illus('Bilgisayarın açılış menüsü. Windows UEFI ise "UEFI:" ile başlayan bellek satırını seçin.') %}
+  <div class="bios">
+    <div class="bios-box">
+      <p>Boot Menu</p>
+      <ul>
+        <li>Windows Boot Manager</li>
+        <li class="sel">UEFI: USB Flash Disk 1.00</li>
+        <li>USB Flash Disk 1.00</li>
+      </ul>
+    </div>
+    <p class="bios-hint">↑↓ seç · Enter başlat</p>
+  </div>
+  {% endcall %}
+  {% call m.callout('tip', 'Tuşu yakalayamıyor musunuz?') %}
+  <p>Windows'ta Ayarlar → Sistem → <strong>Kurtarma</strong> → Gelişmiş başlangıç → <strong>Şimdi yeniden başlat</strong> → <strong>Bir cihaz kullan</strong> → USB belleğiniz. (Yalnızca UEFI bilgisayarlarda.)</p>
+  {% endcall %}
+  <p>Secure Boot açık kalabilir: BioKids, Debian'ın imzalı açılış yükleyicisini kullanır. Bilgisayarınız belleği yine de reddederse ayarlardan Secure Boot'u kapatın.</p>
+  {% endcall %}
+
+  {% call m.step('"Start installer", dil, klavye ve hesabınız', 'kurulum-basla') %}
+  <p>BioKids menüsünde <strong>Start installer</strong>'ı seçin. Dili, klavyeyi seçin ve ebeveyn hesabınızı (adınız, kullanıcı adı, parola) oluşturun. Bu adımlar <a href="{{ url('guide-install', 'start-installer') }}">kurulum rehberindeki</a> ile aynıdır.</p>
+  {% endcall %}
+
+  {% call m.step('Boş alanı seçin: "use the largest continuous free space"', 'bos-alan') %}
+  <p>Disk bölümleme ekranında <strong>en büyük boş alanı kullanan</strong> yönlendirmeli seçeneği seçin; İngilizcesi <strong>"Guided - use the largest continuous free space"</strong>. Bu seçenek yalnızca Windows'tan açtığınız boş alana kurar; <strong>o alanın dışındaki hiçbir şeye dokunmaz</strong>.</p>
+  {% call m.illus('Doğru seçenek en üstte: boş alanı kullanan. "Use entire disk" seçenekleri Windows\'u siler.') %}
+  <div class="di">
+    <img class="di-banner" src="/assets/img/illus/installer-banner.webp" width="800" height="75" alt="">
+    <div class="di-body">
+      <p class="di-title">Partition disks</p>
+      <p>Partitioning method:</p>
+      <div class="di-list">
+        <div class="sel">Guided - use the largest continuous free space</div>
+        <div>Guided - use entire disk</div>
+        <div>Guided - use entire disk and set up LVM</div>
+        <div>Guided - use entire disk and set up encrypted LVM</div>
+        <div>Manual</div>
+      </div>
+    </div>
+    <div class="di-foot"><span class="di-btn">Go Back</span><span class="di-btn">Continue</span></div>
+  </div>
+  {% endcall %}
+  {% call m.callout('danger', '"use entire disk" seçmeyin') %}
+  <p>"Entire disk" (tüm disk) yazan seçenekler Windows dahil diskteki her şeyi siler. Emin değilseniz <strong>Go Back</strong> ile geri dönün.</p>
+  {% endcall %}
+  <p>"Tüm dosyalar tek bölümde" önerisini kabul edin, özet ekranında yalnızca <em>boş alanda</em> yeni bölümler oluşturulduğunu görün ve değişiklikleri diske yazmayı onaylayın.</p>
+  {% endcall %}
+
+  {% call m.step('Bekleyin, belleği çıkarın, yeniden başlatın', 'bitir') %}
+  <p>Kopyalama ağ istemez; çoğu bilgisayarda 20–40 dakika sürer. Bitince belleği çıkarıp <strong>Continue</strong>'ya basın.</p>
+  {% endcall %}
+
+  {% call m.step('Açılış menüsü: BioKids mi, Windows mu?', 'acilis-menusu') %}
+  <p>Artık bilgisayar her açılışta 5 saniye boyunca bir menü gösterir. Hiçbir şeye basmazsanız <strong>BioKids</strong> açılır; Windows'a geçmek için okla <strong>Windows Boot Manager</strong>'ı seçip {{ m.kbd('Enter') }}'a basın.</p>
+  {% call m.illus('BioKids\'in açılış menüsü. BioKids burada Debian\'ın adıyla, "Debian GNU/Linux" olarak görünür.') %}
+  <div class="boot" style="background-image:url('/assets/img/illus/grub.webp')">
+    <span class="boot-space"></span>
+    <ul class="boot-menu">
+      <li class="sel">Debian GNU/Linux</li>
+      <li>Advanced options for Debian GNU/Linux</li>
+      <li>Windows Boot Manager (on /dev/nvme0n1p1)</li>
+      <li>UEFI Firmware Settings</li>
+    </ul>
+    <p class="boot-foot">⏱ 5 sn · ↑ ↓ · Enter</p>
+  </div>
+  {% endcall %}
+  <p>Giriş yapınca <a href="{{ url('guide-first-setup') }}">ilk kurulum sihirbazı</a> açılır.</p>
+  {% endcall %}
+
+  {% call m.step('Windows hesabına parola koyun', 'windows-parola') %}
+  <p><strong>BioKids Windows'u denetlemez.</strong> Çocuğunuz menüden Windows'u seçebilir; bu yüzden Windows hesabınıza çocuğunuzun bilmediği bir parola (ya da PIN) koyun. BitLocker'ı askıya aldıysanız şimdi <strong>Korumayı sürdür</strong>'e basın.</p>
+  {% endcall %}
+</ol>
+
+<p>Fikrinizi değiştirirseniz BioKids'i kaldırıp yalnızca Windows'a dönebilirsiniz: <a href="{{ url('guide-uninstall', 'windowsa-donus') }}">Windows'a geri dönme</a>.</p>
+
+<h2 id="sorun">Sorun mu var?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>Açılış menüsünde Windows yok</h3></summary>
+    <div class="faq-answer"><p>BioKids'e kendi hesabınızla girin, bir uçbirim açın ve aşağıdakini yazın; menü Windows'u yeniden arar. Hâlâ yoksa USB belleği Windows'la <em>aynı modda</em> (UEFI/Eski) açıp açmadığınızı kontrol edin.</p>{{ m.code('sudo update-grub') }}</div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Bilgisayar menüyü göstermeden doğrudan Windows'a açılıyor</h3></summary>
+    <div class="faq-answer"><p>Bazı bilgisayarlar açılış sırasını kendileri değiştirir. Bilgisayarın ayarlarına (BIOS/UEFI; çoğu zaman {{ m.kbd('F2') }} ya da {{ m.kbd('Del') }}) girin ve <strong>Boot Order</strong>'da <strong>debian</strong> girişini en üste alın.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Windows BitLocker kurtarma anahtarı istiyor</h3></summary>
+    <div class="faq-answer"><p>Bu, açılış ayarları değiştiği için olur; bir şey bozulmadı. Anahtarı Microsoft hesabınızdan (<code>aka.ms/myrecoverykey</code>) alıp girin. Bir kez girince Windows normal açılır.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Windows'ta saat birkaç saat kaymış</h3></summary>
+    <div class="faq-answer"><p>BioKids ve Windows bilgisayarın saatini farklı okur. Windows'ta Ayarlar → Saat ve dil → Tarih ve saat → <strong>Şimdi eşitle</strong>'ye basın.</p></div>
+  </details>
+</div>
+
+{% endblock %}

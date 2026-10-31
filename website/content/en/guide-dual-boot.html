@@ -1,0 +1,200 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>You can install BioKids without erasing Windows: you free some space in Windows, BioKids installs into that space, and the computer asks which one you want at every start. Half the steps happen in Windows, half in the installer.</p>
+
+{% call m.illus('First Windows shrinks and leaves free space beside it; BioKids installs only into that space.') %}
+<div class="mock mock-win">
+  <div class="mock-body">
+    <div class="disk-row">
+      <p class="disk-title">1. Today</p>
+      <div class="disk"><div class="efi"><b>EFI</b>100 MB</div><div class="win" style="flex:6"><b>Windows (C:)</b>237 GB</div><div class="rec"><b>Recovery</b></div></div>
+    </div>
+    <div class="disk-arrow" aria-hidden="true">↓</div>
+    <div class="disk-row">
+      <p class="disk-title">2. After shrinking Windows</p>
+      <div class="disk"><div class="efi"><b>EFI</b></div><div class="win"><b>Windows (C:)</b>197 GB</div><div class="free"><b>Unallocated</b>40 GB</div><div class="rec"><b>Recovery</b></div></div>
+    </div>
+    <div class="disk-arrow" aria-hidden="true">↓</div>
+    <div class="disk-row">
+      <p class="disk-title">3. After installing BioKids</p>
+      <div class="disk"><div class="efi"><b>EFI</b></div><div class="win"><b>Windows (C:)</b>197 GB</div><div class="bk"><b>BioKids</b>40 GB</div><div class="rec"><b>Recovery</b></div></div>
+    </div>
+  </div>
+</div>
+{% endcall %}
+
+<h2 id="before-you-start">Before you start</h2>
+<ul class="checks">
+  <li><strong>Back up your important files</strong> (an external disk or the cloud). Changing partitions always carries a small risk.</li>
+  <li>At least <strong>40 GB free</strong> on the Windows disk.</li>
+  <li>If <strong>BitLocker</strong> is used, have the recovery key at hand (in your Microsoft account: <code>aka.ms/myrecoverykey</code>).</li>
+  <li><strong>Plug a laptop in.</strong> Have the BioKids USB stick ready: <a href="{{ url('guide-usb') }}">make a USB stick</a>.</li>
+</ul>
+
+<h2 id="prepare-windows">Prepare Windows</h2>
+<ol class="steps">
+  {% call m.step('Suspend BitLocker (if it is on)', 'bitlocker') %}
+  <p>Open Control Panel → <strong>BitLocker Drive Encryption</strong>. If BitLocker is on for C:, press <strong>Suspend protection</strong>, so changing the boot settings does not make Windows ask for the recovery key. Afterwards, press <strong>Resume protection</strong> in the same place.</p>
+  <p>Cannot find that page (for example "Device encryption" on Windows Home)? Write the recovery key down anyway.</p>
+  {% endcall %}
+
+  {% call m.step('Turn off Fast Startup', 'fast-startup') %}
+  <p>With Fast Startup on, Windows never fully shuts down and leaves its disk half open. Turn it off: Control Panel → <strong>Power Options</strong> → <strong>Choose what the power buttons do</strong> → <strong>Change settings that are currently unavailable</strong> → untick <strong>Turn on fast startup</strong> → <strong>Save changes</strong>.</p>
+  {% call m.illus('Shutdown settings: "Turn on fast startup" must be unticked.') %}
+  <div class="mock mock-win">
+    <div class="mock-dialog">
+      <div class="mock-titlebar"><span>System Settings</span><span class="dots" aria-hidden="true">— ▢ ✕</span></div>
+      <div class="mock-body">
+        <p class="mock-section">Shutdown settings</p>
+        <div class="mock-check"><span class="mock-box mock-hl"></span><span><span class="mock-strike">Turn on fast startup (recommended)</span><br><span class="mock-small">This helps start your PC faster after shutdown.</span></span></div>
+        <div class="mock-check"><span class="mock-box on"></span><span>Sleep</span></div>
+        <div class="mock-check"><span class="mock-box"></span><span>Hibernate</span></div>
+        <div class="mock-check"><span class="mock-box on"></span><span>Lock</span></div>
+      </div>
+      <div class="mock-buttons"><span class="mock-btn primary">Save changes</span><span class="mock-btn">Cancel</span></div>
+    </div>
+  </div>
+  {% endcall %}
+  {% endcall %}
+
+  {% call m.step('Find out how Windows starts', 'boot-mode') %}
+  <p>Press {{ m.kbd('Win') }} + {{ m.kbd('R') }}, type <code>msinfo32</code> and press {{ m.kbd('Enter') }}. In <strong>System Information</strong> look at <strong>BIOS Mode</strong>: <strong>UEFI</strong> or <strong>Legacy</strong>. You will choose the USB stick to match it in a moment.</p>
+  {% call m.illus('System Information. Most recent computers say "UEFI".') %}
+  <div class="mock mock-win">
+    <div class="mock-body">
+      <table class="mock-table">
+        <thead><tr><th>Item</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>OS Name</td><td>Microsoft Windows 11</td></tr>
+          <tr><td>System Type</td><td>x64-based PC</td></tr>
+          <tr class="hl"><td>BIOS Mode</td><td>UEFI</td></tr>
+          <tr><td>Secure Boot State</td><td>On</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endcall %}
+  {% endcall %}
+
+  {% call m.step('Shrink Windows', 'shrink') %}
+  <p>Right-click the Start button and open <strong>Disk Management</strong>. Right-click <strong>C:</strong> → <strong>Shrink Volume…</strong>. In "Enter the amount of space to shrink in MB" type at least <strong>40960</strong> (40 GB; more if you like) and press <strong>Shrink</strong>.</p>
+  {% call m.illus('The Shrink window in Disk Management. The number is in MB: 40960 MB = 40 GB.') %}
+  <div class="mock mock-win">
+    <div class="mock-dialog">
+      <div class="mock-titlebar"><span>Shrink C:</span><span class="dots" aria-hidden="true">✕</span></div>
+      <div class="mock-body">
+        <div class="mock-field"><span>Total size before shrink in MB:</span><span class="mock-input">242688</span></div>
+        <div class="mock-field"><span>Size of available shrink space in MB:</span><span class="mock-input">118312</span></div>
+        <div class="mock-field"><span><strong>Enter the amount of space to shrink in MB:</strong></span><span class="mock-input hl">40960</span></div>
+        <div class="mock-field"><span>Total size after shrink in MB:</span><span class="mock-input">201728</span></div>
+      </div>
+      <div class="mock-buttons"><span class="mock-btn primary">Shrink</span><span class="mock-btn">Cancel</span></div>
+    </div>
+  </div>
+  {% endcall %}
+  <p>A black-striped <strong>Unallocated</strong> area appears next to C:. Leave it alone; BioKids goes there.</p>
+  {% endcall %}
+</ol>
+
+<h2 id="install">Install BioKids</h2>
+<ol class="steps">
+  {% call m.step('Start from the stick, in the same mode as Windows', 'boot-stick') %}
+  <p>Plug the stick in, restart, and keep tapping the boot menu key (often {{ m.kbd('F12') }}, {{ m.kbd('F11') }}, {{ m.kbd('F9') }}, {{ m.kbd('F8') }} or {{ m.kbd('Esc') }}). If BIOS Mode was <strong>UEFI</strong>, choose the stick entry starting with <strong>"UEFI: …"</strong>; if it was <strong>Legacy</strong>, the one without "UEFI".</p>
+  {% call m.illus('The computer\'s boot menu. If Windows is UEFI, choose the stick line starting with "UEFI:".') %}
+  <div class="bios">
+    <div class="bios-box">
+      <p>Boot Menu</p>
+      <ul>
+        <li>Windows Boot Manager</li>
+        <li class="sel">UEFI: USB Flash Disk 1.00</li>
+        <li>USB Flash Disk 1.00</li>
+      </ul>
+    </div>
+    <p class="bios-hint">↑↓ select · Enter boot</p>
+  </div>
+  {% endcall %}
+  {% call m.callout('tip', 'Cannot catch the key?') %}
+  <p>In Windows: Settings → System → <strong>Recovery</strong> → Advanced startup → <strong>Restart now</strong> → <strong>Use a device</strong> → your USB stick. (UEFI computers only.)</p>
+  {% endcall %}
+  <p>Secure Boot can stay on: BioKids uses Debian's signed boot loader. If your computer still refuses the stick, turn Secure Boot off in its settings.</p>
+  {% endcall %}
+
+  {% call m.step('"Start installer", language, keyboard and your account', 'installer') %}
+  <p>Choose <strong>Start installer</strong> in BioKids' menu. Choose the language and keyboard and create your parent account (name, username, password). These steps are the same as in the <a href="{{ url('guide-install', 'start-installer') }}">install guide</a>.</p>
+  {% endcall %}
+
+  {% call m.step('Choose "use the largest continuous free space"', 'free-space') %}
+  <p>On <strong>Partition disks</strong>, choose <strong>"Guided - use the largest continuous free space"</strong>. It installs only into the space you freed in Windows: <strong>nothing outside that space is touched</strong>.</p>
+  {% call m.illus('The right option is at the top: the free space. The "use entire disk" options erase Windows.') %}
+  <div class="di">
+    <img class="di-banner" src="/assets/img/illus/installer-banner.webp" width="800" height="75" alt="">
+    <div class="di-body">
+      <p class="di-title">Partition disks</p>
+      <p>Partitioning method:</p>
+      <div class="di-list">
+        <div class="sel">Guided - use the largest continuous free space</div>
+        <div>Guided - use entire disk</div>
+        <div>Guided - use entire disk and set up LVM</div>
+        <div>Guided - use entire disk and set up encrypted LVM</div>
+        <div>Manual</div>
+      </div>
+    </div>
+    <div class="di-foot"><span class="di-btn">Go Back</span><span class="di-btn">Continue</span></div>
+  </div>
+  {% endcall %}
+  {% call m.callout('danger', 'Do not choose "use entire disk"') %}
+  <p>The options that say "entire disk" erase everything on it, Windows included. If you are not sure, press <strong>Go Back</strong>.</p>
+  {% endcall %}
+  <p>Accept "All files in one partition", check on the summary that new partitions are made only in the <em>free space</em>, and confirm writing the changes.</p>
+  {% endcall %}
+
+  {% call m.step('Wait, take the stick out, restart', 'finish') %}
+  <p>Copying needs no network and takes 20–40 minutes on most computers. When it is done, take the stick out and press <strong>Continue</strong>.</p>
+  {% endcall %}
+
+  {% call m.step('The boot menu: BioKids or Windows?', 'boot-menu') %}
+  <p>From now on the computer shows a menu for 5 seconds at every start. Press nothing and <strong>BioKids</strong> starts; to go to Windows, choose <strong>Windows Boot Manager</strong> with the arrows and press {{ m.kbd('Enter') }}.</p>
+  {% call m.illus('BioKids\' boot menu. BioKids appears under Debian\'s name, "Debian GNU/Linux".') %}
+  <div class="boot" style="background-image:url('/assets/img/illus/grub.webp')">
+    <span class="boot-space"></span>
+    <ul class="boot-menu">
+      <li class="sel">Debian GNU/Linux</li>
+      <li>Advanced options for Debian GNU/Linux</li>
+      <li>Windows Boot Manager (on /dev/nvme0n1p1)</li>
+      <li>UEFI Firmware Settings</li>
+    </ul>
+    <p class="boot-foot">⏱ 5 s · ↑ ↓ · Enter</p>
+  </div>
+  {% endcall %}
+  <p>When you sign in, the <a href="{{ url('guide-first-setup') }}">setup wizard</a> opens. Not in Turkey? Set your time zone afterwards, as in the <a href="{{ url('guide-install', 'after-installing') }}">install guide</a>.</p>
+  {% endcall %}
+
+  {% call m.step('Put a password on Windows', 'windows-password') %}
+  <p><strong>BioKids does not supervise Windows.</strong> Your child could pick Windows in the menu, so give your Windows account a password (or PIN) your child does not know. If you suspended BitLocker, press <strong>Resume protection</strong> now.</p>
+  {% endcall %}
+</ol>
+
+<p>Change your mind later? You can remove BioKids and go back to Windows only: <a href="{{ url('guide-uninstall', 'back-to-windows') }}">back to Windows</a>.</p>
+
+<h2 id="problems">Something wrong?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>Windows is not in the boot menu</h3></summary>
+    <div class="faq-answer"><p>Sign in to BioKids with your own account, open a terminal and type the line below; the menu looks for Windows again. If it is still missing, check that you started the stick in the <em>same mode</em> as Windows (UEFI or Legacy).</p>{{ m.code('sudo update-grub') }}</div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>The computer goes straight to Windows without the menu</h3></summary>
+    <div class="faq-answer"><p>Some computers change the boot order on their own. Open the computer's settings (BIOS/UEFI; often {{ m.kbd('F2') }} or {{ m.kbd('Del') }}) and move <strong>debian</strong> to the top of the <strong>Boot Order</strong>.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Windows asks for the BitLocker recovery key</h3></summary>
+    <div class="faq-answer"><p>That happens because the boot settings changed; nothing is broken. Get the key from your Microsoft account (<code>aka.ms/myrecoverykey</code>) and enter it. After that, Windows starts normally.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Windows' clock is a few hours off</h3></summary>
+    <div class="faq-answer"><p>BioKids and Windows read the computer's clock differently. In Windows go to Settings → Time &amp; language → Date &amp; time and press <strong>Sync now</strong>.</p></div>
+  </details>
+</div>
+
+{% endblock %}

@@ -1,0 +1,14 @@
+{# An ordinary page: breadcrumbs, a heading and a lead, then the body. #}
+{% extends "base.html" %}
+{% block main %}
+<div class="page-hero">
+  <div class="wrap">
+    {% include "crumbs.html" %}
+    {% block hero %}
+    <h1>{% block h1 %}{{ v.short }}{% endblock %}</h1>
+    {% block lead %}{% endblock %}
+    {% endblock %}
+  </div>
+</div>
+{% block body %}{% endblock %}
+{% endblock %}

@@ -1,0 +1,361 @@
+# Every page of the site, in both languages.
+#
+#   key          names the body: content/<lang>/<key>.html
+#   kind         home, page, guide, faq, about, support, 404
+#   path         the address; every page is a folder with an index.html
+#   title        <title> and og:title, 20-65 characters (build.py --check)
+#   description  meta description, 70-165 characters
+#   short        the name in menus, breadcrumbs and cards
+#   summary      the line under a guide's name on the guides page
+#   guide        order, minutes, level (easy, medium, advanced), icon, and what
+#                you need (supply) and use (tool), for the guide's HowTo data
+#
+# Changing a path breaks every link anyone has made to it. Do not, after launch.
+
+[[page]]
+key = "home"
+kind = "home"
+[page.tr]
+path = "/"
+title = "BioKids — Çocuklar için güvenli bilgisayar, ebeveyn denetimi"
+description = "4–10 yaş için ücretsiz, açık kaynak ebeveyn denetimi: süre sınırları, güvenli internet, telefondan canlı izleme ve yerel yapay zekâ. Hesap yok, bulut yok."
+short = "Ana sayfa"
+[page.en]
+path = "/en/"
+title = "BioKids — Free, private parental controls for kids' computers"
+description = "Free, open-source parental controls for ages 4–10 on Debian: screen-time limits, safe browsing, live view from your phone and an on-device AI. No cloud."
+short = "Home"
+
+[[page]]
+key = "features"
+[page.tr]
+path = "/ozellikler/"
+title = "Özellikler — süre, canlı izleme, yerel yapay zekâ | BioKids"
+description = "BioKids'in tüm özellikleri: süre kuralları, molalar, güvenli internet, canlı ekran, Sor Bana asistanı, Zio ve Sio, parlaklık, geçmiş ve raporlar."
+short = "Özellikler"
+[page.en]
+path = "/en/features/"
+title = "Features — screen time, live view, on-device AI | BioKids"
+description = "Everything BioKids does: time rules, breaks, safe browsing, the live screen view, the Ask Me assistant, Zio and Sio, brightness, history and reports."
+short = "Features"
+
+[[page]]
+key = "download"
+[page.tr]
+path = "/indir/"
+title = "BioKids'i indir — ücretsiz ISO ve Debian paketleri"
+description = "BioKids 2.0.0'ı ücretsiz indirin: USB belleğe yazılıp kurulan ISO ya da Debian 13 paketleri. Sistem gereksinimleri ve SHA256 doğrulaması burada."
+short = "İndir"
+[page.en]
+path = "/en/download/"
+title = "Download BioKids — free ISO and Debian packages"
+description = "Download BioKids 2.0.0 for free: an ISO to write to a USB stick and install, or packages for Debian 13. System requirements and SHA256 checks."
+short = "Download"
+
+[[page]]
+key = "guides"
+[page.tr]
+path = "/rehberler/"
+title = "Rehberler — BioKids kurulumu ve kullanımı, adım adım"
+description = "BioKids'i kurmak ve kullanmak için kısa, resimli rehberler: USB belleğe yazma, Windows'un yanına kurulum, ilk ayarlar, telefondan erişim ve dahası."
+short = "Rehberler"
+[page.en]
+path = "/en/guides/"
+title = "Guides — install and use BioKids, step by step"
+description = "Short, illustrated guides to install and use BioKids: making the USB stick, installing beside Windows, first setup, phone access and more."
+short = "Guides"
+
+# ---------------------------------------------------------------- the guides
+
+[[page]]
+key = "guide-usb"
+kind = "guide"
+guide = { order = 1, minutes = 15, level = "easy", icon = "💾", supply = { tr = ["8 GB ya da daha büyük bir USB bellek", "BioKids ISO dosyası"], en = ["A USB stick of 8 GB or more", "The BioKids ISO file"] }, tool = { tr = ["balenaEtcher ya da Rufus"], en = ["balenaEtcher or Rufus"] } }
+[page.tr]
+path = "/rehberler/usb-bellek-hazirlama/"
+title = "BioKids USB belleği nasıl hazırlanır? Etcher ve Rufus"
+description = "BioKids ISO'sunu 8 GB'lık bir USB belleğe yazmanın en kolay yolu: Windows, macOS ve Linux'ta balenaEtcher, Rufus (DD modu) ve dd ile adım adım."
+short = "USB belleği hazırlama"
+summary = "ISO'yu bir USB belleğe yazın: Etcher, Rufus ya da dd."
+[page.en]
+path = "/en/guides/make-a-usb-stick/"
+title = "How to make a BioKids USB stick: Etcher and Rufus"
+description = "The easiest way to write the BioKids ISO to an 8 GB USB stick on Windows, macOS or Linux: balenaEtcher, Rufus in DD mode, or dd, step by step."
+short = "Make a USB stick"
+summary = "Write the ISO to a USB stick with Etcher, Rufus or dd."
+
+[[page]]
+key = "guide-install"
+kind = "guide"
+guide = { order = 2, minutes = 40, level = "easy", icon = "💿", supply = { tr = ["BioKids USB belleği", "64 bit (amd64) bir bilgisayar, en az 4 GB RAM ve 25 GB disk"], en = ["The BioKids USB stick", "A 64-bit (amd64) computer with 4 GB RAM and 25 GB of disk"] } }
+[page.tr]
+path = "/rehberler/kurulum/"
+title = "BioKids nasıl kurulur? Adım adım kurulum rehberi"
+description = "BioKids'i bir bilgisayara USB bellekten kurun: açılış menüsü, dil ve klavye, ebeveyn hesabı, disk seçimi ve ilk açılış. Ağ gerekmez, yaklaşık yarım saat."
+short = "Kurulum"
+summary = "USB bellekten açın, kurulumu başlatın, yarım saatte hazır."
+[page.en]
+path = "/en/guides/install/"
+title = "How to install BioKids: a step-by-step guide"
+description = "Install BioKids from a USB stick: the boot menu, language and keyboard, the parent's account, the disk and the first start. No network needed, about 30 minutes."
+short = "Install"
+summary = "Boot the stick, start the installer, done in half an hour."
+
+[[page]]
+key = "guide-dual-boot"
+kind = "guide"
+guide = { order = 3, minutes = 60, level = "medium", icon = "🪟", supply = { tr = ["BioKids USB belleği", "Windows'ta en az 40 GB boş alan", "BitLocker kurtarma anahtarı (varsa)"], en = ["The BioKids USB stick", "At least 40 GB free in Windows", "Your BitLocker recovery key (if used)"] }, tool = { tr = ["Windows Disk Yönetimi"], en = ["Windows Disk Management"] } }
+[page.tr]
+path = "/rehberler/windows-yanina-kurulum/"
+title = "BioKids'i Windows'un yanına kurma (dual boot) rehberi"
+description = "Windows'u silmeden BioKids kurun: BitLocker, Hızlı Başlatma, Disk Yönetimi'nde küçültme, BIOS/UEFI açılış tuşları ve iki sistemli açılış menüsü."
+short = "Windows'un yanına kurulum"
+summary = "Windows'u silmeden, açılışta ikisinden birini seçerek."
+[page.en]
+path = "/en/guides/dual-boot-with-windows/"
+title = "Install BioKids beside Windows: a dual-boot guide"
+description = "Install BioKids without erasing Windows: BitLocker, Fast Startup, shrinking in Disk Management, BIOS/UEFI boot keys, and a boot menu with both systems."
+short = "Dual boot with Windows"
+summary = "Keep Windows and choose between the two at every start."
+
+[[page]]
+key = "guide-packages"
+kind = "guide"
+guide = { order = 4, minutes = 15, level = "advanced", icon = "📦", supply = { tr = ["Debian 13 (trixie) yüklü bir bilgisayar", "sudo yetkisi olan bir hesap"], en = ["A computer running Debian 13 (trixie)", "An account that can use sudo"] }, tool = { tr = ["Uçbirim (terminal)"], en = ["A terminal"] } }
+[page.tr]
+path = "/rehberler/debian-paketleri/"
+title = "BioKids'i var olan Debian 13'e APT ile kurma"
+description = "Zaten Debian 13 kullanıyorsanız BioKids'i paketlerle kurun: biokids-desktop, biokids ve isteğe bağlı biokids-ai paketleri; güncelleme ve kaldırma komutları."
+short = "Debian paketleri"
+summary = "Debian 13 kullananlar için: biokids-desktop ve diğer paketler."
+[page.en]
+path = "/en/guides/debian-packages/"
+title = "Install BioKids on an existing Debian 13 with APT"
+description = "Already on Debian 13? Install BioKids from packages: biokids-desktop, biokids and the optional biokids-ai, plus the commands to upgrade and remove."
+short = "Debian packages"
+summary = "For Debian 13 users: biokids-desktop and the other packages."
+
+[[page]]
+key = "guide-first-setup"
+kind = "guide"
+guide = { order = 5, minutes = 15, level = "easy", icon = "🧭" }
+[page.tr]
+path = "/rehberler/ilk-kurulum/"
+title = "İlk kurulum sihirbazı: PIN, çocuk, süre ve internet"
+description = "BioKids'in ilk açılış sihirbazı adım adım: dil, ebeveyn PIN'i, parola ve kurtarma kodu, ilk çocuk, uygulamalar, süre, internet, telefon, Zio ve Sio."
+short = "İlk kurulum"
+summary = "Dokuz kısa adım: PIN'iniz, çocuğunuz, kuralları."
+[page.en]
+path = "/en/guides/first-setup/"
+title = "First-run setup: PIN, child, time and internet"
+description = "BioKids' first-run wizard step by step: language, your PIN, a passphrase and recovery code, the first child, apps, time, internet, phone, Zio and Sio."
+short = "First setup"
+summary = "Nine short steps: your PIN, your child, their rules."
+
+[[page]]
+key = "guide-time"
+kind = "guide"
+guide = { order = 6, minutes = 10, level = "easy", icon = "⏱️" }
+[page.tr]
+path = "/rehberler/sure-kurallari/"
+title = "Süre sınırı, mola ve kazanılan süre nasıl ayarlanır?"
+description = "BioKids'te çocuğunuzun ekran süresini ayarlayın: günlük dakikalar, izin verilen saatler, hafta sonu, süre bitince ne olacağı, molalar ve kazanılan süre."
+short = "Süre kuralları"
+summary = "Günlük dakikalar, saatler, molalar ve süre bitince ne olacağı."
+[page.en]
+path = "/en/guides/screen-time-rules/"
+title = "Set screen-time limits, breaks and earned time"
+description = "Set your child's screen time in BioKids: daily minutes, allowed hours, weekends, what happens when time is up, breaks and time earned by learning."
+short = "Screen-time rules"
+summary = "Daily minutes, hours, breaks, and what happens when time is up."
+
+[[page]]
+key = "guide-web"
+kind = "guide"
+guide = { order = 7, minutes = 10, level = "easy", icon = "🛡️" }
+[page.tr]
+path = "/rehberler/guvenli-internet/"
+title = "Güvenli internet: site engelleme ve izin verme"
+description = "BioKids'in internet filtresi: zararlı siteler kapalı, SafeSearch zorunlu, isterseniz yalnızca seçtiğiniz siteler. Bir siteye izin verme ve istekleri yanıtlama."
+short = "Güvenli internet"
+summary = "Zararlı siteler kapalı; isterseniz yalnızca seçtikleriniz açık."
+[page.en]
+path = "/en/guides/safe-browsing/"
+title = "Safe browsing: block and allow websites"
+description = "BioKids' web filter: harmful sites blocked, SafeSearch enforced, or only the sites you choose. How to allow a site and answer your child's requests."
+short = "Safe browsing"
+summary = "Harmful sites blocked; or only the sites you choose."
+
+[[page]]
+key = "guide-phone"
+kind = "guide"
+guide = { order = 8, minutes = 10, level = "easy", icon = "📱", supply = { tr = ["Bir akıllı telefon (Android ya da iPhone)", "Ücretsiz bir Tailscale hesabı"], en = ["A smartphone (Android or iPhone)", "A free Tailscale account"] }, tool = { tr = ["Tailscale uygulaması"], en = ["The Tailscale app"] } }
+[page.tr]
+path = "/rehberler/telefondan-erisim/"
+title = "Telefondan erişim: ebeveyn paneli her yerden (Tailscale)"
+description = "BioKids ebeveyn panelini telefonunuzdan, evde ya da dışarıda açın: Tailscale ile dört adımda, QR kodla. Port yönlendirme yok, bir BioKids sunucusu yok."
+short = "Telefondan erişim"
+summary = "Paneli telefonunuza dört adımda, QR kodla getirin."
+[page.en]
+path = "/en/guides/phone-access/"
+title = "Phone access: your parent panel anywhere (Tailscale)"
+description = "Open the BioKids parent panel on your phone, at home or away: four steps with Tailscale and a QR code. No port forwarding, no BioKids server."
+short = "Phone access"
+summary = "Bring the panel to your phone in four steps, with a QR code."
+
+[[page]]
+key = "guide-live"
+kind = "guide"
+guide = { order = 9, minutes = 5, level = "easy", icon = "👁️" }
+[page.tr]
+path = "/rehberler/canli-ekran/"
+title = "Çocuğunuzun ekranını telefondan canlı izleme"
+description = "BioKids'in Canlı ekranı: çocuğunuzun ekranını telefonunuzdan anlık görün. Çocuk bunu ekranında görür, hiçbir kare kaydedilmez. Nasıl açılır, nasıl durur?"
+short = "Canlı ekran"
+summary = "Ekranı telefondan anlık görün; çocuk bunu bilir."
+[page.en]
+path = "/en/guides/live-view/"
+title = "Watch your child's screen live from your phone"
+description = "BioKids' live view: see your child's screen from your phone as it is now. The child sees that you are watching and no frame is saved. How to start and stop."
+short = "Live view"
+summary = "See the screen from your phone; your child knows."
+
+[[page]]
+key = "guide-assistant"
+kind = "guide"
+guide = { order = 10, minutes = 20, level = "easy", icon = "🤖", supply = { tr = ["7 GB ya da daha fazla bellek (RAM)", "Model indirmek için internet bağlantısı"], en = ["7 GB of memory (RAM) or more", "An internet connection to download the models"] } }
+[page.tr]
+path = "/rehberler/sor-bana-asistan/"
+title = "Sor Bana: bilgisayarda çalışan yapay zekâyı kurma"
+description = "BioKids'in yerel yapay zekâ asistanı Sor Bana'yı açın: modeli panelden indirin, bir çocuk için açın, mikrofonu ve çevrimdışı Vikipedi'yi ayarlayın."
+short = "Sor Bana asistanı"
+summary = "Modeli indirin, çocuğunuz için açın; hiçbir soru buluta gitmez."
+[page.en]
+path = "/en/guides/ask-me-assistant/"
+title = "Ask Me: set up the on-device AI assistant"
+description = "Turn on Ask Me, BioKids' on-device AI assistant: download the model from the panel, enable it for a child, and set up the microphone and offline Wikipedia."
+short = "Ask Me assistant"
+summary = "Download the model, turn it on for a child; no question goes to a cloud."
+
+[[page]]
+key = "guide-virtualbox"
+kind = "guide"
+guide = { order = 11, minutes = 30, level = "medium", icon = "🧪", supply = { tr = ["BioKids ISO dosyası", "8 GB RAM'li bir bilgisayar"], en = ["The BioKids ISO file", "A computer with 8 GB of RAM"] }, tool = { tr = ["VirtualBox"], en = ["VirtualBox"] } }
+[page.tr]
+path = "/rehberler/sanal-makinede-deneme/"
+title = "BioKids'i kurmadan önce VirtualBox'ta deneyin"
+description = "Bilgisayarınıza dokunmadan BioKids'i deneyin: VirtualBox'ta sanal makine oluşturma, ISO'yu bağlama, EFI ayarı ve kurulum. Windows, macOS ve Linux'ta."
+short = "VirtualBox'ta deneme"
+summary = "Bilgisayarınıza dokunmadan, bir sanal makinede deneyin."
+[page.en]
+path = "/en/guides/try-in-virtualbox/"
+title = "Try BioKids in VirtualBox before you install it"
+description = "Try BioKids without touching your computer: create a VirtualBox machine, attach the ISO, set EFI and install. On Windows, macOS and Linux."
+short = "Try in VirtualBox"
+summary = "Try it in a virtual machine without touching your computer."
+
+[[page]]
+key = "guide-troubleshooting"
+kind = "guide"
+guide = { order = 12, minutes = 10, level = "easy", icon = "🧰" }
+[page.tr]
+path = "/rehberler/sorun-giderme/"
+title = "Sorun giderme: PIN'i unuttum, ekran kilitli, güncelleme"
+description = "BioKids'te sık karşılaşılan durumlar ve çözümleri: PIN'i unutmak, kilitlenen oturum, çocuğun girişi, güncelleme, yedekleme ve hata bildirimi."
+short = "Sorun giderme"
+summary = "PIN'i unutmak, kilitlenen ekran, güncelleme ve yedek."
+[page.en]
+path = "/en/guides/troubleshooting/"
+title = "Troubleshooting: forgotten PIN, locked screen, updates"
+description = "Common BioKids situations and what to do: a forgotten PIN, a locked session, a child who cannot sign in, updates, backups and reporting a bug."
+short = "Troubleshooting"
+summary = "A forgotten PIN, a locked screen, updates and backups."
+
+[[page]]
+key = "guide-uninstall"
+kind = "guide"
+guide = { order = 13, minutes = 15, level = "medium", icon = "↩️" }
+[page.tr]
+path = "/rehberler/kaldirma/"
+title = "BioKids'i kaldırma ya da yalnızca Windows'a dönme"
+description = "BioKids'i tamamen kaldırın: Debian'da paketleri silme, iki sistemli bir bilgisayarda Windows'a geri dönme ve BioKids'in diskte kapladığı alanı geri alma."
+short = "Kaldırma"
+summary = "Paketleri silin ya da yalnızca Windows'a dönün."
+[page.en]
+path = "/en/guides/uninstall/"
+title = "Remove BioKids, or go back to Windows only"
+description = "Remove BioKids completely: purge the packages on Debian, go back to Windows only on a dual-boot computer, and get BioKids' disk space back."
+short = "Uninstall"
+summary = "Purge the packages, or go back to Windows only."
+
+# --------------------------------------------------------------- the rest
+
+[[page]]
+key = "privacy"
+[page.tr]
+path = "/gizlilik/"
+title = "Gizlilik: hiçbir şey cihazınızdan çıkmaz | BioKids"
+description = "BioKids neyi görür, neyi saklar, nereye bağlanır? Telemetri yok, bulut yok; çocuk denetimi her zaman görür. Kayıtların silinme takvimi ve bu sitenin gizliliği."
+short = "Gizlilik"
+[page.en]
+path = "/en/privacy/"
+title = "Privacy: nothing leaves your device | BioKids"
+description = "What BioKids sees, keeps and connects to. No telemetry, no cloud, and the child always sees the supervision. When records are deleted, and this site's privacy."
+short = "Privacy"
+
+[[page]]
+key = "faq"
+kind = "faq"
+[page.tr]
+path = "/sss/"
+title = "Sık sorulan sorular — BioKids ebeveyn denetimi"
+description = "BioKids hakkında merak edilenler: ücretli mi, Windows'u siler mi, hangi bilgisayarda çalışır, çocuk kandırabilir mi, yapay zekâ güvenli mi, internet gerekir mi?"
+short = "SSS"
+[page.en]
+path = "/en/faq/"
+title = "Frequently asked questions — BioKids parental controls"
+description = "What parents ask about BioKids: is it free, does it erase Windows, which computers it runs on, can a child get around it, is the AI safe, does it need internet?"
+short = "FAQ"
+
+[[page]]
+key = "support"
+kind = "support"
+[page.tr]
+path = "/destek/"
+title = "Destek ve iletişim — BioKids"
+description = "BioKids için yardım alın: e-posta, GitHub'da hata ve donanım bildirimi, güvenlik açığı bildirimi ve panelin kendi Yardım sayfası. Türkçe ya da İngilizce."
+short = "Destek"
+[page.en]
+path = "/en/support/"
+title = "Support and contact — BioKids"
+description = "Get help with BioKids: email, bug and hardware reports on GitHub, private vulnerability reports, and the panel's own offline Help page. In English or Turkish."
+short = "Support"
+
+[[page]]
+key = "about"
+kind = "about"
+[page.tr]
+path = "/hakkinda/"
+title = "Hakkında: BioKids'i kim yapıyor ve neden? | BioKids"
+description = "BioKids, Bilal Gürkan Şanlı'nın BioStudio etiketiyle geliştirdiği açık kaynak bir proje. İlkeleri, yapıldığı teknolojiler ve yol haritası."
+short = "Hakkında"
+[page.en]
+path = "/en/about/"
+title = "About: who makes BioKids, and why | BioKids"
+description = "BioKids is an open-source project by Bilal Gürkan Şanlı, under the BioStudio label. Its principles, the technology it is built on, and the roadmap."
+short = "About"
+
+[[page]]
+key = "404"
+kind = "404"
+noindex = true
+[page.tr]
+path = "/404.html"
+title = "Sayfa bulunamadı — BioKids"
+description = "Aradığınız sayfa burada değil. Ana sayfaya, rehberlere ya da indirme sayfasına buradan dönebilirsiniz."
+short = "Bulunamadı"
+[page.en]
+path = "/404.html"
+title = "Page not found — BioKids"
+description = "The page you were looking for is not here. Go back to the home page, the guides or the download page from here."
+short = "Not found"

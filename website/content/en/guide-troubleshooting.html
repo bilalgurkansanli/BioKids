@@ -1,0 +1,94 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>The situations parents meet most often in BioKids, and what to do, in brief. Find yours in the list at the side (on a phone, in the headings below). If it is not here, write to us.</p>
+
+{% call m.callout('tip', 'Look at the panel\'s own Help page first') %}
+<p>The <strong>Help</strong> link at the top of the panel shows the common questions and step-by-step guides on the computer itself, even offline. <strong>Settings → Protection</strong> tells you in one list what is in place and what needs you.</p>
+{% endcall %}
+
+<h2 id="forgot-pin">I forgot my PIN</h2>
+<ol>
+<li>On the panel's sign-in page, press <strong>I forgot my PIN</strong>.</li>
+<li>Type the <strong>8-word recovery code</strong> you wrote down during setup (or when you were added as a parent), with spaces between the words. The words are Turkish, written without Turkish letters, even on an English computer.</li>
+<li>Choose a new PIN.</li>
+</ol>
+<p>If the recovery code is lost too: sign in to the computer with your own (parent) account, open <strong>Terminal</strong> from the applications menu and type the line below. It asks for the computer's password (not the PIN: the account password you chose when installing):</p>
+{{ m.code('sudo biokids-admin reset-pin') }}
+<p>With more than one parent it asks whose PIN it is; you can also say so up front: <code>sudo biokids-admin reset-pin --parent NAME</code>.</p>
+
+<h2 id="too-many-tries">It says "too many tries"</h2>
+<p>After 5 wrong PINs in a row, signing in is closed for 15 minutes; if wrong tries go on, the wait doubles each time, up to a day. Each parent has their own count. Rather not wait? Reset your PIN with the recovery code as above.</p>
+
+<h2 id="forgot-passphrase">I forgot the family passphrase</h2>
+<p>The family passphrase is asked for to turn protection off, remove a child, add or remove a parent, and back up or restore. If you forgot it, type this in a terminal and choose a new passphrase of at least 10 characters:</p>
+{{ m.code('sudo biokids-admin reset-passphrase') }}
+
+<h2 id="screen-locked">My child's screen is locked</h2>
+<p>The screen locks when the day's time is used up, outside the allowed hours ("Waiting for their next window"), during a forced break, or when you locked it. On the panel's <strong>Today</strong> screen press <strong>+10 min</strong> or <strong>+30 min</strong> on your child's card: the lock opens by itself.</p>
+<p>If the child's screen says <strong>"BioKids is not answering right now. Tell a grown-up."</strong>, BioKids' background service ran into a problem. At such a moment BioKids locks the session and tells you, rather than leave the child unprotected. Even after the service is back, the lock stays until you give time from Today. If the panel says "The BioKids service is not responding", restart the computer; if it keeps happening, <a href="#report-a-bug">tell us</a>.</p>
+
+<h2 id="not-on-login-screen">My child is not on the login screen</h2>
+<p>After BioKids is installed, the computer needs <strong>one restart</strong>: the picture login screen reads the children only when it starts. If you restarted and the child is still missing, check that they are listed on the panel's <strong>Children</strong> page.</p>
+
+<h2 id="no-internet">My child has no internet</h2>
+<ul>
+<li>BioKids' web filter <strong>fails safe</strong>: if the filter is not running, the children's accounts get no internet at all. Look at the "Internet filter" line under <strong>Settings → Protection</strong>; if it is not green, what to do is written beside it. A restart is often enough.</li>
+<li>If the child is on <strong>Only the sites I choose</strong>, only the sites you chose open. See the <a href="{{ url('guide-web') }}">safe browsing guide</a>.</li>
+<li>If one site will not open, it may be blocked: when the child presses <strong>Ask a grown-up</strong>, the request lands in <strong>Requests</strong>, and <strong>Allow</strong> opens that site.</li>
+</ul>
+
+<h2 id="windows-clock">The clock is wrong when I switch to Windows</h2>
+<p>On computers with BioKids beside Windows, Windows' clock may show a few hours ahead or behind. In Windows go to <strong>Settings → Time &amp; language → Date &amp; time</strong> and press <strong>Sync now</strong>. BioKids' time counting does not depend on the clock and is not affected.</p>
+
+<h2 id="turn-off-for-a-while">Turning BioKids off for a while</h2>
+<p>Playing together? Start <strong>We're together</strong> in the panel: for 30 minutes, 1 or 2 hours nothing is counted, with no warnings and no lock. For a longer break, untick <strong>Let BioKids manage this child</strong> under <strong>Children → Time rules</strong>; your family passphrase is asked. Tick it again and protection is back.</p>
+
+<h2 id="updates">Updates</h2>
+<p>BioKids never updates itself; you decide when. Open a terminal in your parent account and type the line below. It brings Debian's security updates too:</p>
+{{ m.code('sudo apt update && sudo apt upgrade') }}
+<p>The BioKids packages are upgraded together; do not try to upgrade one on its own. If an update brought something new, a restart is the cleanest way to pick it up.</p>
+
+<h2 id="backup">Backing up and moving to a new computer</h2>
+<p><strong>Settings → Back up and move</strong> keeps your children's rules, apps, stickers, English and reading progress and history in a single <code>.biokids</code> file.</p>
+<ol>
+<li>Type your family passphrase under <strong>Confirm your passphrase</strong> and press <strong>Download the backup</strong>. Keep the file on a USB stick or somewhere you trust.</li>
+<li>Install BioKids on the new computer and do the first-run setup.</li>
+<li>On the same page, under <strong>Restore from a backup</strong>: choose the file and type this computer's family passphrase and, if it was different, the old computer's.</li>
+<li>Restart the computer once, and set up email again.</li>
+</ol>
+{{ m.shot(lang ~ '/backup', 'The Back up and move page: confirm the passphrase and download the backup at the top, choose a backup file and restore at the bottom.', 'Back up and move: taking a backup at the top, restoring at the bottom.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% call m.callout('privacy', 'What is not in the backup') %}
+<p>The file is sealed with your family passphrase; it holds no PIN, passphrase, recovery code or email settings. The assistant's models and the natural voice are not in it either; on the new computer they are downloaded again from the panel.</p>
+{% endcall %}
+
+<h2 id="protect-the-computer">Protecting the computer itself</h2>
+<p><strong>Settings → Protection</strong> shows everything in one list: whether BioKids is running, the web filter, the browser's rules and extension, any other browser, email alerts, the backup, disk space, the clock and a boot password. Green items are in place; the others say what to do.</p>
+{{ m.shot(lang ~ '/settings-protection', 'The Protection list: a warning for email alerts, notes for the backup, the clock and the boot password, the rest green.', 'Protection: green items are in place; the others have a "What to do" link.', sizes='(min-width: 960px) 600px, 100vw') }}
+<p>BioKids cannot stop someone who boots from a USB stick or takes the disk out. If you want to slow down a technically minded child, a password in the BIOS and on the boot menu is <strong>your choice</strong>; BioKids never sets one itself. How to do it, and how to undo it, is in the panel's <strong>Protecting the computer itself</strong> guide. Write down any password you set: a forgotten BIOS password can lock you out of the computer.</p>
+
+<h2 id="boot-menu">The boot menu and recovery mode</h2>
+<p>On a computer with only BioKids, the boot menu is hidden and waits for one second. Press <kbd>Esc</kbd> while the computer starts and the menu appears; from there you can reach Debian's recovery mode. On computers beside Windows the menu shows for 5 seconds at every start. If a start failed, the menu shows longer by itself on the next one.</p>
+
+<h2 id="email">Email notifications do not arrive</h2>
+<p>Fill in the details under <strong>Settings → Email notifications</strong> and press <strong>Save and send a test</strong>; if the test does not arrive, a setting is wrong.</p>
+<ul>
+<li><strong>Gmail</strong>: server <code>smtp.gmail.com</code>, port 587, STARTTLS, and as the password not your usual one but an <em>app password</em> created in your Google account.</li>
+<li><strong>Yandex</strong> and <strong>iCloud</strong> work.</li>
+<li>Personal <strong>Outlook / Hotmail</strong> accounts can no longer send mail this way; use another account.</li>
+</ul>
+{{ m.shot(lang ~ '/settings-mail', 'The Email notifications section: the address to send to, the two notification options, the mail server details and a Save and send a test button.', 'Email notifications: the mails go out through your own mail server.', sizes='(min-width: 960px) 600px, 100vw') }}
+
+<h2 id="report-a-bug">Reporting a bug</h2>
+<p>If something does not work as it should, three things help us most:</p>
+<ol>
+<li><strong>The version:</strong> at the bottom of the panel (e.g. "BioKids 2.0.0"), or <code>biokids-admin version</code> in a terminal.</li>
+<li><strong>The Debian version</strong>, and whether the computer is real or a virtual machine.</li>
+<li><strong>The logs:</strong> the output of the command below. Remove any children's names from it before sending.</li>
+</ol>
+{{ m.code('sudo journalctl -u biokids-daemon -n 200 --no-pager') }}
+<p>Then fill in the <a href="{{ site.issues_url }}" rel="noopener">bug form on GitHub</a> or write to <a href="mailto:{{ site.email }}">{{ site.email }}</a>. For hardware problems (the screen, sound, Wi-Fi, the microphone) there is a separate hardware form on GitHub.</p>
+{% call m.callout('danger', 'Never attach anything that shows your child') %}
+<p>Never put your child's name, a screenshot of their screen or their history in a bug report. Found a security problem? Report it privately as <a href="{{ site.repo }}/blob/main/SECURITY.md" rel="noopener">SECURITY.md</a> describes, not in a public issue.</p>
+{% endcall %}
+{% endblock %}

@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% import "macros.html" as m with context %}
+{% block main %}
+<section class="hero" aria-labelledby="hero-title">
+  <div class="wrap">
+    <div class="hero-text">
+      <p class="eyebrow tint-amber"><span aria-hidden="true">🪁</span> Ücretsiz ve açık kaynak · Sürüm {{ site.version }}</p>
+      <h1 id="hero-title">Çocuğunuz için <span class="hl">güvenli</span> bir bilgisayar. Kurallar sizde, her şey evde.</h1>
+      <p class="lead"><strong>BioKids</strong>, 4–10 yaş çocuklar için Debian 13 tabanlı, ücretsiz ve açık kaynak bir ebeveyn denetimi sistemidir. Süre sınırları, güvenli internet, telefondan canlı izleme ve bilgisayarın kendisinde çalışan bir yapay zekâ asistanı sunar; hesap istemez, buluta hiçbir şey göndermez.</p>
+      <div class="btn-row">
+        <a class="btn btn-primary btn-lg" href="{{ url('download') }}"><span aria-hidden="true">⬇</span> Ücretsiz indir</a>
+        <a class="btn btn-secondary btn-lg" href="{{ url('guide-install') }}">Nasıl kurulur?</a>
+      </div>
+      <ul class="trust">
+        <li>Hesap gerekmez</li>
+        <li>Telemetri yok</li>
+        <li>İnternetsiz çalışır</li>
+        <li>Windows'un yanına kurulur</li>
+      </ul>
+    </div>
+    <figure class="hero-shot">
+      {{ m.img(lang ~ '/hero', 'Solda çocuğun BioKids ekranı: büyük uygulama kutuları ve 42 dakika kaldığını gösteren halka; üstte "Annen şu an ekranını görüyor" yazısı. Sağda o ekranı canlı izleyen ebeveynin telefonu.', '(min-width: 1180px) 1120px, 100vw', eager=True) }}
+      <span class="float-chip c1" aria-hidden="true"><span class="emoji">⏱️</span> 42 dk kaldı</span>
+      <span class="float-chip c2" aria-hidden="true"><span class="emoji">🛡️</span> Zararlı siteler kapalı</span>
+      <span class="float-chip c3" aria-hidden="true"><span class="emoji">🤖</span> Yapay zekâ bilgisayarda</span>
+      <figcaption>Solda çocuğun ekranı, sağda onu telefondan canlı izleyen ebeveyn. Çocuk izlendiğini her zaman görür.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="why">
+  <div class="wrap">
+    {{ m.head('why', 'Ebeveynler için yapıldı, çocuklar için tasarlandı', 'Neden BioKids?', 'Bir çocuk bilgisayarı ne kadar sade olursa o kadar güvenlidir. BioKids, Debian yüklü bir bilgisayarı küçük bir çocuğun tek başına kullanabileceği hale getirir.') }}
+    <div class="why-grid">
+      {% call m.feature('🏠', 'Evde kalır', 'coral', url('privacy')) %}<p>Telemetri yok, hesap yok, bulut yok. Ailenizle ilgili her şey bu bilgisayarda kalır; bir BioKids sunucusu zaten yok.</p>{% endcall %}
+      {% call m.feature('👀', 'Çocuk bilir', 'amber', url('privacy')) %}<p>Denetim hiçbir zaman gizli değildir. İlk açılışta neler görülebildiği anlatılır; siz ekranı izlerken çocuk bunu görür.</p>{% endcall %}
+      {% call m.feature('⏱️', 'Kandırılamayan süre', 'teal', url('features', 'sure')) %}<p>Dakikalar bilgisayarın açılıştan beri işleyen saatiyle sayılır. Sistem saatini ileri almak hiçbir şeyi değiştirmez.</p>{% endcall %}
+      {% call m.feature('📱', 'Kumanda telefonunuzda', 'indigo', url('guide-phone')) %}<p>+10 dakika verin, ekranı kilitleyin, bir isteği yanıtlayın: evde ya da dışarıda, kendi özel ağınız üzerinden.</p>{% endcall %}
+      {% call m.feature('🤖', 'Bilgisayardaki asistan', 'coral', url('features', 'sor-bana')) %}<p><em>Sor Bana</em>, çocuğun sorularını bilgisayarda çalışan bir dil modeliyle yanıtlar. Hiçbir soru buluta gitmez.</p>{% endcall %}
+      {% call m.feature('🧸', '4–10 yaş için', 'amber', url('features', 'cocuk-icin')) %}<p>Kocaman kutular, kalan süreyi gösteren bir halka, kendini sesli okuyan düğmeler ve iki arkadaş: Zio ile Sio.</p>{% endcall %}
+    </div>
+  </div>
+</section>
+
+<section class="section section-white" aria-labelledby="spot-live">
+  <div class="wrap">
+    <div class="spot">
+      <div class="spot-media phone">
+        {{ m.shot(lang ~ '/panel-live', 'Telefonda BioKids ebeveyn paneli: Canlı ekran kartında çocuğun ekranı o anki haliyle ve altında Durdur düğmesi.', sizes='(min-width: 960px) 400px, 90vw') }}
+      </div>
+      <div class="spot-text">
+        <p class="eyebrow tint-indigo"><span aria-hidden="true">👁️</span> Canlı ekran</p>
+        <h2 id="spot-live">Çocuğunuzun ekranı, şu an, telefonunuzda</h2>
+        <p class="lead">Panelde <strong>Canlı izle</strong>'ye basın; çocuğunuzun ekranını saniyede yaklaşık bir kare olarak görün. Evde ya da işte, fark etmez.</p>
+        <ul class="checks">
+          <li><strong>Çocuğa söylenir.</strong> Siz izlerken ekranında "👁 Annen şu an ekranını görüyor" yazar. Bu işaret kapatılamaz.</li>
+          <li><strong>Hiçbir şey kaydedilmez.</strong> Her kare bellekte bir öncekinin yerini alır; sayfadan ayrılınca izleme biter.</li>
+          <li><strong>Kayıt altında.</strong> Her izleme başlangıcı kayıt defterine yazılır.</li>
+        </ul>
+        <p class="btn-row" style="margin-top:24px"><a class="btn btn-secondary" href="{{ url('guide-live') }}">Canlı ekran nasıl açılır?</a></p>
+      </div>
+    </div>
+
+    <div class="spot flip">
+      <div class="spot-media">
+        {{ m.shot(lang ~ '/assistant', 'Zio\'ya sor ekranı: çocuk gökyüzünün neden mavi olduğunu soruyor ve yaşına uygun kısa bir yanıt alıyor.', sizes='(min-width: 960px) 580px, 100vw') }}
+      </div>
+      <div class="spot-text">
+        <p class="eyebrow tint-coral"><span aria-hidden="true">🤖</span> Sor Bana · yerel yapay zekâ</p>
+        <h2>Merak eden çocuğa, buluta gitmeyen bir asistan</h2>
+        <p class="lead">Çocuk sorusunu yazar ya da sesli sorar; yaşına uygun, kısa bir yanıtı sorduğu dilde alır. Yanıt bilgisayarın kendisinde çalışan bir modelden gelir.</p>
+        <ul class="checks">
+          <li><strong>Tamamen çevrimdışı:</strong> Gemma dil modeli (llama.cpp), konuşma için Whisper, yanıtları denetlemek için çevrimdışı Vikipedi.</li>
+          <li><strong>Sormaması gerekenleri reddeder;</strong> neleri reddettiğini siz görürsünüz. Sıradan sorular saklanmaz.</li>
+          <li><strong>Mikrofon yalnızca düğmeye basılıyken</strong> dinler, en fazla 15 saniye, hiçbir şey kaydedilmez.</li>
+          <li>İsteğe bağlıdır: siz panelden indirip bir çocuk için açana kadar kapalıdır. 7 GB ya da daha fazla bellek ister.</li>
+        </ul>
+        <p class="btn-row" style="margin-top:24px"><a class="btn btn-secondary" href="{{ url('guide-assistant') }}">Sor Bana nasıl kurulur?</a></p>
+      </div>
+    </div>
+
+    <div class="spot">
+      <div class="spot-media">
+        {{ m.shot(lang ~ '/panel-time', 'Bir çocuğun süre kuralları: hafta içi ve hafta sonu günlük süre, izin verilen saatler ve süre bitince ne olacağı.', sizes='(min-width: 960px) 580px, 100vw') }}
+      </div>
+      <div class="spot-text">
+        <p class="eyebrow tint-teal"><span aria-hidden="true">⏱️</span> Süre kuralları</p>
+        <h2>Ekran süresi: birkaç anlaşılır ayar, gerisi kendiliğinden</h2>
+        <p class="lead">Hafta içi ve hafta sonu için günlük dakikaları ve kullanılabilecek saatleri seçin. BioKids gerisini sayar, uyarır ve uygular.</p>
+        <ul class="checks">
+          <li>Zio ve Sio 10, 5 ve 1 dakika kala <strong>sesli</strong> haber verir.</li>
+          <li>Süre bitince ekranı <strong>kilitle</strong>, <strong>oturumu kapat</strong> ya da <strong>bilgisayarı kapat</strong>: seçim sizin.</li>
+          <li>İsterseniz zorunlu <strong>molalar</strong>, göz egzersizleri ve öğrenerek <strong>kazanılan süre</strong>.</li>
+          <li>Tatil, bayram, doğum günü: <strong>özel günler</strong> için ayrı kural.</li>
+        </ul>
+        <p class="btn-row" style="margin-top:24px"><a class="btn btn-secondary" href="{{ url('guide-time') }}">Süre kuralları rehberi</a></p>
+      </div>
+    </div>
+
+    <div class="spot flip">
+      <div class="spot-media">
+        {{ m.shot(lang ~ '/panel-history', 'Geçmiş ekranı: bir yılın ekran süresi bir harita olarak ve son on dört gün çubuk grafik halinde.', sizes='(min-width: 960px) 580px, 100vw') }}
+      </div>
+      <div class="spot-text">
+        <p class="eyebrow tint-amber"><span aria-hidden="true">📊</span> Geçmiş ve analiz</p>
+        <h2>Bir bakışta bir yıl, bir dokunuşla bir gün</h2>
+        <p class="lead">Bugün ekranı her çocuğun kalan süresini gösterir; Geçmiş ve Analiz, sürenin nereye gittiğini anlatır.</p>
+        <ul class="checks">
+          <li><strong>Yıllık harita</strong>, son 14 günün çubukları ve her günün ayrıntısı: uygulamalar, açılan siteler, istekler.</li>
+          <li><strong>Analiz:</strong> haftanın öne çıkanları, uygulama türlerine göre süre, günün hangi saatlerinde kullanıldığı.</li>
+          <li>İsterseniz <strong>Pazar akşamı haftalık özet</strong> e-postası, kendi posta sunucunuzdan.</li>
+        </ul>
+        <p class="btn-row" style="margin-top:24px"><a class="btn btn-secondary" href="{{ url('features', 'gecmis') }}">Raporları inceleyin</a></p>
+      </div>
+    </div>
+
+    <div class="spot">
+      <div class="spot-media">
+        {{ m.shot(lang ~ '/blocked', 'Kapalı bir site: Burası senin için değil yazan sevimli bir sayfa ve Büyüğüme sor düğmesi.', sizes='(min-width: 960px) 580px, 100vw') }}
+      </div>
+      <div class="spot-text">
+        <p class="eyebrow tint-indigo"><span aria-hidden="true">🛡️</span> Güvenli internet</p>
+        <h2>İnternet açık, en kötüleri kapalı</h2>
+        <p class="lead">Yetişkin, kumar, zararlı yazılım ve dolandırıcılık siteleri bilgisayardaki bir filtreyle yalnızca çocukların hesaplarında kapanır.</p>
+        <ul class="checks">
+          <li>Yaklaşık <strong>291.000</strong> zararlı alan adı kapalı; <strong>SafeSearch</strong> ve YouTube'un kısıtlı modu zorunlu.</li>
+          <li>İsterseniz <strong>yalnızca seçtiğim siteler</strong> modu.</li>
+          <li>Kapalı bir sitede çocuk <strong>Büyüğüme sor</strong>'a basar; istek telefonunuza düşer, tek dokunuşla yanıtlarsınız.</li>
+          <li>Araya giren vekil sunucu yok: BioKids kimsenin trafiğinin şifresini çözmez.</li>
+        </ul>
+        <p class="btn-row" style="margin-top:24px"><a class="btn btn-secondary" href="{{ url('guide-web') }}">Güvenli internet rehberi</a></p>
+      </div>
+    </div>
+
+    <div class="spot flip">
+      <div class="spot-media">
+        {{ m.shot(lang ~ '/launcher', 'Çocuğun başlatıcısı: Sor Bana, Boya, GCompris, Okuma, İngilizce gibi kocaman kutular; üstte ses ve kalan süre, altta parlaklık ve açık uygulamalar.', sizes='(min-width: 960px) 580px, 100vw') }}
+      </div>
+      <div class="spot-text">
+        <p class="eyebrow tint-coral"><span aria-hidden="true">🧒</span> Çocuğun ekranı</p>
+        <h2>Masaüstü yok, ayar yok: yalnızca kocaman kutular</h2>
+        <p class="lead">Çocuk resmine dokunarak girer ve sizin seçtiğiniz uygulamalarla sitelerden oluşan bir başlatıcıya gelir.</p>
+        <ul class="checks">
+          <li>Okuma bilmeyenler için kendini <strong>sesli okuyan</strong> kutular; 4–7 ve 8–10 yaşa göre iki görünüm.</li>
+          <li>Altta <strong>parlaklık</strong>, üstte <strong>ses</strong> ayarı; açık uygulamalar baştan başlamadan bekler.</li>
+          <li><strong>Okuma</strong> (birinci sınıf sırasıyla) ve Sio ile <strong>İngilizce</strong> köşeleri, her gün bir sürpriz kart.</li>
+          <li>GCompris, Tux Paint, TRT Çocuk, EBA ve 30'u aşkın hazır uygulama ve site.</li>
+        </ul>
+        <p class="btn-row" style="margin-top:24px"><a class="btn btn-secondary" href="{{ url('features') }}">Tüm özellikler</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="day">
+  <div class="wrap">
+    {{ m.head('day', 'BioKids ile sıradan bir gün', 'Nasıl çalışır?', 'Kurallar bir kez konur; sonra BioKids sizin yerinize hatırlatır, sayar ve haber verir.', 'teal') }}
+    <ol class="day">
+      <li><time>16:00</time><span class="emoji" aria-hidden="true">🖼️</span><h3>Resmine dokunur</h3><p>Çocuk giriş ekranında kendi resmine dokunarak girer. Parola yok, masaüstü yok.</p></li>
+      <li><time>16:40</time><span class="emoji" aria-hidden="true">🤸</span><h3>Biraz mola</h3><p>İsterseniz 40 dakikada bir 5 dakikalık mola ve gözler için birkaç hareket.</p></li>
+      <li><time>17:10</time><span class="emoji" aria-hidden="true">🙋</span><h3>Büyüğüme sor</h3><p>Kapalı bir site mi? Çocuk sorar, istek telefonunuza düşer, "İzin ver"e basarsınız.</p></li>
+      <li><time>17:50</time><span class="emoji" aria-hidden="true">🔔</span><h3>10 dakika kaldı</h3><p>Zio sesli haber verir. Çocuk günde bir kez işini bitirmek için son tur isteyebilir.</p></li>
+      <li><time>20:30</time><span class="emoji" aria-hidden="true">💬</span><h3>Akşam sohbeti</h3><p>Panel, çocuğunuzun gününden konuşmak için birkaç konu önerir: öğrendiği kelimeler, sorduğu bilmece.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section class="section section-white" aria-labelledby="compare">
+  <div class="wrap narrow">
+    {{ m.head('compare', 'Bulut tabanlı uygulamalardan farkı', 'Karşılaştırma', 'Çoğu ebeveyn denetimi bir hesap açtırır ve çocuğun gününü bir şirketin sunucularına gönderir. BioKids bunu hiç yapmaz.', 'indigo') }}
+    <div class="table-wrap">
+      <table class="compare">
+        <thead>
+          <tr><th scope="col">&nbsp;</th><th scope="col" class="us">BioKids</th><th scope="col">Tipik bulut uygulaması</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Hesap gerekir mi?</th><td class="us yes">Hayır</td><td>Evet</td></tr>
+          <tr><th scope="row">Çocuğun verileri nerede?</th><td class="us yes">Yalnızca bu bilgisayarda</td><td>Üreticinin sunucularında</td></tr>
+          <tr><th scope="row">Ücret</th><td class="us yes">Ücretsiz</td><td>Çoğu zaman abonelik</td></tr>
+          <tr><th scope="row">Kaynak kodu açık mı?</th><td class="us yes">Evet (MIT)</td><td>Genellikle hayır</td></tr>
+          <tr><th scope="row">Yapay zekâ nerede çalışır?</th><td class="us yes">Bilgisayarın kendisinde</td><td>Bulutta (varsa)</td></tr>
+          <tr><th scope="row">Çocuk izlendiğini bilir mi?</th><td class="us yes">Her zaman</td><td>Uygulamaya göre değişir</td></tr>
+          <tr><th scope="row">İnternet kesilince</th><td class="us yes">Tüm kurallar çalışır</td><td>Uygulamaya göre değişir</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="start">
+  <div class="wrap">
+    {{ m.head('start', 'Üç adımda kurulum', 'Başlarken', 'Bir USB bellek ve yarım saat yeter. Kurulum için internet de gerekmez.', 'coral') }}
+    <ol class="start-steps">
+      <li><h3>ISO'yu indirin</h3><p>BioKids yüklü Debian 13 kalıbı, yaklaşık 3,3 GB. Ücretsiz.</p><a href="{{ url('download') }}">İndirme sayfası →</a></li>
+      <li><h3>USB belleğe yazın</h3><p>8 GB'lık bir belleğe balenaEtcher ya da Rufus ile, birkaç tıklamayla.</p><a href="{{ url('guide-usb') }}">USB rehberi →</a></li>
+      <li><h3>Kurun ve ayarlayın</h3><p>Bellekten açın, kurun; ilk açılışta dokuz kısa adımlık sihirbaz sizi karşılar.</p><a href="{{ url('guide-install') }}">Kurulum rehberi →</a></li>
+    </ol>
+    {% call m.callout('tip', 'Windows\'u silmek istemiyor musunuz?') %}
+    <p>BioKids, Windows'u küçültüp yanına kurulabilir; bilgisayar her açılışta hangisini istediğinizi sorar. <a href="{{ url('guide-dual-boot') }}">Windows'un yanına kurulum rehberi</a></p>
+    {% endcall %}
+  </div>
+</section>
+
+<section class="section-tight" aria-labelledby="principles">
+  <div class="wrap">
+    {{ m.head('principles', 'Değişmeyen ilkeler', 'Söz', 'Bu ilkeler projenin anayasasında yazılı; hiçbir özellik onları çiğneyemez.', 'indigo') }}
+    <div class="principles">
+      <div><h3><span class="emoji" aria-hidden="true">🏠</span> Hiçbir şey cihazdan çıkmaz</h3><p>Telemetri, analiz, bulut çıkarımı yok. Dış bağlantıların tam listesi açıkça yazılı.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">👀</span> Çocuk bilir</h3><p>Gizli ekran görüntüsü yok, tuş kaydı yok. Denetim her zaman görünür.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">🔒</span> Güvenli tarafta kalır</h3><p>Koruma çökerse oturum kilitlenir ve size haber verilir; "korumasız devam" yoktur.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">🧯</span> Sizi asla dışarıda bırakmaz</h3><p>Sizi dışarıda bırakabilecek her şey isteğe bağlı, geri alınabilir ve belgeli.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">📴</span> Önce çevrimdışı</h3><p>Temel her şey ağ kablosu çıkarılmışken de çalışır.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">🙂</span> Anlaşılır panel</h3><p>Bir paragraf açıklama isteyen ayar "Gelişmiş"in arkasında durur.</p></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><strong>0</strong><span>buluta giden veri</span></div>
+      <div class="stat"><strong>~291 bin</strong><span>kapalı zararlı alan adı</span></div>
+      <div class="stat"><strong>4 GB</strong><span>RAM yeterli</span></div>
+      <div class="stat"><strong>MIT</strong><span>özgür lisans</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="faq-home">
+  <div class="wrap narrow">
+    {{ m.head('faq-home', 'Ebeveynlerin en çok sordukları', 'SSS', '', 'amber') }}
+    {{ m.faq_list(faq, home=True) }}
+    <p class="btn-row" style="justify-content:center;margin-top:28px"><a class="btn btn-secondary" href="{{ url('faq') }}">Tüm soruları görün</a></p>
+  </div>
+</section>
+{% endblock %}

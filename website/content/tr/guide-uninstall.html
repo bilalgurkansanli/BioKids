@@ -1,0 +1,115 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>BioKids'i bırakmak her zaman mümkündür; hiçbir şey sizi içeride tutmaz. Nasıl kaldıracağınız, nasıl kurduğunuza bağlı.</p>
+
+{% call m.callout('tip', 'Yalnızca bir süre ara mı vermek istiyorsunuz?') %}
+<p>Kaldırmanıza gerek yok. Panelde Çocuklar → Süre kuralları'ndaki <strong>"BioKids bu çocuğu yönetsin"</strong> kutusunu boşaltın (aile parolanız sorulur). Kutuyu yeniden işaretleyince her şey kaldığı yerden devam eder.</p>
+{% endcall %}
+
+<h2 id="hangisi">Hangi durumdasınız?</h2>
+<div class="cases">
+  <a href="#paketler"><span class="emoji" aria-hidden="true">📦</span><strong>BioKids'i kaldırıp Debian'ı tutmak</strong><span>ISO'dan ya da paketlerle kurduysanız: düz bir Debian kalır.</span></a>
+  <a href="#windowsa-donus"><span class="emoji" aria-hidden="true">🪟</span><strong>Yalnızca Windows'a dönmek</strong><span>Windows'un yanına kurduysanız: BioKids'in yerini Windows'a geri verin.</span></a>
+  <a href="#yeni-sistem"><span class="emoji" aria-hidden="true">💿</span><strong>Başka bir sistem kurmak</strong><span>Bilgisayarda yalnızca BioKids varsa.</span></a>
+</div>
+
+<h2 id="once-yedek">Önce: ailenizin yedeği (isteğe bağlı)</h2>
+<p>Bir gün yeniden kurabilirseniz panelde <strong>Ayarlar → Yedekle ve taşı → Yedeği indir</strong> ile çocukların kurallarını ve geçmişini tek bir dosyaya alın ve bir USB belleğe kopyalayın. Dosya aile parolanızla şifrelenir; PIN'ler ve e-posta ayarları içinde yoktur.</p>
+
+<h2 id="paketler">BioKids'i kaldırıp Debian'ı tutmak</h2>
+<p>BioKids, ISO'dan kurulduğunda da Debian'ın üstünde paketler olarak durur. Bu paketleri kaldırınca geriye sıradan bir Debian ve Xfce masaüstü kalır. Kendi hesabınızla girip bir uçbirim açın:</p>
+<ol class="steps">
+  {% call m.step('Asistanın modellerini silin (kuruluysa)', 'asistan') %}
+  <p>Sor Bana'nın birkaç GB'lık modellerini siler.</p>
+  {{ m.code('sudo apt purge biokids-ai') }}
+  {% endcall %}
+
+  {% call m.step('BioKids\'i kaldırın', 'kaldir') %}
+  {{ m.code('sudo apt purge biokids biokids-desktop biokids-core biokids-daemon biokids-panel biokids-shell biokids-voice') }}
+  <p>Bir soru gelir: <strong>"Bu ailenin BioKids verileri silinsin mi?"</strong> Varsayılan yanıt <em>Hayır</em>'dır ve kayıtlar bilgisayarda kalır. Her şeyin silinmesini istiyorsanız <em>Evet</em> deyin: kurallar, geçmiş, ses kayıtları ve indirilen doğal ses gider.</p>
+  <p>Bununla açılış menüsü de Debian'ın olağan görünümüne döner.</p>
+  {% endcall %}
+
+  {% call m.step('Çocukların hesaplarını silin (isterseniz)', 'hesaplar') %}
+  <p>Çocukların bilgisayardaki hesapları ve dosyaları (çizimleri gibi) bilerek bırakılır. Silmek için her çocuk için bir kez, kendi kullanıcı adıyla:</p>
+  {{ m.code('sudo deluser --remove-home elif') }}
+  {% endcall %}
+
+  {% call m.step('Gereksiz kalanları temizleyin', 'temizle') %}
+  {{ m.code('sudo apt autoremove') }}
+  <p>Telefondan erişimi açtıysanız Tailscale da kurulmuştu; artık gerekmiyorsa <code>sudo apt purge tailscale</code> ile kaldırabilirsiniz.</p>
+  {% endcall %}
+</ol>
+
+<h2 id="windowsa-donus">Yalnızca Windows'a dönmek</h2>
+<p>Bilgisayarda Windows ve BioKids birlikteyse BioKids'in bölümlerini silip yerini Windows'a geri verebilirsiniz. Bunlar BioKids'in değil, Windows'un kendi araçlarıdır; dikkatle ve sırayla yapın.</p>
+{% call m.callout('danger', 'Başlamadan önce') %}
+<ul>
+  <li>Önemli dosyalarınızı <strong>yedekleyin</strong>.</li>
+  <li>BitLocker kullanıyorsanız <strong>kurtarma anahtarınız</strong> elinizde olsun (<code>aka.ms/myrecoverykey</code>).</li>
+  <li>Sıralamayı değiştirmeyin: önce Windows'u açılışta ilk sıraya alıp denersiniz, <em>sonra</em> bölümleri silersiniz. Ters sırada bilgisayar açılmayabilir.</li>
+</ul>
+{% endcall %}
+<ol class="steps">
+  {% call m.step('Windows\'u açın', 'win-ac') %}
+  <p>Açılış menüsünde <strong>Windows Boot Manager</strong>'ı seçin.</p>
+  {% endcall %}
+
+  {% call m.step('Windows\'u açılışta ilk sıraya alın', 'win-ilk') %}
+  <p>Başlat'a <code>cmd</code> yazın, <strong>Komut İstemi</strong>'ne sağ tıklayıp <strong>Yönetici olarak çalıştır</strong>'ı seçin ve şunu yazın:</p>
+  {{ m.code('bcdedit /set {fwbootmgr} displayorder {bootmgr} /addfirst', 'Komut İstemi (yönetici)') }}
+  <p>Bilgisayarı yeniden başlatın: menü çıkmadan doğrudan <strong>Windows açılmalı</strong>. Açılmazsa devam etmeyin; bilgisayarın ayarlarındaki (BIOS/UEFI) <strong>Boot Order</strong>'da <em>Windows Boot Manager</em>'ı en üste alın.</p>
+  {% call m.callout('note', 'Eski (Legacy/BIOS) kurulumlar') %}
+  <p>Windows'un BIOS Modu "Eski" ise bu komut yerine Ayarlar → Sistem → Kurtarma → Gelişmiş başlangıç → Sorun gider → Gelişmiş seçenekler → <strong>Komut İstemi</strong>'nde <code>bootrec /fixmbr</code> yazın, sonra yeniden başlatıp Windows'un doğrudan açıldığını görün.</p>
+  {% endcall %}
+  {% endcall %}
+
+  {% call m.step('BioKids\'in bölümlerini silin', 'bolumleri-sil') %}
+  <p>Başlat düğmesine sağ tıklayıp <strong>Disk Yönetimi</strong>'ni açın. BioKids'in bölümlerinin <strong>sürücü harfi yoktur</strong>; boyutlarından tanırsınız: Windows'tan açtığınız alan kadar büyük bir bölüm ve yanında birkaç GB'lık bir takas (swap) bölümü. Her birine sağ tıklayıp <strong>Birimi Sil</strong>'i seçin.</p>
+  {% call m.illus('Yalnızca kırmızı olanları silin. EFI, C: ve Kurtarma bölümlerine dokunmayın.') %}
+  <div class="mock mock-win">
+    <div class="mock-body">
+      <div class="disk-row">
+        <p class="disk-title">Disk 0</p>
+        <div class="disk"><div class="efi"><b>EFI</b>100 MB</div><div class="win"><b>Windows (C:)</b>197 GB</div><div class="del"><b>Sağlıklı (Birincil Bölüm)</b>~36 GB · sil</div><div class="swap"><b>takas</b>sil</div><div class="rec"><b>Kurtarma</b></div></div>
+      </div>
+      <div class="disk-legend"><span><i style="background:#2b6cc4"></i>Windows'un (dokunmayın)</span><span><i style="background:#E04A3F"></i>BioKids'in (silin)</span></div>
+    </div>
+  </div>
+  {% endcall %}
+  {% call m.callout('warn') %}<p><strong>EFI Sistem Bölümü</strong>'nü, <strong>Kurtarma</strong> bölümünü ve <strong>C:</strong>'yi asla silmeyin. Hangisi olduğundan emin değilseniz durun ve <a href="mailto:{{ site.email }}">bize yazın</a>.</p>{% endcall %}
+  {% endcall %}
+
+  {% call m.step('C: sürücüsünü büyütün', 'genislet') %}
+  <p><strong>C:</strong>'ye sağ tıklayın → <strong>Birimi Genişlet…</strong> → İleri → Son. Boş alan C:'ye katılır.</p>
+  <p>Windows bu seçeneği gri gösteriyorsa boş alan C:'nin hemen yanında değildir (ör. arada bir Kurtarma bölümü vardır). O zaman boş alana sağ tıklayıp <strong>Yeni Basit Birim</strong> ile ayrı bir sürücü (D:) yapabilirsiniz.</p>
+  {% endcall %}
+
+  {% call m.step('EFI\'deki debian klasörünü kaldırın (isteğe bağlı)', 'efi-temizle') %}
+  <p>Açılış menüsünde artık kullanılmayan bir "debian" girişi kalmasın isterseniz, yönetici Komut İstemi'nde sırayla yazın. Harfleri dikkatle yazın.</p>
+  {{ m.code('mountvol S: /s
+rd /s /q S:\\EFI\\debian
+mountvol S: /d', 'Komut İstemi (yönetici)') }}
+  {% endcall %}
+</ol>
+
+<h2 id="yeni-sistem">Bilgisayarda yalnızca BioKids varsa</h2>
+<p>İki yolunuz var: yukarıdaki <a href="#paketler">paketleri kaldırma</a> adımlarıyla sıradan bir Debian'a dönmek ya da başka bir sistemi (ör. Windows) kendi USB belleğinden kurmak. İkincisinde o sistemin kurulumu diski siler; önce ailenizin yedeğini ve dosyalarınızı alın.</p>
+
+<h2 id="sorun">Sorun mu var?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>Silmeden sonra "grub rescue" yazan siyah bir ekran çıkıyor</h3></summary>
+    <div class="faq-answer"><p>Bilgisayar hâlâ BioKids'in açılış yükleyicisini arıyor. Bilgisayarın ayarlarına (çoğu zaman {{ m.kbd('F2') }}, {{ m.kbd('F10') }} ya da {{ m.kbd('Del') }}) girin ve <strong>Boot Order</strong>'da <em>Windows Boot Manager</em>'ı en üste alın. Eski (BIOS) kurulumlarda Windows kurtarma ortamında <code>bootrec /fixmbr</code> çalıştırın.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Ailemin verileri ne olur?</h3></summary>
+    <div class="faq-answer"><p>Silinmesini seçmedikçe bilgisayarda kalır. Kaldırma sırasında sorulan soruya <em>Evet</em> derseniz kurallar, geçmiş ve kayıtlar silinir. Bölümleri sildiyseniz zaten hepsi gitmiştir.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Sonra yeniden kurabilir miyim?</h3></summary>
+    <div class="faq-answer"><p>Elbette. Kurulumdan sonra panelde <strong>Yedekle ve taşı → Geri yükle</strong> ile yedeğinizi yüklerseniz çocukların kuralları ve geçmişi geri gelir.</p></div>
+  </details>
+</div>
+{% endblock %}

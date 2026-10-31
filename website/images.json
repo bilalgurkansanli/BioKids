@@ -1,0 +1,352 @@
+{
+ "brand/logo": {
+  "w": 480,
+  "h": 340
+ },
+ "en/assistant": {
+  "w": 1280,
+  "h": 800,
+  "small": 760
+ },
+ "en/backup": {
+  "w": 1100,
+  "h": 1395,
+  "small": 760
+ },
+ "en/blocked": {
+  "w": 1280,
+  "h": 800,
+  "small": 760
+ },
+ "en/child-apps-top": {
+  "w": 1100,
+  "h": 1300,
+  "small": 760
+ },
+ "en/child-assistant": {
+  "w": 1100,
+  "h": 1353,
+  "small": 760
+ },
+ "en/child-assistant-download": {
+  "w": 1100,
+  "h": 1149,
+  "small": 760
+ },
+ "en/child-internet": {
+  "w": 1100,
+  "h": 1001,
+  "small": 760
+ },
+ "en/child-internet-advanced": {
+  "w": 1100,
+  "h": 1473,
+  "small": 760
+ },
+ "en/children": {
+  "w": 1100,
+  "h": 1008,
+  "small": 760
+ },
+ "en/children-add": {
+  "w": 1100,
+  "h": 1781,
+  "small": 760
+ },
+ "en/first-run": {
+  "w": 1280,
+  "h": 920,
+  "small": 760
+ },
+ "en/hero": {
+  "w": 1600,
+  "h": 900,
+  "small": 760
+ },
+ "en/insights": {
+  "w": 1100,
+  "h": 3603,
+  "small": 760
+ },
+ "en/launcher": {
+  "w": 1280,
+  "h": 800,
+  "small": 760
+ },
+ "en/panel-history": {
+  "w": 1100,
+  "h": 840,
+  "small": 760
+ },
+ "en/panel-live": {
+  "w": 824,
+  "h": 984
+ },
+ "en/panel-time": {
+  "w": 980,
+  "h": 1250,
+  "small": 760
+ },
+ "en/panel-today": {
+  "w": 980,
+  "h": 1000,
+  "small": 760
+ },
+ "en/phone-access": {
+  "w": 1100,
+  "h": 1417,
+  "small": 760
+ },
+ "en/phone-access-approval": {
+  "w": 1100,
+  "h": 1538,
+  "small": 760
+ },
+ "en/phone-access-done": {
+  "w": 1100,
+  "h": 1477,
+  "small": 760
+ },
+ "en/phone-access-signin": {
+  "w": 1100,
+  "h": 1748,
+  "small": 760
+ },
+ "en/requests": {
+  "w": 1100,
+  "h": 1444,
+  "small": 760
+ },
+ "en/settings-mail": {
+  "w": 704,
+  "h": 1073
+ },
+ "en/settings-protection": {
+  "w": 704,
+  "h": 1018
+ },
+ "en/voice-natural": {
+  "w": 1100,
+  "h": 703,
+  "small": 760
+ },
+ "en/wizard-1-language": {
+  "w": 720,
+  "h": 832
+ },
+ "en/wizard-10-done": {
+  "w": 720,
+  "h": 1090
+ },
+ "en/wizard-2-parent": {
+  "w": 720,
+  "h": 910
+ },
+ "en/wizard-3-passphrase": {
+  "w": 720,
+  "h": 921
+ },
+ "en/wizard-4-child": {
+  "w": 720,
+  "h": 1366
+ },
+ "en/wizard-5-apps": {
+  "w": 720,
+  "h": 1803
+ },
+ "en/wizard-6-time": {
+  "w": 720,
+  "h": 1247
+ },
+ "en/wizard-7-internet": {
+  "w": 720,
+  "h": 825
+ },
+ "en/wizard-8-phone": {
+  "w": 720,
+  "h": 1470
+ },
+ "en/wizard-9-voices": {
+  "w": 720,
+  "h": 899
+ },
+ "illus/greeter": {
+  "w": 1280,
+  "h": 720
+ },
+ "illus/grub": {
+  "w": 1280,
+  "h": 720
+ },
+ "illus/installer-banner": {
+  "w": 800,
+  "h": 75
+ },
+ "tr/assistant": {
+  "w": 1280,
+  "h": 800,
+  "small": 760
+ },
+ "tr/backup": {
+  "w": 1100,
+  "h": 1395,
+  "small": 760
+ },
+ "tr/blocked": {
+  "w": 1280,
+  "h": 800,
+  "small": 760
+ },
+ "tr/child-apps-top": {
+  "w": 1100,
+  "h": 1300,
+  "small": 760
+ },
+ "tr/child-assistant": {
+  "w": 1100,
+  "h": 1353,
+  "small": 760
+ },
+ "tr/child-assistant-download": {
+  "w": 1100,
+  "h": 1130,
+  "small": 760
+ },
+ "tr/child-internet": {
+  "w": 1100,
+  "h": 1020,
+  "small": 760
+ },
+ "tr/child-internet-advanced": {
+  "w": 1100,
+  "h": 1492,
+  "small": 760
+ },
+ "tr/children": {
+  "w": 1100,
+  "h": 1063,
+  "small": 760
+ },
+ "tr/children-add": {
+  "w": 1100,
+  "h": 1836,
+  "small": 760
+ },
+ "tr/first-run": {
+  "w": 1280,
+  "h": 920,
+  "small": 760
+ },
+ "tr/hero": {
+  "w": 1600,
+  "h": 900,
+  "small": 760
+ },
+ "tr/insights": {
+  "w": 1100,
+  "h": 3627,
+  "small": 760
+ },
+ "tr/launcher": {
+  "w": 1280,
+  "h": 800,
+  "small": 760
+ },
+ "tr/panel-history": {
+  "w": 1100,
+  "h": 840,
+  "small": 760
+ },
+ "tr/panel-live": {
+  "w": 824,
+  "h": 984
+ },
+ "tr/panel-time": {
+  "w": 980,
+  "h": 1250,
+  "small": 760
+ },
+ "tr/panel-today": {
+  "w": 980,
+  "h": 1000,
+  "small": 760
+ },
+ "tr/phone-access": {
+  "w": 1100,
+  "h": 1442,
+  "small": 760
+ },
+ "tr/phone-access-approval": {
+  "w": 1100,
+  "h": 1588,
+  "small": 760
+ },
+ "tr/phone-access-done": {
+  "w": 1100,
+  "h": 1502,
+  "small": 760
+ },
+ "tr/phone-access-signin": {
+  "w": 1100,
+  "h": 1772,
+  "small": 760
+ },
+ "tr/requests": {
+  "w": 1100,
+  "h": 1419,
+  "small": 760
+ },
+ "tr/settings-mail": {
+  "w": 704,
+  "h": 1092
+ },
+ "tr/settings-protection": {
+  "w": 704,
+  "h": 1062
+ },
+ "tr/voice-natural": {
+  "w": 1100,
+  "h": 684,
+  "small": 760
+ },
+ "tr/wizard-1-language": {
+  "w": 720,
+  "h": 832
+ },
+ "tr/wizard-10-done": {
+  "w": 720,
+  "h": 1069
+ },
+ "tr/wizard-2-parent": {
+  "w": 720,
+  "h": 910
+ },
+ "tr/wizard-3-passphrase": {
+  "w": 720,
+  "h": 921
+ },
+ "tr/wizard-4-child": {
+  "w": 720,
+  "h": 1366
+ },
+ "tr/wizard-5-apps": {
+  "w": 720,
+  "h": 1779
+ },
+ "tr/wizard-6-time": {
+  "w": 720,
+  "h": 1247
+ },
+ "tr/wizard-7-internet": {
+  "w": 720,
+  "h": 844
+ },
+ "tr/wizard-8-phone": {
+  "w": 720,
+  "h": 1470
+ },
+ "tr/wizard-9-voices": {
+  "w": 720,
+  "h": 899
+ }
+}

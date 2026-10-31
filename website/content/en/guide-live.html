@@ -1,0 +1,65 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>The <strong>live view</strong> lets you see your child's screen as it is right now: at the computer or <a href="{{ url('guide-phone') }}">from your phone</a>, wherever you are. Stuck in a game, a video you are curious about, homework that is "nearly done": one tap is enough.</p>
+
+{% call m.callout('child', 'Tell your child first') %}
+<p>Supervision in BioKids is never hidden; while you watch, the child sees it on the screen. Even so, it is best to talk about it beforehand: "Sometimes I may look at your screen, and you will see the eyes when I do" is enough. The feature is there so you can help, not to spy.</p>
+{% endcall %}
+
+<h2 id="steps">Starting the live view</h2>
+<ol class="steps">
+{% call m.step('Open the panel and pick the child', 'open-the-panel') %}
+<p>Open the panel on the computer or on your phone and enter your PIN. Go to <strong>Children</strong> and press <strong>See their screen</strong> on your child's card.</p>
+{% endcall %}
+
+{% call m.step('Press Watch live', 'watch-live') %}
+<p>On the page that opens, press <strong>Watch live</strong>. Your child's screen arrives at about one picture a second; it is not a video but a picture refreshed often, with no sound.</p>
+<div style="max-width:380px">
+{{ m.shot(lang ~ '/panel-live', 'The Live screen card on a phone: the child\'s launcher as it is now, with a Stop button below.', 'The live view on a phone: the child\'s screen and the Stop button.', sizes='(min-width: 960px) 380px, 90vw') }}
+</div>
+{% endcall %}
+
+{% call m.step('Your child sees it', 'child-sees-it') %}
+<p>For as long as you watch, every page of the child's launcher shows a line such as <strong>"👁 Mum can see your screen now"</strong> (with your name), and the bar on top of an open app shows 👁. This sign cannot be turned off.</p>
+{{ m.shot(lang ~ '/hero', 'Left: the child\'s screen with a line at the top saying a parent can see it now. Right: a phone watching that screen live.', 'The blue line at the top tells the child they are being watched.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Stop watching', 'stop') %}
+<p>Press <strong>Stop</strong> and watching ends at once. If you leave the page or lock your phone, it also ends by itself within about 10 seconds, and the line on the child's screen goes away.</p>
+{% endcall %}
+</ol>
+
+<h2 id="what-is-kept">What is kept, and what is not</h2>
+<ul class="checks">
+<li><strong>No picture is recorded.</strong> Each new picture replaces the last in memory; nothing is written to disk, to a cloud or to an email.</li>
+<li><strong>The picture goes only to your panel</strong>: on the computer itself, or to your phone over your own private Tailscale network. There is no BioKids server in between.</li>
+<li><strong>Every start is on the record.</strong> Who started watching, and when, shows on the panel's <strong>Audit log</strong> page, so everyone in the family can see that it happened.</li>
+<li>The picture is at most 960 pixels wide: easy to read on a phone, light on the network.</li>
+</ul>
+{% call m.callout('privacy', 'The only time BioKids looks at a screen') %}
+<p>BioKids does not collect screenshots and does not watch the screen with AI. The only time anyone looks at a child's screen is when a parent presses Watch live, and the child's screen says so.</p>
+{% endcall %}
+
+<h2 id="preview">Screen preview: check without watching</h2>
+<p>The <strong>Screen preview</strong> on the same page draws what your child's screen looks like from your rules: which tiles are there, how many minutes are left, what the warnings and the end-of-time screen look like. It does not look at the real screen, so it is ideal for trying out your settings and shows nothing on the child's screen.</p>
+
+<h2 id="eye-sign">The eyes on the screen</h2>
+<p>In the child's settings (<strong>Children → Edit → Screen</strong>), <strong>The eyes on the screen</strong> sets the general supervision sign that always sits on the launcher: shown, reduced to a small icon, or hidden. The live view does not depend on it: while you watch, the warning line always appears.</p>
+
+<h2 id="something-wrong">Something wrong?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>I pressed Watch live but no screen appears</h3></summary>
+    <div class="faq-answer"><p>The live view works while your child has a session open on the computer; if the computer is off or asleep, or the child has not signed in yet, there is no screen to see. Watching from your phone? Check that the Tailscale app is connected too.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>The picture is not smooth, and there is no sound</h3></summary>
+    <div class="faq-answer"><p>That is by design: about one picture a second, no sound. The point is to see what is on the screen, not to watch a video from afar.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Can I watch without my child knowing?</h3></summary>
+    <div class="faq-answer"><p>No. This is one of BioKids' fixed principles: the child knows they are supervised. No setting turns off the line shown during the live view.</p></div>
+  </details>
+</div>
+{% endblock %}

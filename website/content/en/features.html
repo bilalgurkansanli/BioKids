@@ -1,0 +1,288 @@
+{% extends "page.html" %}
+{% import "macros.html" as m with context %}
+{% block h1 %}Everything BioKids does{% endblock %}
+{% block lead %}
+<p class="lead">From the child's screen to the parent panel, from time rules to an AI that runs on the computer: every BioKids feature, in plain words. All free, all on this computer.</p>
+<ul class="jump">
+  <li><a href="#for-the-child"><span class="emoji" aria-hidden="true">🧒</span> For the child</a></li>
+  <li><a href="#time"><span class="emoji" aria-hidden="true">⏱️</span> Time and breaks</a></li>
+  <li><a href="#live-view"><span class="emoji" aria-hidden="true">👁️</span> Live view</a></li>
+  <li><a href="#internet"><span class="emoji" aria-hidden="true">🛡️</span> Safe browsing</a></li>
+  <li><a href="#ask-me"><span class="emoji" aria-hidden="true">🤖</span> Ask Me</a></li>
+  <li><a href="#zio-sio"><span class="emoji" aria-hidden="true">🗣️</span> Zio and Sio</a></li>
+  <li><a href="#brightness"><span class="emoji" aria-hidden="true">☀️</span> Brightness and display</a></li>
+  <li><a href="#history"><span class="emoji" aria-hidden="true">📊</span> History and insights</a></li>
+  <li><a href="#phone"><span class="emoji" aria-hidden="true">📱</span> Phone and notifications</a></li>
+  <li><a href="#warm-side"><span class="emoji" aria-hidden="true">💛</span> The warm side</a></li>
+  <li><a href="#safety"><span class="emoji" aria-hidden="true">🔒</span> Safety</a></li>
+  <li><a href="#limits"><span class="emoji" aria-hidden="true">🚫</span> What it doesn't do</a></li>
+</ul>
+{% endblock %}
+{% block body %}
+
+<section class="feat-block" aria-labelledby="for-the-child">
+  <div class="wrap">
+    <div class="spot">
+      <div class="spot-media">{{ m.shot(lang ~ '/launcher', 'The child\'s launcher: big tiles such as Ask Me, Paint, GCompris, Numbers and Music Lab; the volume and the time-left ring at the top, the brightness slider at the bottom.', 'The child\'s launcher. No desktop, no settings, no terminal.', sizes='(min-width: 960px) 580px, 100vw') }}</div>
+      <div class="spot-text">
+        <p class="eyebrow tint-coral">For the child</p>
+        <h2 id="for-the-child">Big tiles instead of a desktop</h2>
+        <p class="lead">The child taps their own picture on the login screen and lands in a full-screen launcher of the apps and sites you chose.</p>
+        <ul class="checks">
+          <li><strong>Picture login:</strong> no password; every child has their own account and picture.</li>
+          <li><strong>Two looks:</strong> bigger tiles and read-aloud for ages 4–7; a clock, the date and "My files" for 8–10.</li>
+          <li><strong>A time-left ring:</strong> green, then amber, then red; for the youngest, a sun rides the end of it.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="minis">
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🔊</span> Screens that read themselves</h3><p>A child who cannot read yet taps a tile and hears its name; screens are read aloud once.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🧭</span> The same bar on every app</h3><p>Home, the minutes left, the app's own volume, fill the screen, and a Close button that stops even an app that won't close.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">⏯️</span> Switch without starting over</h3><p>Open apps wait at the bottom: pause a video, play a game, go back to the video where it was.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🔤</span> English corner</h3><p>12 units, 98 words, a five-minute lesson a day and a word of the day; with the assistant, simple English chat with Sio.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">📖</span> Reading corner</h3><p>Turkish reading for ages 5–8, letters to sentences, in the order first grade teaches them.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🎁</span> Today's surprise</h3><p>A card a day: did you know, a riddle, the animal of the day, the word of the day. 223 cards in 15 weekly themes.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">⭐</span> Sticker album</h3><p>Fifteen minutes of learning earns the day's sticker; there are 64 to collect.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🎙️</span> My voice</h3><p>The child records clips of up to 40 seconds and can send one to you with "Send to a grown-up".</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🙋</span> Ask a grown-up</h3><p>More time, a site or an app: the request comes to you, and your answer is shown and spoken to the child.</p></article>
+    </div>
+    <p class="chips-title">Some of the apps and sites that come ready</p>
+    <ul class="chips">
+      <li>GCompris</li><li>Tux Paint</li><li>TuxMath</li><li>Klavaro</li><li>KolourPaint</li><li>SuperTux</li><li>Frozen Bubble</li><li>Marble</li><li>KGeography</li><li>KBruch</li><li>Blinken</li><li>KTuberling</li><li>GNOME Chess</li><li>Scratch</li><li>Code.org</li><li>Chrome Music Lab</li><li>PBS KIDS</li><li>LearnEnglish Kids</li><li>StoryWeaver</li><li>YouTube Kids</li><li>Wikipedia</li>
+    </ul>
+  </div>
+</section>
+
+<section class="feat-block" aria-labelledby="time">
+  <div class="wrap">
+    <div class="spot flip">
+      <div class="spot-media">{{ m.shot(lang ~ '/panel-time', 'Time rules for Elif: daily time on weekdays and at weekends, quick choices and allowed hours.', 'A child\'s time rules. The details wait behind "Advanced".', sizes='(min-width: 960px) 580px, 100vw') }}</div>
+      <div class="spot-text">
+        <p class="eyebrow tint-teal">Time and breaks</p>
+        <h2 id="time">Time that can't be fooled, but isn't harsh either</h2>
+        <p class="lead">You choose the daily minutes and the hours the computer can be used; BioKids counts, warns, and when time is up does what you chose.</p>
+        <ul class="checks">
+          <li><strong>Weekdays, weekends</strong> or a rule for any single day; up to two windows of allowed hours.</li>
+          <li><strong>Changing the clock does nothing:</strong> time is counted on the kernel's boot-time clock, and sleep is not charged.</li>
+          <li><strong>When time runs out:</strong> a 2-minute countdown, then lock the screen, log out or shut the computer down.</li>
+        </ul>
+        <p class="btn-row" style="margin-top:22px"><a class="btn btn-secondary" href="{{ url('guide-time') }}">Time rules guide</a></p>
+      </div>
+    </div>
+    <div class="minis">
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🔔</span> Spoken warnings</h3><p>Zio or Sio says so at 10, 5 and 1 minutes left; the launcher comes to the front for a few seconds.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🏁</span> The last round</h3><p>Once a day the child can ask for a 2–5 minute last round to finish what they are doing.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🤸</span> Breaks and eye exercises</h3><p>If you like, a 5-minute break every 40 minutes, with a few moves and a far-away look for the eyes.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🎓</span> Time earned by learning</h3><p>Minutes in learning apps earn game time (1 for 1, up to +60 minutes a day).</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🔒</span> Learn first</h3><p>Games can wait until the day's learning minutes are done.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🗂️</span> Time by kind of app</h3><p>Separate daily limits for Games, Learning, Web and Free.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🎉</span> Special days</h3><p>Holiday rules for up to 100 days; "Is today a special day?" gives +1 or +2 hours with a tap.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🌙</span> Good night</h3><p>When the day ends in the evening, the screen dims gently over the last 10 minutes and Zio says good night.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🤝</span> We're together</h3><p>Playing together? For 30 minutes, 1 or 2 hours, nothing is counted.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="feat-block" aria-labelledby="live-view">
+  <div class="wrap">
+    <div class="spot">
+      <div class="spot-media phone">{{ m.shot(lang ~ '/panel-live', 'The Live screen card in the parent panel on a phone: the child\'s screen as it is now, and a Stop button.', 'The live view, on a phone.', sizes='(min-width: 960px) 400px, 90vw') }}</div>
+      <div class="spot-text">
+        <p class="eyebrow tint-indigo">Live view</p>
+        <h2 id="live-view">See the screen now, and your child knows</h2>
+        <p class="lead">In the panel: <strong>Children → See their screen → Watch live</strong>. At the computer or on your phone, about one picture a second.</p>
+        <ul class="checks">
+          <li>The child's screen says <strong>"👁 … can see your screen now"</strong>; that sign cannot be turned off.</li>
+          <li><strong>No picture is saved;</strong> the latest one lives only in memory. It ends when you press Stop or leave the page.</li>
+          <li>Every time watching starts, it is written in the <strong>audit log</strong>.</li>
+          <li>There is also a <strong>Screen preview:</strong> how your rules make the child's screen look.</li>
+        </ul>
+        <p class="btn-row" style="margin-top:22px"><a class="btn btn-secondary" href="{{ url('guide-live') }}">Live view guide</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="feat-block" aria-labelledby="internet">
+  <div class="wrap">
+    <div class="spot flip">
+      <div class="spot-media">{{ m.shot(lang ~ '/blocked', 'The blocked-site page: a friendly character, "This place is not for you", and Ask a grown-up and Go back buttons.', 'A blocked site looks like a friendly page to the child.', sizes='(min-width: 960px) 580px, 100vw') }}</div>
+      <div class="spot-text">
+        <p class="eyebrow tint-indigo">Safe browsing</p>
+        <h2 id="internet">Harmful sites closed, requests a tap away</h2>
+        <p class="lead">The filter runs on the computer itself, affects only the children's accounts, and works without the internet.</p>
+        <ul class="checks">
+          <li>About <strong>291,000</strong> adult, gambling, malware and scam domains are always blocked.</li>
+          <li><strong>SafeSearch</strong> is enforced on Google, Bing and DuckDuckGo; YouTube is in restricted mode.</li>
+          <li>Two modes: <strong>"Open internet, harmful sites closed"</strong> or <strong>"Only the sites I choose"</strong>.</li>
+          <li><strong>Words that cannot be searched:</strong> add your own to the 89 built-in ones. A blocked search is never sent.</li>
+          <li>If the filter fails, the internet <strong>closes entirely</strong>; there is no unprotected internet.</li>
+        </ul>
+        <p class="btn-row" style="margin-top:22px"><a class="btn btn-secondary" href="{{ url('guide-web') }}">Safe browsing guide</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="feat-block" aria-labelledby="ask-me">
+  <div class="wrap">
+    <div class="spot">
+      <div class="spot-media">{{ m.shot(lang ~ '/assistant', 'Ask Zio: the child asks "Why is the sky blue?" and gets a short answer for their age.', 'Ask Me. Answers are made on the computer itself.', sizes='(min-width: 960px) 580px, 100vw') }}</div>
+      <div class="spot-text">
+        <p class="eyebrow tint-coral">Ask Me · on-device AI</p>
+        <h2 id="ask-me">An AI assistant with no cloud</h2>
+        <p class="lead">The child types, or holds the button and speaks; the answer is short, right for their age, in the language they asked in (English or Turkish), and Zio reads it aloud.</p>
+        <ul class="checks">
+          <li><strong>Fully offline:</strong> Gemma through llama.cpp, Whisper for speech, and an offline Wikipedia to check the answers.</li>
+          <li><strong>You see what it refused</strong> (on Today and, if you like, by email); ordinary questions are not kept.</li>
+          <li>At most 5 sentences for ages 4–7 and 7 for 8–10; up to 20 questions every 10 minutes.</li>
+          <li>Optional, and turned on for each child separately.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="model-table">
+        <caption class="visually-hidden">The models downloaded, by memory</caption>
+        <thead><tr><th scope="col">Computer's memory</th><th scope="col">Language model</th><th scope="col">Speech</th><th scope="col">Total download</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Under 7 GB</th><td colspan="3">No assistant; the rest of BioKids works fully.</td></tr>
+          <tr><th scope="row">7–12 GB</th><td>Gemma 4 E2B (3.35 GB)</td><td>Whisper small</td><td>≈ 4.0 GB</td></tr>
+          <tr><th scope="row">12 GB or more</th><td>Gemma 4 E4B (5.15 GB)</td><td>Whisper large-v3-turbo</td><td>≈ 6.2 GB</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Both come with offline Wikipedia packs in English and Turkish (297 MB + 138 MB), and every file is checked against a fixed SHA-256. <a href="{{ url('guide-assistant') }}">How to set up Ask Me</a></p>
+  </div>
+</section>
+
+<section class="feat-block" aria-labelledby="zio-sio">
+  <div class="wrap">
+    <div class="spot flip">
+      <div class="spot-media">{{ m.shot(lang ~ '/first-run', 'The first start: Zio explains to the child what the family can see.', 'At the first start, Zio explains what the family can see.', sizes='(min-width: 960px) 580px, 100vw') }}</div>
+      <div class="spot-text">
+        <p class="eyebrow tint-amber">Zio and Sio</p>
+        <h2 id="zio-sio">A mother's voice and a father's</h2>
+        <p class="lead">Zio and Sio are two friends who tell the child what is happening: welcome, time left, a break, time's up, the answer to a request, well done…</p>
+        <ul class="checks">
+          <li>Out of the box they speak with <strong>espeak-ng</strong>.</li>
+          <li><strong>Natural voice:</strong> one button downloads Piper's natural voice (about 153 MB with its Turkish and English voices).</li>
+          <li><strong>Your own voice:</strong> record seven short lines yourself, and your child hears the warnings in your voice. Recordings stay on the computer.</li>
+          <li>If the voice service fails, the child reads the warning on screen instead.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="feat-block" aria-labelledby="brightness">
+  <div class="wrap">
+    <header class="section-head">
+      <p class="eyebrow tint-amber">Brightness, sound and display</p>
+      <h2 id="brightness">A screen that suits the eyes and the reader</h2>
+      <p class="lead">Brightness and volume are always at the child's fingertips; text size and colours are set for each child.</p>
+    </header>
+    <div class="minis">
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">☀️</span> Brightness slider</h3><p>Always at the bottom of the launcher; the screen goes down to 20% and never fully dark.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🌙</span> Evening dimming</h3><p>When the day ends after 7 pm, the screen dims step by step to 60% over the last 10 minutes, then goes back.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🔉</span> Sound</h3><p>A volume bar at the top, and each app's own volume on its bar; Zio can always be heard.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🔠</span> Text size</h3><p>Normal, Large or Extra large; one setting for the child, another for your panel.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">📚</span> Easy-reading typeface</h3><p>OpenDyslexic, for children who find reading hard.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🌓</span> High contrast and calm screen</h3><p>Sharper colours, and a "Calm screen" with no motion.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="feat-block" aria-labelledby="history">
+  <div class="wrap">
+    <div class="spot">
+      <div class="spot-media">{{ m.shot(lang ~ '/panel-history', 'History: a year of daily screen time as a heatmap, with the last 14 days as bars below.', 'History: a year as a heatmap, two weeks as bars.', sizes='(min-width: 960px) 580px, 100vw') }}</div>
+      <div class="spot-text">
+        <p class="eyebrow tint-teal">History, insights and reports</p>
+        <h2 id="history">Where the time went, at a glance</h2>
+        <p class="lead">Today shows the moment, History the past year, and Insights tells the story of the week.</p>
+        <ul class="checks">
+          <li><strong>Today:</strong> a card per child with the time left, what is on screen, +10 min, +30 min, lock, shut down.</li>
+          <li><strong>History:</strong> a year-long heatmap, the last 14 days, and every day in detail: apps, sites opened, requests.</li>
+          <li><strong>Insights:</strong> this week, last week or the last 30 days; highlights, time by kind of app, hours of the day, blocked searches.</li>
+          <li><strong>Audit log:</strong> every rule change, PIN attempt, time given and clock change; it cannot be deleted and is kept for a year.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="grid grid-2" style="margin-top:36px">
+      {{ m.shot(lang ~ '/panel-today', 'The Today screen: Elif\'s card with the time left, the app on screen, and +10 min and lock buttons.', 'Today: a card with big buttons for each child.', sizes='(min-width: 960px) 560px, 100vw', cls='crop-top') }}
+      {{ m.shot(lang ~ '/insights', 'Insights: the week\'s highlights, total and daily average time, and the split by kind of app.', 'Insights: rule-based highlights and charts.', sizes='(min-width: 960px) 560px, 100vw', cls='crop-top') }}
+    </div>
+  </div>
+</section>
+
+<section class="feat-block" aria-labelledby="phone">
+  <div class="wrap">
+    <header class="section-head">
+      <p class="eyebrow tint-indigo">Phone and notifications</p>
+      <h2 id="phone">The remote in your pocket, the news in your inbox</h2>
+      <p class="lead">The panel runs on the computer at <code>127.0.0.1:7878</code>, and reaches your phone only over your own private network.</p>
+    </header>
+    <div class="minis">
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">📱</span> Phone access</h3><p>Four steps with Tailscale and a QR code. No port forwarding, no BioKids server. <a href="{{ url('guide-phone') }}">Guide</a></p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🏠</span> Add to Home Screen</h3><p>The panel opens on your phone like an app.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">✉️</span> Told at once</h3><p>A protection problem, a request from your child, a question the assistant refused: from your own mail server, batched once a minute.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">📅</span> Weekly summary</h3><p>On Sunday evening, each child's time per day and three highlights. Emails never contain what a child typed or searched.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="feat-block" aria-labelledby="warm-side">
+  <div class="wrap">
+    <header class="section-head">
+      <p class="eyebrow tint-coral">The warm side</p>
+      <h2 id="warm-side">Not only supervision: connection too</h2>
+      <p class="lead">Some of what BioKids does exists only for you and your child.</p>
+    </header>
+    <div class="minis">
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">⭐</span> Well done!</h3><p>One tap sends "Well done!" or a note of up to 140 characters to your child's screen; Zio reads it aloud.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">💬</span> What shall we talk about today?</h3><p>Up to three things from your child's day to talk about in the evening: the day's card, new words, a favourite app.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🎂</span> Birthday</h3><p>If you like, Zio says happy birthday and a cake appears on the screen.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🎧</span> Your child's voice</h3><p>Recordings sent from My voice can be played on your Today screen for 7 days.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="feat-block" aria-labelledby="safety">
+  <div class="wrap">
+    <header class="section-head">
+      <p class="eyebrow tint-teal">Safety and resilience</p>
+      <h2 id="safety">If something breaks, the child is not left unprotected</h2>
+      <p class="lead">BioKids' rule is "fail safe, not silent": if protection is not working, the session locks and you are told.</p>
+    </header>
+    <div class="minis">
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🧯</span> Fail safe</h3><p>If the background service stops, the filter fails or a lock does not take, the child's session locks.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🔢</span> PIN, passphrase, recovery code</h3><p>A 6-digit PIN (stored with argon2, slowed down after 5 wrong tries), a family passphrase for the big things, and an 8-word recovery code.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">👨‍👩‍👧</span> Up to four parents</h3><p>Each with their own name, PIN and recovery code; the log says who did what.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">✅</span> Protection checklist</h3><p>Filter, browser rules, backup, disk, clock: a list of what is in place, and what to do about what isn't.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">💾</span> Encrypted backup</h3><p>One file, sealed with the family passphrase, to move everything to a new computer.</p></article>
+      <article class="mini"><h3><span class="emoji" aria-hidden="true">🧑‍💻</span> Children can't install software</h3><p>No terminal, no settings and no software installs on children's accounts; no guest account.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="feat-block" aria-labelledby="limits">
+  <div class="wrap narrow">
+    <header class="section-head">
+      <p class="eyebrow tint-coral">Being honest</p>
+      <h2 id="limits">What BioKids doesn't do</h2>
+      <p class="lead">We would rather be clear about the limits than let a parent feel safer than they are.</p>
+    </header>
+    <ul class="checks no">
+      <li><strong>No covert monitoring:</strong> no hidden screenshots, no keylogging, no location tracking.</li>
+      <li><strong>No AI watching the screen,</strong> and no "risk score".</li>
+      <li><strong>No decrypting traffic:</strong> there is no proxy in the middle.</li>
+      <li><strong>No phones or tablets;</strong> it manages only the computer it is installed on.</li>
+      <li><strong>It doesn't stop a determined adult:</strong> booting from a USB stick, removing the disk or someone helping the child are out of scope.</li>
+      <li><strong>It doesn't supervise Windows:</strong> on a dual-boot computer, give the Windows account a password your child doesn't know.</li>
+    </ul>
+    {% call m.callout('note', 'An aid, not a guarantee') %}
+    <p>No filter catches everything, and none of this replaces talking with your child. The full scope is on the <a href="{{ url('privacy') }}">Privacy</a> page and in <a href="{{ site.repo }}/blob/main/docs/SECURITY.md">SECURITY.md</a>.</p>
+    {% endcall %}
+  </div>
+</section>
+{% endblock %}

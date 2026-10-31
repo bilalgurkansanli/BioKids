@@ -1,0 +1,115 @@
+{# The pieces pages are made of. Import with:
+   {% import "macros.html" as m with context %} #}
+
+{# A picture from static/img/, as WebP with a half-size copy for small screens.
+   `name` is relative to static/img/ without the extension, e.g. "tr/hero".
+   Sizes come from images.json, which make_images.py writes. #}
+{% macro img(name, alt, sizes="(min-width: 1180px) 1100px, 100vw", eager=False, cls="") -%}
+{% set im = image(name) -%}
+<img src="/assets/img/{{ name }}.webp"{% if im.get('small') %} srcset="/assets/img/{{ name }}-{{ im.small }}.webp {{ im.small }}w, /assets/img/{{ name }}.webp {{ im.w }}w" sizes="{{ sizes }}"{% endif %} width="{{ im.w }}" height="{{ im.h }}" alt="{{ alt }}"{% if eager %} fetchpriority="high"{% else %} loading="lazy"{% endif %} decoding="async"{% if cls %} class="{{ cls }}"{% endif %}>
+{%- endmacro %}
+
+{# A screenshot in a frame, with a caption and a "real screenshot" label.
+   Pass `sizes` by keyword: m.shot("tr/launcher", "alt…", "caption…", sizes="…"). #}
+{% macro shot(name, alt, caption="", sizes="(min-width: 1180px) 1100px, 100vw", eager=False, cls="", label=True) -%}
+<figure class="shot {{ cls }}">
+  <div class="shot-frame">{{ img(name, alt, sizes, eager) }}</div>
+  {% if caption or label %}
+  <figcaption>{% if label %}<span class="badge badge-real">{{ t.screenshot }}</span> {% endif %}{{ caption }}</figcaption>
+  {% endif %}
+</figure>
+{%- endmacro %}
+
+{# A drawing made for the site (not a screenshot), labelled as one. #}
+{% macro illus(caption="", cls="") -%}
+<figure class="illus {{ cls }}">
+  <div class="illus-frame">{{ caller() }}</div>
+  <figcaption><span class="badge badge-illus">{{ t.illustration }}</span> {{ caption }}</figcaption>
+</figure>
+{%- endmacro %}
+
+{# One step of a guide. build.py reads these back for the HowTo data and the
+   table of contents, so keep the markup exactly as it is. #}
+{% macro step(title, id) -%}
+<li class="step" id="{{ id }}"><h3>{{ title }}</h3>
+<div class="step-body">{{ caller() }}</div><!--/step--></li>
+{%- endmacro %}
+
+{# A boxed aside: note, tip, warn, danger. #}
+{% macro callout(kind="note", title="") -%}
+{% set icons = {"note": "💡", "tip": "✨", "warn": "⚠️", "danger": "⛔", "privacy": "🔒", "child": "🧒"} %}
+<aside class="callout callout-{{ kind }}">
+  <span class="callout-icon" aria-hidden="true">{{ icons[kind] }}</span>
+  <div>{% if title %}<p class="callout-title">{{ title }}</p>{% endif %}{{ caller() }}</div>
+</aside>
+{%- endmacro %}
+
+{# A command to type, with a copy button. #}
+{% macro code(text, label="") -%}
+<div class="code">
+  {% if label %}<div class="code-label">{{ label }}</div>{% endif %}
+  <pre><code>{{ text | trim }}</code></pre>
+  <button type="button" class="code-copy" data-copied="{{ t.copied }}">{{ t['copy'] }}</button>
+</div>
+{%- endmacro %}
+
+{# A feature card: an emoji on a tinted square, a name, a few words. #}
+{% macro feature(icon, title, tint="coral", href="") -%}
+<article class="feature">
+  <span class="ico tint-{{ tint }}" aria-hidden="true">{{ icon }}</span>
+  <h3>{% if href %}<a href="{{ href }}">{{ title }}</a>{% else %}{{ title }}{% endif %}</h3>
+  {{ caller() }}
+</article>
+{%- endmacro %}
+
+{# A section heading with an optional small label above it. #}
+{% macro head(id, title, eyebrow="", lead="", tint="coral", center=True) -%}
+<header class="section-head{% if center %} center{% endif %}">
+  {% if eyebrow %}<p class="eyebrow tint-{{ tint }}">{{ eyebrow }}</p>{% endif %}
+  <h2 id="{{ id }}">{{ title }}</h2>
+  {% if lead %}<p class="lead">{{ lead }}</p>{% endif %}
+</header>
+{%- endmacro %}
+
+{# A link card to a guide. #}
+{% macro guide_card(g) -%}
+{% set gv = g.v(lang) %}
+<a class="guide-card" href="{{ gv.path }}">
+  <span class="ico tint-{{ ['coral', 'amber', 'teal', 'indigo'][(g.guide.order - 1) % 4] }}" aria-hidden="true">{{ g.guide.icon }}</span>
+  <span class="guide-card-text">
+    <strong>{{ gv.short }}</strong>
+    <span>{{ gv.summary }}</span>
+    <span class="guide-card-meta">⏱ {{ g.guide.minutes }} {{ t.minutes }} · {{ t['level_' ~ g.guide.level] }}</span>
+  </span>
+</a>
+{%- endmacro %}
+
+{# The questions of faq.toml, as <details>: every group under its heading,
+   or, with `home`, only the questions marked for the home page, in one list. #}
+{% macro faq_list(groups, home=False) -%}
+{% if home %}
+<div class="faq">
+{% for group in groups %}{% for q in group["items"] if q.get('home') %}
+  <details class="faq-item">
+    <summary><h3>{{ q.q }}</h3></summary>
+    <div class="faq-answer">{{ q.a | safe }}</div>
+  </details>
+{% endfor %}{% endfor %}
+</div>
+{% else %}
+{% for group in groups %}
+<h2 id="{{ group.id }}" class="faq-group">{{ group.title }}</h2>
+<div class="faq">
+  {% for q in group["items"] %}
+  <details class="faq-item" id="{{ q.id }}">
+    <summary><h3>{{ q.q }}</h3></summary>
+    <div class="faq-answer">{{ q.a | safe }}</div>
+  </details>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endif %}
+{%- endmacro %}
+
+{# A key on the keyboard. #}
+{% macro kbd(k) %}<kbd>{{ k }}</kbd>{% endmacro %}

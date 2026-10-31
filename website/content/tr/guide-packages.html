@@ -1,0 +1,87 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+{% call m.callout('warn', 'APT deposu henüz yayımlanmadı') %}
+<p>BioKids'in APT deposu (<code>{{ site.apt_url }}</code>) ve onu imzalayan yayın anahtarı ilk yayınla birlikte gelecek; anahtarın parmak izi o zaman bu sayfaya ve README'ye yazılacak. O zamana kadar paketler kaynak koddan derlenir: <a href="{{ site.repo }}/blob/main/docs/VM-RUNBOOK.md" rel="noopener">docs/VM-RUNBOOK.md</a> §1. Bir bilgisayarı en kolay yoldan hazırlamak için <a href="{{ url('guide-install') }}">ISO ile kurulum</a> rehberini izleyin.</p>
+{% endcall %}
+
+<p>Bilgisayarınızda zaten Debian 13 varsa BioKids'i ISO yerine paketlerle kurabilirsiniz. Bu rehber biraz uçbirim (terminal) kullanmayı gerektirir.</p>
+
+<h2 id="gereksinimler">Gereksinimler</h2>
+<ul>
+  <li><strong>Debian 13 "trixie", amd64.</strong> Ubuntu ve diğer dağıtımlar test edilmedi ve desteklenmiyor.</li>
+  <li><strong>X11 oturumu.</strong> Wayland desteklenmez; <code>biokids-desktop</code> Xfce ve LightDM'i kendisi getirir.</li>
+  <li>En az 4 GB bellek ve yaklaşık 25 GB disk; isteğe bağlı asistan için 7 GB ya da daha fazla bellek.</li>
+  <li><code>sudo</code> kullanabilen bir hesap ve kurulum sırasında internet.</li>
+</ul>
+
+<h2 id="paketler">Hangi paket ne yapar?</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">Paket</th><th scope="col">Ne kurar?</th><th scope="col">Kimin için?</th></tr></thead>
+    <tbody>
+      <tr><th scope="row"><code>biokids-desktop</code></th><td>BioKids, Xfce, LightDM, Chromium, çocukların uygulamaları (GCompris, Tux Paint, TuxMath, Klavaro, SuperTux…) ve gizli açılış menüsü.</td><td>Çocuğun bilgisayarı olacak bir makine. Önerilen budur.</td></tr>
+      <tr><th scope="row"><code>biokids</code></th><td>Yalnızca BioKids'in kendisi: arka plan hizmeti, panel, başlatıcı ve sesler. Açılışa dokunmaz.</td><td>Masaüstü zaten kurulu olan ve kendi düzenini korumak isteyenler.</td></tr>
+      <tr><th scope="row"><code>biokids-ai</code></th><td>Sor Bana asistanı. Hiçbir zaman kendiliğinden kurulmaz; modelleri sonra panelden indirirsiniz.</td><td>7 GB ya da daha fazla belleği olan ve asistanı isteyenler.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<ol class="steps">
+{% call m.step('Deponun anahtarını ekleyin', 'anahtar') %}
+<p>Bir uçbirim açın ve BioKids'in imza anahtarını indirip APT'nin anahtarlığına koyun:</p>
+{{ m.code('curl -fsSL ' ~ site.apt_url ~ '/KEY.gpg \\\n  | sudo tee /usr/share/keyrings/biokids-archive-keyring.gpg > /dev/null', 'Uçbirim') }}
+<p>Anahtarın parmak izini, yayımlandığında bu sayfada yazacak olanla karşılaştırın.</p>
+{% endcall %}
+
+{% call m.step('Depoyu ekleyin', 'depo') %}
+{{ m.code('echo "deb [signed-by=/usr/share/keyrings/biokids-archive-keyring.gpg] \\\n' ~ site.apt_url ~ ' trixie main" \\\n  | sudo tee /etc/apt/sources.list.d/biokids.list', 'Uçbirim') }}
+{% endcall %}
+
+{% call m.step('Paketi kurun', 'kurun') %}
+{{ m.code('sudo apt update && sudo apt install biokids-desktop', 'Uçbirim') }}
+<p>Var olan masaüstünüzü değiştirmek istemiyorsanız <code>biokids-desktop</code> yerine <code>biokids</code> yazın.</p>
+{% endcall %}
+
+{% call m.step('Kurulum sihirbazını tamamlayın', 'sihirbaz') %}
+<p>Kurulum biter bitmez ebeveyn hesabınızda bir sihirbaz açılır: PIN'iniz, ilk çocuğunuz, süresi ve interneti. Adım adım: <a href="{{ url('guide-first-setup') }}">İlk kurulum rehberi</a>.</p>
+{% endcall %}
+
+{% call m.step('Bilgisayarı bir kez yeniden başlatın', 'yeniden-baslat') %}
+<p>Çocuğun resmiyle giriş ekranı ancak yeniden başlatınca gelir.</p>
+{{ m.code('sudo systemctl reboot', 'Uçbirim') }}
+{% endcall %}
+</ol>
+
+<h2 id="asistan">Asistanı da kurmak isterseniz</h2>
+<p>Sor Bana, Debian 13'tekinden daha yeni <code>llama.cpp</code> ve <code>whisper.cpp</code> sürümlerine ihtiyaç duyar; bunlar BioKids deposundan gelir. Bu yüzden <code>biokids-ai</code>, BioKids deposu eklenmemiş sıradan bir Debian 13'e kurulamaz. ISO'da ise her şey hazırdır.</p>
+{{ m.code('sudo apt install biokids-ai', 'Uçbirim') }}
+<p>Sonra modeli panelden indirip bir çocuk için açın: <a href="{{ url('guide-assistant') }}">Sor Bana rehberi</a>.</p>
+
+<h2 id="guncelleme">Güncelleme</h2>
+<p>BioKids kendiliğinden güncellenmez. Güncellemeleri siz, Debian'ın geri kalanıyla birlikte alırsınız. BioKids paketleri birbirine bağlıdır ve hep birlikte güncellenir:</p>
+{{ m.code('sudo apt update && sudo apt upgrade', 'Uçbirim') }}
+
+<h2 id="kaldirma">Kaldırma</h2>
+<p>Paketleri silmek ve ailenizin kayıtlarını saklamak ya da silmek için: <a href="{{ url('guide-uninstall') }}">Kaldırma rehberi</a>.</p>
+
+<h2 id="sorun">Sorun mu var?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>Ubuntu'ya kurabilir miyim?</h3></summary>
+    <div class="faq-answer"><p>Şu an hayır: depo yalnızca Debian 13 "trixie" içindir ve Ubuntu test edilmedi. En kolayı, içinde Debian 13 olan BioKids ISO'sunu kurmaktır.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3><code>biokids-ai</code> kurulmuyor, <code>llama.cpp-tools</code> bulunamıyor diyor.</h3></summary>
+    <div class="faq-answer"><p>Bu paketlerin yeni sürümleri Debian 13'te yok, BioKids deposundan gelir. Depoyu 2. adımdaki gibi eklediğinizden ve <code>sudo apt update</code> çalıştırdığınızdan emin olun.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Hangi sürüm kurulu?</h3></summary>
+    <div class="faq-answer"><p>Panelin en altında yazar. Uçbirimde <code>apt policy biokids</code> komutuyla da bakabilirsiniz.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Oturum Wayland'de açılıyor.</h3></summary>
+    <div class="faq-answer"><p>BioKids yalnızca X11'de çalışır. <code>biokids-desktop</code> ile gelen LightDM ve Xfce zaten X11 kullanır; başka bir giriş yöneticisi kullanıyorsanız oturumu Xfce (X11) olarak seçin.</p></div>
+  </details>
+</div>
+{% endblock %}

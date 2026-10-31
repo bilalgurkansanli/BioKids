@@ -1,0 +1,85 @@
+{% extends "page.html" %}
+{% import "macros.html" as m with context %}
+{% block h1 %}Destek ve iletişim{% endblock %}
+{% block lead %}<p class="lead">Takıldığınız bir yer mi var, bir şey beklediğiniz gibi çalışmıyor mu? Bize yazın; Türkçe ya da İngilizce, hangisi kolayınıza gelirse.</p>{% endblock %}
+{% block body %}
+<section class="section-tight">
+  <div class="wrap">
+    <div class="grid grid-2">
+      <article class="card help-card">
+        <span class="ico tint-coral" aria-hidden="true">✉️</span>
+        <h3>E-posta</h3>
+        <p>Kurulum, ayarlar ya da aklınıza takılan her şey için. Rehberde bir eksik görürseniz de yazın.</p>
+        <div class="btn-row"><a class="btn btn-primary" href="mailto:{{ site.email }}?subject={{ 'BioKids: destek' | urlencode }}">{{ site.email }}</a></div>
+      </article>
+      <article class="card help-card">
+        <span class="ico tint-amber" aria-hidden="true">🐞</span>
+        <h3>Hata bildirimi</h3>
+        <p>Bir şey olması gerektiği gibi çalışmıyorsa GitHub'da hata formuyla bir kayıt açın. Form, işe yarayacak bilgileri sizden adım adım ister.</p>
+        <div class="btn-row"><a class="btn btn-secondary" href="{{ site.issues_url }}" rel="noopener">GitHub'da bildirin</a></div>
+      </article>
+      <article class="card help-card">
+        <span class="ico tint-teal" aria-hidden="true">🖥️</span>
+        <h3>Donanım sorunu</h3>
+        <p>Ekran, ses, Wi-Fi ya da mikrofon bilgisayarınızda çalışmıyor mu? Donanım formu, düzeltmek için gerekenleri toplar.</p>
+        <div class="btn-row"><a class="btn btn-secondary" href="{{ site.issues_url }}" rel="noopener">Donanım formunu açın</a></div>
+      </article>
+      <article class="card help-card">
+        <span class="ico tint-indigo" aria-hidden="true">🔒</span>
+        <h3>Güvenlik açığı</h3>
+        <p>Lütfen herkese açık bir kayıt açmayın. Güvenlik sorunlarını gizlice bildirin; nasıl yapılacağı güvenlik belgesinde.</p>
+        <div class="btn-row"><a class="btn btn-secondary" href="{{ site.repo }}/blob/main/SECURITY.md" rel="noopener">Gizlice bildirin</a></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight">
+  <div class="wrap narrow prose">
+    <h2 id="once-bunlar">Önce bunlara bir bakın</h2>
+    <p>Çoğu sorunun yanıtı zaten yazılı:</p>
+    <ul>
+      <li><a href="{{ url('faq') }}">Sık sorulan sorular</a> ve <a href="{{ url('guide-troubleshooting') }}">Sorun giderme</a>: PIN'i unutmak, kilitlenen ekran, güncelleme.</li>
+      <li><a href="{{ url('guides') }}">Tüm rehberler</a>: kurulumdan telefondan erişime, adım adım ve resimli.</li>
+      <li>Panelin kendi <strong>Yardım</strong> sayfası: üst çubukta, bilgisayarın kendisinde, internet olmadan da açılır. Sık sorulan soruların yanında sekiz adım adım rehber vardır ve bunlar giriş yapmadan da açılır:</li>
+    </ul>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Paneldeki rehber</th><th scope="col">Ne anlatır</th></tr></thead>
+        <tbody>
+          <tr><td>E-posta bildirimlerini kurmak</td><td>Gmail, Yandex ya da iCloud ile bildirim ve haftalık özet</td></tr>
+          <tr><td>Paneli telefondan açmak</td><td>Tailscale ile dört adım</td></tr>
+          <tr><td>Çocuk eklemek ve ilk giriş</td><td>Yeni bir çocuk ve resmiyle ilk giriş</td></tr>
+          <tr><td>Süreler ve saatler</td><td>Günlük süre, izin verilen saatler, özel günler</td></tr>
+          <tr><td>İnternet, siteler ve aramalar</td><td>Filtre, izin verilen siteler, aranamayacak kelimeler</td></tr>
+          <tr><td>Zio ve Sio'nun sesi</td><td>Doğal ses ve kendi sesinizi kaydetmek</td></tr>
+          <tr><td>PIN'i ya da parolayı unuttum</td><td>Kurtarma kodu ve yönetici komutları</td></tr>
+          <tr><td>Bilgisayarın kendisini korumak</td><td>BIOS parolası, USB'den açılış ve benzerleri</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="bildirime-ne-eklenmeli">Bir bildirime neler eklenmeli?</h2>
+    <p>Sorunu birlikte daha hızlı çözmek için şunları yazın:</p>
+    <ul class="checks">
+      <li><strong>BioKids sürümü:</strong> panelin en altında yazar (ör. "BioKids {{ site.version }}"). Uçbirimde <code>biokids-admin version</code> da gösterir.</li>
+      <li><strong>Debian sürümü</strong> ve bilgisayarın <strong>gerçek bir bilgisayar mı, sanal makine mi</strong> olduğu.</li>
+      <li>Ne yaptığınız, ne beklediğiniz ve ne olduğu, adım adım.</li>
+      <li>Gerekirse arka plan hizmetinin son kayıtları:</li>
+    </ul>
+    {{ m.code('sudo journalctl -u biokids-daemon -n 200 --no-pager', 'Uçbirim') }}
+    {% call m.callout('danger', 'Çocuğunuzu gösteren hiçbir şey eklemeyin') %}
+    <p>Bildirimlere, e-postalara ya da kayıtlara çocuğunuzun adını, ekranını ya da geçmişini koymayın. Kayıtlardaki adları göndermeden önce silin ya da değiştirin.</p>
+    {% endcall %}
+
+    <h2 id="yanit-suresi">Ne zaman yanıt alırım?</h2>
+    <p>BioKids tek kişinin geliştirdiği, gönüllü bir açık kaynak projedir. Her mesajı okuyoruz, ama yanıt bazen birkaç gün sürebilir. Acil bir güvenlik sorunu ise <a href="{{ site.repo }}/blob/main/SECURITY.md" rel="noopener">güvenlik belgesindeki</a> yolu izleyin.</p>
+
+    <h2 id="katki">Katkıda bulunun</h2>
+    <div class="card">
+      <p>BioKids herkesin katkısına açık: <strong>çeviriler</strong>, <strong>donanım raporları</strong> ("bu bilgisayarda her şey çalıştı" da çok değerlidir), hata bildirimleri ve kod. Başlamadan önce <a href="{{ site.repo }}/blob/main/CONTRIBUTING.md" rel="noopener">katkı rehberini</a> okuyun: çalışma düzenini ve projenin kabul etmeyeceği özellikleri (gizli izleme, tuş kaydı, çocuğa gösterilmeyen ekran görüntüsü gibi) anlatır. Katılan herkes <a href="{{ site.repo }}/blob/main/CODE_OF_CONDUCT.md" rel="noopener">Davranış Kuralları</a>'na uyar.</p>
+      <div class="btn-row"><a class="btn btn-secondary" href="{{ site.repo }}" rel="noopener">GitHub'daki proje</a></div>
+    </div>
+  </div>
+</section>
+{% endblock %}

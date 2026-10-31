@@ -1,0 +1,86 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>Want to see BioKids before putting it on a real computer? With the free <strong>VirtualBox</strong> you can make a "virtual computer" inside your own and install BioKids there. Nothing happens to your real disk.</p>
+
+{% call m.callout('note', 'Why not just try the USB stick?') %}
+<p>The live session on the stick is for looking at the desktop and installing; BioKids' services are switched off there on purpose. The launcher, the time limits and the panel only run on an <em>installed</em> system. A virtual machine is the easiest way to see that without changing your computer.</p>
+{% endcall %}
+
+<h2 id="before-you-start">Before you start</h2>
+<ul class="checks">
+  <li><strong>VirtualBox 7</strong> from <a href="https://www.virtualbox.org/" rel="noopener">virtualbox.org</a> (free for Windows, Intel Macs and Linux).</li>
+  <li><strong>The BioKids ISO</strong> from the <a href="{{ url('download', 'iso') }}">download page</a>. No need to write it to a USB stick.</li>
+  <li>At least <strong>8 GB of memory</strong> and <strong>45 GB of free disk</strong> on your computer.</li>
+</ul>
+
+<h2 id="virtual-machine">Create the virtual machine</h2>
+<ol class="steps">
+  {% call m.step('Make a new machine', 'new') %}
+  <p>In VirtualBox press <strong>Machine → New</strong>. Name: <code>BioKids</code>. As the <strong>ISO Image</strong>, choose the BioKids ISO. Type <strong>Linux</strong>, version <strong>Debian (64-bit)</strong>.</p>
+  {% call m.callout('warn') %}<p>Tick <strong>Skip Unattended Installation</strong>. Otherwise VirtualBox tries to run the installation its own way.</p>{% endcall %}
+  {% endcall %}
+
+  {% call m.step('Set the memory, processors and disk', 'hardware') %}
+  <div class="table-wrap">
+    <table class="settings-table">
+      <tbody>
+        <tr><th scope="row">Memory</th><td><strong>4096 MB</strong>; <strong>8192 MB</strong> or more to try the Ask Me assistant too</td></tr>
+        <tr><th scope="row">Processors</th><td><strong>2</strong> or more</td></tr>
+        <tr><th scope="row">EFI</th><td>Optional: both EFI and BIOS work</td></tr>
+        <tr><th scope="row">Hard disk</th><td><strong>40 GB</strong>, <em>dynamically allocated</em> (it grows as it is used)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {% endcall %}
+
+  {% call m.step('Set the graphics controller to VBoxSVGA', 'display') %}
+  <p>Select the machine and go to <strong>Settings → Display</strong>. Set the <strong>Graphics Controller</strong> to <strong>VBoxSVGA</strong> and raise the video memory to 128 MB. On some computers the screen stays black with VMSVGA.</p>
+  {% endcall %}
+</ol>
+
+<h2 id="install">Install BioKids</h2>
+<ol class="steps">
+  {% call m.step('Start it and choose "Start installer"', 'start') %}
+  <p>Press <strong>Start</strong>. When BioKids' menu appears, choose <strong>Start installer</strong>. The language, keyboard and parent account are as in the <a href="{{ url('guide-install', 'language-keyboard') }}">install guide</a>.</p>
+  <p>Clicking inside the virtual machine may "capture" the mouse; press the right {{ m.kbd('Ctrl') }} key (the Host key; on a Mac the left {{ m.kbd('⌘') }}) to get it back.</p>
+  {% endcall %}
+
+  {% call m.step('Disk: "use entire disk" is safe here', 'disk') %}
+  <p>In the virtual machine you can choose <strong>"Guided - use entire disk"</strong>: what gets erased is only the machine's own 40 GB virtual disk. Your real disk is not touched.</p>
+  {% endcall %}
+
+  {% call m.step('Remove the ISO and restart', 'remove-iso') %}
+  <p>When it is done, before restarting, choose <strong>Devices → Optical Drives → Remove disk from virtual drive</strong> in VirtualBox's menu. Then press <strong>Continue</strong>.</p>
+  {% endcall %}
+
+  {% call m.step('Finish the wizard and sign in as a child', 'try') %}
+  <p>Sign in with your account; the <a href="{{ url('guide-first-setup') }}">setup wizard</a> opens. Add a test child, restart the virtual machine once when the wizard is done, and click the child's picture on the login screen. Now you see what your child would see.</p>
+  {{ m.shot(lang ~ '/launcher', 'The child\'s launcher: big tiles, the minutes left, brightness and open apps at the bottom.', 'The same launcher opens in the virtual machine.', sizes='(min-width: 960px) 760px, 100vw') }}
+  {% endcall %}
+</ol>
+
+<h2 id="tips">Tips</h2>
+<ul>
+  <li>Before trying something, press <strong>Machine → Take Snapshot</strong>; one click brings everything back to that moment.</li>
+  <li>The virtual machine is much faster while its window is in front. The assistant answers noticeably slower in a virtual machine than on a real computer; that is normal.</li>
+  <li>The installer sets the time zone to Istanbul; if you live elsewhere, change it as shown in the <a href="{{ url('guide-install', 'after-installing') }}">install guide</a>.</li>
+  <li>Like it? To install it on a real computer: <a href="{{ url('guide-usb') }}">make a USB stick</a>.</li>
+</ul>
+
+<h2 id="problems">Something wrong?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>The screen stays black</h3></summary>
+    <div class="faq-answer"><p>Turn the machine off, check that Settings → Display → Graphics Controller is <strong>VBoxSVGA</strong>, and start it again.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>It says "No bootable medium found"</h3></summary>
+    <div class="faq-answer"><p>The ISO is not attached. In Settings → Storage, choose the BioKids ISO for the optical drive. If it says this after installing, the installation did not finish; install again.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Everything is very slow</h3></summary>
+    <div class="faq-answer"><p>Give it more processors, keep the virtual machine's window in front, and close other heavy programs on your computer.</p></div>
+  </details>
+</div>
+{% endblock %}

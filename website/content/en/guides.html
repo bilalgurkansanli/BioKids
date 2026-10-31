@@ -1,0 +1,48 @@
+{% extends "page.html" %}
+{% import "macros.html" as m with context %}
+{% block h1 %}Guides: step by step, with pictures{% endblock %}
+{% block lead %}
+<p class="lead">Short guides to install and use BioKids. No technical knowledge needed; we show you what you will see at every step.</p>
+{% endblock %}
+{% block body %}
+{% set by_key = {} %}
+{% for g in guides %}{% set _ = by_key.update({g.key: g}) %}{% endfor %}
+<section class="section-tight" aria-labelledby="where-to-start">
+  <div class="wrap">
+    {{ m.head('where-to-start', 'Where should I start?', 'Installing for the first time?', 'Pick the way that suits your computer.', 'teal', center=False) }}
+    <div class="picker">
+      <a href="{{ url('guide-install') }}"><span class="emoji" aria-hidden="true">💻</span><strong>Only BioKids on this computer</strong><span>A spare or a new computer.</span><span>Install →</span></a>
+      <a href="{{ url('guide-dual-boot') }}"><span class="emoji" aria-hidden="true">🪟</span><strong>Keep Windows too</strong><span>Choose one of the two at each start.</span><span>Beside Windows →</span></a>
+      <a href="{{ url('guide-virtualbox') }}"><span class="emoji" aria-hidden="true">🧪</span><strong>I want to try it first</strong><span>Without touching your computer.</span><span>Try in VirtualBox →</span></a>
+      <a href="{{ url('guide-packages') }}"><span class="emoji" aria-hidden="true">📦</span><strong>I already use Debian 13</strong><span>Packages on your existing system.</span><span>Debian packages →</span></a>
+    </div>
+  </div>
+</section>
+
+{% set groups = [
+  ('installing', '💿', 'Installing', ['guide-usb', 'guide-install', 'guide-dual-boot', 'guide-virtualbox', 'guide-packages']),
+  ('first-days', '🧭', 'The first days', ['guide-first-setup', 'guide-time', 'guide-web']),
+  ('remote', '📱', 'Phone and AI', ['guide-phone', 'guide-live', 'guide-assistant']),
+  ('help', '🧰', 'Help', ['guide-troubleshooting', 'guide-uninstall']),
+] %}
+<section class="section-tight">
+  <div class="wrap">
+    {% for id, icon, title, keys in groups %}
+    <div class="guide-group">
+      <h2 id="{{ id }}"><span class="emoji" aria-hidden="true">{{ icon }}</span> {{ title }}</h2>
+      <div class="grid grid-3">
+        {% for k in keys %}{{ m.guide_card(by_key[k]) }}{% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section-tight">
+  <div class="wrap narrow">
+    {% call m.callout('tip', 'There are guides inside the panel too') %}
+    <p>Once BioKids is installed, the parent panel's <strong>Help</strong> page shows step-by-step guides, even offline: email notifications, phone access, adding a child, time, the internet, Zio and Sio's voice, a forgotten PIN, and protecting the computer itself.</p>
+    {% endcall %}
+  </div>
+</section>
+{% endblock %}

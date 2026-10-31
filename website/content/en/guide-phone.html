@@ -1,0 +1,79 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>The parent panel normally opens only on the computer itself. Turn on phone access and the same panel opens on your phone too: at home, at work or on the go. Give time, lock the screen, answer a request or <a href="{{ url('guide-live') }}">watch the screen live</a>.</p>
+
+<p>It uses the free <strong>Tailscale</strong> app, which builds an encrypted, private network between your phone and the computer that only you can use. Nothing needs changing on your router, and no door is opened to the internet.</p>
+
+{% call m.callout('tip', 'Did it in the setup wizard?') %}
+<p>Step 8 of the first-run setup is these same four steps. If you finished it there, the panel already opens on your phone; come back here only to turn it on later or switch it off.</p>
+{% endcall %}
+
+<h2 id="steps">Phone access in four steps</h2>
+<p>Do these <strong>at the computer</strong>, in the panel. It takes about five minutes in all.</p>
+
+<ol class="steps">
+{% call m.step('Connect this computer', 'connect-this-computer') %}
+<p>In the panel go to <strong>Settings → Access from your phone</strong> and press <strong>Turn on phone access</strong>. BioKids installs Tailscale on the computer by itself; there is nothing for you to download.</p>
+{{ m.shot(lang ~ '/phone-access', 'The Access from your phone page in the panel: four numbered steps and a Turn on phone access button at the bottom.', 'Before you start: Tailscale is not installed yet. Four steps, and Turn on phone access at the bottom.', sizes='(min-width: 960px) 760px, 100vw') }}
+<p>An <strong>Open the sign-in page</strong> button and a QR code appear. On the page that opens, sign in with your Google, Apple or Microsoft account, or create a free Tailscale account. You can also scan the QR code and sign in on your phone instead.</p>
+{{ m.shot(lang ~ '/phone-access-signin', 'Step one asks you to sign in to Tailscale once: an Open the sign-in page button and a QR code.', 'Step one: sign in to Tailscale once, with the button or the QR code.', sizes='(min-width: 960px) 760px, 100vw', cls='crop-top') }}
+{% endcall %}
+
+{% call m.step('Allow phone access', 'allow-phone-access') %}
+<p>Once the computer is connected, BioKids opens the panel to your phone. The first time, Tailscale may ask you to approve this feature on your network: an <strong>Approve in Tailscale</strong> button then appears here. Press it, approve on the page that opens, then press <strong>Turn on phone access</strong> again. This happens only once.</p>
+{{ m.shot(lang ~ '/phone-access-approval', 'Step two says Tailscale is waiting for your approval, with an Approve in Tailscale button.', 'If Tailscale asks for approval, this button appears in step two.', sizes='(min-width: 960px) 760px, 100vw', cls='crop-top') }}
+{% endcall %}
+
+{% call m.step('Install Tailscale on your phone', 'install-on-your-phone') %}
+<p>Scan the QR code for your phone (iPhone · iPad or Android) with its camera; the Tailscale app opens in the store. Install it, open it, and sign in with <strong>the same account you used on the computer</strong>.</p>
+<ul>
+<li>The phone asks to add a VPN connection: allow it. It is only Tailscale's own connection; the rest of your phone's internet is unchanged.</li>
+<li>Tap <strong>Connect</strong> in the app; it should say "Connected" at the top.</li>
+</ul>
+{% endcall %}
+
+{% call m.step('Open the panel on your phone', 'open-the-panel') %}
+<p>When the first three steps are done, the panel's phone address and a QR code appear. The address looks like <code>https://your-computer.your-network.ts.net</code>. Scan the code with your phone's camera and enter your PIN.</p>
+{{ m.shot(lang ~ '/phone-access-done', 'The Access from your phone page with all four steps done: the panel address, a QR code to scan, and a Turn off phone access button.', 'Done: the panel\'s phone address and its QR code. Only devices on your own Tailscale network can reach it.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% call m.callout('tip', 'Make it feel like an app') %}
+<p>In your phone's browser menu choose <strong>Add to Home Screen</strong>. BioKids then sits on your phone like an app icon and opens with one tap.</p>
+{% endcall %}
+{% endcall %}
+</ol>
+
+<h2 id="everyday-use">Everyday use</h2>
+<p>To open the panel on your phone, the Tailscale app there just needs to be connected. After 30 minutes without any action the panel signs you out, and you enter your PIN again.</p>
+<p>You can do almost everything from the phone: give +10 min, lock or shut down from <strong>Today</strong>, answer <strong>Requests</strong>, look at History and Insights, watch the screen live. Only <strong>Switch user</strong> works at the computer alone.</p>
+
+{% call m.callout('privacy', 'What this means for privacy') %}
+<p>Tailscale's coordination server is the one outside party, and only once you turn this on; BioKids runs Tailscale without its logging (<code>--no-logs-no-support</code>). The panel itself travels only over your own encrypted network and never through a BioKids server. One thing worth knowing: because of the secure (HTTPS) certificate, your computer's <code>.ts.net</code> name appears in public certificate logs. That is a name only, nothing about your family. Every outbound connection BioKids makes is on the <a href="{{ url('privacy', 'connections') }}">Privacy page</a>.</p>
+{% endcall %}
+
+{% call m.callout('danger', 'Do not forward ports') %}
+<p>Do not set up port forwarding on your router to reach the panel, and do not turn on Tailscale Funnel. BioKids refuses Funnel anyway: the panel is open only to the devices on your own network, and should stay that way.</p>
+{% endcall %}
+
+<h2 id="turn-off">Turning phone access off</h2>
+<p>Go to <strong>Settings → Access from your phone</strong> and press <strong>Turn off phone access</strong>. The panel no longer opens from your phone. Tailscale stays installed on the computer; to turn access back on, press the same button again.</p>
+
+<h2 id="something-wrong">Something wrong?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>The panel will not open on my phone</h3></summary>
+    <div class="faq-answer"><p>Open the Tailscale app on the phone and check it says "Connected". Make sure the computer is on and online; a sleeping or switched-off computer cannot be reached. Check that the phone and the computer are signed in to the same Tailscale account.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Does Tailscale cost anything?</h3></summary>
+    <div class="faq-answer"><p>No. A free personal Tailscale account is enough for a family's use like this.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Can my partner use it from their phone too?</h3></summary>
+    <div class="faq-answer"><p>Yes. Install Tailscale on their phone and sign in with the same account; in the panel, give them their own parent account with their name and PIN under <strong>Settings → Parents</strong>. Up to four parents are allowed.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>What if I lose my phone?</h3></summary>
+    <div class="faq-answer"><p>The panel still asks for the PIN, so whoever finds the phone cannot get in without it. Even so, remove that phone from your network in the device list of Tailscale's admin console, on their website.</p></div>
+  </details>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p><strong>Canlı ekran</strong>, çocuğunuzun ekranını o anki haliyle görmenizi sağlar: bilgisayarın başında ya da <a href="{{ url('guide-phone') }}">telefonunuzdan</a>, nerede olursanız olun. Bir oyunda takıldıysa, bir videoda ne izlediğini merak ettiyseniz ya da "neredeyse bitti" dediği ödevi görmek istiyorsanız bir dokunuş yeter.</p>
+
+{% call m.callout('child', 'Önce çocuğunuza söyleyin') %}
+<p>BioKids'te denetim hiçbir zaman gizli değildir; siz izlerken çocuk bunu ekranında görür. Yine de en iyisi önceden konuşmaktır: "Bazen ekranına bakabilirim, ekranda gözü görürsün" demek yeter. Bu özellik gözetlemek için değil, yardım edebilmeniz için var.</p>
+{% endcall %}
+
+<h2 id="adimlar">Canlı izlemeyi başlatmak</h2>
+<ol class="steps">
+{% call m.step('Paneli açın ve çocuğu seçin', 'paneli-acin') %}
+<p>Paneli bilgisayarda ya da telefonunuzda açın, PIN'inizi girin. <strong>Çocuklar</strong>'a gidin ve çocuğunuzun kartında <strong>Ekranını gör</strong>'e basın.</p>
+{% endcall %}
+
+{% call m.step('Canlı izle\'ye basın', 'canli-izle') %}
+<p>Açılan sayfada <strong>Canlı izle</strong>'ye basın. Çocuğunuzun ekranı saniyede yaklaşık bir kare olarak gelir; bu bir video değil, sık yenilenen bir resimdir ve ses taşımaz.</p>
+<div style="max-width:380px">
+{{ m.shot(lang ~ '/panel-live', 'Telefonda Canlı ekran kartı: çocuğun başlatıcısı o anki haliyle görünüyor, altta Durdur düğmesi.', 'Telefonda canlı ekran: çocuğun ekranı ve Durdur düğmesi.', sizes='(min-width: 960px) 380px, 90vw') }}
+</div>
+{% endcall %}
+
+{% call m.step('Çocuk bunu görür', 'cocuk-gorur') %}
+<p>Siz izlediğiniz sürece çocuğun başlatıcısının her sayfasında <strong>"👁 Annen şu an ekranını görüyor"</strong> gibi bir yazı (sizin adınızla), açık bir uygulamanın üstündeki çubukta da 👁 işareti görünür. Bu işaret kapatılamaz.</p>
+{{ m.shot(lang ~ '/hero', 'Solda çocuğun ekranının üstünde Annen şu an ekranını görüyor yazısı, sağda o ekranı canlı izleyen telefon.', 'Sol üstteki mavi yazı, izlendiğini çocuğa söyler.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('İzlemeyi bitirin', 'bitirin') %}
+<p><strong>Durdur</strong>'a basın: izleme hemen biter. Sayfadan ayrılırsanız ya da telefonu kilitlerseniz de yaklaşık 10 saniye içinde kendiliğinden biter ve çocuğun ekranındaki yazı kaybolur.</p>
+{% endcall %}
+</ol>
+
+<h2 id="ne-kaydedilir">Ne kaydedilir, ne kaydedilmez?</h2>
+<ul class="checks">
+<li><strong>Hiçbir kare kaydedilmez.</strong> Her yeni kare bellekte bir öncekinin yerini alır; diske, buluta ya da e-postaya hiçbir şey yazılmaz.</li>
+<li><strong>Görüntü yalnızca sizin panelinize gider</strong>: bilgisayarın kendisinde ya da kendi özel Tailscale ağınız üzerinden telefonunuzda. Arada bir BioKids sunucusu yoktur.</li>
+<li><strong>Her başlangıç kayda geçer.</strong> Kim, ne zaman izlemeye başladı, panelin <strong>Kayıtlar</strong> sayfasında görünür; ailede herkes bunun olduğunu görebilir.</li>
+<li>Görüntü en fazla 960 piksel genişliğinde gelir; telefonda rahat okunur, ağı yormaz.</li>
+</ul>
+{% call m.callout('privacy', 'BioKids\'in ekrana baktığı tek an') %}
+<p>BioKids ekran görüntüsü toplamaz, ekranı yapay zekâyla izlemez. Bir çocuğun ekranına bakılan tek an, bir ebeveynin Canlı izle'ye bastığı ve bunun çocuğun ekranında yazdığı andır.</p>
+{% endcall %}
+
+<h2 id="onizleme">Ekran önizlemesi: izlemeden kontrol</h2>
+<p>Aynı sayfadaki <strong>Ekran önizlemesi</strong>, çocuğun ekranının nasıl göründüğünü kurallarınızdan çizer: hangi kutular var, kaç dakika kaldı, uyarılar ve süre bitiş ekranı nasıl görünüyor. Gerçek ekrana bakmaz; ayarlarınızı denemek için idealdir ve çocuğun ekranında bir şey göstermez.</p>
+
+<h2 id="goz-isareti">Göz işareti ayarı</h2>
+<p>Çocuğun ayarlarında (<strong>Çocuklar → Düzenle → Ekran</strong>) <strong>Ekrandaki göz işareti</strong> seçeneği, başlatıcıda her zaman duran genel denetim işaretini göster, küçük bir simgeye indir ya da gizle diye ayarlar. Canlı izleme bundan bağımsızdır: siz izlerken uyarı yazısı her zaman çıkar.</p>
+
+<h2 id="sorun-mu-var">Sorun mu var?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>Canlı izle'ye bastım ama ekran gelmiyor</h3></summary>
+    <div class="faq-answer"><p>Canlı izleme, çocuğunuzun bilgisayarda açık bir oturumu varken çalışır; bilgisayar kapalıysa, uykudaysa ya da çocuk henüz giriş yapmadıysa görülecek bir ekran yoktur. Telefondan bakıyorsanız Tailscale uygulamasının bağlı olduğunu da kontrol edin.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Görüntü akıcı değil, ses de yok</h3></summary>
+    <div class="faq-answer"><p>Böyle tasarlandı: saniyede yaklaşık bir kare, ses yok. Amaç ekranda ne olduğunu görmek; bir videoyu uzaktan izlemek değil.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Çocuğum izlendiğini görmesin, olur mu?</h3></summary>
+    <div class="faq-answer"><p>Hayır. Bu, BioKids'in değişmeyen ilkelerinden biridir: çocuk, denetlendiğini bilir. Canlı izleme sırasında çıkan yazı hiçbir ayarla kapatılamaz.</p></div>
+  </details>
+</div>
+{% endblock %}

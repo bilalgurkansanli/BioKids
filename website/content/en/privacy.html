@@ -1,0 +1,125 @@
+{% extends "page.html" %}
+{% import "macros.html" as m with context %}
+{% block h1 %}Nothing leaves your device{% endblock %}
+{% block lead %}<p class="lead">BioKids sends nothing about your family to any server: no telemetry, no account, no cloud. Every connection the computer makes is either its own updates or something you turned on yourself, and every one of them is listed on this page.</p>{% endblock %}
+{% block body %}
+<section class="section-tight">
+  <div class="wrap">
+    <div class="grid grid-3">
+      {% call m.feature('🏠', 'No cloud', 'coral') %}<p>Rules, history and records stay on this computer. There is no BioKids server, no account and no "anonymous usage statistics".</p>{% endcall %}
+      {% call m.feature('👀', 'The child knows', 'amber') %}<p>Supervision is never hidden. The first start explains what the family can see, and when you watch the screen, the child sees it.</p>{% endcall %}
+      {% call m.feature('🗓️', 'Records delete themselves', 'teal') %}<p>Every record has a lifetime: sites 30 days, requests 90 days, the audit log a year, daily minutes 400 days.</p>{% endcall %}
+    </div>
+  </div>
+  <div class="wrap narrow prose after-cards">
+    <h2 id="what-is-kept">What BioKids sees, and what it keeps</h2>
+    <p>BioKids keeps only what it needs to enforce the rules and show you a summary. It all lives in one database on the computer, and records that expire are deleted by themselves.</p>
+    <div class="table-wrap">
+      <table class="retention">
+        <thead><tr><th scope="col">What is kept</th><th scope="col">For how long</th><th scope="col">Details</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Names of sites opened</th><td>30 days</td><td>Only the site's name (e.g. <code>pbskids.org</code>); never the page, a search or anything typed.</td></tr>
+          <tr><th scope="row">App use</th><td>30 days</td><td>Which app was open, and for how long.</td></tr>
+          <tr><th scope="row">Use by the hour</th><td>30 days</td><td>For the "At what time of day?" chart in Insights.</td></tr>
+          <tr><th scope="row">Daily minutes</th><td>400 days</td><td>For the year-long map in History.</td></tr>
+          <tr><th scope="row">Requests</th><td>90 days</td><td>The time, sites and apps the child asked for with "Ask a grown-up".</td></tr>
+          <tr><th scope="row">Audit log</th><td>365 days</td><td>Every rule change, PIN attempt, time given, clock change, and every time live viewing started. It cannot be deleted from the panel.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>Never kept:</strong></p>
+    <ul class="checks no">
+      <li>Screenshots or screen recordings.</li>
+      <li>What is on the pages, what the child types, keystrokes.</li>
+      <li>Ordinary questions to the assistant: answered, then forgotten.</li>
+      <li>What the microphone hears: turned into text in memory, then dropped.</li>
+      <li>Location.</li>
+    </ul>
+    {% call m.callout('note', 'Questions the assistant refused') %}
+    <p>If Ask Me refuses a question (say, the child wants to share their home address), that question is shown to you in the panel, in the child's own words, under "Questions it would not answer". The child's screen tells them that their family may see some questions.</p>
+    {% endcall %}
+
+    <h2 id="live-view">The live view: the one exception</h2>
+    <p>The only moment BioKids looks at a child's screen is when you press <strong>Watch live</strong> in the panel.</p>
+    <ul class="checks">
+      <li>About one picture a second arrives; each replaces the last in memory and <strong>is never written anywhere</strong>.</li>
+      <li>Leave the page or press <strong>Stop</strong> and the watching ends.</li>
+      <li>While you watch, the child's screen says so, for example "👁 Mum can see your screen now". <strong>That sign cannot be turned off.</strong></li>
+      <li>Every time watching starts, it is written in the audit log, so everyone in the family can see that it happened.</li>
+    </ul>
+
+    <h2 id="the-child-knows">The child knows</h2>
+    <p>The child is always told about the supervision. It is one of BioKids' principles that no setting can change.</p>
+    <ul class="checks">
+      <li>At the <strong>first start</strong>, Zio explains what the family can see, out loud for the youngest. That explanation always runs.</li>
+      <li>An <strong>eye sign</strong> on the screen is a reminder of the supervision. A parent can make it smaller, but the sign shown during a live view cannot be turned off.</li>
+      <li>A blocked search tells the child that a grown-up will see it too, and the assistant says which questions the family may see.</li>
+      <li>The child is also told that the browser extension reports only the names of sites.</li>
+    </ul>
+
+    <h2 id="where-data-lives">Where the data lives, and how it is protected</h2>
+    <ul>
+      <li>Everything is in <code>/var/lib/biokids/biokids.db</code>, which only the administrator (root) can read; the children's accounts cannot reach it.</li>
+      <li>PINs are stored as argon2 hashes, never as plain text. Your mail password is stored encrypted.</li>
+      <li>The assistant runs as its own user, and <strong>has no network at all</strong> while it runs; its model and the offline Wikipedia live on the computer.</li>
+      <li>Your voice recordings and the child's stay on the computer.</li>
+      <li>A <strong>backup</strong> (Settings → Back up and move) is sealed with your family passphrase (argon2id and AES-256-GCM). It holds no PIN, passphrase, recovery code or mail settings.</li>
+      <li>Email notifications never contain what a child typed or searched for.</li>
+    </ul>
+
+    <h2 id="connections">Every outbound connection BioKids makes</h2>
+    <p>This list is complete. A new connection must first be written into the project's <a href="{{ site.repo }}/blob/main/docs/SECURITY.md" rel="noopener">security document (§4)</a>.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Where to</th><th scope="col">Why</th></tr></thead>
+        <tbody>
+          <tr><th scope="row" colspan="2" class="row-group">Always</th></tr>
+          <tr><td><code>deb.debian.org</code>, <code>security.debian.org</code></td><td>Debian updates</td></tr>
+          <tr><td>The BioKids APT repository</td><td>BioKids updates</td></tr>
+          <tr><td>Your DNS server</td><td>Looking up names (it can be your router)</td></tr>
+          <tr><th scope="row" colspan="2" class="row-group">Only if you turn it on</th></tr>
+          <tr><td>Your own mail server (SMTP)</td><td>Email notifications and the weekly summary</td></tr>
+          <tr><td>Tailscale and <code>pkgs.tailscale.com</code></td><td>Phone access; installed when you press the button</td></tr>
+          <tr><td>Hugging Face</td><td>The assistant's models and the natural voices</td></tr>
+          <tr><td><code>github.com</code></td><td>The natural-voice program (Piper)</td></tr>
+          <tr><td><code>download.kiwix.org</code></td><td>The offline Wikipedia</td></tr>
+          <tr><th scope="row" colspan="2" class="row-group">Never</th></tr>
+          <tr><td colspan="2">Telemetry, crash reports, version checks, usage statistics. Tailscale's own log upload is switched off (<code>--no-logs-no-support</code>). The blocklists ship inside the package and are never refreshed from outside.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Every download you start is checked against a pinned checksum (SHA-256); a file that does not match is not used.</p>
+    {% call m.callout('privacy', 'The small price of phone access') %}
+    <p>When you turn on phone access, the computer's Tailscale name (<code>…ts.net</code>) appears in public certificate logs. The panel still opens only from devices on your own Tailscale network.</p>
+    {% endcall %}
+
+    <h2 id="never-does">What BioKids never does</h2>
+    <ul class="checks no">
+      <li>It never sits in the middle of traffic to decrypt it: there is no intercepting proxy.</li>
+      <li>There is no hidden or covert mode.</li>
+      <li>It does not log keystrokes.</li>
+      <li>It does not track location.</li>
+      <li>It uses no AI that watches the screen, reads images or computes a "risk score".</li>
+    </ul>
+
+    <h2 id="limits">Its limits: an aid, not a guarantee</h2>
+    <p>BioKids is made for <strong>one curious 4–10-year-old alone at one computer</strong>. It does not stop:</p>
+    <ul>
+      <li>starting the computer from a USB stick or another system,</li>
+      <li>changing the kernel command line at boot, or taking the disk out,</li>
+      <li>an adult helping the child, or a capable teenager,</li>
+      <li>phones and tablets: BioKids manages only the computer it is installed on.</li>
+    </ul>
+    <p>Everything inside and outside its scope is in the <a href="{{ site.repo }}/blob/main/docs/SECURITY.md" rel="noopener">threat model (§1)</a>. We would rather be honest about the limits than have a parent feel safer than they are: no filter catches everything, and none of this replaces talking with your child.</p>
+
+    <h2 id="this-site">This website's privacy</h2>
+    <ul class="checks">
+      <li><strong>No cookies, no analytics, no ads.</strong> There is no code that counts or follows your visit.</li>
+      <li><strong>Nothing is loaded from any other server:</strong> every file, the typeface (Fredoka) included, comes from this site.</li>
+      <li>The only thing stored is a small "dismissed" flag in that browser tab if you close the language hint (<code>sessionStorage</code>); it goes when the tab closes.</li>
+    </ul>
+    <p>The site is hosted on GitHub Pages. Like any web server, GitHub sees your IP address and your request in order to send you the page; this falls under <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">GitHub's privacy statement</a>. When you follow a link to the source code on GitHub, or an email link, that service's own rules apply.</p>
+    <p>A question? <a href="mailto:{{ site.email }}">{{ site.email }}</a></p>
+  </div>
+</section>
+{% endblock %}

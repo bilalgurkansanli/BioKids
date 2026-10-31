@@ -1,0 +1,100 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p><strong>Ask Me</strong> (Sor Bana) is an AI assistant that answers your child's questions with short answers for their age. It runs <strong>on the computer itself</strong>: questions and answers are never sent anywhere. It is optional and stays off until you turn it on.</p>
+
+{% call m.callout('note', 'Before you start') %}
+<ul>
+<li><strong>Memory:</strong> at least 7 GB of RAM. With less, the assistant is not installed; the rest of BioKids works as usual.</li>
+<li><strong>Package:</strong> the BioKids ISO comes with the assistant package (<code>biokids-ai</code>) ready. If you installed from Debian packages, the assistant needs the llama.cpp and whisper.cpp builds from the BioKids repository; see the <a href="{{ url('guide-packages') }}">Debian packages guide</a>.</li>
+<li><strong>Internet:</strong> only to download the models, once. After that it is entirely offline.</li>
+</ul>
+{% endcall %}
+
+<h2 id="setup">Turning Ask Me on</h2>
+<ol class="steps">
+{% call m.step('Open the child\'s Assistant page', 'assistant-page') %}
+<p>In the panel go to <strong>Children</strong> and press <strong>Assistant</strong> on your child's card.</p>
+{% endcall %}
+
+{% call m.step('Download the models', 'download-the-models') %}
+<p>In the <strong>Models on this computer</strong> box, press <strong>Download the models</strong>. BioKids picks the right model for the computer's memory by itself:</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th scope="col">Computer's memory</th><th scope="col">What is downloaded</th><th scope="col">In total</th></tr></thead>
+<tbody>
+<tr><th scope="row">7–12 GB</th><td>Gemma 4 E2B language model (3.35 GB), Whisper small (190 MB), offline Wikipedia in Turkish and English (138 + 297 MB)</td><td>about 4 GB</td></tr>
+<tr><th scope="row">12 GB or more</th><td>Gemma 4 E4B language model (5.15 GB), Whisper large-v3-turbo (574 MB), the same Wikipedia packs</td><td>about 6.2 GB</td></tr>
+</tbody>
+</table>
+</div>
+<p>The download runs in the background with a progress bar; if the connection drops, press the button again and it carries on where it stopped. Every file is checked against a pinned SHA-256 value and written to <code>/var/lib/biokids-ai/models</code>.</p>
+{{ m.shot(lang ~ '/child-assistant-download', 'Elif\'s Assistant page: the Assistant on, Press-and-speak on and Check answers against Wikipedia boxes, and a Download the models button below.', 'Before the models are downloaded: the Download the models button at the bottom. The table above has the download sizes.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Turn it on for your child', 'turn-it-on') %}
+<p>When the download is done, tick these on the same page and press <strong>Save</strong>:</p>
+<ul>
+<li><strong>Assistant on</strong>: turns Ask Me on for this child. Each child is turned on separately.</li>
+<li><strong>Press-and-speak on</strong>: the child can also ask out loud. The microphone opens only while the child holds the button down, for up to 15 seconds; the voice is turned into text on the computer and never recorded.</li>
+<li><strong>Check answers against Wikipedia</strong>: recommended, and on from the start. A small model is sometimes wrong; Zio first looks at the Wikipedia summaries on the computer. It applies to every child.</li>
+</ul>
+{{ m.shot(lang ~ '/child-assistant', 'Kerem\'s Assistant page: one question under Questions it would not answer, the three settings ticked, and a models box saying the assistant is ready.', 'The assistant is ready and on. At the top, a question it would not answer.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Let your child ask', 'let-them-ask') %}
+<p>An <strong>Ask Me</strong> tile appears in the child's launcher (it stays hidden until the models are ready). The child types a question, or holds the microphone button and says it; the answer arrives sentence by sentence and Zio reads it aloud.</p>
+{{ m.shot(lang ~ '/assistant', 'The Ask Zio screen: the child asks why the sky is blue and Zio gives a short answer.', 'The child\'s screen: the question, a short answer, and "Your family can see some of the questions you ask." at the bottom.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+</ol>
+
+<h2 id="how-it-answers">How it answers</h2>
+<ul class="checks">
+<li><strong>Briefly:</strong> at most 5 sentences for ages 4–7, at most 7 for ages 8–10.</li>
+<li><strong>In the language it was asked in:</strong> Turkish for a Turkish question, English for an English one.</li>
+<li><strong>Sums are not guessed:</strong> additions and subtractions are worked out by the computer, not by the language model.</li>
+<li><strong>In moderation:</strong> a child can ask at most 20 questions in 10 minutes.</li>
+</ul>
+
+<h2 id="what-it-refuses">What it will not answer</h2>
+<p>When a child asks something they should not, it says "I can't answer that". The topics it refuses: sex, self-harm, violence and weapons, drugs, alcohol and gambling, sharing personal details (an address, a phone number…), rude words, things not suitable for their age, trying to get round the rules, and beliefs (those are left to the family).</p>
+{% call m.callout('child', 'If a child says something hard') %}
+<p>To a child who talks about hurting themselves, or says someone is hurting them, the assistant suggests telling a trusted adult and calling the emergency numbers (in Türkiye, 183 and 112).</p>
+{% endcall %}
+
+<h2 id="what-you-see">What you see</h2>
+<ul>
+<li>The questions it would not answer, in the child's own words, wait under <strong>Questions it would not answer</strong> on the Assistant page. Press <strong>Seen</strong> once you have read them. A note also appears on Today, and if email notifications are on, you get the topic's name only.</li>
+<li><strong>Ordinary questions are not kept.</strong> "Why is the sky blue?" is asked, answered and forgotten.</li>
+<li>The child always sees <em>"Your family can see some of the questions you ask."</em> on the screen.</li>
+</ul>
+{% call m.callout('tip', 'A chance to talk') %}
+<p>A refused question is usually not an alarm but a sign of curiosity. A calm "What did you ask Ask Me today?" in the evening works better than a ban.</p>
+{% endcall %}
+
+<h2 id="speed">Speed, memory and waiting</h2>
+<p>How fast it answers depends on the computer's processor. The model is loaded into memory at the first question, so the first answer after a quiet spell can take longer. After 10 minutes without a question the model leaves memory and the computer is light again.</p>
+
+<h2 id="wikipedia-english">Offline Wikipedia and English chat</h2>
+<p>The Wikipedia packs that come with the models do two jobs: they check the assistant's answers, and for ages 8–10 they can become a <strong>Wikipedia</strong> tile in the launcher that works without the internet. With the assistant on, <strong>Talk with Sio in English</strong> also opens in the English corner: Sio chats in simple English using the words the child has learned, with the same checks.</p>
+
+<h2 id="something-wrong">Something wrong?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>There is no Ask Me tile on my child's screen</h3></summary>
+    <div class="faq-answer"><p>The tile appears once the models are fully downloaded and the assistant is on for that child. On the Assistant page, check that it says "The assistant is ready." and that <strong>Assistant on</strong> is ticked.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>The download stopped part-way</h3></summary>
+    <div class="faq-answer"><p>Check the internet connection and press <strong>Download the models</strong> again; it carries on where it stopped. Make sure there are at least 7 GB free on the disk too.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>The assistant said something wrong</h3></summary>
+    <div class="faq-answer"><p>It can happen: small models running on a computer are sometimes wrong. With <strong>Check answers against Wikipedia</strong> on, it happens far less. Telling your child "the assistant can be wrong too; if you're not sure, ask me" is a good habit.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>My computer has less than 7 GB of memory</h3></summary>
+    <div class="faq-answer"><p>Then the assistant is not installed; everything else in BioKids runs on 4 GB. If you can add memory, the assistant can be turned on later.</p></div>
+  </details>
+</div>
+{% endblock %}

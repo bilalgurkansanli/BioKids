@@ -1,0 +1,77 @@
+{% extends "guide.html" %}
+{% import "macros.html" as m with context %}
+{% block body %}
+<p>With BioKids the internet is open and the worst of it is closed. The blocking happens on the computer itself, on the children's accounts only; the internet on your own account does not change at all. A few settings shape it for your child.</p>
+
+<ol class="steps">
+{% call m.step('Open the Internet page', 'open-the-page') %}
+<p>In the panel go to <strong>Children</strong> and press <strong>Internet</strong> on your child's card. The green box at the top says the filter is running: <em>Harmful-site protection is on.</em></p>
+{{ m.shot(lang ~ '/child-internet', 'The Internet page for Elif: a Harmful-site protection is on box, the How should the internet be? question with two choices, and a Save button.', 'A child\'s Internet page.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Choose how the internet works', 'mode') %}
+<p><strong>How should the internet be?</strong> has two answers:</p>
+<ul>
+  <li><strong>Open internet, harmful sites closed (recommended)</strong>: your child can browse; adult, gambling and harmful sites are always closed. This is the default for every age.</li>
+  <li><strong>Only the sites I choose</strong>: only the sites you tick on the Apps and sites screen open. For very young children.</li>
+</ul>
+<p>Press <strong>Save</strong>.</p>
+{% call m.callout('note', 'The computer has one browser setting') %}
+<p>If you choose <strong>Only the sites I choose</strong> for any child, the browser works that way for every child. Keep that in mind if your children are of different ages.</p>
+{% endcall %}
+{% endcall %}
+
+{% call m.step('Tick the sites that suit your child', 'sites') %}
+<p>The <strong>Apps and sites</strong> link on the same page opens your child's tiles. Whatever you tick appears as a tile on their screen; nothing you leave unticked ever appears. The ready list includes Scratch, Music Lab, Coding (Code.org), Blockly Games and Turkish children's sites such as EBA and TRT Çocuk. Some come unticked and stay off until you tick them: YouTube Kids, Google Earth, PBS KIDS Games, LearnEnglish Kids and StoryWeaver.</p>
+{{ m.shot(lang ~ '/child-apps-top', 'Apps and sites for Elif: ticked boxes such as GCompris, Paint, Numbers, Draw, SuperTux and Bubbles, with the ages each suits.', 'Apps and sites: whatever you tick becomes a tile on your child\'s screen.', sizes='(min-width: 960px) 760px, 100vw', cls='crop-top') }}
+{% endcall %}
+
+{% call m.step('Answer your child\'s requests', 'requests') %}
+<p>If your child tries a closed site, they see a friendly page: <strong>This is not for you</strong>. If they press <strong>Ask a grown-up</strong> there, the request reaches the panel's <strong>Requests</strong> screen and your phone.</p>
+{{ m.shot(lang ~ '/blocked', 'A closed site on the child\'s screen: a This is not for you page with Ask a grown-up and Go back buttons.', 'A closed site, on the child\'s screen.', sizes='(min-width: 960px) 760px, 100vw') }}
+<p><strong>Allow</strong> opens that site, <strong>Not now</strong> keeps it closed. Your answer appears on the child's screen at once and is spoken. The same screen answers requests for apps and for more time.</p>
+{{ m.shot(lang ~ '/requests', 'The Requests screen: Elif would like more time, Kerem would like to open a site, Kerem would like an app; Allow and Not now buttons.', 'Requests: time, sites and apps in one place.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+
+{% call m.step('Add words that cannot be searched, if you like', 'words') %}
+<p>Open <strong>Advanced</strong> at the bottom of the Internet page. BioKids already stops adult and harmful searches with a built-in list of 89 words: they cannot be searched on Google, YouTube, Wikipedia or in other search boxes, and the search is never sent. Type any other words you want blocked in <strong>Words that cannot be searched</strong>, one per line. The list applies to all your children.</p>
+{{ m.shot(lang ~ '/child-internet-advanced', 'The Internet page with Advanced open: an explanation of words that cannot be searched and a box for your own words.', 'Advanced: your own list of words.', sizes='(min-width: 960px) 760px, 100vw') }}
+{% endcall %}
+</ol>
+
+<h2 id="always-closed">What is always closed</h2>
+<ul class="checks">
+  <li><strong>Adult, gambling, malware and scam</strong> sites: about 291,000 domains. The list ships with BioKids and works offline.</li>
+  <li><strong>Encrypted DNS (DoH) services</strong> that could be used to get around the filter.</li>
+  <li><strong>Safe search is enforced:</strong> SafeSearch on Google, Bing and DuckDuckGo, and YouTube's restricted mode.</li>
+  <li><strong>No proxy in the middle:</strong> BioKids never decrypts anyone's traffic; the filter runs in the computer's own DNS (dnsmasq and nftables).</li>
+</ul>
+
+{% call m.callout('privacy', 'What you see, and what you do not') %}
+<p>Under <strong>History</strong> and <strong>Insights</strong> you see only the <em>names</em> of the sites your child opened (for 30 days); never what was on the pages, what was typed, or screenshots. You see the words of blocked searches in Insights and in a notice on the Today screen, never in an email. Ordinary searches are reported to no one. Your child is told all this too.</p>
+{% endcall %}
+
+{% call m.callout('warn', 'If the filter stops, so does the internet') %}
+<p>If the filter cannot run for some reason, the children's accounts cannot reach the internet at all, and the panel says so. BioKids never "continues unprotected". Restarting the computer is usually enough.</p>
+{% endcall %}
+
+<h2 id="something-wrong">Something wrong?</h2>
+<div class="faq">
+  <details class="faq-item">
+    <summary><h3>A site that suits my child does not open.</h3></summary>
+    <div class="faq-answer"><p>Let your child press <strong>Ask a grown-up</strong> on the closed page; the request reaches <strong>Requests</strong> and <strong>Allow</strong> opens the site. You can also check under <strong>Apps and sites</strong> whether it is in the ready list.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Their sibling's browser also acts like "only the sites I choose".</h3></summary>
+    <div class="faq-answer"><p>The computer has one browser setting: once a child is on that mode, it applies to every child. If an older child should have the open internet, keep both on <strong>Open internet, harmful sites closed</strong>.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>The panel says "Harmful-site protection is not running".</h3></summary>
+    <div class="faq-answer"><p>For safety, the children's accounts cannot reach the internet right now. Try restarting the computer; if that does not help, see <a href="{{ url('guide-troubleshooting') }}">Troubleshooting</a>.</p></div>
+  </details>
+  <details class="faq-item">
+    <summary><h3>Can I see which sites they visit?</h3></summary>
+    <div class="faq-answer"><p>Yes, in History when you open a day ("Sites opened"), and in Insights. Only the sites' names are kept, for 30 days.</p></div>
+  </details>
+</div>
+{% endblock %}

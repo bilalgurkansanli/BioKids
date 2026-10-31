@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% import "macros.html" as m with context %}
+{% block main %}
+<section class="hero" aria-labelledby="hero-title">
+  <div class="wrap">
+    <div class="hero-text">
+      <p class="eyebrow tint-amber"><span aria-hidden="true">🪁</span> Free and open source · Version {{ site.version }}</p>
+      <h1 id="hero-title">A <span class="hl">safe</span> computer for your child. Your rules, and everything stays home.</h1>
+      <p class="lead"><strong>BioKids</strong> is a free, open-source parental-control system for children aged 4–10, built on Debian 13. It brings screen-time limits, safe browsing, a live view of the screen on your phone, and an AI assistant that runs on the computer itself. No account, and nothing is sent to a cloud.</p>
+      <div class="btn-row">
+        <a class="btn btn-primary btn-lg" href="{{ url('download') }}"><span aria-hidden="true">⬇</span> Download free</a>
+        <a class="btn btn-secondary btn-lg" href="{{ url('guide-install') }}">How to install</a>
+      </div>
+      <ul class="trust">
+        <li>No account</li>
+        <li>No telemetry</li>
+        <li>Works offline</li>
+        <li>Installs beside Windows</li>
+      </ul>
+    </div>
+    <figure class="hero-shot">
+      {{ m.img(lang ~ '/hero', 'Left: the child\'s BioKids screen with big app tiles, a ring showing 42 minutes left, and "Mum can see your screen now" at the top. Right: the parent\'s phone watching that screen live.', '(min-width: 1180px) 1120px, 100vw', eager=True) }}
+      <span class="float-chip c1" aria-hidden="true"><span class="emoji">⏱️</span> 42 min left</span>
+      <span class="float-chip c2" aria-hidden="true"><span class="emoji">🛡️</span> Harmful sites blocked</span>
+      <span class="float-chip c3" aria-hidden="true"><span class="emoji">🤖</span> AI on the computer</span>
+      <figcaption>The child's screen on the left, the parent watching it live from a phone on the right. The child always sees that they are being watched.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="why">
+  <div class="wrap">
+    {{ m.head('why', 'Made for parents, designed for children', 'Why BioKids?', 'The simpler a child\'s computer, the safer it is. BioKids turns a Debian computer into one a young child can use alone.') }}
+    <div class="why-grid">
+      {% call m.feature('🏠', 'It stays home', 'coral', url('privacy')) %}<p>No telemetry, no account, no cloud. Everything about your family stays on this computer; there is no BioKids server at all.</p>{% endcall %}
+      {% call m.feature('👀', 'The child knows', 'amber', url('privacy')) %}<p>Supervision is never hidden. The first start explains what the family can see, and when you watch the screen, the child sees it.</p>{% endcall %}
+      {% call m.feature('⏱️', 'Time that cannot be fooled', 'teal', url('features', 'time')) %}<p>Minutes are counted on the clock that runs since the computer started. Moving the system clock forward changes nothing.</p>{% endcall %}
+      {% call m.feature('📱', 'Your phone is the remote', 'indigo', url('guide-phone')) %}<p>Give ten more minutes, lock the screen, answer a request: at home or away, over your own private network.</p>{% endcall %}
+      {% call m.feature('🤖', 'An assistant on the computer', 'coral', url('features', 'ask-me')) %}<p><em>Ask Me</em> answers a child's questions with a language model that runs on the computer. No question goes to a cloud.</p>{% endcall %}
+      {% call m.feature('🧸', 'Made for ages 4–10', 'amber', url('features', 'for-the-child')) %}<p>Big tiles, a ring showing the time left, buttons that read themselves aloud, and two friends: Zio and Sio.</p>{% endcall %}
+    </div>
+  </div>
+</section>
+
+<section class="section section-white" aria-labelledby="spot-live">
+  <div class="wrap">
+    <div class="spot">
+      <div class="spot-media phone">
+        {{ m.shot(lang ~ '/panel-live', 'The BioKids parent panel on a phone: the Live screen card shows the child\'s screen as it is now, with a Stop button below.', sizes='(min-width: 960px) 400px, 90vw') }}
+      </div>
+      <div class="spot-text">
+        <p class="eyebrow tint-indigo"><span aria-hidden="true">👁️</span> Live view</p>
+        <h2 id="spot-live">Your child's screen, right now, on your phone</h2>
+        <p class="lead">Press <strong>Watch live</strong> in the panel and see your child's screen at about one picture a second. At home or at work, it makes no difference.</p>
+        <ul class="checks">
+          <li><strong>The child is told.</strong> While you watch, their screen says "👁 Mum can see your screen now". That sign cannot be turned off.</li>
+          <li><strong>Nothing is recorded.</strong> Each picture replaces the last in memory; leave the page and the watching ends.</li>
+          <li><strong>On the record.</strong> Every time watching starts, it is written in the audit log.</li>
+        </ul>
+        <p class="btn-row" style="margin-top:24px"><a class="btn btn-secondary" href="{{ url('guide-live') }}">How to start the live view</a></p>
+      </div>
+    </div>
+
+    <div class="spot flip">
+      <div class="spot-media">
+        {{ m.shot(lang ~ '/assistant', 'Ask Zio: the child asks why the sky is blue and gets a short answer for their age.', sizes='(min-width: 960px) 580px, 100vw') }}
+      </div>
+      <div class="spot-text">
+        <p class="eyebrow tint-coral"><span aria-hidden="true">🤖</span> Ask Me · on-device AI</p>
+        <h2>An assistant for curious kids that never goes to the cloud</h2>
+        <p class="lead">The child types a question or asks it aloud, and gets a short answer for their age, in the language they asked in. The answer comes from a model running on the computer itself.</p>
+        <ul class="checks">
+          <li><strong>Fully offline:</strong> the Gemma language model (llama.cpp), Whisper for speech, and an offline Wikipedia to check the answers.</li>
+          <li><strong>It refuses what a child should not ask,</strong> and you see what it refused. Ordinary questions are not kept.</li>
+          <li><strong>The microphone listens only while the button is held,</strong> for up to 15 seconds, and nothing is recorded.</li>
+          <li>It is optional: off until you download it in the panel and turn it on for a child. It needs 7 GB of memory or more.</li>
+        </ul>
+        <p class="btn-row" style="margin-top:24px"><a class="btn btn-secondary" href="{{ url('guide-assistant') }}">How to set up Ask Me</a></p>
+      </div>
+    </div>
+
+    <div class="spot">
+      <div class="spot-media">
+        {{ m.shot(lang ~ '/panel-time', 'A child\'s time rules: daily time on weekdays and at weekends, allowed hours, and what happens when time runs out.', sizes='(min-width: 960px) 580px, 100vw') }}
+      </div>
+      <div class="spot-text">
+        <p class="eyebrow tint-teal"><span aria-hidden="true">⏱️</span> Time rules</p>
+        <h2>Screen time: a few clear settings, the rest takes care of itself</h2>
+        <p class="lead">Choose the daily minutes and the hours they can use the computer, for weekdays and weekends. BioKids counts, warns and enforces.</p>
+        <ul class="checks">
+          <li>Zio and Sio say it <strong>aloud</strong> when 10, 5 and 1 minutes are left.</li>
+          <li>When time is up, <strong>lock the screen</strong>, <strong>log out</strong> or <strong>shut the computer down</strong>: your choice.</li>
+          <li>Optional <strong>breaks</strong>, eye exercises, and <strong>time earned</strong> by learning.</li>
+          <li>Holidays, birthdays: separate rules for <strong>special days</strong>.</li>
+        </ul>
+        <p class="btn-row" style="margin-top:24px"><a class="btn btn-secondary" href="{{ url('guide-time') }}">Time rules guide</a></p>
+      </div>
+    </div>
+
+    <div class="spot flip">
+      <div class="spot-media">
+        {{ m.shot(lang ~ '/panel-history', 'History: a year of screen time as a heatmap, and the last fourteen days as bars.', sizes='(min-width: 960px) 580px, 100vw') }}
+      </div>
+      <div class="spot-text">
+        <p class="eyebrow tint-amber"><span aria-hidden="true">📊</span> History and insights</p>
+        <h2>A year at a glance, any day at a tap</h2>
+        <p class="lead">The Today screen shows each child's time left; History and Insights show where the time went.</p>
+        <ul class="checks">
+          <li>A <strong>year-long heatmap</strong>, the last 14 days as bars, and every day in detail: apps, sites opened, requests.</li>
+          <li><strong>Insights:</strong> the week's highlights, time by kind of app, and the hours of the day it was used.</li>
+          <li>An optional <strong>weekly summary by email on Sunday evening</strong>, sent from your own mail server.</li>
+        </ul>
+        <p class="btn-row" style="margin-top:24px"><a class="btn btn-secondary" href="{{ url('features', 'history') }}">See the reports</a></p>
+      </div>
+    </div>
+
+    <div class="spot">
+      <div class="spot-media">
+        {{ m.shot(lang ~ '/blocked', 'A blocked site: a friendly page that says this place is not for you, with an Ask a grown-up button.', sizes='(min-width: 960px) 580px, 100vw') }}
+      </div>
+      <div class="spot-text">
+        <p class="eyebrow tint-indigo"><span aria-hidden="true">🛡️</span> Safe browsing</p>
+        <h2>The internet open, the worst of it closed</h2>
+        <p class="lead">Adult, gambling, malware and scam sites are blocked by a filter on the computer, on the children's accounts only.</p>
+        <ul class="checks">
+          <li>About <strong>291,000</strong> harmful domains blocked; <strong>SafeSearch</strong> and YouTube's restricted mode enforced.</li>
+          <li>Or, if you like, <strong>only the sites I choose</strong>.</li>
+          <li>On a blocked site the child presses <strong>Ask a grown-up</strong>; the request reaches your phone and you answer with one tap.</li>
+          <li>No proxy in the middle: BioKids never decrypts anyone's traffic.</li>
+        </ul>
+        <p class="btn-row" style="margin-top:24px"><a class="btn btn-secondary" href="{{ url('guide-web') }}">Safe browsing guide</a></p>
+      </div>
+    </div>
+
+    <div class="spot flip">
+      <div class="spot-media">
+        {{ m.shot(lang ~ '/launcher', 'The child\'s launcher: big tiles such as Ask Me, Paint, GCompris, Numbers and Music Lab; volume and time left at the top, brightness and open apps at the bottom.', sizes='(min-width: 960px) 580px, 100vw') }}
+      </div>
+      <div class="spot-text">
+        <p class="eyebrow tint-coral"><span aria-hidden="true">🧒</span> The child's screen</p>
+        <h2>No desktop, no settings: just big tiles</h2>
+        <p class="lead">The child signs in by tapping their picture and lands in a launcher of the apps and sites you chose.</p>
+        <ul class="checks">
+          <li>Tiles that <strong>read themselves aloud</strong> for children who cannot read yet; two looks, for 4–7 and 8–10.</li>
+          <li><strong>Brightness</strong> at the bottom, <strong>volume</strong> at the top; open apps wait without starting over.</li>
+          <li>Learning corners for <strong>English</strong> with Sio and Turkish <strong>reading</strong>, and a surprise card every day.</li>
+          <li>GCompris, Tux Paint, Scratch, Chrome Music Lab and more than 30 ready apps and sites.</li>
+        </ul>
+        <p class="btn-row" style="margin-top:24px"><a class="btn btn-secondary" href="{{ url('features') }}">All features</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="day">
+  <div class="wrap">
+    {{ m.head('day', 'An ordinary day with BioKids', 'How it works', 'You set the rules once; then BioKids reminds, counts and tells you, so you do not have to.', 'teal') }}
+    <ol class="day">
+      <li><time>4:00 pm</time><span class="emoji" aria-hidden="true">🖼️</span><h3>A tap on their picture</h3><p>The child signs in by tapping their own picture. No password, no desktop.</p></li>
+      <li><time>4:40 pm</time><span class="emoji" aria-hidden="true">🤸</span><h3>A little break</h3><p>If you like, a 5-minute break every 40 minutes, with a few moves for the eyes.</p></li>
+      <li><time>5:10 pm</time><span class="emoji" aria-hidden="true">🙋</span><h3>Ask a grown-up</h3><p>A blocked site? The child asks, the request reaches your phone, you press "Allow".</p></li>
+      <li><time>5:50 pm</time><span class="emoji" aria-hidden="true">🔔</span><h3>Ten minutes left</h3><p>Zio says so aloud. Once a day the child can ask for a last round to finish what they are doing.</p></li>
+      <li><time>8:30 pm</time><span class="emoji" aria-hidden="true">💬</span><h3>Evening chat</h3><p>The panel suggests a few things to talk about from your child's day: new words, the riddle they solved.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section class="section section-white" aria-labelledby="compare">
+  <div class="wrap narrow">
+    {{ m.head('compare', 'How it differs from cloud-based apps', 'Comparison', 'Most parental controls make you open an account and send your child\'s day to a company\'s servers. BioKids never does.', 'indigo') }}
+    <div class="table-wrap">
+      <table class="compare">
+        <thead>
+          <tr><th scope="col">&nbsp;</th><th scope="col" class="us">BioKids</th><th scope="col">Typical cloud app</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Account needed?</th><td class="us yes">No</td><td>Yes</td></tr>
+          <tr><th scope="row">Where is the child's data?</th><td class="us yes">Only on this computer</td><td>On the vendor's servers</td></tr>
+          <tr><th scope="row">Price</th><td class="us yes">Free</td><td>Often a subscription</td></tr>
+          <tr><th scope="row">Open source?</th><td class="us yes">Yes (MIT)</td><td>Usually not</td></tr>
+          <tr><th scope="row">Where does the AI run?</th><td class="us yes">On the computer itself</td><td>In the cloud (if any)</td></tr>
+          <tr><th scope="row">Does the child know they are supervised?</th><td class="us yes">Always</td><td>Depends on the app</td></tr>
+          <tr><th scope="row">When the internet is down</th><td class="us yes">Every rule still works</td><td>Depends on the app</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="start">
+  <div class="wrap">
+    {{ m.head('start', 'Install in three steps', 'Getting started', 'A USB stick and half an hour are enough. Installing needs no internet either.', 'coral') }}
+    <ol class="start-steps">
+      <li><h3>Download the ISO</h3><p>Debian 13 with BioKids, about 3.3 GB. Free.</p><a href="{{ url('download') }}">Download page →</a></li>
+      <li><h3>Write it to a USB stick</h3><p>An 8 GB stick, with balenaEtcher or Rufus, in a few clicks.</p><a href="{{ url('guide-usb') }}">USB guide →</a></li>
+      <li><h3>Install and set up</h3><p>Start from the stick and install; at the first start a nine-step wizard welcomes you.</p><a href="{{ url('guide-install') }}">Install guide →</a></li>
+    </ol>
+    {% call m.callout('tip', 'Don\'t want to erase Windows?') %}
+    <p>BioKids can shrink Windows and install beside it; the computer then asks which one you want at every start. <a href="{{ url('guide-dual-boot') }}">Install beside Windows</a></p>
+    {% endcall %}
+  </div>
+</section>
+
+<section class="section-tight" aria-labelledby="principles">
+  <div class="wrap">
+    {{ m.head('principles', 'Principles that do not change', 'Promise', 'These are written into the project\'s constitution; no feature may break them.', 'indigo') }}
+    <div class="principles">
+      <div><h3><span class="emoji" aria-hidden="true">🏠</span> Nothing leaves the device</h3><p>No telemetry, no analytics, no cloud inference. Every outbound connection is listed in the open.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">👀</span> The child knows</h3><p>No hidden screenshots, no keylogging. Supervision is always visible.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">🔒</span> Fail safe, not silent</h3><p>If protection breaks, the session locks and you are told. Never "continue unprotected".</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">🧯</span> Never locks you out</h3><p>Anything that could lock you out is optional, reversible and documented.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">📴</span> Offline first</h3><p>Every core feature works with the network cable unplugged.</p></div>
+      <div><h3><span class="emoji" aria-hidden="true">🙂</span> A panel anyone understands</h3><p>A setting that needs a paragraph of explanation lives behind "Advanced".</p></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><strong>0</strong><span>data sent to a cloud</span></div>
+      <div class="stat"><strong>~291k</strong><span>harmful domains blocked</span></div>
+      <div class="stat"><strong>4 GB</strong><span>of RAM is enough</span></div>
+      <div class="stat"><strong>MIT</strong><span>free license</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="faq-home">
+  <div class="wrap narrow">
+    {{ m.head('faq-home', 'What parents ask most', 'FAQ', '', 'amber') }}
+    {{ m.faq_list(faq, home=True) }}
+    <p class="btn-row" style="justify-content:center;margin-top:28px"><a class="btn btn-secondary" href="{{ url('faq') }}">See every question</a></p>
+  </div>
+</section>
+{% endblock %}

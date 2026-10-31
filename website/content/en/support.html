@@ -1,0 +1,85 @@
+{% extends "page.html" %}
+{% import "macros.html" as m with context %}
+{% block h1 %}Support and contact{% endblock %}
+{% block lead %}<p class="lead">Stuck somewhere, or something not working the way it should? Write to us, in English or Turkish, whichever is easier for you.</p>{% endblock %}
+{% block body %}
+<section class="section-tight">
+  <div class="wrap">
+    <div class="grid grid-2">
+      <article class="card help-card">
+        <span class="ico tint-coral" aria-hidden="true">✉️</span>
+        <h3>Email</h3>
+        <p>For installing, settings, or anything on your mind. If a guide is missing something, tell us too.</p>
+        <div class="btn-row"><a class="btn btn-primary" href="mailto:{{ site.email }}?subject={{ 'BioKids: support' | urlencode }}">{{ site.email }}</a></div>
+      </article>
+      <article class="card help-card">
+        <span class="ico tint-amber" aria-hidden="true">🐞</span>
+        <h3>Report a bug</h3>
+        <p>If something does not work as it should, open an issue on GitHub with the bug form. It asks, step by step, for what helps.</p>
+        <div class="btn-row"><a class="btn btn-secondary" href="{{ site.issues_url }}" rel="noopener">Report it on GitHub</a></div>
+      </article>
+      <article class="card help-card">
+        <span class="ico tint-teal" aria-hidden="true">🖥️</span>
+        <h3>Hardware trouble</h3>
+        <p>The screen, the sound, Wi-Fi or the microphone not working on your computer? The hardware form collects what is needed to fix it.</p>
+        <div class="btn-row"><a class="btn btn-secondary" href="{{ site.issues_url }}" rel="noopener">Open the hardware form</a></div>
+      </article>
+      <article class="card help-card">
+        <span class="ico tint-indigo" aria-hidden="true">🔒</span>
+        <h3>A security problem</h3>
+        <p>Please do not open a public issue. Report security problems privately; the security policy explains how.</p>
+        <div class="btn-row"><a class="btn btn-secondary" href="{{ site.repo }}/blob/main/SECURITY.md" rel="noopener">Report privately</a></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight">
+  <div class="wrap narrow prose">
+    <h2 id="look-here-first">Look here first</h2>
+    <p>Most answers are already written down:</p>
+    <ul>
+      <li>The <a href="{{ url('faq') }}">FAQ</a> and <a href="{{ url('guide-troubleshooting') }}">Troubleshooting</a>: a forgotten PIN, a locked screen, updates.</li>
+      <li><a href="{{ url('guides') }}">All the guides</a>: from installing to phone access, step by step and with pictures.</li>
+      <li>The panel's own <strong>Help</strong> page: in the top bar, on the computer itself, even without the internet. Beside the common questions it has eight step-by-step guides, which open without signing in:</li>
+    </ul>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Guide in the panel</th><th scope="col">What it covers</th></tr></thead>
+        <tbody>
+          <tr><td>Setting up email notifications</td><td>Alerts and the weekly summary with Gmail, Yandex or iCloud</td></tr>
+          <tr><td>Opening the panel on your phone</td><td>Four steps with Tailscale</td></tr>
+          <tr><td>Adding a child and their first login</td><td>A new child, and signing in with their picture</td></tr>
+          <tr><td>Time limits and hours</td><td>Daily time, allowed hours, special days</td></tr>
+          <tr><td>The internet, sites and searches</td><td>The filter, allowed sites, words that cannot be searched</td></tr>
+          <tr><td>Zio and Sio's voice</td><td>The natural voice, and recording your own</td></tr>
+          <tr><td>I forgot my PIN or passphrase</td><td>The recovery code and the admin commands</td></tr>
+          <tr><td>Protecting the computer itself</td><td>A BIOS password, booting from USB and the like</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="what-to-include">What to put in a report</h2>
+    <p>To sort it out faster together, tell us:</p>
+    <ul class="checks">
+      <li><strong>The BioKids version:</strong> at the bottom of the panel (e.g. "BioKids {{ site.version }}"). <code>biokids-admin version</code> in a terminal shows it too.</li>
+      <li><strong>The Debian version</strong>, and whether it is a <strong>real computer or a virtual machine</strong>.</li>
+      <li>What you did, what you expected, and what happened, step by step.</li>
+      <li>If useful, the background service's latest log lines:</li>
+    </ul>
+    {{ m.code('sudo journalctl -u biokids-daemon -n 200 --no-pager', 'Terminal') }}
+    {% call m.callout('danger', 'Never attach anything that shows your child') %}
+    <p>Do not put your child's name, screen or history in an issue, an email or a log. Remove or replace the names in log lines before you send them.</p>
+    {% endcall %}
+
+    <h2 id="response-time">When will I hear back?</h2>
+    <p>BioKids is an open-source project made by one person in their own time. Every message is read, but a reply can take a few days. For an urgent security problem, follow the route in the <a href="{{ site.repo }}/blob/main/SECURITY.md" rel="noopener">security policy</a>.</p>
+
+    <h2 id="contribute">Contribute</h2>
+    <div class="card">
+      <p>BioKids is open to everyone's help: <strong>translations</strong>, <strong>hardware reports</strong> ("everything worked on this computer" is valuable too), bug reports and code. Read the <a href="{{ site.repo }}/blob/main/CONTRIBUTING.md" rel="noopener">contributing guide</a> first: it explains how work is done and lists the features the project will not accept (covert monitoring, keylogging, screenshots the child is not shown, and the like). Everyone who takes part follows the <a href="{{ site.repo }}/blob/main/CODE_OF_CONDUCT.md" rel="noopener">Code of Conduct</a>.</p>
+      <div class="btn-row"><a class="btn btn-secondary" href="{{ site.repo }}" rel="noopener">The project on GitHub</a></div>
+    </div>
+  </div>
+</section>
+{% endblock %}
