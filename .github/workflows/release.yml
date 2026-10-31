@@ -199,10 +199,10 @@ jobs:
         run: |
           set -eu
           # The ISO is larger than a release asset may be, so it is published on
-          # archive.org (D-28) and named in iso/published.toml before the tag.
-          # Its checksum goes into the signed SHA256SUMS below: the copy people
-          # download from archive.org is then checked against this release's
-          # signature, not against a web page. A file naming another version is
+          # SourceForge, or archive.org (D-28, D-257), and named in
+          # iso/published.toml before the tag. Its checksum goes into the signed
+          # SHA256SUMS below: the copy people download from there is then checked
+          # against this release's signature, not against a web page. A file naming another version is
           # an older ISO, and a release of the packages alone has none.
           if [ ! -f iso/published.toml ]; then
             echo "no iso/published.toml; this release has no ISO"
@@ -224,10 +224,15 @@ jobs:
               raise SystemExit(f"iso/published.toml: {name!r} is not an ISO's file name")
           if not re.fullmatch(r"[0-9a-f]{64}", sha256):
               raise SystemExit(f"iso/published.toml: {sha256!r} is not a SHA256")
-          if not re.fullmatch(r"https://archive\.org/details/[A-Za-z0-9._-]+", url):
-              raise SystemExit(f"iso/published.toml: {url!r} is not an archive.org item")
+          hosts = {
+              r"https://sourceforge\.net/projects/[a-z0-9-]+/files/[A-Za-z0-9._/+-]+": "SourceForge",
+              r"https://archive\.org/details/[A-Za-z0-9._-]+": "archive.org",
+          }
+          host = next((h for pattern, h in hosts.items() if re.fullmatch(pattern, url)), None)
+          if host is None:
+              raise SystemExit(f"iso/published.toml: {url!r} is neither SourceForge nor archive.org")
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
-              env.write(f"ISO_NAME={name}\nISO_SHA256={sha256}\nISO_URL={url}\n")
+              env.write(f"ISO_NAME={name}\nISO_SHA256={sha256}\nISO_URL={url}\nISO_HOST={host}\n")
           print(f"{name} at {url}")
           PY
 
@@ -407,7 +412,7 @@ jobs:
           ### The ISO
 
           Debian 13 with BioKids, to try from a USB stick and install, beside Windows
-          too: [\`${ISO_NAME}\`](${ISO_URL}) on archive.org. It is larger than a
+          too: [\`${ISO_NAME}\`](${ISO_URL}) on ${ISO_HOST}. It is larger than a
           GitHub release file may be. Its SHA256 is in the signed \`SHA256SUMS\` too:
 
           \`\`\`

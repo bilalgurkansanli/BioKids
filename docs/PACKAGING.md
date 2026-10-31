@@ -147,17 +147,22 @@ signing key is not worth it at this stage.
 | Artifact | Primary | Notes |
 |---|---|---|
 | `.deb` packages | our APT repo | also attached to the GitHub Release |
-| ISO | **archive.org** | free, unmetered, permanent; normal practice for distros |
+| ISO | **SourceForge** | free, a worldwide mirror network, download statistics; where small distributions put theirs (D-257) |
+| ISO, fallback | archive.org | free and permanent, but slow to download (D-28) |
 | ISO mirror | GitHub Release | only when the file is under 2 GB |
 | `SHA256SUMS` + `.asc` | GitHub Release | always, for every artifact |
 | Release notes | GitHub Release | always |
 
-GitHub caps release assets at 2 GB per file, which the full ISO will approach. Publish
-the ISO to an archive.org item named `biokids-<version>`, and let the GitHub Release
-carry the checksums and a link: before the tag, `iso/published.toml` names the item and
-the ISO's SHA256, and `release.yml` adds that checksum to the signed `SHA256SUMS` and
-the link to the notes. Cloudflare R2 is a reasonable later addition if a
-download link on the project's own domain is wanted.
+GitHub caps release assets at 2 GB per file, which the full ISO passes. Publish the
+ISO to SourceForge's file release system, project `biokids`, in a folder per version
+(`2.0.0/`), uploaded with `sftp` (the web form is for small files), or to an
+archive.org item named `biokids-<version>`; and let the GitHub Release carry the
+checksums and a link: before the tag, `iso/published.toml` names the file's address and
+its SHA256, and `release.yml` adds that checksum to the signed `SHA256SUMS` and the link
+to the notes. `https://sourceforge.net/projects/biokids/files/latest/download` always
+gives the newest file, a download link that needs no change at the next release. Cloudflare
+R2 is a reasonable later addition if a download link on the project's own domain is
+wanted.
 
 ---
 

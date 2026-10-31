@@ -2451,9 +2451,13 @@ that it is open source with the product, its screenshots and its facts.
   leaves apt no source it cannot verify.
 - **The release's notes are `CHANGELOG.md`'s section for the version**; only a version
   with none gets them from the commit log. **The ISO is named in `iso/published.toml`**
-  (version, file name, SHA256, archive.org item) before the tag: its checksum goes into
-  the signed `SHA256SUMS`, so the copy on archive.org is checked against the release's
+  (version, file name, SHA256, address) before the tag: its checksum goes into the
+  signed `SHA256SUMS`, so the copy people download is checked against the release's
   signature, and its link into the notes.
+- **The ISO is on SourceForge, not archive.org** (revises D-28): archive.org keeps a low
+  speed per connection, and small distributions (Bodhi, Peppermint, Linux Lite's
+  torrents) publish on SourceForge, whose mirror network is free and fast. archive.org
+  stays the fallback, and `release.yml` accepts either address.
 
 **D-258 [claude] The website is served by Vercel.** (2026-10-31)
 The owner moved biokids.bilalgurkansanli.com from GitHub Pages (D-256) to Vercel; the
