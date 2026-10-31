@@ -465,7 +465,7 @@ msgid "parents.recovery.title"
 msgstr "Their recovery code"
 
 msgid "parents.recovery.help"
-msgstr "The only way back if they forget their PIN. Let them write it on paper; it is shown once."
+msgstr "The only way back if they forget their PIN. Let them write it on paper; it is shown once. The words are Turkish, spelled without Turkish letters: copy them as they are."
 
 msgid "parents.recovery.confirm"
 msgstr "The new parent has written this code down"
@@ -1051,7 +1051,7 @@ msgid "wizard.recovery.title"
 msgstr "Your recovery code"
 
 msgid "wizard.recovery.help"
-msgstr "This is the only way back if you forget your PIN. Write it down; it is shown once."
+msgstr "This is the only way back if you forget your PIN. Write it down; it is shown once. The words are Turkish, spelled without Turkish letters: copy them as they are."
 
 msgid "wizard.recovery.confirm"
 msgstr "I have written the recovery code down"
