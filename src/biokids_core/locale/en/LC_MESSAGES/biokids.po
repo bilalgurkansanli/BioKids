@@ -465,7 +465,7 @@ msgid "parents.recovery.title"
 msgstr "Their recovery code"
 
 msgid "parents.recovery.help"
-msgstr "The only way back if they forget their PIN. Let them write it on paper; it is shown once."
+msgstr "The only way back if they forget their PIN. Let them write it on paper; it is shown once. The words are Turkish, spelled without Turkish letters: copy them as they are."
 
 msgid "parents.recovery.confirm"
 msgstr "The new parent has written this code down"
@@ -1051,7 +1051,7 @@ msgid "wizard.recovery.title"
 msgstr "Your recovery code"
 
 msgid "wizard.recovery.help"
-msgstr "This is the only way back if you forget your PIN. Write it down; it is shown once."
+msgstr "This is the only way back if you forget your PIN. Write it down; it is shown once. The words are Turkish, spelled without Turkish letters: copy them as they are."
 
 msgid "wizard.recovery.confirm"
 msgstr "I have written the recovery code down"
@@ -1354,7 +1354,7 @@ msgid "assistant.panel.models"
 msgstr "Models on this computer"
 
 msgid "assistant.panel.not_installed"
-msgstr "The assistant is not installed on this computer, so \"Ask Me\" does not appear on your child's screen. It needs at least 8 GB of memory; in a terminal: sudo apt install biokids-ai"
+msgstr "The assistant is not installed on this computer, so \"Ask Me\" does not appear on your child's screen. It needs at least 7 GB of memory; in a terminal: sudo apt install biokids-ai"
 
 msgid "assistant.panel.ready"
 msgstr "The assistant is ready."
@@ -1366,7 +1366,7 @@ msgid "assistant.panel.download"
 msgstr "Download the models"
 
 msgid "assistant.panel.download.help"
-msgstr "1.5–4 GB depending on this computer's memory; it can take a few minutes. No internet is needed after that."
+msgstr "About 4.0 GB, or about 6.2 GB on a computer with 12 GB of memory or more; it can take a few minutes. No internet is needed after that."
 
 msgid "assistant.panel.download.started"
 msgstr "The download has started and the assistant is on for this child. \"Ask Me\" appears on the child's screen once the models are here."
@@ -2304,7 +2304,7 @@ msgid "remote.guide.1.title"
 msgstr "Connect this computer"
 
 msgid "remote.guide.1.body"
-msgstr "Press \"Open phone access\" below. BioKids installs Tailscale on this computer and asks you to sign in once. You can use your Google, Apple or Microsoft account; if you have none, a free one is made."
+msgstr "Press \"Turn on phone access\" below. BioKids installs Tailscale on this computer and asks you to sign in once. You can use your Google, Apple or Microsoft account; if you have none, a free one is made."
 
 msgid "remote.guide.1.done"
 msgstr "This computer is connected to Tailscale."
@@ -3097,7 +3097,7 @@ msgid "guide.voice.step.1"
 msgstr "In the panel, go to Settings and press \"Set up the voices\"."
 
 msgid "guide.voice.step.2"
-msgstr "If the natural voice box was ticked during setup, the voice comes down by itself. If not, press \"Download the natural voice\": about 90 MB, a few minutes."
+msgstr "If the natural voice box was ticked during setup, the voice comes down by itself. If not, press \"Download the natural voice\": about 153 MB, a few minutes."
 
 msgid "guide.voice.step.3"
 msgstr "To use your own voice, press \"● Record\" beside a sentence, say it, and press Stop. Recordings stay on this computer."
@@ -3866,7 +3866,7 @@ msgid "preview.title"
 msgstr "Screen preview"
 
 msgid "preview.intro"
-msgstr "This is how your child's screen looks with your rules. It is a preview; it does not show your child's screen live."
+msgstr "Below is how your child's screen looks with your rules. These pictures are drawn from your settings, not taken from the screen; the live screen is above."
 
 msgid "preview.home"
 msgstr "Home screen"

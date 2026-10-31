@@ -23,6 +23,7 @@ import pytest
 
 from biokids_core import admin, natural_voice, remote
 from biokids_core.config import Config
+from biokids_core.i18n import translator
 from biokids_core.natural_voice import PinnedFile, VoiceSetupError
 from biokids_voice import synth as synth_module
 from biokids_voice.synth import (
@@ -166,6 +167,10 @@ def test_what_is_pinned_is_what_was_checked() -> None:
     # The box and the button say "about 153 MB"; this is where that number comes from.
     assert round(natural_voice.DOWNLOAD_BYTES / 1_000_000) == 153
     assert round(natural_voice.ENGLISH_BYTES / 1_000_000) == 64
+    # The guide writes it out, and once still said 90 MB.
+    size = f"{round(natural_voice.DOWNLOAD_BYTES / 1_000_000)} MB"
+    for locale in ("tr", "en"):
+        assert size in translator(locale)("guide.voice.step.2")
     assert "/en/en_US/ljspeech/medium/" in natural_voice.ENGLISH_FILES[0].url
 
 

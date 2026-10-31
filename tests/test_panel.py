@@ -682,6 +682,22 @@ def test_a_second_child_can_be_added_outside_the_wizard(
     assert daemon.ran("reload")
 
 
+def test_a_second_child_is_offered_the_familys_language(
+    client: TestClient, family_ready: None, db: Database
+) -> None:
+    """The form preselected nothing, so an English family's child was Türkçe."""
+    login(client)
+    assert '<option value="tr" selected>' in client.get("/children").text
+    with db.session() as session:
+        family = repo.get_family(session)
+        assert family is not None
+        family.locale = "en"
+        session.commit()
+    page = client.get("/children").text
+    assert '<option value="en" selected>' in page
+    assert '<option value="tr" selected>' not in page
+
+
 def test_skipping_the_app_step_still_leaves_tiles(
     client: TestClient, db: Database, daemon: FakeDaemon
 ) -> None:

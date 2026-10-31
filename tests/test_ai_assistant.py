@@ -28,6 +28,7 @@ from biokids_ai.localhttp import Endpoint, HttpError, parse_response
 from biokids_ai.runtime import ManagedServer, ServerUnavailable
 from biokids_ai.stt import clean
 from biokids_core.config import Config
+from biokids_core.i18n import translator
 from biokids_core.ipc import Response
 from biokids_daemon.assistant import AssistantGate
 
@@ -253,6 +254,21 @@ def test_a_small_computer_is_offered_no_assistant() -> None:
     assert models.recommend(8.0)["chat"].key == "gemma-4-e2b"
     assert models.recommend(16.0)["chat"].key == "gemma-4-e4b"
     assert models.recommend(16.0)["stt"].key == "whisper-turbo"
+
+
+def test_the_panel_says_what_the_assistant_needs_and_downloads() -> None:
+    """The assistant page's numbers are the catalogue's. They had drifted to
+    "at least 8 GB" and "1.5-4 GB" while the catalogue allowed 7 GB and
+    fetched about 4.0 or 6.2 GB."""
+    smallest = min(m.min_ram_gb for m in models.MODELS if m.role == "chat")
+    downloads = [
+        sum(m.size for m in models.recommend(ram).values()) / 1e9 for ram in (smallest, 12.0)
+    ]
+    for locale, point in (("en", "."), ("tr", ",")):
+        tr = translator(locale)
+        assert f"{smallest:.0f} GB" in tr("assistant.panel.not_installed")
+        for gb in downloads:
+            assert f"{gb:.1f} GB".replace(".", point) in tr("assistant.panel.download.help")
 
 
 class FakeResponse(io.BytesIO):

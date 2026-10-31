@@ -76,9 +76,10 @@
 
       <div class="field">
         <label for="locale">{{ _('child.locale') }}</label>
+        {# The panel's language, which is the family's unless ?lang= says otherwise. #}
         <select id="locale" name="locale">
-          <option value="tr">Türkçe</option>
-          <option value="en">English</option>
+          <option value="tr" {% if locale == 'tr' %}selected{% endif %}>Türkçe</option>
+          <option value="en" {% if locale == 'en' %}selected{% endif %}>English</option>
         </select>
       </div>
 
