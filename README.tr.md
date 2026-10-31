@@ -18,7 +18,7 @@
 
 **[Web sitesi](https://biokids.bilalgurkansanli.com)** ·
 **[İndir](#i̇ndir)** ·
-**[Rehberler ve destek](https://biokids.bilalgurkansanli.com)** ·
+**[Rehberler ve destek](https://biokids.bilalgurkansanli.com/rehberler/)** ·
 **[Belgeler](#belgeler)** ·
 **[Katkıda bulunun](CONTRIBUTING.md)**
 
@@ -299,7 +299,7 @@ pakettir (`biokids-ai`) ve hiçbir zaman kendiliğinden kurulmaz.
    anlatır.
 4. **Panel**, masaüstünüzdeki ve uygulamalar menüsündeki "BioKids Ebeveyn Paneli"
    simgesidir; telefondan erişimi açtığınızda telefonunuzda da. Sık sorulan soruların
-   yanıtları **Yardım**'da, rehberler [web sitesinde](https://biokids.bilalgurkansanli.com).
+   yanıtları **Yardım**'da, rehberler [web sitesinde](https://biokids.bilalgurkansanli.com/rehberler/).
 
 ## Gizlilik
 

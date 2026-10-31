@@ -2394,3 +2394,32 @@ has its own: `update-grub` still found desktop-base's picture.
   the image removes it.
 - Left as Debian's: the installer's own words and colours, the firmware's "debian" boot
   entry and the console's `/etc/issue`.
+
+**D-256 [claude] The website lives in the repository.** (2026-10-31)
+The owner chose to build biokids.bilalgurkansanli.com here rather than separately, so
+that it is open source with the product, its screenshots and its facts.
+- **`website/`**: Jinja2 templates in two languages, Turkish at `/` and English under
+  `/en/`, built to static HTML by `website/build.py` (Jinja2 and the standard library)
+  and published by GitHub Pages from `.github/workflows/website.yml` on every push to
+  main that touches it. No npm, no framework, no CDN, no font service, no analytics and
+  no cookies: the site keeps the product's own rules (principle 1, D-32).
+- **The product's look:** `tokens.css`'s colours, Fredoka copied from `biokids_core` at
+  build time (one copy of the font in the repository), the logo cut by
+  `website/make_images.py` the way `dev/make_icons.py` cuts it, the footer in the boot
+  menu's deep indigo (D-255).
+- **For search engines and assistants:** canonical and hreflang pairs (x-default is
+  English), JSON-LD made from the same files as the pages (WebSite, Person,
+  SoftwareApplication, BreadcrumbList, a HowTo from each guide's steps, a FAQPage from
+  `website/faq.toml`), a sitemap with alternates, a robots.txt open to every crawler,
+  `llms.txt` and `llms-full.txt`, `/.well-known/security.txt`, and a share card per page.
+  `build.py --check` fails CI on a broken link or anchor, an image without alt text or
+  size, a page without exactly one h1, or a title or description out of range.
+- **Real pictures:** the READMEs' screenshots and 27 more of the panel in each language
+  (the wizard, phone access, the internet, the assistant, Insights...), taken over
+  `dev/seed.py`'s family with a stand-in daemon. Drawings (the disk, the firmware menu,
+  the installer, the boot menu) are labelled as drawings.
+- **Only what 2.0.0 does.** Where the product is not there yet the site says so: the APT
+  repository and the release key, Secure Boot on real hardware, Ubuntu.
+- **The owner sets the domain once:** Pages source "GitHub Actions", the custom domain,
+  "Enforce HTTPS", and a DNS CNAME record `biokids` -> `bilalgurkansanli.github.io`. The
+  APT repository keeps its own host name, `apt.biokids.bilalgurkansanli.com`.

@@ -24,7 +24,7 @@ Never work on the ISO before the packages work. See `docs/ROADMAP.md`.
 **Repository:** `github.com/bilalgurkansanli/BioKids` (single monorepo)
 **License:** MIT
 **Author:** Bilal Gürkan Şanlı (Furkan), under the BioStudio label
-**Site:** biokids.bilalgurkansanli.com (built separately, not in this repo)
+**Site:** biokids.bilalgurkansanli.com, built from `website/` (D-256)
 
 ---
 
@@ -100,6 +100,7 @@ biokids/
 ├── extension/                 # Chromium managed extension (URL reporting)
 ├── debian/                    # single source package -> multiple binary packages
 ├── iso/                       # live-build config (Phase 3 only)
+├── website/                   # biokids.bilalgurkansanli.com, static, GitHub Pages (D-256)
 ├── assets/                    # icons, character art, themes, sounds
 ├── tests/
 └── .github/workflows/
@@ -163,6 +164,7 @@ Take a snapshot before anything that touches boot, PAM, nftables, or GRUB.
 | Zio & Sio | `docs/VOICE.md` |
 | child launcher or parent panel | `docs/UX.md` |
 | .deb, APT repo, ISO, CI | `docs/PACKAGING.md` |
+| the website | `website/README.md` |
 | "what should I do next" | `docs/ROADMAP.md`, then `docs/TASKS-PHASE0.md` |
 
 ---

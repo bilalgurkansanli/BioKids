@@ -16,9 +16,9 @@ For children aged 4–10 · no account · no cloud · nothing leaves the device
 [![Debian 13](https://img.shields.io/badge/Debian-13%20trixie-A81D33?logo=debian&logoColor=white)](https://www.debian.org/releases/trixie/)
 [![Python 3.13](https://img.shields.io/badge/python-3.13-4B54C8?logo=python&logoColor=white)](pyproject.toml)
 
-**[Website](https://biokids.bilalgurkansanli.com)** ·
+**[Website](https://biokids.bilalgurkansanli.com/en/)** ·
 **[Download](#download)** ·
-**[Guides & support](https://biokids.bilalgurkansanli.com)** ·
+**[Guides & support](https://biokids.bilalgurkansanli.com/en/guides/)** ·
 **[Documentation](#documentation)** ·
 **[Contributing](CONTRIBUTING.md)**
 
@@ -287,7 +287,7 @@ assistant is a separate package, `biokids-ai`, never installed by default.
    can see.
 4. **The panel** is the "BioKids Parent Panel" icon on your desktop and in the
    applications menu, and on your phone once phone access is on. **Help** answers the
-   common questions, and the [website](https://biokids.bilalgurkansanli.com) has guides.
+   common questions, and the [website](https://biokids.bilalgurkansanli.com/en/guides/) has guides.
 
 ## Privacy
 
