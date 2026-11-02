@@ -242,8 +242,8 @@ programıyla, BioKids görünümünde ve ağ gerekmeden kurulur. Windows olan bi
 bilgisayarda kurulum, Windows'u küçültüp yanına kurmayı önerir; açılış menüsünde ikisi
 de görünür.
 
-1. ISO'yu [SourceForge'dan](https://sourceforge.net/projects/biokids/files/) indirin; aynı
-   dosya [archive.org'da](https://archive.org/details/biokids-2.0.0) da var. 2 GB'tan
+1. ISO'yu [archive.org'dan](https://archive.org/details/biokids-2.0.0) indirin; aynı
+   dosya [SourceForge'da](https://sourceforge.net/projects/biokids/files/) da var. 2 GB'tan
    büyük olduğu için GitHub sürümüne sığmaz;
    [sürüm sayfası](https://github.com/bilalgurkansanli/BioKids/releases/latest) SHA256
    değerini imzalı `SHA256SUMS` içinde verir.

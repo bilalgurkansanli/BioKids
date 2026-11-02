@@ -27,7 +27,7 @@
         <p>Slow, or not starting? <a href="{{ site.iso_mirror_url }}" rel="noopener">The same file on {{ site.iso_mirror_host }}</a>.</p>
         <p>Release notes and the signed <code>SHA256SUMS</code>: <a href="{{ site.release_url }}" rel="noopener">the release page on GitHub</a>.</p>
         {% call m.callout('note', 'Why is the file on ' ~ site.iso_host ~ '?') %}
-        <p>The ISO is larger than GitHub's 2 GB file limit, so it is kept on {{ site.iso_host }}, which sends it from a server near you, with a second copy on {{ site.iso_mirror_host }}. Whichever you use, its SHA256 is on the release page on GitHub, signed with BioKids' key: <a href="{{ url('download', 'verify') }}">how to check it</a>.</p>
+        <p>The ISO is larger than GitHub's 2 GB file limit, so it is kept on {{ site.iso_host }}, with a second copy on {{ site.iso_mirror_host }}. Whichever you use, its SHA256 is on the release page on GitHub, signed with BioKids' key: <a href="{{ url('download', 'verify') }}">how to check it</a>.</p>
         {% endcall %}
       </article>
       <div class="dl-side">

@@ -232,8 +232,8 @@ runtime. It boots as a live system for trying, and installs with Debian's own in
 — in BioKids' look — with no network needed. On a computer with Windows, the installer
 offers to shrink Windows and install beside it; the boot menu then lists both.
 
-1. Download the ISO from [SourceForge](https://sourceforge.net/projects/biokids/files/), or
-   the same file from [archive.org](https://archive.org/details/biokids-2.0.0). It is over
+1. Download the ISO from [archive.org](https://archive.org/details/biokids-2.0.0), or the
+   same file from [SourceForge](https://sourceforge.net/projects/biokids/files/). It is over
    2 GB, too large for a GitHub release; the
    [release](https://github.com/bilalgurkansanli/BioKids/releases/latest) has its SHA256 in
    the signed `SHA256SUMS`.

@@ -156,25 +156,25 @@ signing key is not worth it at this stage.
 | Artifact | Primary | Notes |
 |---|---|---|
 | `.deb` packages | our APT repo | also attached to the GitHub Release |
-| ISO | **SourceForge** | free, a worldwide mirror network, download statistics; where small distributions put theirs (D-257) |
-| ISO, fallback | archive.org | free and permanent, but slow to download (D-28) |
+| ISO | **archive.org** | free and permanent; the site's button, as it starts at once and was the faster from Turkey (D-28, D-257) |
+| ISO, second copy | SourceForge | free, a worldwide mirror network, download statistics; where small distributions put theirs (D-257) |
 | ISO mirror | GitHub Release | only when the file is under 2 GB |
 | `SHA256SUMS` + `.asc` | GitHub Release | always, for every artifact |
 | Release notes | GitHub Release | always |
 
 GitHub caps release assets at 2 GB per file, which the full ISO passes. Publish the
-ISO to SourceForge's file release system, project `biokids`, in a folder per version
-(`2.0.0/`), uploaded with `scp` or `sftp` to
-`frs.sourceforge.net:/home/frs/project/biokids/<version>/` (the web form takes 500 MB
-at most), beside the release's `SHA256SUMS`, `SHA256SUMS.asc` and a short README, and
-made the folder's default download for every system; or to an
-archive.org item named `biokids-<version>`; and let the GitHub Release carry the
-checksums and a link: before the tag, `iso/published.toml` names the file's address and
+ISO to both an archive.org item named `biokids-<version>` and SourceForge's file
+release system, project `biokids`, in a folder per version (`2.0.0/`), uploaded with
+`scp` or `sftp` to `frs.sourceforge.net:/home/frs/project/biokids/<version>/` (the web
+form takes 500 MB at most), beside the release's `SHA256SUMS`, `SHA256SUMS.asc` and a
+short README, and made the folder's default download for every system; and let the
+GitHub Release carry the checksums and a link: before the tag, `iso/published.toml` names the file's address and
 its SHA256, and `release.yml` adds that checksum to the signed `SHA256SUMS` and the link
 to the notes. `https://sourceforge.net/projects/biokids/files/latest/download` always
 gives the newest file, a download link that needs no change at the next release; the
-site's button instead links to `downloads.sourceforge.net/project/biokids/<version>/<file>`,
-which goes straight to a mirror without SourceForge's download page. Cloudflare
+site names SourceForge under its button with
+`downloads.sourceforge.net/project/biokids/<version>/<file>`, which goes to a mirror
+without SourceForge's download page, though Cloudflare may check the browser first. Cloudflare
 R2 is a reasonable later addition if a download link on the project's own domain is
 wanted.
 

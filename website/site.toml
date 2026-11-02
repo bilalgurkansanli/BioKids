@@ -23,14 +23,15 @@ work_id = "https://www.bilalgurkansanli.com/#work-biokids"
 label = "BioStudio"
 iso_name = "biokids-2.0.0-amd64.hybrid.iso"
 # The ISO is larger than a GitHub release file may be, so the button gets it
-# from SourceForge (D-257), straight from a mirror near the parent rather than
-# through SourceForge's download page. archive.org keeps the same file, named
-# under the button for when SourceForge is slow or down. iso_host and
-# iso_mirror_host name those places on the download page.
-iso_url = "https://downloads.sourceforge.net/project/biokids/2.0.0/biokids-2.0.0-amd64.hybrid.iso"
-iso_host = "SourceForge"
-iso_mirror_url = "https://archive.org/download/biokids-2.0.0/biokids-2.0.0-amd64.hybrid.iso"
-iso_mirror_host = "archive.org"
+# from archive.org (D-28), which starts the download at once and was the faster
+# of the two from Turkey (D-257). SourceForge keeps the same file, named under
+# the button; its link skips SourceForge's download page, though Cloudflare may
+# check the browser first. iso_host and iso_mirror_host name those places on
+# the download page.
+iso_url = "https://archive.org/download/biokids-2.0.0/biokids-2.0.0-amd64.hybrid.iso"
+iso_host = "archive.org"
+iso_mirror_url = "https://downloads.sourceforge.net/project/biokids/2.0.0/biokids-2.0.0-amd64.hybrid.iso"
+iso_mirror_host = "SourceForge"
 apt_url = "https://apt.biokids.bilalgurkansanli.com"
 # The archive key, as README.md and debian/biokids-archive-keyring.asc have it.
 key_fingerprint = "F6A4 D652 8690 1EE0 99A1  095A 793E 458A 5F17 E9B0"

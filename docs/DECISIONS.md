@@ -2458,9 +2458,12 @@ that it is open source with the product, its screenshots and its facts.
   speed per connection, and small distributions (Bodhi, Peppermint, Linux Lite's
   torrents) publish on SourceForge, whose mirror network is free and fast. archive.org
   stays the fallback, and `release.yml` accepts either address. The project opened on
-  2026-11-02: the site's button links straight to the file on
-  `downloads.sourceforge.net`, which sends a nearby mirror's address without
-  SourceForge's download page and its advertising, and names archive.org under it.
+  2026-11-02 with the ISO, its checksums and a README. The site's button went to
+  SourceForge for a day and came back to archive.org on 2026-11-03: from Turkey,
+  archive.org sent the file at about 17 MB/s against 8 to 11 from SourceForge's
+  mirrors, and it starts the download at once, where SourceForge's download address
+  first puts the browser through a Cloudflare check. SourceForge is named under the
+  button, and keeps its mirrors and download statistics for those who find it there.
 - **The assistant's runtime is in the archive too** (D-165): `llama.cpp` and
   `whisper.cpp` rebuilt for trixie, and `libggml0` from trixie-backports, the five
   packages the ISO carries. 2.0.0's archive lacked them, so `biokids-ai` could not be

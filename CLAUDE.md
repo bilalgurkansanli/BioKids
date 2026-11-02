@@ -179,10 +179,10 @@ in `docs/DECISIONS.md`, newest last.
 **2.0.0 is released (2026-10-31, tag `v2.0.0`), and the repository is public.** The
 packages are in the APT repository (`BioKids-apt`, `apt.biokids.bilalgurkansanli.com`,
 signed with the archive key `F6A4 D652 … 5F17 E9B0`), the .debs and the signed
-`SHA256SUMS` on the GitHub Release, the ISO on SourceForge (project `biokids`, folder
-`2.0.0/`) with archive.org as its mirror (`iso/published.toml`), and the site's button
-downloads it from SourceForge (`website/site.toml`, `iso_url`, `iso_mirror_url`). What
-is left:
+`SHA256SUMS` on the GitHub Release, the ISO on archive.org (`biokids-2.0.0`) and on
+SourceForge (project `biokids`, folder `2.0.0/`), and the site's button downloads it
+from archive.org, with SourceForge named under it (`website/site.toml`, `iso_url`,
+`iso_mirror_url`). What is left:
 1. The assistant's runtime, llama.cpp and whisper.cpp rebuilt for Trixie (D-165), is
    pinned in `debian/archive-extra.sha256sums` and kept in `BioKids-apt`'s
    `extra/trixie`; the next release (2.0.1) signs it into the APT repository. Until
