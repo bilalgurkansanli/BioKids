@@ -24,7 +24,7 @@
           <a class="btn btn-primary btn-lg" href="{{ site.iso_url }}" rel="noopener">{% include "icon-download.html" %} ISO'yu indir</a>
           <a class="btn btn-secondary btn-lg" href="{{ url('guide-install') }}">Nasıl kurulur?</a>
         </div>
-        <p>Yavaş mı, başlamıyor mu? <a href="{{ site.iso_mirror_url }}" rel="noopener">Aynı dosya {{ site.iso_mirror_host }}'da</a>.</p>
+        <p>Yavaş mı, başlamıyor mu? <a href="{{ site.iso_mirror_url }}" target="_blank" rel="noopener">Aynı dosya {{ site.iso_mirror_host }}'da</a>.</p>
         <p>Sürüm notları ve imzalı <code>SHA256SUMS</code>: <a href="{{ site.release_url }}" rel="noopener">GitHub'daki sürüm sayfası</a>.</p>
         {% call m.callout('note', 'Dosya neden ' ~ site.iso_host ~ '\'da?') %}
         <p>ISO, GitHub'ın 2 GB'lık dosya sınırından büyük; bu yüzden {{ site.iso_host }}'da, ikinci bir kopyası da {{ site.iso_mirror_host }}'da duruyor. Hangisinden indirirseniz indirin, dosyanın SHA256 değeri GitHub'daki sürüm sayfasında, BioKids'in anahtarıyla imzalı olarak yazar: <a href="{{ url('download', 'dogrulama') }}">nasıl doğrulanır?</a></p>
