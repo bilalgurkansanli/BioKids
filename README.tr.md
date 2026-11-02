@@ -242,9 +242,11 @@ programıyla, BioKids görünümünde ve ağ gerekmeden kurulur. Windows olan bi
 bilgisayarda kurulum, Windows'u küçültüp yanına kurmayı önerir; açılış menüsünde ikisi
 de görünür.
 
-1. ISO'yu [son sürümden](https://github.com/bilalgurkansanli/BioKids/releases) indirin.
-   2 GB'tan büyük olduğu için sürüm sayfası archive.org'daki kopyasına ve SHA256
-   değerine bağlantı verir.
+1. ISO'yu [SourceForge'dan](https://sourceforge.net/projects/biokids/files/) indirin; aynı
+   dosya [archive.org'da](https://archive.org/details/biokids-2.0.0) da var. 2 GB'tan
+   büyük olduğu için GitHub sürümüne sığmaz;
+   [sürüm sayfası](https://github.com/bilalgurkansanli/BioKids/releases/latest) SHA256
+   değerini imzalı `SHA256SUMS` içinde verir.
 2. 8 GB ya da daha büyük bir USB belleğe yazın (balenaEtcher, DD modunda Rufus ya da
    `dd`).
 3. Bilgisayarı USB bellekten açın ve **Start installer**'ı seçin.

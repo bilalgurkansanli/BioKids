@@ -164,12 +164,17 @@ signing key is not worth it at this stage.
 
 GitHub caps release assets at 2 GB per file, which the full ISO passes. Publish the
 ISO to SourceForge's file release system, project `biokids`, in a folder per version
-(`2.0.0/`), uploaded with `sftp` (the web form is for small files), or to an
+(`2.0.0/`), uploaded with `scp` or `sftp` to
+`frs.sourceforge.net:/home/frs/project/biokids/<version>/` (the web form takes 500 MB
+at most), beside the release's `SHA256SUMS`, `SHA256SUMS.asc` and a short README, and
+made the folder's default download for every system; or to an
 archive.org item named `biokids-<version>`; and let the GitHub Release carry the
 checksums and a link: before the tag, `iso/published.toml` names the file's address and
 its SHA256, and `release.yml` adds that checksum to the signed `SHA256SUMS` and the link
 to the notes. `https://sourceforge.net/projects/biokids/files/latest/download` always
-gives the newest file, a download link that needs no change at the next release. Cloudflare
+gives the newest file, a download link that needs no change at the next release; the
+site's button instead links to `downloads.sourceforge.net/project/biokids/<version>/<file>`,
+which goes straight to a mirror without SourceForge's download page. Cloudflare
 R2 is a reasonable later addition if a download link on the project's own domain is
 wanted.
 

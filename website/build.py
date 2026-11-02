@@ -646,7 +646,7 @@ class Site:
             f"- License: MIT. Source code: {s['repo']}",
             f"- Developer: {s['author']} ({s['label']}), {s['author_url']}",
             f"- Contact and support: {s['email']}",
-            f"- Download: {s['iso_url']}",
+            f"- Download: {s['iso_url']} (the same file on {s['iso_mirror_host']}: {s['iso_mirror_url']})",
             f"- Release notes and signed checksums: {s['release_url']}",
             "- Languages: Turkish and English (the site: Turkish at /, English at /en/)",
             "",

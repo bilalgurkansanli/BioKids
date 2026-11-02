@@ -179,16 +179,16 @@ in `docs/DECISIONS.md`, newest last.
 **2.0.0 is released (2026-10-31, tag `v2.0.0`), and the repository is public.** The
 packages are in the APT repository (`BioKids-apt`, `apt.biokids.bilalgurkansanli.com`,
 signed with the archive key `F6A4 D652 … 5F17 E9B0`), the .debs and the signed
-`SHA256SUMS` on the GitHub Release, the ISO on archive.org (`iso/published.toml`), and
-the site's button downloads it (`website/site.toml`, `iso_url`). What is left:
-1. SourceForge: the project waits on SourceForge's support (phone verification). Once
-   it is open, the ISO goes there as well and `iso_url` moves to it (D-257).
-2. The assistant's runtime, llama.cpp and whisper.cpp rebuilt for Trixie (D-165), is
+`SHA256SUMS` on the GitHub Release, the ISO on SourceForge (project `biokids`, folder
+`2.0.0/`) with archive.org as its mirror (`iso/published.toml`), and the site's button
+downloads it from SourceForge (`website/site.toml`, `iso_url`, `iso_mirror_url`). What
+is left:
+1. The assistant's runtime, llama.cpp and whisper.cpp rebuilt for Trixie (D-165), is
    pinned in `debian/archive-extra.sha256sums` and kept in `BioKids-apt`'s
    `extra/trixie`; the next release (2.0.1) signs it into the APT repository. Until
    then `biokids-ai` installs from the ISO only, and the README and the site's packages
    guide say so: take those notes out with that release.
-3. The announcement.
+2. The announcement.
 
 The assistant is measured with `dev/assistant_eval.py` against a real model (D-248):
 run it after any change to `src/biokids_ai/prompts.py`.

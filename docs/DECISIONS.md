@@ -2457,7 +2457,10 @@ that it is open source with the product, its screenshots and its facts.
 - **The ISO is on SourceForge, not archive.org** (revises D-28): archive.org keeps a low
   speed per connection, and small distributions (Bodhi, Peppermint, Linux Lite's
   torrents) publish on SourceForge, whose mirror network is free and fast. archive.org
-  stays the fallback, and `release.yml` accepts either address.
+  stays the fallback, and `release.yml` accepts either address. The project opened on
+  2026-11-02: the site's button links straight to the file on
+  `downloads.sourceforge.net`, which sends a nearby mirror's address without
+  SourceForge's download page and its advertising, and names archive.org under it.
 - **The assistant's runtime is in the archive too** (D-165): `llama.cpp` and
   `whisper.cpp` rebuilt for trixie, and `libggml0` from trixie-backports, the five
   packages the ISO carries. 2.0.0's archive lacked them, so `biokids-ai` could not be
